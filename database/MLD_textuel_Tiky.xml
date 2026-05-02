@@ -1,0 +1,869 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+
+<Database>
+   <Name>BDD_Tiky_MLD_Merise</Name>
+   <Table>
+      <Name>Utilisateur</Name>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>nom</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>email</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>mdp</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>type</Name>
+         <Type>VARCHAR(50)</Type>
+         <Comment>Enum : &#233;tudiant / enseignant </Comment>
+      </Column>
+      <Column>
+         <Name>date_creation</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_util</Key>
+      </PK>
+   </Table>
+   <Table>
+      <Name>Role</Name>
+      <Column>
+         <Name>id</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>nom</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id</Key>
+      </PK>
+   </Table>
+   <Table>
+      <Name>Groupe_etud</Name>
+      <Column>
+         <Name>id_grp_etd</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>nom</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_grp_etd</Key>
+      </PK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Cat&#233;gorie</Name>
+      <Column>
+         <Name>id_cat</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>nom</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>description</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>est_valid&#233;</Name>
+         <Type>LOGICAL</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util_1</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_cat</Key>
+      </PK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+      <FK>
+         <Key>id_util_1</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Etud_membre_group</Name>
+      <Column>
+         <Name>id_etd_mem_grp</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_grp_etd</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_etd_mem_grp</Key>
+      </PK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+      <FK>
+         <Key>id_grp_etd</Key>
+         <Reference>Groupe_etud(id_grp_etd)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Ticket</Name>
+      <Column>
+         <Name>id_tick</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>titre</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>description</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>status</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>est_priv&#233;</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>date_creation</Name>
+         <Type>DATETIME</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>statut_gest</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+         <Comment>enum : statut du ticket en g&#233;n&#233;ral (ouvert/ferm&#233;/incomplet...)</Comment>
+      </Column>
+      <Column>
+         <Name>commentaire</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>type_rejet</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+         <Comment>enum : info manquante, r&#233;&#233;criture, autre  </Comment>
+      </Column>
+      <Column>
+         <Name>raison_rejet</Name>
+         <Type>VARCHAR(50)</Type>
+      </Column>
+      <Column>
+         <Name>statut_manager</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+         <Comment>le manager doit accepter son role (en_attente/accept&#233;/refus&#233;)</Comment>
+      </Column>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_cat</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util_1</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_tick</Key>
+      </PK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+      <FK>
+         <Key>id_cat</Key>
+         <Reference>Cat&#233;gorie(id_cat)</Reference>
+      </FK>
+      <FK>
+         <Key>id_util_1</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Lien_ticket</Name>
+      <Column>
+         <Name>id_lien_tick</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>type</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+         <Comment>enum : lien simple ou fusion</Comment>
+      </Column>
+      <Column>
+         <Name>date_creation</Name>
+         <Type>DATE</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>statut</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+         <Comment>enum : en attente, refus&#233;, accept&#233; </Comment>
+      </Column>
+      <Column>
+         <Name>id_tick</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>id_tick_1</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_tick_2</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_lien_tick</Key>
+      </PK>
+      <FK>
+         <Key>id_tick</Key>
+         <Reference>Ticket(id_tick)</Reference>
+      </FK>
+      <FK>
+         <Key>id_tick_1</Key>
+         <Reference>Ticket(id_tick)</Reference>
+      </FK>
+      <FK>
+         <Key>id_tick_2</Key>
+         <Reference>Ticket(id_tick)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Document</Name>
+      <Column>
+         <Name>id_doc</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>nom</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>url</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>date_creation</Name>
+         <Type>DATE</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_tick</Name>
+         <Type>INT</Type>
+      </Column>
+      <PK>
+         <Key>id_doc</Key>
+      </PK>
+      <FK>
+         <Key>id_tick</Key>
+         <Reference>Ticket(id_tick)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Conversation</Name>
+      <Column>
+         <Name>id_convs</Name>
+         <Type>VARCHAR(50)</Type>
+      </Column>
+      <Column>
+         <Name>date_creation</Name>
+         <Type>DATE</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_tick</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_convs</Key>
+      </PK>
+      <AK>
+         <Key>id_tick</Key>
+      </AK>
+      <FK>
+         <Key>id_tick</Key>
+         <Reference>Ticket(id_tick)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Abonn&#233;_tick</Name>
+      <Column>
+         <Name>id_abn_tick</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>raison</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+         <Comment>enum : int&#233;ress&#233;, peut aider, aussi impact&#233;</Comment>
+      </Column>
+      <Column>
+         <Name>date_creation</Name>
+         <Type>DATE</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_tick</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_abn_tick</Key>
+      </PK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+      <FK>
+         <Key>id_tick</Key>
+         <Reference>Ticket(id_tick)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Historique_tick</Name>
+      <Column>
+         <Name>id_hist_tick</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>type</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>contenu</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>date_creation</Name>
+         <Type>DATE</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_tick</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_hist_tick</Key>
+      </PK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+      <FK>
+         <Key>id_tick</Key>
+         <Reference>Ticket(id_tick)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Type_even</Name>
+      <Column>
+         <Name>id_typ_evt</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>nom</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_typ_evt</Key>
+      </PK>
+   </Table>
+   <Table>
+      <Name>Convers_util</Name>
+      <Column>
+         <Name>id_convs_util</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>role</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+         <Comment>enum : initiateur, participant</Comment>
+      </Column>
+      <Column>
+         <Name>id_convs</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_convs_util</Key>
+      </PK>
+      <FK>
+         <Key>id_convs</Key>
+         <Reference>Conversation(id_convs)</Reference>
+      </FK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Message</Name>
+      <Column>
+         <Name>id_mes</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>contenu</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>date_creation</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_tick</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_doc</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_convs</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_mes</Key>
+      </PK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+      <FK>
+         <Key>id_tick</Key>
+         <Reference>Ticket(id_tick)</Reference>
+      </FK>
+      <FK>
+         <Key>id_doc</Key>
+         <Reference>Document(id_doc)</Reference>
+      </FK>
+      <FK>
+         <Key>id_convs</Key>
+         <Reference>Conversation(id_convs)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Abonn&#233;_cat</Name>
+      <Column>
+         <Name>id_abn_cat</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>date_creation</Name>
+         <Type>DATE</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_cat</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_abn_cat</Key>
+      </PK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+      <FK>
+         <Key>id_cat</Key>
+         <Reference>Cat&#233;gorie(id_cat)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Ev&#233;nement</Name>
+      <Column>
+         <Name>id_evt</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>titre</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>description</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>date_deb</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>date_fin</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>statut</Name>
+         <Type>LOGICAL</Type>
+      </Column>
+      <Column>
+         <Name>id_typ_evt</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_evt</Key>
+      </PK>
+      <FK>
+         <Key>id_typ_evt</Key>
+         <Reference>Type_even(id_typ_evt)</Reference>
+      </FK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Participant_even</Name>
+      <Column>
+         <Name>id_pt_evt</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>statut</Name>
+         <Type>LOGICAL</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_evt</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_pt_evt</Key>
+      </PK>
+      <FK>
+         <Key>id_evt</Key>
+         <Reference>Ev&#233;nement(id_evt)</Reference>
+      </FK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Demande_cat</Name>
+      <Column>
+         <Name>id_dem_cat</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>nom</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+         <Comment>statut : pour marquer une categorie comme complet ou incomplet</Comment>
+      </Column>
+      <Column>
+         <Name>description</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>statut</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>date_creation</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>date_traitement_</Name>
+         <Type>DATE</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util_1</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_cat</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_dem_cat</Key>
+      </PK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+      <FK>
+         <Key>id_util_1</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+      <FK>
+         <Key>id_cat</Key>
+         <Reference>Cat&#233;gorie(id_cat)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Groupe_even</Name>
+      <Column>
+         <Name>id_grp_evt</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>id_evt</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_grp_etd</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_grp_evt</Key>
+      </PK>
+      <FK>
+         <Key>id_evt</Key>
+         <Reference>Ev&#233;nement(id_evt)</Reference>
+      </FK>
+      <FK>
+         <Key>id_grp_etd</Key>
+         <Reference>Groupe_etud(id_grp_etd)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Notification</Name>
+      <Column>
+         <Name>id_not</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>type</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>contenu</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>est_lu</Name>
+         <Type>LOGICAL</Type>
+      </Column>
+      <Column>
+         <Name>date_creation</Name>
+         <Type>VARCHAR(50)</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_tick</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_evt</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_not</Key>
+      </PK>
+      <FK>
+         <Key>id_tick</Key>
+         <Reference>Ticket(id_tick)</Reference>
+      </FK>
+      <FK>
+         <Key>id_evt</Key>
+         <Reference>Ev&#233;nement(id_evt)</Reference>
+      </FK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Disponibilit&#233;</Name>
+      <Column>
+         <Name>id_dispo</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>heure_deb</Name>
+         <Type>TIME</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>heure_fin</Name>
+         <Type>TIME</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>date_</Name>
+         <Type>DATE</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_evt</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+         <Property>NOT NULL</Property>
+      </Column>
+      <PK>
+         <Key>id_dispo</Key>
+      </PK>
+      <FK>
+         <Key>id_evt</Key>
+         <Reference>Ev&#233;nement(id_evt)</Reference>
+      </FK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+   </Table>
+   <Table>
+      <Name>Attribuer</Name>
+      <Column>
+         <Name>id_util</Name>
+         <Type>INT</Type>
+      </Column>
+      <Column>
+         <Name>id</Name>
+         <Type>INT</Type>
+      </Column>
+      <PK>
+         <Key>id_util, id</Key>
+      </PK>
+      <FK>
+         <Key>id_util</Key>
+         <Reference>Utilisateur(id_util)</Reference>
+      </FK>
+      <FK>
+         <Key>id</Key>
+         <Reference>Role(id)</Reference>
+      </FK>
+   </Table>
+</Database>
