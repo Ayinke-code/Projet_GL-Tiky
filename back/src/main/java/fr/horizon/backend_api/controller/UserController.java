@@ -2,7 +2,7 @@ package fr.horizon.backend_api.controller;
 
 import java.util.List;
 
-import fr.horizon.backend_api.model.dto.UserDto;
+import fr.horizon.backend_api.model.dto.UserRequestDto;
 import fr.horizon.backend_api.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ public class UserController {
     }
 
     @PostMapping("/add")
-    public User createUser(@Valid @RequestBody UserDto dto) {
+    public User createUser(@Valid @RequestBody UserRequestDto dto) {
         return userService.createUser(dto);
     }
 
