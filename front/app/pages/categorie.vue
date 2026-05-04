@@ -15,7 +15,15 @@
 
     <!-- MODALE UNIQUE (Détail / Édition / Archivage) -->
     <div v-if="selectedCat" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="closeModal">
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 animate-in fade-in zoom-in duration-200">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 animate-in fade-in zoom-in duration-200 relative">
+        
+        <!-- Bouton Fermer Absolu -->
+        <button 
+          @click="closeModal" 
+          class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors z-10"
+        >
+          <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
         
         <!-- MODE VUE -->
         <div v-if="!isEditing">
@@ -24,7 +32,6 @@
               <h2 class="text-2xl font-bold text-gray-900">{{ selectedCat.subject || selectedCat.name }}</h2>
               <p class="text-indigo-600 font-medium">{{ selectedCat.name }}</p>
             </div>
-            <button @click="closeModal" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
           </div>
 
           <!-- Liste des Issues -->
@@ -47,7 +54,6 @@
         <div v-else>
           <div class="flex justify-between items-start mb-4">
             <h3 class="text-lg font-bold">Modifier la catégorie</h3>
-            <button @click="isEditing = false" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-times text-xl"></i></button>
           </div>
           <div class="space-y-4">
             <input v-model="editForm.name" class="w-full border p-2 rounded" placeholder="Matière" />
@@ -76,10 +82,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue' 
-import { useCategoryMock } from '~/composables/useCategoryMock'
+import { ref, onMounted } from 'vue'
+import { useCategory } from '~/composables/useCategory' 
 
-const { categories, loading, createCategory, deleteCategory } = useCategoryMock()
+const { categories, loading, createCategory, updateCategory, fetchCategories } = useCategory()
 
 const apiError = ref('')
 const successMessage = ref('')
@@ -87,13 +93,28 @@ const selectedCat = ref(null)
 const isEditing = ref(false)
 const editForm = ref({ name: '', subject: '', teacher: 'Teacher_default' })
 
+
+onMounted(async () => {
+  await fetchCategories()
+})
+
 const handleCreate = async (data) => {
   try {
     await createCategory(data)
     showSuccess("Catégorie créée avec succès !")
+    // Le composables recharge automatiquement la liste via fetchCategories
   } catch (err) {
-    apiError.value = "Erreur lors de la création de la catégorie."
+    apiError.value = "Erreur lors de la création."
   }
+}
+
+const startEdit = () => {
+  editForm.value = { 
+    name: selectedCat.value.name, 
+    subject: selectedCat.value.subject,
+    teacher: selectedCat.value.owner || 'Teacher_default'
+  }
+  isEditing.value = true
 }
 
 const closeModal = () => {
@@ -101,18 +122,17 @@ const closeModal = () => {
   isEditing.value = false
 }
 
-const startEdit = () => {
-  editForm.value = { ...selectedCat.value }
-  isEditing.value = true
-}
-
-const saveEdit = () => {
-  const index = categories.value.findIndex(c => c.id === selectedCat.value.id)
-  if (index !== -1) {
-    categories.value[index] = { ...selectedCat.value, ...editForm.value }
+const saveEdit = async () => {
+  try {
+    await updateCategory(selectedCat.value.id, editForm.value)
+    
+    await fetchCategories() 
+    
     showSuccess("Catégorie mise à jour avec succès !")
+    closeModal()
+  } catch (err) {
+    apiError.value = "Erreur lors de la mise à jour."
   }
-  closeModal()
 }
 
 /* const archiveCategory = async () => {

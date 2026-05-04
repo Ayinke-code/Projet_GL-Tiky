@@ -47,21 +47,36 @@
 </template>
 
 <script setup>
-const emit = defineEmits(['submit'])
+import { ref } from 'vue'
+import { useCategory } from '~/composables/useCategory' 
+
+// Initialisation du service 
+const { createCategory, loading, error } = useCategory()
 
 const formData = ref({
   name: '',
   subject: '',
-  teacher: 'Teacher_default'
+  teacher: 'teacher-default' 
 })
 
-const submitForm = () => {
-  if (formData.value.name && formData.value.subject) {
-    emit('submit', { ...formData.value })
+const submitForm = async () => {
+  try {
+    // Appel direct àl'API via le composables
+    await createCategory({
+      name: formData.value.name,
+      subject: formData.value.subject,
+      teacher: formData.value.teacher
+    })
+    
+
+    resetForm()
+    alert('Catégorie créée avec succès !')
+  } catch (err) {
+    alert(error.value || 'Une erreur est survenue')
   }
 }
 
 const resetForm = () => {
-  formData.value = { name: '', subject: '', teacher: 'Teacher_default' }
+  formData.value = { name: '', subject: '', teacher: 'teacher-default' }
 }
 </script>
