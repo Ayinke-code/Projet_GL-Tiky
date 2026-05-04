@@ -1,10 +1,9 @@
 package fr.horizon.backend_api.service;
 
-import fr.horizon.backend_api.model.Issue;
-import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.IssueStatus;
-import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.*;
+import fr.horizon.backend_api.model.dto.DemandeManagerDTO;
 import fr.horizon.backend_api.model.dto.IssueDTO;
+import fr.horizon.backend_api.repository.DemandeManagerRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.UserRepository;
@@ -17,6 +16,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,12 +28,14 @@ public class IssueService {
     private final IssueRepository issueRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final DemandeManagerRepository demandeManagerRepository;
     private final String uploadDir = "uploads/issues/";
 
     public IssueService(IssueRepository issueRepository,
-                        CategoryRepository categoryRepository, UserRepository userRepository) {
+                        CategoryRepository categoryRepository, UserRepository userRepository, DemandeManagerRepository demandeManagerRepository) {
         this.issueRepository = issueRepository;
         this.userRepository = userRepository;
+        this.demandeManagerRepository = demandeManagerRepository;
         this.categoryRepository = categoryRepository;
     }
 
@@ -123,18 +126,80 @@ public class IssueService {
     }
 
     @Transactional
-    private void assignManagerToIssue(Long issueId, Long userId) {
+    public DemandeManagerDTO assignManagerToIssue(Long issueId, Long userId) {
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket non trouvé"));
 
         User teacher = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
 
+        if (demandeManagerRepository.existsByIssueAndStatut(issue, DemandeManagerStatus.PENDING)) {
+            throw new IllegalStateException("Une demande de manager est déjà en cours pour ce ticket.");
+        }
+
+        if (issue.getManager() != null) {
+            throw new IllegalStateException("Ce ticket a déjà un manager assigné.");
+        }
+
         if (!teacher.isTeacher()) {
             throw new IllegalArgumentException("L'utilisateur visé n'est pas un teacher");
         }
 
-        // issue.setManager(teacher);
-        issue.setStatut(IssueStatus.VALIDE);
+        return sendManagerRequest(issue, teacher);
     }
+
+    private DemandeManagerDTO sendManagerRequest(Issue issue, User targetedUser) {
+        DemandeManagerStatus initialStatus = DemandeManagerStatus.PENDING;
+
+        // Correction : Comparaison par ID
+        if (targetedUser.getId().equals(issue.getCategorie().getCategoryOwner().getId())) {
+            initialStatus = DemandeManagerStatus.ACCEPTED;
+            issue.setManager(targetedUser);
+        }
+
+        DemandeManager demandeManager = DemandeManager.builder()
+                .targetTeacher(targetedUser)
+                .categorieOwner(issue.getCategorie().getCategoryOwner())
+                .issue(issue)
+                .statut(initialStatus)
+                .build();
+
+        DemandeManager savedDemande = demandeManagerRepository.save(demandeManager);
+
+        return DemandeManagerDTO.builder()
+                .cible(targetedUser.getName())
+                .statut(initialStatus.toString())
+                .dateCreation(LocalDateTime.now())
+                .titreIssue(issue.getTitre())
+                .build();
+    }
+
+    @Transactional
+    public DemandeManagerDTO respondManagerRequest(boolean response, Long demandeManagerId, Long userId) {
+        DemandeManager demandeManager = demandeManagerRepository.findById(demandeManagerId)
+                .orElseThrow(() -> new IllegalArgumentException("Demande non trouvée"));
+
+        if (!demandeManager.getTargetTeacher().getId().equals(userId)) {
+            throw new IllegalStateException("Vous n'êtes pas autorisé à répondre à cette demande");
+        }
+
+        demandeManager.setDateTraitement(LocalDateTime.now());
+
+        if (response) {
+            demandeManager.setStatut(DemandeManagerStatus.ACCEPTED);
+            demandeManager.getIssue().setManager(demandeManager.getTargetTeacher());
+        } else {
+            demandeManager.setStatut(DemandeManagerStatus.DENIED);
+        }
+
+        return DemandeManagerDTO.builder()
+                .cible(demandeManager.getTargetTeacher().getName())
+                .statut(demandeManager.getStatut().toString())
+                .dateCreation(demandeManager.getDateCreation())
+                .dateTraitement(demandeManager.getDateTraitement())
+                .titreIssue(demandeManager.getIssue().getTitre())
+                .build();
+    }
+
+
 }

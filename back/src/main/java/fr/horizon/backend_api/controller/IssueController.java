@@ -2,6 +2,7 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.dto.DemandeManagerDTO;
 import fr.horizon.backend_api.model.dto.IssueDTO;
 import fr.horizon.backend_api.service.IssueService;
 import fr.horizon.backend_api.repository.UserRepository;
@@ -58,4 +59,38 @@ public class IssueController {
         issueService.deleteIssue(id);
         return ResponseEntity.noContent().build();
     }
+
+
+    /**
+     * Endpoint pour créer une demande d'assignation de manager.
+     * URL : POST /demandes-manager/issue/12/target-user/5
+     */
+    @PostMapping("demandes-manager/issue/{issueId}/target-user/{userId}")
+    public ResponseEntity<DemandeManagerDTO> createRequest(
+            @PathVariable Long issueId,
+            @PathVariable Long userId) {
+
+        DemandeManagerDTO dto = issueService.assignManagerToIssue(issueId, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+    }
+
+    /**
+     * Endpoint pour accepter ou refuser une demande.
+     * URL : PUT /demandes-manager/42/respond?accept=true&userId=5
+     */
+    @PutMapping("demandes-manager/{demandeId}/respond")
+    public ResponseEntity<DemandeManagerDTO> respondToRequest(
+            @PathVariable Long demandeId,
+            @RequestParam boolean accept,
+            // on devrait plutard remplacer par le jeton d'authentification
+            @RequestParam Long userId) {
+
+        DemandeManagerDTO dto = issueService.respondManagerRequest(accept, demandeId, userId);
+        return ResponseEntity.ok(dto);
+    }
+
+
+
+
+
 }
