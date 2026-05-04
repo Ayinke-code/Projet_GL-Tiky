@@ -12,10 +12,12 @@ import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -49,6 +51,7 @@ public class IssueService {
                 .description(dto.getDescription())
                 .categorie(category)
                 .createur(creator)
+                .statut(IssueStatus.INCOMPLETE)
                 .estPrive(false)
                 .build();
 
@@ -64,6 +67,23 @@ public class IssueService {
     public Issue getIssueById(Long id) {
         return issueRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Issue non trouvée"));
+    }
+
+    public List<Issue> getIssuesByCategory(Long categorieId) {
+        return issueRepository.findByCategorie_IdCat(categorieId);
+    }
+
+    public List<Issue> getIssuesByCreator(Long creatorId) {
+        return issueRepository.findByCreateur_Id(creatorId);
+    }
+
+    public List<Issue> getIssuesByStatus(String statut) {
+        try {
+            IssueStatus parsedStatus = IssueStatus.valueOf(statut.toUpperCase());
+            return issueRepository.findByStatut(parsedStatus);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Statut invalide");
+        }
     }
 
     public void deleteIssue(Long id) {
@@ -85,7 +105,7 @@ public class IssueService {
         }
     }
 
-    private void saveDocuments(Issue issue, java.util.List<MultipartFile> documents) {
+    private void saveDocuments(Issue issue, List<MultipartFile> documents) {
         try {
             Path uploadPath = Paths.get(uploadDir + issue.getIdTick());
             Files.createDirectories(uploadPath);
@@ -103,19 +123,18 @@ public class IssueService {
     }
 
     @Transactional
-    private void assignManagerToIssue(Long issueId, Long userId){
+    private void assignManagerToIssue(Long issueId, Long userId) {
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket non trouvé"));
 
         User teacher = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
 
-        if(!teacher.isTeacher()){
+        if (!teacher.isTeacher()) {
             throw new IllegalArgumentException("L'utilisateur visé n'est pas un teacher");
         }
 
-//        issue.setManager(teacher);`
-        // envoyer une demande de gerer un manager 
+        // issue.setManager(teacher);
         issue.setStatut(IssueStatus.VALIDE);
     }
 }

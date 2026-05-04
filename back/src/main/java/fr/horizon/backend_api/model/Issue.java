@@ -21,6 +21,7 @@ public class Issue {
 
     private String description;
 
+    @Enumerated(EnumType.STRING)
     private IssueStatus statut = IssueStatus.INCOMPLETE;
 
     private Boolean estPrive = false;
