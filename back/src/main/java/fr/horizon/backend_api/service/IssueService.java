@@ -6,38 +6,24 @@ import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.IssueDTO;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.CategoryRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.UUID;
+import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 @Transactional
 public class IssueService {
 
     private final IssueRepository issueRepository;
     private final CategoryRepository categoryRepository;
-    private final String uploadDir = "uploads/issues/";
-
-    public IssueService(IssueRepository issueRepository,
-                        CategoryRepository categoryRepository) {
-        this.issueRepository = issueRepository;
-        this.categoryRepository = categoryRepository;
-    }
 
     public Issue createIssue(IssueDTO dto, User creator) {
         validateIssueInput(dto);
 
         Category category = categoryRepository.findById(dto.getCategorieId())
                 .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
-
-        if (!category.getEstValide()) {
-            throw new IllegalArgumentException("Catégorie inactive ou non validée");
-        }
 
         Issue issue = Issue.builder()
                 .titre(dto.getTitre())
@@ -48,18 +34,24 @@ public class IssueService {
                 .estPrive(false)
                 .build();
 
-        Issue savedIssue = issueRepository.save(issue);
-
-        if (dto.getDocuments() != null && !dto.getDocuments().isEmpty()) {
-            saveDocuments(savedIssue, dto.getDocuments());
-        }
-
-        return savedIssue;
+        return issueRepository.save(issue);
     }
 
     public Issue getIssueById(Long id) {
         return issueRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Issue non trouvée"));
+    }
+
+    public List<Issue> getIssuesByCategory(Long categorieId) {
+        return issueRepository.findByCategorie_IdCat(categorieId);
+    }
+
+    public List<Issue> getIssuesByCreator(Long creatorId) {
+        return issueRepository.findByCreateur_Id(creatorId);
+    }
+
+    public List<Issue> getIssuesByStatus(String statut) {
+        return issueRepository.findByStatut(statut);
     }
 
     public void deleteIssue(Long id) {
@@ -78,23 +70,6 @@ public class IssueService {
         }
         if (dto.getCategorieId() == null) {
             throw new IllegalArgumentException("La catégorie est obligatoire");
-        }
-    }
-
-    private void saveDocuments(Issue issue, java.util.List<MultipartFile> documents) {
-        try {
-            Path uploadPath = Paths.get(uploadDir + issue.getIdTick());
-            Files.createDirectories(uploadPath);
-
-            for (MultipartFile file : documents) {
-                if (!file.isEmpty()) {
-                    String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-                    Path filePath = uploadPath.resolve(fileName);
-                    Files.copy(file.getInputStream(), filePath);
-                }
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Erreur lors du téléchargement des fichiers", e);
         }
     }
 }
