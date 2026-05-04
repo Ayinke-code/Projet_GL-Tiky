@@ -9,6 +9,7 @@
 
     <div v-else>
       <p>Non connecté</p>
+      <UButton size="md" href="/login">Se connecter</UButton>
     </div>
 
     <UPageHero

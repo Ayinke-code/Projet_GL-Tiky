@@ -3,13 +3,25 @@ export const useAuth = () => {
     const user = useState('user', () => null)
 
     const login = async (email, password) => {
-        await $fetch(`${config.public.apiBase}/auth/login`, {
-            method: 'POST',
-            body: { email, password },
-            credentials: 'include'
-        })
+        try {
+            await $fetch(`${config.public.apiBase}/auth/login`, {
+                method: 'POST',
+                body: { email, password },
+                credentials: 'include'
+            })
 
-        await fetchUser()
+            await fetchUser()
+            return true
+        } catch (e) {
+            user.value = null
+
+            if (e?.response?.status === 401) {
+                throw new Error('INVALID_CREDENTIALS')
+            }
+
+            throw new Error('UNKNOWN_ERROR')
+        }
+
     }
 
     const fetchUser = async () => {
