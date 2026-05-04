@@ -1,0 +1,51 @@
+image: srv-proxy.openstack.etudis.eseo.fr:1973/projetgl-cicd:latest
+
+variables:
+  # Maven local repository path for caching
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Dhttp.proxyHost=192.168.4.8 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=192.168.4.8 -Dhttps.proxyPort=3128"
+  MAVEN_CLI_OPTS: "-s .m2/settings.xml --batch-mode"
+
+  no_proxy: "gitlab-etu.openstack.etudis.eseo.fr,localhost,127.0.0.1,172.24.1.1"
+
+cache:
+  paths:
+    - .m2/repository
+
+stages:
+  - sonar
+
+before_script:
+  # Ensure clean slate for ChromeDriver if needed by the runner
+  - rm -f /usr/bin/chromedriver || true
+  - export http_proxy=http://192.168.4.8:3128
+  - export https_proxy=http://192.168.4.8:3128
+
+  # Create Maven proxy configuration
+  - mkdir -p .m2
+  - |
+    cat > .m2/settings.xml <<EOF
+    <settings>
+      <proxies>
+        <proxy>
+          <id>proxy</id>
+          <active>true</active>
+          <protocol>http</protocol>
+          <host>192.168.4.8</host>
+          <port>3128</port>
+        </proxy><proxy>
+          <id>https-proxy</id>
+          <active>true</active>
+          <protocol>https</protocol>
+          <host>192.168.4.8</host>
+          <port>3128</port>
+        </proxy>
+      </proxies>
+    </settings>
+    EOF
+
+sonar:
+  stage: sonar
+  script:
+    # Run Maven verify (includes tests) and sonar analysis
+    - cd back
+    - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
