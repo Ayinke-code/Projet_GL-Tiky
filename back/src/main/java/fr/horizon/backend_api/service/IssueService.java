@@ -2,10 +2,13 @@ package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.Category;
+import fr.horizon.backend_api.model.IssueStatus;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.IssueDTO;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.CategoryRepository;
+import fr.horizon.backend_api.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,12 +23,14 @@ import java.util.UUID;
 public class IssueService {
 
     private final IssueRepository issueRepository;
+    private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final String uploadDir = "uploads/issues/";
 
     public IssueService(IssueRepository issueRepository,
-                        CategoryRepository categoryRepository) {
+                        CategoryRepository categoryRepository, UserRepository userRepository) {
         this.issueRepository = issueRepository;
+        this.userRepository = userRepository;
         this.categoryRepository = categoryRepository;
     }
 
@@ -44,7 +49,6 @@ public class IssueService {
                 .description(dto.getDescription())
                 .categorie(category)
                 .createur(creator)
-                .statut("en attente de traitement")
                 .estPrive(false)
                 .build();
 
@@ -96,5 +100,22 @@ public class IssueService {
         } catch (IOException e) {
             throw new RuntimeException("Erreur lors du téléchargement des fichiers", e);
         }
+    }
+
+    @Transactional
+    private void assignManagerToIssue(Long issueId, Long userId){
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new EntityNotFoundException("Ticket non trouvé"));
+
+        User teacher = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
+
+        if(!teacher.isTeacher()){
+            throw new IllegalArgumentException("L'utilisateur visé n'est pas un teacher");
+        }
+
+//        issue.setManager(teacher);`
+        // envoyer une demande de gerer un manager 
+        issue.setStatut(IssueStatus.VALIDE);
     }
 }

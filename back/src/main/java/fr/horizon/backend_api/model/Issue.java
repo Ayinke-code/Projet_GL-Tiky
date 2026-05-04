@@ -21,7 +21,7 @@ public class Issue {
 
     private String description;
 
-    private String statut = "en attente de traitement";
+    private IssueStatus statut = IssueStatus.INCOMPLETE;
 
     private Boolean estPrive = false;
 
@@ -42,6 +42,10 @@ public class Issue {
     @ManyToOne
     @JoinColumn(name = "id_util", nullable = false)
     private User createur;
+
+    @ManyToOne
+    @JoinColumn(name = "id_util_1")
+    private User manager;
 
     @PrePersist
     public void prePersist() {
