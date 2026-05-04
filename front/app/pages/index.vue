@@ -72,5 +72,22 @@
         }]"
       />
     </UPageSection>
+    
+    <!-- Redirection vers les catégories -->
+    <div class="flex items-center justify-center h-full">
+      <p class="text-gray-500">Redirection vers les catégories...</p>
+    </div>
   </div>
 </template>
+
+
+<script setup>
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+onMounted(() => {
+  router.push('/categorie')
+})
+</script>
