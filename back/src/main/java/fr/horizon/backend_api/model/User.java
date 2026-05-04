@@ -42,4 +42,8 @@ public class User {
         this.createdAt = LocalDateTime.now();
     }
 
+    public boolean isTeacher(){
+        return this.role.getName().equals("TEACHER");
+    }
+
 }
