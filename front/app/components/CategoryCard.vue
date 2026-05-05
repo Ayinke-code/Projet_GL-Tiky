@@ -7,11 +7,7 @@
     <div v-if="category.status === 'archived'" class="absolute inset-0 bg-white/10 flex items-center justify-center z-10 pointer-events-none">
       <span class="text-red-600 text-5xl font-black rotate-[-20deg] opacity-40 border-8 border-red-600 p-4 rounded-xl tracking-widest">ARCHIVE</span>
     </div>
-
-    <!-- Badge Suivi -->
-    <div v-if="isFollowed && category.status !== 'archived'" class="absolute top-0 right-0 bg-indigo-600 text-white text-[8px] font-bold px-2 py-1 rounded-bl-lg uppercase tracking-tighter">
-      Suivi
-    </div>
+    
 
     <div class="flex justify-between items-start mb-2">
       <div>
@@ -26,17 +22,20 @@
         </div>
 
         <template v-else>
+          <!-- Bouton Toggle Suivre/Suivi -->
           <button 
             v-if="isFollowed" 
-            @click.stop="$emit('unfollow')"
-            class="text-[10px] text-gray-400 hover:text-red-500 transition-colors p-1"
+            @click.stop="confirmUnfollow"
+            class="text-[10px] bg-emerald-600 text-white px-3 py-1 rounded-full font-bold hover:bg-red-600 transition-colors flex items-center group/btn"
             title="Ne plus suivre"
           >
-            <i class="fa-solid fa-heart-circle-minus"></i>
+            <i class="fa-solid fa-check mr-1 group-hover/btn:hidden"></i>
+            <i class="fa-solid fa-xmark mr-1 hidden group-hover/btn:inline"></i>
+            <span class="group-hover/btn:hidden">Suivi</span>
+            <span class="hidden group-hover/btn:inline">Ne plus suivre</span>
           </button>
-          
           <button 
-            v-if="!isFollowed" 
+            v-else 
             @click.stop="$emit('follow')"
             class="text-[10px] bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-bold hover:bg-indigo-600 hover:text-white transition-colors"
           >
@@ -70,18 +69,19 @@ import { computed } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 
 const { user } = useAuth()
+const emit = defineEmits(['click', 'follow', 'unfollow'])
 
 const props = defineProps({ 
-  category: {
-    type: Object,
-    required: true
-  },
-  isFollowed: {
-    type: Boolean,
-    default: false
-  }
+  category: { type: Object, required: true },
+  isFollowed: { type: Boolean, default: false }
 })
-defineEmits(['click', 'follow', 'unfollow'])
+
+// Fonction pour confirmer avant de déclencher l'événement
+const confirmUnfollow = () => {
+  if (confirm(`Êtes-vous sûr de vouloir arrêter de suivre "${props.category.subject}" ?`)) {
+    emit('unfollow')
+  }
+}
 
 const formatDate = (dateString) => {
   if (!dateString) return ''

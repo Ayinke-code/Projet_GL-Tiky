@@ -1,6 +1,5 @@
 <template>
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-    <h2 class="text-sm font-medium uppercase tracking-wider text-blue-800 mb-6">Créer une nouvelle catégorie</h2>
+  <div class="p-2">
     
     <form @submit.prevent="submitForm" class="space-y-4">
       <!-- Grid pour aligner les champs -->
