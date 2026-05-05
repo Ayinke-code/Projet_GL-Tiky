@@ -14,6 +14,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Contrôleur d'authentification.
+ * <p>
+ * Fournit les endpoints liés à la connexion, récupération de l'utilisateur courant
+ * et déconnexion. Gère également la création et suppression du cookie JWT.
+ */
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -24,6 +30,13 @@ public class AuthController {
     @Value("${jwt.expiration}")
     private long expiration;
 
+    /**
+     * Authentifie un utilisateur et génère un cookie contenant le JWT.
+     *
+     * @param loginRequest identifiants utilisateur (email, mot de passe)
+     * @param response réponse HTTP utilisée pour ajouter le cookie
+     * @return réponse HTTP 200 si authentification réussie
+     */
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(
             @RequestBody LoginRequest loginRequest,
@@ -43,6 +56,12 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * Retourne les informations de l'utilisateur actuellement authentifié.
+     *
+     * @param authentication contexte de sécurité Spring contenant l'utilisateur connecté
+     * @return DTO de l'utilisateur courant
+     */
     @GetMapping("/me")
     public ResponseEntity<UserDto> me(Authentication authentication) {
         String email = authentication.getName();
@@ -50,6 +69,12 @@ public class AuthController {
         return ResponseEntity.ok(userService.toDto(user));
     }
 
+    /**
+     * Déconnecte l'utilisateur en supprimant le cookie JWT.
+     *
+     * @param response réponse HTTP utilisée pour supprimer le cookie
+     * @return réponse HTTP 200 sans contenu
+     */
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletResponse response) {
 

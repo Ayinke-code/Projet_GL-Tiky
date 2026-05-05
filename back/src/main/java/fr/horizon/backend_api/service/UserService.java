@@ -10,6 +10,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+/**
+ * Service de gestion des utilisateurs.
+ * <p>
+ * Fournit les opérations liées à la création, la recherche et la conversion
+ * des entités User en DTO.
+ */
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -18,6 +24,21 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
+    /**
+     * Crée un nouvel utilisateur.
+     * <p>
+     * Étapes :
+     * <ul>
+     *     <li>Vérifie si l'email est déjà utilisé</li>
+     *     <li>Récupère le rôle associé</li>
+     *     <li>Encode le mot de passe</li>
+     *     <li>Sauvegarde l'utilisateur en base</li>
+     * </ul>
+     *
+     * @param dto données de création utilisateur
+     * @return l'utilisateur créé
+     * @throws RuntimeException si l'email existe déjà ou si le rôle est introuvable
+     */
     public User createUser(UserRequestDto dto){
         if (userRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("Email already used");
@@ -36,11 +57,24 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    /**
+     * Recherche un utilisateur par email.
+     *
+     * @param email email de l'utilisateur
+     * @return l'utilisateur correspondant
+     * @throws RuntimeException si aucun utilisateur n'est trouvé
+     */
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
+    /**
+     * Convertit une entité User en DTO.
+     *
+     * @param user entité utilisateur
+     * @return DTO contenant les informations publiques de l'utilisateur
+     */
     public UserDto toDto(User user) {
         return UserDto.builder()
                 .id(user.getId())
