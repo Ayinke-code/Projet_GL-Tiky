@@ -31,6 +31,7 @@
 		<java.version>17</java.version>
 		<sonar.projectKey>Team3_2026_DevBranch_Project</sonar.projectKey>
 		<sonar.projectName>Team3_2026_DevBranch</sonar.projectName>
+		<sonar.qualitygate.wait>true</sonar.qualitygate.wait>
 		<sonar.host.url>http://172.24.1.1/sonar</sonar.host.url>
 	</properties>
 	<dependencies>

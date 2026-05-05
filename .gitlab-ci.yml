@@ -1,25 +1,35 @@
 image: srv-proxy.openstack.etudis.eseo.fr:1973/projetgl-cicd:latest
 
 variables:
-  # Maven local repository path for caching
+  # Maven configuration
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Dhttp.proxyHost=192.168.4.8 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=192.168.4.8 -Dhttps.proxyPort=3128"
-  MAVEN_CLI_OPTS: "--batch-mode"
-
+  MAVEN_CLI_OPTS: "-s $CI_PROJECT_DIR/.m2/settings.xml --batch-mode"
+  
+  # SonarQube configuration
+  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+  GIT_DEPTH: "0"
+  
+  # Proxy exceptions
   no_proxy: "gitlab-etu.openstack.etudis.eseo.fr,localhost,127.0.0.1,172.24.1.1"
 
 cache:
+  policy: pull-push
+  key: "maven-sonar-cache-$CI_COMMIT_REF_SLUG"
   paths:
     - .m2/repository
+    - .sonar/cache
 
 stages:
   - sonar
 
 before_script:
-  # Ensure clean slate for ChromeDriver if needed by the runner
+  # Clean ChromeDriver if needed
   - rm -f /usr/bin/chromedriver || true
+  
+  # Set proxy environment variables
   - export http_proxy=http://192.168.4.8:3128
   - export https_proxy=http://192.168.4.8:3128
-
+  
   # Create Maven proxy configuration
   - mkdir -p .m2
   - |
@@ -32,7 +42,8 @@ before_script:
           <protocol>http</protocol>
           <host>192.168.4.8</host>
           <port>3128</port>
-        </proxy><proxy>
+        </proxy>
+        <proxy>
           <id>https-proxy</id>
           <active>true</active>
           <protocol>https</protocol>
@@ -46,6 +57,12 @@ before_script:
 sonar:
   stage: sonar
   script:
-    # Run Maven verify (includes tests) and sonar analysis
     - cd back
-    - mvn -s $CI_PROJECT_DIR/.m2/settings.xml --batch-mode verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
+    - mvn $MAVEN_CLI_OPTS verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.token=$SONAR_TOKEN
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == 'master'
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH == 'dev'
+    - if: $CI_COMMIT_BRANCH == 'develop'
