@@ -53,3 +53,15 @@
 <script setup>
 const { user, fetchUser } = useAuth()
 </script>
+
+
+<script setup>
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+onMounted(() => {
+  router.push('/categorie')
+})
+</script>
