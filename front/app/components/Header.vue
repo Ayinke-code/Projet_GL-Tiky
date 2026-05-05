@@ -19,6 +19,6 @@
   </header>
 </template>
 
-<script setup lang="ts">
+<script setup>
 defineEmits(['toggle-sidebar'])
 </script>

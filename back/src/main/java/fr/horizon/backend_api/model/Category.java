@@ -1,45 +1,85 @@
 package fr.horizon.backend_api.model;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
+/**
+ * Entité représentant une catégorie de questions.
+ * 
+ * @author Tiky Team
+ * @version 1.0
+ */
 @Entity
-@Getter
-@Setter
-@Builder
+@Table(name = "categories", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_category_name", columnNames = { "name", })
+})
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "categorie")
+@Builder
 public class Category {
 
+    /**
+     * Identifiant unique de la catégorie.
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idCat;
+    private Long id;
 
-    private String nom;
+    /**
+     * Nom de la catégorie (unique, insensible à la casse).
+     */
+    @Column(nullable = false, unique = true)
+    private String name;
 
-    private String description;
-
+    /**
+     * Statut de la catégorie (active, inactive, archived).
+     */
+    @Column(nullable = false)
     @Builder.Default
-    private Boolean estValide = false;
+    private String status = "active";
 
-    private LocalDateTime dateCreation;
+    /**
+     * Identifiant de l'enseignant propriétaire de la catégorie.
+     */
+    @Column(nullable = false)
+    private String categoryOwner;
 
-    private LocalDateTime dateModification;
+    private String subject;
 
-    @ManyToOne
-    @JoinColumn(name = "id_util")
-    private User categoryOwner;
+    /**
+     * Date et heure de création de la catégorie.
+     */
+    @Column(nullable = false)
+    @Temporal(TemporalType.TIMESTAMP)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
 
+    /**
+     * Date et heure de la dernière modification.
+     */
+    @Column
+    @Temporal(TemporalType.TIMESTAMP)
+    private LocalDateTime updatedAt;
+
+    /**
+     * Préchargement des données avant la persistance.
+     */
     @PrePersist
-    public void prePersist() {
-        this.dateCreation = LocalDateTime.now();
-        this.dateModification = LocalDateTime.now();
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * Mise à jour de la date de modification.
+     */
     @PreUpdate
-    public void preUpdate() {
-        this.dateModification = LocalDateTime.now();
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }

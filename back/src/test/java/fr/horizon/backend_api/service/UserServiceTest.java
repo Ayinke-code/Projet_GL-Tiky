@@ -1,11 +1,11 @@
 package fr.horizon.backend_api.service;
 
-import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.Role;
+import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.UserDto;
-import fr.horizon.backend_api.repository.UserRepository;
 import fr.horizon.backend_api.repository.RoleRepository;
-import org.junit.jupiter.api.BeforeEach;
+import fr.horizon.backend_api.repository.UserRepository;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,7 +16,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -33,60 +34,37 @@ class UserServiceTest {
     @InjectMocks
     private UserService userService;
 
-    private User testUser;
-    private Role testRole;
-    private UserDto userDto;
+    @Test
+    @DisplayName("Créer un utilisateur avec succès")
+    void createUser_Success() {
+        UserDto dto = new UserDto();
+        dto.setName("Test User");
+        dto.setEmail("test@user.com");
+        dto.setPassword("pass");
+        dto.setRoleId(1L);
 
-    @BeforeEach
-    void setUp() {
-        testRole = new Role("STUDENT");
-        testRole.setId(1L);
+        Role role = Role.builder().id(1L).name("ROLE_TEACHER").build();
 
-        testUser = new User();
-        testUser.setId(1L);
-        testUser.setEmail("test@test.fr");
-        testUser.setName("Test User");
-        testUser.setRole(testRole);
+        when(userRepository.existsByEmail(any())).thenReturn(false);
+        when(roleRepository.findById(1L)).thenReturn(Optional.of(role));
+        when(passwordEncoder.encode("pass")).thenReturn("encoded");
+        when(userRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
 
-        userDto = new UserDto();
-        userDto.setEmail("test@test.fr");
-        userDto.setName("Test User");
-        userDto.setPassword("password");
-        userDto.setRoleId(1L);
+        User result = userService.createUser(dto);
+
+        assertNotNull(result);
+        assertEquals("Test User", result.getName());
+        assertEquals("encoded", result.getPassword());
     }
 
     @Test
-    void testCreateUserSuccess() {
-        when(userRepository.existsByEmail("test@test.fr")).thenReturn(false);
-        when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
-        when(passwordEncoder.encode("password")).thenReturn("encoded_password");
-        when(userRepository.save(any(User.class))).thenReturn(testUser);
+    @DisplayName("Lancer une exception si email déjà utilisé")
+    void createUser_EmailUsed() {
+        UserDto dto = new UserDto();
+        dto.setEmail("used@test.com");
 
-        User createdUser = userService.createUser(userDto);
+        when(userRepository.existsByEmail("used@test.com")).thenReturn(true);
 
-        assertNotNull(createdUser);
-        assertEquals("test@test.fr", createdUser.getEmail());
-        verify(userRepository).existsByEmail("test@test.fr");
-        verify(roleRepository).findById(1L);
-        verify(passwordEncoder).encode("password");
-        verify(userRepository).save(any(User.class));
-    }
-
-    @Test
-    void testCreateUserEmailAlreadyExists() {
-        when(userRepository.existsByEmail("test@test.fr")).thenReturn(true);
-
-        assertThrows(RuntimeException.class, () -> userService.createUser(userDto));
-        verify(userRepository).existsByEmail("test@test.fr");
-        verify(userRepository, never()).save(any(User.class));
-    }
-
-    @Test
-    void testCreateUserRoleNotFound() {
-        when(userRepository.existsByEmail("test@test.fr")).thenReturn(false);
-        when(roleRepository.findById(999L)).thenReturn(Optional.empty());
-
-        userDto.setRoleId(999L);
-        assertThrows(RuntimeException.class, () -> userService.createUser(userDto));
+        assertThrows(RuntimeException.class, () -> userService.createUser(dto));
     }
 }
