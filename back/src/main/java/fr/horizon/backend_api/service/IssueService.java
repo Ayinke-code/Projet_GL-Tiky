@@ -3,6 +3,7 @@ package fr.horizon.backend_api.service;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.dto.IssueDTO;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.CategoryRepository;
@@ -10,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +21,7 @@ public class IssueService {
 
     private final IssueRepository issueRepository;
     private final CategoryRepository categoryRepository;
+    private static final Logger logger = LoggerFactory.getLogger(IssueService.class);
 
     public Issue createIssue(IssueDTO dto, User creator) {
         validateIssueInput(dto);
@@ -30,7 +34,7 @@ public class IssueService {
                 .description(dto.getDescription())
                 .categorie(category)
                 .createur(creator)
-                .statut("en attente de traitement")
+                .statut(IssueStatus.OUVERT)
                 .estPrive(false)
                 .build();
 
@@ -42,6 +46,10 @@ public class IssueService {
                 .orElseThrow(() -> new IllegalArgumentException("Issue non trouvée"));
     }
 
+    public List<Issue> getAllIssues() {
+        return issueRepository.findAll();
+    }
+
     public List<Issue> getIssuesByCategory(Long categorieId) {
         return issueRepository.findByCategorie_IdCat(categorieId);
     }
@@ -51,7 +59,8 @@ public class IssueService {
     }
 
     public List<Issue> getIssuesByStatus(String statut) {
-        return issueRepository.findByStatut(statut);
+        IssueStatus status = IssueStatus.fromValue(statut);
+        return issueRepository.findByStatut(status);
     }
 
     public void deleteIssue(Long id) {
@@ -59,6 +68,21 @@ public class IssueService {
             throw new IllegalArgumentException("Issue non trouvée");
         }
         issueRepository.deleteById(id);
+    }
+
+    public Issue updateIssueStatus(Long id, String newStatus) {
+        logger.info("updateIssueStatus called with id={}, newStatus={}", id, newStatus);
+        Issue issue = getIssueById(id);
+        logger.info("Current status before update: {}", issue.getStatut());
+        
+        IssueStatus status = IssueStatus.fromValue(newStatus);
+        logger.info("Parsed status: {}", status);
+        
+        issue.setStatut(status);
+        Issue saved = issueRepository.save(issue);
+        logger.info("Status after save: {}", saved.getStatut());
+        
+        return saved;
     }
 
     private void validateIssueInput(IssueDTO dto) {

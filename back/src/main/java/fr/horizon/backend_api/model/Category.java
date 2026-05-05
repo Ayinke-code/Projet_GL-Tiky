@@ -21,6 +21,7 @@ public class Category {
 
     private String description;
 
+    @Builder.Default
     private Boolean estValide = false;
 
     private LocalDateTime dateCreation;

@@ -3,6 +3,7 @@ package fr.horizon.backend_api.model;
 import java.time.LocalDateTime;
 import jakarta.persistence.*;
 import lombok.*;
+import fr.horizon.backend_api.model.enums.IssueStatus;
 
 @Entity
 @Getter
@@ -21,8 +22,11 @@ public class Issue {
 
     private String description;
 
-    private String statut = "en attente de traitement";
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private IssueStatus statut = IssueStatus.OUVERT;
 
+    @Builder.Default
     private Boolean estPrive = false;
 
     private LocalDateTime dateCreation;
