@@ -64,10 +64,10 @@ sonar:
   script:
     - cd back
     - mvn $MAVEN_CLI_OPTS verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.token=$SONAR_TOKEN
-  # allow_failure: true
-  # rules:
-  #   - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-  #   - if: $CI_COMMIT_BRANCH == 'master'
-  #   - if: $CI_COMMIT_BRANCH == 'main'
-  #   - if: $CI_COMMIT_BRANCH == 'dev'
-  #   - if: $CI_COMMIT_BRANCH == 'develop'
+  allow_failure: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == 'master'
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH == 'dev'
+    - if: $CI_COMMIT_BRANCH == 'develop'
