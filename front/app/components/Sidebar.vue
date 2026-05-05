@@ -8,31 +8,22 @@
     <!-- Navigation Scrollable -->
     <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
       <NuxtLink 
+        to="/issues" 
+        class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
+        :class="isActive('/issues') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
+      >
+        <i class="fa-solid fa-list-check w-6"></i> 
+        <span class="font-medium">Gestion Issues</span>
+      </NuxtLink>
+
+      <NuxtLink 
         to="/categorie" 
         class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
-        :class="isActive('/admin/categorie') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
+        :class="isActive('/categorie') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
       >
         <i class="fa-solid fa-folder w-6"></i> 
         <span class="font-medium">Gestion Catégories</span>
       </NuxtLink>
-
-      <!-- Liste dynamique des catégories -->
-      <div class="pt-6 mt-6 border-t border-slate-800">
-        <p class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
-          Catégories actives
-        </p>
-        <ul class="space-y-1">
-          <li v-for="category in activeCategories" :key="category.id" 
-              class="flex items-center px-4 py-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition cursor-pointer">
-            <span class="w-2 h-2 rounded-full inline-block mr-3" :class="getRandomColor(category.id)"></span>
-            <span class="text-sm font-medium">{{ category.name }}</span>
-          </li>
-          
-          <li v-if="activeCategories.length === 0" class="px-4 py-2 text-slate-600 italic text-xs">
-            Aucune catégorie
-          </li>
-        </ul>
-      </div>
     </nav>
 
     <!-- Footer Sidebar : Fixé en bas -->
@@ -44,19 +35,12 @@
   </aside>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { useRoute } from 'vue-router'
+
 const route = useRoute()
-// Assure-toi d'importer ton store ou composable ici
-const { categories } = useCategoryMock() 
 
 const isActive = (path) => route.path === path
-
-const activeCategories = computed(() => {
-  return categories.value.filter(c => c.status === 'active')
-})
-
-const colors = ['bg-emerald-400', 'bg-blue-400', 'bg-violet-400', 'bg-amber-400', 'bg-rose-400']
-const getRandomColor = (id) => colors[id % colors.length]
 </script>
 
 <style scoped>
