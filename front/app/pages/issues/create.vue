@@ -9,7 +9,7 @@
             icon="i-lucide-arrow-left"
             size="sm"
           />
-          <h1 class="text-2xl font-bold">Créer une issue</h1>
+          <h1 class="text-2xl font-bold">Créer un ticket</h1>
         </div>
       </template>
       
@@ -20,7 +20,7 @@
           <input 
             v-model="form.titre"
             type="text"
-            placeholder="Entrez le titre de l'issue"
+            placeholder="Entrez le titre du ticket"
             class="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
             required
           />
@@ -31,7 +31,7 @@
           <label class="block text-sm font-medium text-gray-700">Description *</label>
           <UTextarea 
             v-model="form.description"
-            placeholder="Décrivez l'issue en détail..."
+            placeholder="Décrivez le ticket en détail..."
             :rows="6"
             class="w-full"
             required

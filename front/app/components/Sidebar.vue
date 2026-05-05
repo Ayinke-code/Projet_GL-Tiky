@@ -13,7 +13,7 @@
         :class="isActive('/issues') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
       >
         <i class="fa-solid fa-list-check w-6"></i> 
-        <span class="font-medium">Gestion Issues</span>
+        <span class="font-medium">Mes tickets</span>
       </NuxtLink>
 
       <NuxtLink 
