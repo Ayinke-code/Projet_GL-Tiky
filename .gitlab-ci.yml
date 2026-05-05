@@ -96,8 +96,7 @@ unit-test:
 deploy:
   stage: deploy
   script:
-    - cd back
-    - mvn $MAVEN_CLI_OPTS package -DskipTests
+    - mvn -f back/pom.xml $MAVEN_CLI_OPTS package -DskipTests
     # Démarrer l'application avec Docker Compose
     - docker-compose up -d
     # Attendre que l'app soit prête
