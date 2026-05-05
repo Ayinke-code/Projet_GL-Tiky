@@ -125,6 +125,12 @@ public class IssueService {
         }
     }
 
+    /**
+     * envoyer une demande d'assignation d'un ticket à un teacher
+     * @param userId Id de l'enseignant visé par la demande.
+     * @param issueId Id du ticket visé par la demande.
+     * @return le DTO d'une demande d'assignation
+     */
     @Transactional
     public DemandeManagerDTO assignManagerToIssue(Long issueId, Long userId) {
         Issue issue = issueRepository.findById(issueId)
@@ -148,6 +154,12 @@ public class IssueService {
         return sendManagerRequest(issue, teacher);
     }
 
+    /**
+     * gère l'envoie d'une demande d'assignation d'un ticket à un teacher
+     * @param issue Ticket visé par la demande.
+     * @param targetedUser Teacher visé par la demande.
+     * @return le DTO d'une demande d'assignation
+     */
     private DemandeManagerDTO sendManagerRequest(Issue issue, User targetedUser) {
         DemandeManagerStatus initialStatus = DemandeManagerStatus.PENDING;
 
@@ -174,6 +186,13 @@ public class IssueService {
                 .build();
     }
 
+    /**
+     * répondre à une demande d'assignation d'un ticket à un teacher et met à jour le status de la demande
+     * @param userId Id de l'enseignant qui répond à la demande.
+     * @param demandeManagerId Id de la demande d'assignation du ticket.
+     * @param response Réponse de l'enseignant.
+     * @return le DTO d'une demande d'assignation
+     */
     @Transactional
     public DemandeManagerDTO respondManagerRequest(boolean response, Long demandeManagerId, Long userId) {
         DemandeManager demandeManager = demandeManagerRepository.findById(demandeManagerId)
