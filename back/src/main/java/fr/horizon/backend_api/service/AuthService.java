@@ -10,6 +10,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+/**
+ * Service responsable de l'authentification des utilisateurs.
+ * <p>
+ * Il gère la vérification des identifiants (email / mot de passe)
+ * et la génération du token JWT en cas de succès.
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -18,6 +24,20 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtToken jwtToken;
 
+    /**
+     * Authentifie un utilisateur à partir de ses identifiants.
+     * <p>
+     * Étapes :
+     * <ul>
+     *     <li>Recherche de l'utilisateur par email</li>
+     *     <li>Vérification du mot de passe</li>
+     *     <li>Génération d'un token JWT si authentification réussie</li>
+     * </ul>
+     *
+     * @param loginRequest contient l'email et le mot de passe saisis
+     * @return une réponse contenant les informations utilisateur et le token JWT
+     * @throws ResponseStatusException si l'email n'existe pas ou si le mot de passe est incorrect
+     */
     public LoginResponse login(LoginRequest loginRequest) {
         String email = loginRequest.getEmail();
         String password = loginRequest.getPassword();

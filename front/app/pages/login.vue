@@ -1,0 +1,103 @@
+<template>
+  <div class="min-h-screen flex items-center justify-center bg-default">
+
+    <!-- Affichage d’une alerte d’erreur temporaire -->
+    <div v-if="error" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
+      <Alert color="error" title="Erreur" :description="error" icon="i-lucide-alert-circle" />
+    </div>
+
+    <div class="w-full max-w-md p-6 space-y-4 rounded-xl bg-elevated shadow-lg border border-default">
+      <LoginForms @submit="handleLogin" />
+    </div>
+
+  </div>
+</template>
+
+<script setup>
+import LoginForms from '~/components/forms/LoginForms.vue'
+import Alert from '~/components/ui/Alert.vue';
+import { useAuth } from '~/composables/useAuth'
+
+const { login } = useAuth()
+
+/**
+ * Message d’erreur affiché à l’utilisateur (UI state).
+ */
+const error = ref(null)
+
+/**
+ * Timer utilisé pour supprimer automatiquement les messages d’erreur.
+ */
+let errorTimer = null
+
+/**
+ * Affiche un message d’erreur temporaire.
+ * Le message est automatiquement supprimé après 4 secondes.
+ *
+ * @param message message à afficher
+ */
+const showError = (message) => {
+  if (errorTimer) clearTimeout(errorTimer)
+  error.value = message
+  errorTimer = setTimeout(() => { error.value = null }, 4000)
+}
+
+/**
+ * Gère la soumission du formulaire de login.
+ *
+ * Étapes :
+ * - validation des champs (email / password)
+ * - appel API via composable useAuth
+ * - redirection si succès
+ * - affichage d’erreur si échec
+ *
+ * @param values données du formulaire de connexion
+ */
+const handleLogin = async (values) => {
+  error.value = false
+
+  // Gestion des erreurs des champs emails et password
+  const dataError = entriesFormat(values.data?.email, values.data?.password);
+  if (dataError) {
+    // error.value = dataError
+    showError(dataError)
+    return
+  }
+
+  // Envoie de la requête de login
+  try {
+    await login(values.data.email, values.data.password)
+    await navigateTo('/')
+  } catch (e) {
+    // error.value = "Email ou mot de passe incorrect"
+    showError('Email ou mot de passe incorrect.')
+    console.error('login failed', e)
+  }
+}
+
+/**
+ * Valide le format des champs de connexion.
+ *
+ * @param email email utilisateur
+ * @param password mot de passe utilisateur
+ * @return message d’erreur si invalide, sinon null
+ */
+function entriesFormat(email, password) {
+  if (!email || !password) return 'Veuillez remplir tous les champs.'
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(email)) return 'Adresse email invalide.'
+
+  if (password.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.'
+
+  return null // pas d'erreur
+}
+
+/**
+ * Nettoyage du timer lors de la destruction du composant.
+ */
+onUnmounted(() => {
+  if (errorTimer) clearTimeout(errorTimer)
+})
+
+</script>
