@@ -1,9 +1,11 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.model.Category;
+import fr.horizon.backend_api.model.CategoryFollower;
 import fr.horizon.backend_api.model.dto.CategoryResponseDTO;
 import fr.horizon.backend_api.model.dto.CreateCategoryDTO;
 import fr.horizon.backend_api.exception.CategoryAlreadyExistsException;
+import fr.horizon.backend_api.repository.CategoryFollowerRepository;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,28 @@ public class CategoryService {
      * Repository pour l'accès aux données des catégories.
      */
     private final CategoryRepository categoryRepository;
+    private final CategoryFollowerRepository followerRepository;
+
+    @Transactional
+    public void followCategory(Long categoryId, String teacherId) {
+        if (!followerRepository.existsByTeacherIdAndCategoryId(teacherId, categoryId)) {
+            followerRepository.save(CategoryFollower.builder()
+                    .teacherId(teacherId)
+                    .categoryId(categoryId)
+                    .build());
+        }
+    }
+
+    @Transactional
+    public void unfollowCategory(Long categoryId, String teacherId) {
+        followerRepository.deleteByTeacherIdAndCategoryId(teacherId, categoryId);
+    }
+
+    public List<Long> getFollowedCategoryIds(String teacherId) {
+        return followerRepository.findByTeacherId(teacherId).stream()
+                .map(CategoryFollower::getCategoryId)
+                .collect(Collectors.toList());
+    }
 
     /**
      * Crée une nouvelle catégorie pour un enseignant.
@@ -70,26 +94,55 @@ public class CategoryService {
                 .build();
 
         Category savedCategory = categoryRepository.save(category);
+        
+        // Auto-follow pour le créateur
+        followCategory(savedCategory.getId(), teacherId);
+        
         return convertToDTO(savedCategory);
     }
-
-    public CategoryResponseDTO updateCategory(Long id, CreateCategoryDTO dto) {
+ 
+    @Transactional
+    public CategoryResponseDTO updateCategory(Long id, CreateCategoryDTO dto, String requesterId) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée avec l'id : " + id));
-
-        category.setName(dto.getName());
-        category.setSubject(dto.getSubject());
-        // ... autres champs si nécessaire
-
+ 
+        // Vérification des droits : seul le propriétaire peut modifier
+        if (!category.getCategoryOwner().equals(requesterId)) {
+            throw new SecurityException("Seul le propriétaire de la catégorie peut la modifier.");
+        }
+ 
+        category.setName(dto.getName().trim());
+        category.setSubject(dto.getSubject().trim());
+        
+        // Transfert de propriété si spécifié dans le DTO (en utilisant le champ teacher si présent)
+        if (dto.getTeacher() != null && !dto.getTeacher().isEmpty()) {
+            category.setCategoryOwner(dto.getTeacher());
+        }
+ 
         Category saved = categoryRepository.save(category);
         return convertToDTO(saved);
     }
-
+ 
+    /**
+     * Récupère toutes les catégories actives du système + les catégories possédées par le prof.
+     */
+    @Transactional(readOnly = true)
+    public List<CategoryResponseDTO> getAllActiveCategoriesForTeacher(String teacherId) {
+        // On récupère tout ce qui est actif
+        List<Category> allActive = categoryRepository.findByStatus("active");
+        
+        // On récupère tout ce que possède le prof (même archivé)
+        List<Category> ownedByMe = categoryRepository.findByCategoryOwner(teacherId);
+        
+        // On merge et on convertit en DTO (en évitant les doublons)
+        return java.util.stream.Stream.concat(allActive.stream(), ownedByMe.stream())
+                .distinct()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+ 
     /**
      * Récupère toutes les catégories d'un enseignant.
-     * 
-     * @param teacherId L'identifiant de l'enseignant
-     * @return Liste des catégories de l'enseignant converties en DTOs
      */
     @Transactional(readOnly = true)
     public List<CategoryResponseDTO> getCategoriesByTeacher(String teacherId) {
@@ -97,6 +150,8 @@ public class CategoryService {
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
+
+
 
     /**
      * Récupère toutes les catégories actives d'un enseignant.
@@ -147,17 +202,48 @@ public class CategoryService {
                 .map(this::convertToDTO);
     }
 
+    @Transactional
+    public CategoryResponseDTO archiveCategory(Long id, String requesterId) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
+        
+        if (!category.getCategoryOwner().equals(requesterId)) {
+            throw new SecurityException("Seul le propriétaire peut archiver cette catégorie.");
+        }
+        
+        category.setStatus("archived");
+        return convertToDTO(categoryRepository.save(category));
+    }
+
+    @Transactional
+    public CategoryResponseDTO unarchiveCategory(Long id, String requesterId) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
+        
+        if (!category.getCategoryOwner().equals(requesterId)) {
+            throw new SecurityException("Seul le propriétaire peut désarchiver cette catégorie.");
+        }
+        
+        category.setStatus("active");
+        return convertToDTO(categoryRepository.save(category));
+    }
+
     /**
      * Supprime une catégorie.
-     * 
-     * @param id L'identifiant de la catégorie
-     * @throws IllegalArgumentException Si la catégorie n'existe pas
      */
     @Transactional
-    public void deleteCategory(Long id) {
-        if (!categoryRepository.existsById(id)) {
-            throw new IllegalArgumentException("La catégorie avec l'ID " + id + " n'existe pas");
+    public void deleteCategory(Long id, String requesterId) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("La catégorie n'existe pas"));
+        
+        if (!category.getCategoryOwner().equals(requesterId)) {
+            throw new SecurityException("Seul le propriétaire peut supprimer cette catégorie.");
         }
+
+        if (!"archived".equals(category.getStatus())) {
+            throw new IllegalStateException("Seule une catégorie archivée peut être supprimée définitivement.");
+        }
+
         categoryRepository.deleteById(id);
     }
 

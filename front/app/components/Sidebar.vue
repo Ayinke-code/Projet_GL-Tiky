@@ -8,6 +8,7 @@
     <!-- Navigation Scrollable -->
     <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
       <NuxtLink 
+        v-if="isTeacher"
         to="/categorie" 
         class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
         :class="isActive('/categorie') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
@@ -37,7 +38,10 @@
 
     <!-- Footer Sidebar : Fixé en bas -->
     <div class="p-4 border-t border-slate-800 bg-slate-950">
-      <button class="w-full flex items-center justify-center px-4 py-2 bg-slate-800 hover:bg-red-900/30 text-slate-400 hover:text-red-400 rounded-lg transition-all duration-200 text-sm font-medium">
+      <button 
+        @click="logout"
+        class="w-full flex items-center justify-center px-4 py-2 bg-slate-800 hover:bg-red-900/30 text-slate-400 hover:text-red-400 rounded-lg transition-all duration-200 text-sm font-medium"
+      >
         <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> Déconnexion
       </button>
     </div>
@@ -49,7 +53,7 @@ import { onMounted } from 'vue'
 const route = useRoute()
 // Assure-toi d'importer ton store ou composables ici
 const { categories, fetchCategories } = useCategory() 
-
+const { isTeacher, logout } = useAuth()
 onMounted(() => {
   fetchCategories()
 })

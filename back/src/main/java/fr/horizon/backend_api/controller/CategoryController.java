@@ -66,7 +66,7 @@ public class CategoryController {
     @GetMapping("/teacher")
     public ResponseEntity<List<CategoryResponseDTO>> getCategoriesByTeacher(
             @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String teacherId) {
-        List<CategoryResponseDTO> categories = categoryService.getCategoriesByTeacher(teacherId);
+        List<CategoryResponseDTO> categories = categoryService.getAllActiveCategoriesForTeacher(teacherId);
         return ResponseEntity.ok(categories);
     }
 
@@ -138,25 +138,37 @@ public class CategoryController {
      * @return La catégorie mise à jour
      */
     @PutMapping("/{id}")
-    public ResponseEntity<CategoryResponseDTO> createCategory(
+    public ResponseEntity<CategoryResponseDTO> updateCategory(
             @PathVariable Long id,
-            @Valid @RequestBody CreateCategoryDTO dto) {
-
-        CategoryResponseDTO updatedCategory = categoryService.updateCategory(id, dto);
+            @Valid @RequestBody CreateCategoryDTO dto,
+            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String requesterId) {
+ 
+        CategoryResponseDTO updatedCategory = categoryService.updateCategory(id, dto, requesterId);
         return ResponseEntity.ok(updatedCategory);
     }
 
+    @PatchMapping("/{id}/archive")
+    public ResponseEntity<CategoryResponseDTO> archiveCategory(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String requesterId) {
+        return ResponseEntity.ok(categoryService.archiveCategory(id, requesterId));
+    }
+ 
+    @PatchMapping("/{id}/unarchive")
+    public ResponseEntity<CategoryResponseDTO> unarchiveCategory(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String requesterId) {
+        return ResponseEntity.ok(categoryService.unarchiveCategory(id, requesterId));
+    }
+ 
     /**
      * Supprime une catégorie.
-     * 
-     * Endpoint: DELETE /api/categories/{id}
-     * 
-     * @param id L'identifiant de la catégorie
-     * @return Une réponse 204 No Content
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
-        categoryService.deleteCategory(id);
+    public ResponseEntity<Void> deleteCategory(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String requesterId) {
+        categoryService.deleteCategory(id, requesterId);
         return ResponseEntity.noContent().build();
     }
 
@@ -172,6 +184,36 @@ public class CategoryController {
         error.put("error", "CATEGORY_ALREADY_EXISTS");
         error.put("message", e.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @PostMapping("/{id}/follow")
+    public ResponseEntity<Void> followCategory(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String teacherId) {
+        categoryService.followCategory(id, teacherId);
+        return ResponseEntity.ok().build();
+    }
+ 
+    @DeleteMapping("/{id}/follow")
+    public ResponseEntity<Void> unfollowCategory(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String teacherId) {
+        categoryService.unfollowCategory(id, teacherId);
+        return ResponseEntity.ok().build();
+    }
+ 
+    @GetMapping("/followed")
+    public ResponseEntity<List<Long>> getFollowedCategoryIds(
+            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String teacherId) {
+        return ResponseEntity.ok(categoryService.getFollowedCategoryIds(teacherId));
+    }
+ 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException e) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "ILLEGAL_STATE");
+        error.put("message", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     /**

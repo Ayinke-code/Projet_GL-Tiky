@@ -1,10 +1,9 @@
 import { ref } from 'vue'
 
-const categories = ref([])
-const loading = ref(false)
-const error = ref(null)
-
 export const useCategory = (teacherId = 'teacher-default') => {
+  const categories = ref([])
+  const loading = ref(false)
+  const error = ref(null)
 
   const API_BASE = 'http://localhost:8080/api/categories'
 
@@ -79,12 +78,93 @@ export const useCategory = (teacherId = 'teacher-default') => {
     }
   }
 
+  const archiveCategory = async (id) => {
+    loading.value = true
+    try {
+      const response = await fetch(`${API_BASE}/${id}/archive`, {
+        method: 'PATCH',
+        headers: getHeaders()
+      })
+      if (!response.ok) throw new Error('Erreur lors de l\'archivage')
+      return await response.json()
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const unarchiveCategory = async (id) => {
+    loading.value = true
+    try {
+      const response = await fetch(`${API_BASE}/${id}/unarchive`, {
+        method: 'PATCH',
+        headers: getHeaders()
+      })
+      if (!response.ok) throw new Error('Erreur lors du désarchivage')
+      return await response.json()
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const followCategory = async (id) => {
+    try {
+      await fetch(`${API_BASE}/${id}/follow`, {
+        method: 'POST',
+        headers: getHeaders()
+      })
+    } catch (err) {
+      console.error('Follow error', err)
+    }
+  }
+
+  const unfollowCategory = async (id) => {
+    try {
+      await fetch(`${API_BASE}/${id}/follow`, {
+        method: 'DELETE',
+        headers: getHeaders()
+      })
+    } catch (err) {
+      console.error('Unfollow error', err)
+    }
+  }
+
+  const getFollowedCategories = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/followed`, {
+        headers: getHeaders()
+      })
+      if (response.ok) return await response.json()
+    } catch (err) {
+      console.error('Fetch followed error', err)
+    }
+    return []
+  }
+
+  const deleteCategoryPermanent = async (id) => {
+    loading.value = true
+    try {
+      const response = await fetch(`${API_BASE}/${id}`, {
+        method: 'DELETE',
+        headers: getHeaders()
+      })
+      if (!response.ok) throw new Error('Erreur lors de la suppression')
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     categories,
     loading,
     error,
     fetchCategories,
     createCategory,
-    updateCategory
+    updateCategory,
+    archiveCategory,
+    unarchiveCategory,
+    followCategory,
+    unfollowCategory,
+    getFollowedCategories,
+    deleteCategoryPermanent
   }
 }

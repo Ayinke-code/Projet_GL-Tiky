@@ -6,10 +6,13 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <CategoryCard 
-        v-for="cat in categories" 
+        v-for="cat in sortedCategories" 
         :key="cat.id" 
         :category="cat"
+        :is-followed="followedCategories.includes(cat.id)"
         @click="selectedCat = cat" 
+        @follow="handleFollow(cat.id)"
+        @unfollow="handleUnfollow(cat.id)"
       />
     </div>
 
@@ -45,8 +48,36 @@
 
           <!-- Actions -->
           <div class="flex gap-3 pt-6 border-t">
-            <button v-if="selectedCat.owner === 'teacher-default' || selectedCat.owner === 'Teacher_default'" @click="startEdit" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Modifier</button>
-            <button class="flex-1 px-4 py-2 bg-red-50 text-red-600 rounded-lg opacity-50 cursor-not-allowed" title="Fonctionnalité désactivée">Archiver</button>
+            <template v-if="selectedCat.owner === user?.id">
+              <button @click="startEdit" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Modifier</button>
+              
+              <button 
+                v-if="selectedCat.status !== 'archived'" 
+                @click="handleArchive" 
+                class="flex-1 px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+              >
+                Archiver
+              </button>
+              
+              <button 
+                v-else 
+                @click="handleUnarchive" 
+                class="flex-1 px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+              >
+                Désarchiver
+              </button>
+
+              <button 
+                v-if="selectedCat.status === 'archived'" 
+                @click="handleDeletePermanent" 
+                class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Supprimer définitivement
+              </button>
+            </template>
+            <div v-else class="flex-1 text-center py-2 text-gray-400 text-sm italic">
+              Lecture seule (Propriété de {{ selectedCat.owner }})
+            </div>
           </div>
         </div>
 
@@ -58,10 +89,11 @@
           <div class="space-y-4">
             <input v-model="editForm.name" class="w-full border p-2 rounded" placeholder="Matière" />
             <input v-model="editForm.subject" class="w-full border p-2 rounded" placeholder="Sujet" />
+            <label class="text-[10px] font-bold text-gray-400 uppercase">Propriétaire (Transférer)</label>
             <select v-model="editForm.teacher" class="w-full border p-2 rounded">
-              <option value="Teacher_default">Teacher_default</option>
-              <option value="Prof. Martin">Prof. Martin</option>
-              <option value="Dr. Smith">Dr. Smith</option>
+              <option value="teacher-default">Prof. Martin (Moi)</option>
+              <option value="teacher-002">Dr. Smith</option>
+              <option value="teacher-003">Mme. Durand</option>
             </select>
             <div class="flex gap-3 mt-6 pt-4 border-t">
               <button @click="saveEdit" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg">Sauvegarder</button>
@@ -82,19 +114,103 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useCategory } from '~/composables/useCategory' 
+ 
+const { 
+  categories, loading, createCategory, updateCategory, fetchCategories, 
+  archiveCategory, unarchiveCategory, followCategory: apiFollow, 
+  unfollowCategory: apiUnfollow, getFollowedCategories, deleteCategoryPermanent 
+} = useCategory()
 
-const { categories, loading, createCategory, updateCategory, fetchCategories } = useCategory()
+const { user, isTeacher, followedCategories, followCategory, unfollowCategory, setFollowedCategories } = useAuth()
+ 
+const sortedCategories = computed(() => {
+  return [...categories.value].sort((a, b) => {
+    // 1. Archivées tout en bas
+    if (a.status === 'archived' && b.status !== 'archived') return 1
+    if (a.status !== 'archived' && b.status === 'archived') return -1
+    
+    // 2. Si les deux sont dans le même état d'archive, on trie par "Suivi"
+    const aFollowed = followedCategories.value.includes(a.id)
+    const bFollowed = followedCategories.value.includes(b.id)
+    if (aFollowed && !bFollowed) return -1
+    if (!aFollowed && bFollowed) return 1
+    
+    return 0
+  })
+})
+
+onMounted(async () => {
+  if (!isTeacher.value) {
+    router.push('/')
+    return
+  }
+  await fetchCategories()
+  const followedIds = await getFollowedCategories()
+  setFollowedCategories(followedIds)
+})
+
+const handleFollow = async (id) => {
+  await apiFollow(id)
+  followCategory(id)
+}
+
+const handleUnfollow = async (id) => {
+  await apiUnfollow(id)
+  unfollowCategory(id)
+}
+
+const handleArchive = async () => {
+  try {
+    await archiveCategory(selectedCat.value.id)
+    await fetchCategories()
+    showSuccess("Catégorie archivée")
+    closeModal()
+  } catch (err) {
+    apiError.value = "Erreur lors de l'archivage"
+  }
+}
+
+const handleUnarchive = async () => {
+  try {
+    await unarchiveCategory(selectedCat.value.id)
+    await fetchCategories()
+    showSuccess("Catégorie désarchivée")
+    closeModal()
+  } catch (err) {
+    apiError.value = "Erreur lors du désarchivage"
+  }
+}
+
+const handleDeletePermanent = async () => {
+  if (!confirm("ATTENTION : Cette action est irréversible. Voulez-vous vraiment supprimer cette catégorie définitivement ?")) return
+  
+  try {
+    await deleteCategoryPermanent(selectedCat.value.id)
+    await fetchCategories()
+    showSuccess("Catégorie supprimée définitivement")
+    closeModal()
+  } catch (err) {
+    apiError.value = "Erreur lors de la suppression"
+  }
+}
 
 const apiError = ref('')
 const successMessage = ref('')
 const selectedCat = ref(null)
 const isEditing = ref(false)
 const editForm = ref({ name: '', subject: '', teacher: 'Teacher_default' })
-
-
+ 
+ 
+import { useRouter } from 'vue-router'
+const router = useRouter()
+ 
 onMounted(async () => {
+  if (!isTeacher.value) {
+    router.push('/')
+    return
+  }
   await fetchCategories()
 })
 

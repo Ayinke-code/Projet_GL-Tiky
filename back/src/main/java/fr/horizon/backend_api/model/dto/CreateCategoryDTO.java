@@ -33,4 +33,9 @@ public class CreateCategoryDTO {
     @NotBlank(message = "Le sujet ne peut pas être vide")
     @Size(max = 200, message = "Le sujet ne doit pas dépasser 200 caractères")
     private String subject;
+ 
+    /**
+     * Identifiant de l'enseignant (utilisé pour la création initiale ou le transfert de propriété).
+     */
+    private String teacher;
 }
