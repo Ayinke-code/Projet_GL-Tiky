@@ -55,13 +55,18 @@ const { user, fetchUser } = useAuth()
 </script>
 
 
-<script setup>
+<script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+
+definePageMeta({
+  layout: 'blank'
+})
 
 const router = useRouter()
 
 onMounted(() => {
-  router.push('/categorie')
+  // Redirect to login if not authenticated
+  router.push('/login')
 })
 </script>
