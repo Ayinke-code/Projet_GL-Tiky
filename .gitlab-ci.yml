@@ -198,10 +198,11 @@ selenium-test:
   #   - deploy
   # allow_failure: true
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_COMMIT_BRANCH == "dev"
-    - if: $CI_COMMIT_BRANCH # Pipeline dev
+    # - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # - if: $CI_COMMIT_BRANCH == "main"
+    # - if: $CI_COMMIT_BRANCH == "dev"
+    # - if: $CI_COMMIT_BRANCH
+    - when: never # Pipeline dev
 
 # Stage 5: SonarQube Analysis
 sonar:
