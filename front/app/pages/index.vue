@@ -73,9 +73,9 @@
       />
     </UPageSection>
     
-    <!-- Redirection vers les catégories -->
+    <!-- Redirection vers la connexion -->
     <div class="flex items-center justify-center h-full">
-      <p class="text-gray-500">Redirection vers les catégories...</p>
+      <p class="text-gray-500">Redirection vers la connexion...</p>
     </div>
   </div>
 </template>
@@ -92,6 +92,6 @@ definePageMeta({
 const router = useRouter()
 
 onMounted(() => {
-  router.push('/categorie')
+  router.push('/login')
 })
 </script>

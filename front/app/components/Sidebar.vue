@@ -11,7 +11,7 @@
         <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Mon espace</p>
         <p class="text-sm font-semibold text-white">{{ user?.name || 'Utilisateur' }}</p>
         <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wide">
-          <span class="rounded-full bg-slate-800 px-2.5 py-1 text-slate-300">{{ user?.role || 'USER' }}</span>
+          <span class="rounded-full bg-slate-800 px-2.5 py-1 text-slate-300">{{ user?.role || 'STUDENT' }}</span>
           <span v-if="isIssueCreator" class="rounded-full bg-emerald-500/20 px-2.5 py-1 text-emerald-300">Issue Creator</span>
           <span v-if="isIssueFollower" class="rounded-full bg-blue-500/20 px-2.5 py-1 text-blue-300">Issue Follower</span>
           <span v-if="isParticipant" class="rounded-full bg-amber-500/20 px-2.5 py-1 text-amber-300">Participant</span>
