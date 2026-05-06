@@ -158,6 +158,10 @@ deploy:
     # Déploiement Docker sur le serveur
     - |
       ssh $DEPLOY_USER@$DEPLOY_SERVER << 'ENDSSH'
+        echo "📍 Répertoire courant: $(pwd)"
+        echo "📂 Contenu de $DEPLOY_PATH:"
+        ls -la $DEPLOY_PATH/
+        
         cd $DEPLOY_PATH
         
         echo "📦 Arrêt des anciens conteneurs..."
