@@ -101,14 +101,23 @@ unit-test:
 # Stage 3: Deploy sur serveur de dev
 deploy:
   stage: deploy
+deploy:
+  stage: deploy
   before_script:
     # Installation des outils SSH
     - apt-get update && apt-get install -y openssh-client rsync
     - eval $(ssh-agent -s)
-    - chmod 600 $SSH_PRIVATE_KEY
-    - ssh-add $SSH_PRIVATE_KEY
+    
+    # Créer le dossier SSH
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
+    
+    # Créer le fichier de clé avec la variable
+    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    
+    # Ajouter la clé à l'agent
+    - ssh-add ~/.ssh/id_rsa
     
     # Ajouter le serveur aux known_hosts
     - ssh-keyscan -H $DEPLOY_SERVER >> ~/.ssh/known_hosts
