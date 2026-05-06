@@ -60,3 +60,17 @@ email: 'admin@admin.fr'
 password: 'password'
 
 ---
+
+
+##  Utilisateur Teacher
+Email: teacher1@horizon.fr
+Mot de passe: password
+
+Email: teacher2@horizon.fr
+Mot de passe: password
+
+##Utilisateur Student
+Email: student1@horizon.fr
+Mot de passe: password
+Email: student2@horizon.fr
+Mot de passe: password
