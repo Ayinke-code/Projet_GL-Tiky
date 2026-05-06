@@ -3,7 +3,7 @@ image: srv-proxy.openstack.etudis.eseo.fr:1973/projetgl-cicd:latest
 variables:
   # Maven configuration
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Dhttp.proxyHost=192.168.4.8 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=192.168.4.8 -Dhttps.proxyPort=3128"
-  MAVEN_CLI_OPTS: "-s $CI_PROJECT_DIR/.m2/settings.xml --batch-mode"
+  MAVEN_CLI_OPTS: "-s .m2/settings.xml --batch-mode"
   
   # SonarQube configuration
   SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
@@ -211,10 +211,9 @@ sonar:
   stage: sonar
   script:
     - cd back
-    - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
+    - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN -Dsonar.coverage.jacoco.xmlReportPaths=back/target/site/jacoco/jacoco.xml
   dependencies:
     - unit-test
-  allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_COMMIT_BRANCH == 'main'
