@@ -52,9 +52,9 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
 
-        Role studentRole = getOrCreateRole("STUDENT");
-        Role teacherRole = getOrCreateRole("TEACHER");
-        Role adminRole = getOrCreateRole("ADMIN");
+        Role studentRole = getOrCreateRole(ROLE_STUDENT);
+        Role teacherRole = getOrCreateRole(ROLE_TEACHER);
+        Role adminRole = getOrCreateRole(ROLE_ADMIN);
 
         getOrCreateUser(ADMIN_EMAIL, "Admin", adminRole);
         getOrCreateUser(TEACHER_EMAIL, "Teacher", teacherRole);

@@ -75,7 +75,8 @@ build:
       - back/target/
     expire_in: 1 hour
   rules:
-    - if: $CI_COMMIT_BRANCH   # toutes les branches
+    # - if: $CI_COMMIT_BRANCH   # toutes les branches
+    - when: never # Pipeline dev
 
 # Stage 2: Unit Tests
 unit-test:
@@ -95,6 +96,7 @@ unit-test:
     - build
   rules:
     - if: $CI_COMMIT_BRANCH   # toutes les branches
+    # - when: never # Pipeline dev
 
 # Stage 3: Deploy sur serveur de dev
 deploy:
@@ -209,7 +211,7 @@ sonar:
   stage: sonar
   script:
     - cd back
-    - mvn $MAVEN_CLI_OPTS verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.token=$SONAR_TOKEN
+    - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
   dependencies:
     - unit-test
   # allow_failure: true
