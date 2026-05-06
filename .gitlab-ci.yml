@@ -211,7 +211,7 @@ sonar:
   stage: sonar
   script:
     - cd back
-    - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
+    - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN -Dsonar.qualitygate.wait=true
   dependencies:
     - unit-test
   # allow_failure: true
