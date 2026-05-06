@@ -157,7 +157,7 @@ deploy:
     
     # Déploiement Docker sur le serveur
     - |
-      ssh $DEPLOY_USER@$DEPLOY_SERVER << 'ENDSSH'
+      ssh $DEPLOY_USER@$DEPLOY_SERVER << ENDSSH
         echo "📍 Répertoire courant: $(pwd)"
         echo "📂 Contenu de $DEPLOY_PATH:"
         ls -la $DEPLOY_PATH/
@@ -180,7 +180,7 @@ deploy:
         docker-compose logs --tail=50
         
         echo "🔍 Test de santé du backend..."
-        curl -f http://localhost:8080/api/health || echo "⚠️ Health check échoué (normal si pas de endpoint /health)"
+        curl -f http://localhost:8080/api/health || echo "⚠️ Health check échoué"
         
         echo "✅ Déploiement terminé !"
       ENDSSH
