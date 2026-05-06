@@ -188,7 +188,7 @@ const {
   unfollowCategory: apiUnfollow, getFollowedCategories, deleteCategoryPermanent 
 } = useCategory()
 
-const { user, isTeacher, followedCategories, followCategory, unfollowCategory, setFollowedCategories } = useAuth()
+const { user, canAccessCategories, followedCategories, followCategory, unfollowCategory, setFollowedCategories } = useAuth()
  
 const ownedAndFollowed = computed(() => {
   return categories.value.filter(cat => 
@@ -215,8 +215,8 @@ const archivedCategories = computed(() => {
 })
 
 onMounted(async () => {
-  if (!isTeacher.value) {
-    router.push('/')
+  if (!canAccessCategories.value) {
+    router.push('/login')
     return
   }
   await fetchCategories()
@@ -281,10 +281,6 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
  
 onMounted(async () => {
-  if (!isTeacher.value) {
-    router.push('/')
-    return
-  }
   await fetchCategories()
 })
 

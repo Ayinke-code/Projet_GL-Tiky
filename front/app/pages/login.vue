@@ -71,6 +71,7 @@ definePageMeta({
 })
 
 const router = useRouter()
+const { syncSession } = useAuth()
 
 const form = ref({
   email: 'admin@admin.fr',
@@ -97,10 +98,16 @@ const handleLogin = async () => {
       // Store token in cookie using nuxt composable
       const token = useCookie('auth_token')
       token.value = response.token
+      syncSession({
+        id: response.id,
+        name: response.name,
+        email: response.email,
+        role: response.role
+      })
       console.log('Connexion réussie! Token:', response.token.substring(0, 20) + '...')
-      
-      // Redirect to issues
-      await router.push('/issues')
+
+      // Redirige vers l'espace le plus cohérent avec le rôle métier
+      await router.push(response.role === 'USER' ? '/issues' : '/categorie')
     }
   } catch (err: any) {
     console.error('Login error:', err)

@@ -95,12 +95,12 @@ export const useApi = () => {
     }
   }
 
-  // Récupérer toutes les catégories
+  // Récupérer les catégories actives pour les formulaires de création
   const getCategories = async () => {
     loading.value = true
     error.value = null
     try {
-      const response = await $fetch(`${BASE_URL}/categories`, {
+      const response = await $fetch(`${BASE_URL}/categories/active`, {
         headers: getHeaders()
       })
       return response || []

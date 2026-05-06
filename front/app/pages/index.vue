@@ -1,23 +1,4 @@
 <template>
-<<<<<<< HEAD
-  <div></div>
-</template>
-
-<script setup lang="ts">
-definePageMeta({
-  layout: 'blank'
-})
-
-const router = useRouter()
-const token = useCookie('auth_token')
-
-onMounted(() => {
-  if (token.value) {
-    router.push('/issues')
-  } else {
-    router.push('/login')
-  }
-=======
   <div>
     <UPageHero
       title="Nuxt Starter Template"
@@ -100,14 +81,17 @@ onMounted(() => {
 </template>
 
 
-<script setup>
+<script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+
+definePageMeta({
+  layout: 'blank'
+})
 
 const router = useRouter()
 
 onMounted(() => {
   router.push('/categorie')
->>>>>>> origin/13-6597-us-teacher-creer-une-categorie
 })
 </script>
