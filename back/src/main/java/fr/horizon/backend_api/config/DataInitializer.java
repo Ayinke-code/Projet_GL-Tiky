@@ -61,23 +61,24 @@ public class DataInitializer implements CommandLineRunner {
                 "Bibliothèque & Documentation"
             };
 
-            String[] descriptions = {
-                "Problèmes liés aux bâtiments, salles, équipements fixes (climatisation, portes, fenêtres, etc.)",
-                "Questions administratives, certificats, inscriptions, dossiers étudiants",
-                "Problèmes de sécurité, issues de secours, risques pour les personnes",
-                "Restauration, logement, transport, activités étudiantes",
-                "Cours, absences de professeurs, supports de cours, examens",
-                "Signalement de comportements inappropriés, discrimination, harcèlement",
-                "WiFi, ordinateurs, serveurs, plateformes en ligne, équipements informatiques",
-                "Accès aux ressources, horaires, espaces de travail"
+            String[] subjects = {
+                "Maintenance",
+                "Scolarité",
+                "Sécurité",
+                "Vie Étudiante",
+                "Pédagogie",
+                "Discrimination",
+                "Réseau",
+                "Bibliothèque"
             };
 
             for (int i = 0; i < categories.length; i++) {
-                Category cat = new Category();
-                cat.setNom(categories[i]);
-                cat.setDescription(descriptions[i]);
-                cat.setEstValide(true);
-                cat.setCategoryOwner(admin);
+                Category cat = Category.builder()
+                        .name(categories[i])
+                        .subject(subjects[i])
+                        .status("active")
+                        .categoryOwner(String.valueOf(admin.getId()))
+                        .build();
                 categoryRepository.save(cat);
             }
 
