@@ -101,8 +101,6 @@ unit-test:
 # Stage 3: Deploy sur serveur de dev
 deploy:
   stage: deploy
-deploy:
-  stage: deploy
   before_script:
     # Installation des outils SSH
     - apt-get update && apt-get install -y openssh-client rsync
@@ -126,10 +124,15 @@ deploy:
     # Vérifier la connexion SSH
     - ssh $DEPLOY_USER@$DEPLOY_SERVER "echo 'Connexion SSH réussie'"
     
-    # Créer le dossier de déploiement
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER "mkdir -p $DEPLOY_PATH"
+    # Créer les dossiers de déploiement
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER "mkdir -p $DEPLOY_PATH/ssl"
     
-    # Transfert des fichiers (back, front, docker-compose.prod.yml)
+    # Transférer les certificats SSL sur le serveur
+    - echo "$SSL_CERT_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > $DEPLOY_PATH/ssl/server.crt"
+    - echo "$SSL_KEY_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > $DEPLOY_PATH/ssl/server.key"
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER "chmod 644 $DEPLOY_PATH/ssl/server.crt && chmod 600 $DEPLOY_PATH/ssl/server.key"
+    
+    # Transfert des fichiers (back, front, nginx.conf, docker-compose.prod.yml)
     - |
       rsync -avz --delete \
         --exclude 'node_modules' \
@@ -153,15 +156,13 @@ deploy:
         front/ \
         $DEPLOY_USER@$DEPLOY_SERVER:$DEPLOY_PATH/front/
     
+    # Transfert nginx.conf et docker-compose
+    - scp nginx.conf $DEPLOY_USER@$DEPLOY_SERVER:$DEPLOY_PATH/nginx.conf
     - scp docker-compose.prod.yml $DEPLOY_USER@$DEPLOY_SERVER:$DEPLOY_PATH/docker-compose.yml
     
     # Déploiement Docker sur le serveur
     - |
       ssh $DEPLOY_USER@$DEPLOY_SERVER << ENDSSH
-        echo "📍 Répertoire courant: $(pwd)"
-        echo "📂 Contenu de $DEPLOY_PATH:"
-        ls -la $DEPLOY_PATH/
-        
         cd $DEPLOY_PATH
         
         echo "📦 Arrêt des anciens conteneurs..."
@@ -176,18 +177,18 @@ deploy:
         echo "✅ État des conteneurs :"
         docker-compose ps
         
-        echo "📋 Logs des conteneurs :"
-        docker-compose logs --tail=50
+        echo "📋 Logs Nginx :"
+        docker-compose logs nginx --tail=20
         
-        echo "🔍 Test de santé du backend..."
-        curl -f http://localhost:8080/api/health || echo "⚠️ Health check échoué"
+        echo "🔍 Test de santé HTTPS..."
+        curl -k https://localhost || echo "⚠️ HTTPS non accessible"
         
         echo "✅ Déploiement terminé !"
       ENDSSH
     
   environment:
     name: dev
-    url: http://172.24.1.16:8080
+    url: https://172.24.1.16  # HTTPS maintenant
     
   dependencies:
     - build
