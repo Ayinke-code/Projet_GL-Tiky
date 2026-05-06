@@ -2,11 +2,14 @@ package fr.horizon.backend_api.service;
 
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class JwtTokenTest {
+@ExtendWith(MockitoExtension.class)
+class JwtTokenTest {
     @Test
     void shouldGenerateAndParseToken() {
         JwtToken jwtToken = new JwtToken();
