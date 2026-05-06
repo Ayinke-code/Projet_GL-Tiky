@@ -120,14 +120,16 @@ CREATE TABLE Demande_cat (
 -- ============================================================
 -- TABLE : Abonne_cat
 -- ============================================================
-CREATE TABLE Abonne_cat (
-    id_abn_cat      INT AUTO_INCREMENT,
-    date_creation   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    id_util         INT      NOT NULL,
-    id_cat          INT      NOT NULL,
-    PRIMARY KEY (id_abn_cat),
-    FOREIGN KEY (id_util) REFERENCES Utilisateur(id_util),
-    FOREIGN KEY (id_cat)  REFERENCES Categorie(id_cat)
+CREATE TABLE Abonne_tick (
+     id_abn_tick   INT AUTO_INCREMENT,
+     raison        ENUM('interesse', 'peut_aider', 'aussi_impacte') NOT NULL,
+     date_creation DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+     derniere_visite DATETIME,          -- ajouté pour US visualiser issues suivies
+     id_util       INT      NOT NULL,
+     id_tick       INT      NOT NULL,
+     PRIMARY KEY (id_abn_tick),
+     FOREIGN KEY (id_util) REFERENCES Utilisateur(id_util),
+     FOREIGN KEY (id_tick) REFERENCES Ticket(id_tick)
 );
 
 -- ============================================================
