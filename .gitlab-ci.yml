@@ -214,7 +214,7 @@ sonar:
     - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
   dependencies:
     - unit-test
-  # allow_failure: true
+  allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     - if: $CI_COMMIT_BRANCH == 'main'
