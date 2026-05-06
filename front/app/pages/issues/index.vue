@@ -41,8 +41,8 @@
         </template>
         
         <div class="flex gap-2 flex-wrap mb-4">
-          <UBadge variant="soft" color="blue">
-            {{ issue.categorie?.nom || 'Sans catégorie' }}
+          <UBadge variant="soft" color="info">
+            {{ issue.categorie?.name || issue.categorie?.nom || 'Sans catégorie' }}
           </UBadge>
           
           <div class="relative group">
@@ -76,7 +76,7 @@
             </div>
           </div>
           
-          <UBadge v-if="issue.estPrive" color="orange" variant="soft">
+          <UBadge v-if="issue.estPrive" color="warning" variant="soft">
             🔒 Privé
           </UBadge>
         </div>
@@ -87,7 +87,7 @@
               @click.stop="handleDelete(issue.idTick)"
               variant="ghost"
               size="sm"
-              color="red"
+              color="error"
               icon="i-lucide-trash-2"
               :loading="deletingId === issue.idTick"
             >
@@ -100,7 +100,7 @@
     
     <UAlert 
       v-if="error" 
-      color="red" 
+      color="error" 
       class="mt-4"
       @close="error = null"
     >
@@ -116,6 +116,8 @@ definePageMeta({
   layout: 'default'
 })
 
+const router = useRouter()
+const { isAuthenticated } = useAuth()
 const { getIssues, deleteIssue, updateIssueStatus } = useApi()
 const issues = ref<any[]>([])
 const loading = ref(true)
@@ -164,7 +166,7 @@ const formatDate = (date: string) => {
 const handleStatusChange = async (id: number, newStatus: string) => {
   updatingStatusId.value = id
   try {
-    const updatedIssue = await updateIssueStatus(id, newStatus)
+    const updatedIssue = await updateIssueStatus(id, newStatus) as any
     const issueIndex = issues.value.findIndex(i => i.idTick === id)
     if (issueIndex !== -1) {
       issues.value[issueIndex].statut = updatedIssue.statut
@@ -193,8 +195,13 @@ const handleDelete = async (id: number) => {
 }
 
 onMounted(async () => {
+  if (!isAuthenticated.value) {
+    await router.push('/login')
+    return
+  }
+
   try {
-    issues.value = await getIssues()
+    issues.value = await getIssues() as any[]
   } catch (err: any) {
     error.value = err.message || 'Erreur lors du chargement'
   } finally {

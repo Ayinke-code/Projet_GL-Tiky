@@ -46,9 +46,9 @@
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
             required
           >
-            <option value="">Sélectionnez une catégorie</option>
-            <option v-for="cat in categories" :key="cat.idCat" :value="cat.idCat">
-              {{ cat.nom }}
+            <option disabled value="">Sélectionnez une catégorie</option>
+            <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+              {{ cat.name }}
             </option>
           </select>
         </div>
@@ -56,7 +56,7 @@
         <!-- Erreur -->
         <UAlert 
           v-if="error" 
-          color="red" 
+          color="error"
           class="mt-4"
           @close="error = null"
         >
@@ -92,6 +92,7 @@ definePageMeta({
 })
 
 const router = useRouter()
+const { isAuthenticated, addIssueRole } = useAuth()
 const { createIssue, getCategories } = useApi()
 const submitting = ref(false)
 const loadingCategories = ref(true)
@@ -129,6 +130,8 @@ const handleCreateIssue = async () => {
       description: form.description,
       categorieId: form.categorieId
     })
+
+    addIssueRole('CREATOR')
     
     await router.push('/issues')
   } catch (err: any) {
@@ -140,9 +143,14 @@ const handleCreateIssue = async () => {
 }
 
 onMounted(async () => {
+  if (!isAuthenticated.value) {
+    await router.push('/login')
+    return
+  }
+
   try {
     const data = await getCategories()
-    categories.value = data || []
+    categories.value = (data || []) as any[]
     if (categories.value.length === 0) {
       error.value = 'Aucune catégorie disponible. Connecté? Backend lancé?'
     }
