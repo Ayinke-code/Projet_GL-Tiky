@@ -1,17 +1,30 @@
 package fr.horizon.backend_api.config;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
 import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
+
+    private static final String ROLE_STUDENT = "STUDENT";
+    private static final String ROLE_TEACHER = "TEACHER";
+    private static final String ROLE_ADMIN = "ADMIN";
+
+    private static final String ADMIN_EMAIL = "admin@admin.fr";
+    private static final String TEACHER_EMAIL = "teacher@teacher.fr";
+    private static final String STUDENT_EMAIL = "student@student.fr";
+
+    @Value("${app.default-password}")
+    private String defaultPassword;
 
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
@@ -22,6 +35,20 @@ public class DataInitializer implements CommandLineRunner {
                 .orElseGet(() -> roleRepository.save(new Role(name)));
     }
 
+    private User getOrCreateUser(String email, String name, Role role) {
+
+        return userRepository.findByEmail(email)
+                .orElseGet(() -> {
+                    User user = new User();
+                    user.setEmail(email);
+                    user.setName(name);
+                    user.setPassword(passwordEncoder.encode(defaultPassword));
+                    user.setRole(role);
+
+                    return userRepository.save(user);
+                });
+    }
+
     @Override
     public void run(String... args) {
 
@@ -29,38 +56,9 @@ public class DataInitializer implements CommandLineRunner {
         Role teacherRole = getOrCreateRole("TEACHER");
         Role adminRole = getOrCreateRole("ADMIN");
 
-        // Un compte admin
-        if (!userRepository.existsByEmail("admin@admin.fr")) {
-            User admin = new User();
-            admin.setEmail("admin@admin.fr");
-            admin.setName("Admin");
-            admin.setPassword(passwordEncoder.encode("password"));
-            admin.setRole(adminRole);
-
-            userRepository.save(admin);
-        }
-
-        // Un compte professeur
-        if (!userRepository.existsByEmail("teacher@teacher.fr")) {
-            User teacher = new User();
-            teacher.setEmail("teacher@teacher.fr");
-            teacher.setName("Teacher");
-            teacher.setPassword(passwordEncoder.encode("password"));
-            teacher.setRole(teacherRole);
-
-            userRepository.save(teacher);
-        }
-
-        // Un compte étudiant
-        if (!userRepository.existsByEmail("student@student.fr")) {
-            User student = new User();
-            student.setEmail("student@student.fr");
-            student.setName("Student");
-            student.setPassword(passwordEncoder.encode("password"));
-            student.setRole(studentRole);
-
-            userRepository.save(student);
-        }
+        getOrCreateUser(ADMIN_EMAIL, "Admin", adminRole);
+        getOrCreateUser(TEACHER_EMAIL, "Teacher", teacherRole);
+        getOrCreateUser(STUDENT_EMAIL, "Student", studentRole);
 
     }
 }
