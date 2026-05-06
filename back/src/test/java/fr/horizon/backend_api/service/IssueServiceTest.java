@@ -41,8 +41,8 @@ class IssueServiceTest {
     @BeforeEach
     void setUp() {
         testCategory = new Category();
-        testCategory.setIdCat(1L);
-        testCategory.setNom("Test Category");
+        testCategory.setId(1L);
+        testCategory.setName("Test Category");
 
         testUser = new User();
         testUser.setId(1L);

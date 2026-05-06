@@ -51,7 +51,7 @@ public class IssueService {
     }
 
     public List<Issue> getIssuesByCategory(Long categorieId) {
-        return issueRepository.findByCategorie_IdCat(categorieId);
+        return issueRepository.findByCategorie_Id(categorieId);
     }
 
     public List<Issue> getIssuesByCreator(Long creatorId) {

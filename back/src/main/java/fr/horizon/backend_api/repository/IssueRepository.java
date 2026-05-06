@@ -9,7 +9,7 @@ import java.util.List;
 @Repository
 public interface IssueRepository extends JpaRepository<Issue, Long> {
 
-    List<Issue> findByCategorie_IdCat(Long categorieId);
+    List<Issue> findByCategorie_Id(Long categorieId);
 
     List<Issue> findByCreateur_Id(Long createurId);
 
