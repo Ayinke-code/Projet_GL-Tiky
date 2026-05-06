@@ -6,7 +6,7 @@ const normalizeIssueRoles = (role, issueRoles) => {
     return issueRoles
   }
 
-  if (role === 'USER') {
+  if (role === 'STUDENT' || role === 'USER') {
     return ['PARTICIPANT']
   }
 
@@ -28,9 +28,9 @@ const normalizeUser = (storedUser) => {
     id: rawUser.id ?? null,
     name: rawUser.name ?? '',
     email: rawUser.email ?? '',
-    role: rawUser.role ?? 'USER',
+    role: rawUser.role ?? 'STUDENT',
     followedCategories: Array.isArray(rawUser.followedCategories) ? rawUser.followedCategories : [],
-    issueRoles: normalizeIssueRoles(rawUser.role ?? 'USER', rawUser.issueRoles)
+    issueRoles: normalizeIssueRoles(rawUser.role ?? 'STUDENT', rawUser.issueRoles)
   }
 }
 
@@ -47,7 +47,7 @@ export const useAuth = () => {
   }
 
   const isAuthenticated = computed(() => !!user.value)
-  const isUser = computed(() => user.value?.role === 'USER')
+  const isUser = computed(() => user.value?.role === 'STUDENT' || user.value?.role === 'USER')
   const isTeacher = computed(() => user.value?.role === 'TEACHER')
   const isAdmin = computed(() => user.value?.role === 'ADMIN')
   const isIssueCreator = computed(() => {

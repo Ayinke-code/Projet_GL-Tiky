@@ -107,7 +107,7 @@ const handleLogin = async () => {
       console.log('Connexion réussie! Token:', response.token.substring(0, 20) + '...')
 
       // Redirige vers l'espace le plus cohérent avec le rôle métier
-      await router.push(response.role === 'USER' ? '/issues' : '/categorie')
+      await router.push((response.role === 'STUDENT' || response.role === 'USER') ? '/issues' : '/categorie')
     }
   } catch (err: any) {
     console.error('Login error:', err)
