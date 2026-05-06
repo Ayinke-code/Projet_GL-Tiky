@@ -2,7 +2,6 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
-import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.dto.IssueDTO;
 import fr.horizon.backend_api.model.dto.UpdateIssueStatusDTO;
 import fr.horizon.backend_api.service.IssueService;
