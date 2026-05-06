@@ -29,6 +29,7 @@ public class DataInitializer implements CommandLineRunner {
         Role teacherRole = getOrCreateRole("TEACHER");
         Role adminRole = getOrCreateRole("ADMIN");
 
+        // Un compte admin
         if (!userRepository.existsByEmail("admin@admin.fr")) {
             User admin = new User();
             admin.setEmail("admin@admin.fr");
@@ -37,6 +38,28 @@ public class DataInitializer implements CommandLineRunner {
             admin.setRole(adminRole);
 
             userRepository.save(admin);
+        }
+
+        // Un compte professeur
+        if (!userRepository.existsByEmail("teacher@teacher.fr")) {
+            User teacher = new User();
+            teacher.setEmail("teacher@teacher.fr");
+            teacher.setName("Teacher");
+            teacher.setPassword(passwordEncoder.encode("password"));
+            teacher.setRole(teacherRole);
+
+            userRepository.save(teacher);
+        }
+
+        // Un compte étudiant
+        if (!userRepository.existsByEmail("student@student.fr")) {
+            User student = new User();
+            student.setEmail("student@student.fr");
+            student.setName("Student");
+            student.setPassword(passwordEncoder.encode("password"));
+            student.setRole(studentRole);
+
+            userRepository.save(student);
         }
 
     }
