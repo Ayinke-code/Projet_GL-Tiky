@@ -19,6 +19,8 @@ cache:
     - .m2/repository
     - .sonar/cache
     - back/target/
+    - front/node_modules/
+    - front/.nuxt/
 
 stages:
   - build
@@ -29,7 +31,7 @@ stages:
 
 before_script:
   # Install OpenSSL and add SonarQube SSL certificate to Java truststore
-  - apt-get update && apt-get install -y openssl
+  - apt-get update && apt-get install -y openssl curl
   - echo -n | openssl s_client -connect 172.24.1.1:443 -showcerts | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/sonar.crt
   - keytool -import -v -trustcacerts -alias sonar -file /tmp/sonar.crt -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
   
@@ -64,19 +66,37 @@ before_script:
     </settings>
     EOF
 
-# Stage 1: Build
-build:
+# Stage 1: Build Backend (JAR)
+build-backend:
   stage: build
   script:
     - cd back
-    - mvn $MAVEN_CLI_OPTS clean compile
+    - mvn $MAVEN_CLI_OPTS clean package -DskipTests
+    - ls -lh target/*.jar
   artifacts:
     paths:
-      - back/target/
-    expire_in: 1 hour
+      - back/target/*.jar
+    expire_in: 1 day
   rules:
-    - if: $CI_COMMIT_BRANCH   # toutes les branches
-    # - when: never # Pipeline dev
+    - if: $CI_COMMIT_BRANCH
+
+# Stage 2: Build Frontend (fichiers statiques)
+build-frontend:
+  stage: build
+  image: node:20-alpine
+  before_script:
+    - cd front
+    - npm ci
+  script:
+    # Build Nuxt en mode production (génère .output/public)
+    - npm run generate
+    - ls -lah .output/public
+  artifacts:
+    paths:
+      - front/.output/public/
+    expire_in: 1 day
+  rules:
+    - if: $CI_COMMIT_BRANCH
 
 # Stage 2: Unit Tests
 unit-test:
@@ -124,74 +144,64 @@ deploy:
     # Vérifier la connexion SSH
     - ssh $DEPLOY_USER@$DEPLOY_SERVER "echo 'Connexion SSH réussie'"
     
-    # Créer les dossiers de déploiement
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER "mkdir -p $DEPLOY_PATH/ssl"
-    
-    # Transférer les certificats SSL sur le serveur
-    - echo "$SSL_CERT_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > $DEPLOY_PATH/ssl/server.crt"
-    - echo "$SSL_KEY_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > $DEPLOY_PATH/ssl/server.key"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER "chmod 644 $DEPLOY_PATH/ssl/server.crt && chmod 600 $DEPLOY_PATH/ssl/server.key"
-    
-    # Transfert des fichiers (back, front, nginx.conf, docker-compose.prod.yml)
+    # Créer l'arborescence sur le serveur
     - |
-      rsync -avz --delete \
-        --exclude 'node_modules' \
-        --exclude '.git' \
-        --exclude 'target' \
-        --exclude '.m2' \
-        --exclude '.sonar' \
-        --exclude '.nuxt' \
-        --exclude '.output' \
-        --exclude 'dist' \
-        back/ \
-        $DEPLOY_USER@$DEPLOY_SERVER:$DEPLOY_PATH/back/
+      ssh $DEPLOY_USER@$DEPLOY_SERVER << 'ENDSSH'
+        mkdir -p ~/app/backend
+        mkdir -p ~/app/frontend
+        mkdir -p ~/app/ssl
+        mkdir -p ~/app/logs
+      ENDSSH
     
+    # Transférer les certificats SSL
+    - echo "$SSL_CERT_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > ~/app/ssl/server.crt"
+    - echo "$SSL_KEY_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > ~/app/ssl/server.key"
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER "chmod 644 ~/app/ssl/server.crt && chmod 600 ~/app/ssl/server.key"
+    
+    # Transférer le JAR backend
+    - scp back/target/*.jar $DEPLOY_USER@$DEPLOY_SERVER:~/app/backend/app.jar
+    
+    # Transférer les fichiers statiques frontend
+    - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER:~/app/frontend/
+    
+    # Transférer le fichier .env
+    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > ~/app/.env"
+    
+    # Redémarrer les services sur le serveur
     - |
-      rsync -avz --delete \
-        --exclude 'node_modules' \
-        --exclude '.git' \
-        --exclude '.nuxt' \
-        --exclude '.output' \
-        --exclude 'dist' \
-        front/ \
-        $DEPLOY_USER@$DEPLOY_SERVER:$DEPLOY_PATH/front/
-    
-    # Transfert nginx.conf et docker-compose
-    - scp nginx.conf $DEPLOY_USER@$DEPLOY_SERVER:$DEPLOY_PATH/nginx.conf
-    - scp docker-compose.prod.yml $DEPLOY_USER@$DEPLOY_SERVER:$DEPLOY_PATH/docker-compose.yml
-    
-    # Déploiement Docker sur le serveur
-    - |
-      ssh $DEPLOY_USER@$DEPLOY_SERVER << ENDSSH
-        cd $DEPLOY_PATH
+      ssh $DEPLOY_USER@$DEPLOY_SERVER << 'ENDSSH'
+        cd ~/app
         
-        echo "📦 Arrêt des anciens conteneurs..."
-        docker-compose down || true
+        echo "🛑 Arrêt de l'ancienne application backend..."
+        pkill -f 'java -jar.*app.jar' || echo "Aucun processus Java à arrêter"
         
-        echo "🔨 Build et démarrage des conteneurs..."
-        docker-compose up -d --build
+        echo "🚀 Démarrage du backend..."
+        nohup java -jar ~/app/backend/app.jar \
+          --spring.config.additional-location=file:~/app/.env \
+          > ~/app/logs/backend.log 2>&1 &
         
-        echo "⏳ Attente du démarrage (30 secondes)..."
-        sleep 30
+        echo "⏳ Attente du démarrage (15 secondes)..."
+        sleep 15
         
-        echo "✅ État des conteneurs :"
-        docker-compose ps
+        echo "✅ Vérification des processus..."
+        ps aux | grep java | grep -v grep || echo "⚠️ Backend non démarré"
         
-        echo "📋 Logs Nginx :"
-        docker-compose logs nginx --tail=20
+        echo "🔍 Test de santé..."
+        curl -f http://localhost:8081/api/user || echo "⚠️ Health check échoué"
         
-        echo "🔍 Test de santé HTTPS..."
-        curl -k https://localhost || echo "⚠️ HTTPS non accessible"
+        echo "📋 Dernières lignes des logs backend:"
+        tail -20 ~/app/logs/backend.log
         
         echo "✅ Déploiement terminé !"
       ENDSSH
     
   environment:
     name: dev
-    url: https://172.24.1.16  # HTTPS maintenant
+    url: https://172.24.1.16
     
   dependencies:
-    - build
+    - build-backend
+    - build-frontend
   
   rules:
     # - dev  # Pipeline dev
