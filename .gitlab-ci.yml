@@ -141,71 +141,25 @@ deploy:
     - ssh-keyscan -H $DEPLOY_SERVER >> ~/.ssh/known_hosts
     
   script:
-    # Vérifier la connexion SSH
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER "echo 'Connexion SSH réussie'"
-    
-    # Créer l'arborescence sur le serveur
-    - |
-      ssh $DEPLOY_USER@$DEPLOY_SERVER << 'ENDSSH'
-        mkdir -p ~/app/backend
-        mkdir -p ~/app/frontend
-        mkdir -p ~/app/ssl
-        mkdir -p ~/app/logs
-      ENDSSH
-    
-    # Transférer les certificats SSL
-    - echo "$SSL_CERT_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > ~/app/ssl/server.crt"
-    - echo "$SSL_KEY_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > ~/app/ssl/server.key"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER "chmod 644 ~/app/ssl/server.crt && chmod 600 ~/app/ssl/server.key"
-    
-    # Transférer le JAR backend
-    - scp back/target/*.jar $DEPLOY_USER@$DEPLOY_SERVER:~/app/backend/app.jar
-    
-    # Transférer les fichiers statiques frontend
-    - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER:~/app/frontend/
-    
-    # Transférer le fichier .env
-    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > ~/app/.env"
+  # Vérifier connexion
+  - ssh $DEPLOY_USER@$DEPLOY_SERVER "echo 'SSH OK'"
 
-    # Transférer la config Apache
-    - scp apache-site.conf $DEPLOY_USER@$DEPLOY_SERVER:~/app/apache-site.conf
-    
-    # Déployer le frontend ET configurer Apache
-    - |
-      ssh $DEPLOY_USER@$DEPLOY_SERVER << 'ENDSSH'
-        cd ~/app
-        
-        echo "📦 Déploiement du frontend..."
-        # ✅ Utiliser sudo pour rsync vers /var/www/html
-        sudo -n rsync -avz --delete ~/app/frontend/ /var/www/html/
-        
-        echo "🔧 Configuration Apache..."
-        sudo -n cp ~/app/apache-site.conf /etc/apache2/sites-available/000-default.conf
-        sudo -n apache2ctl configtest && sudo -n systemctl reload apache2 || echo "⚠️ Erreur Apache"
-        
-        echo "🛑 Arrêt de l'ancienne application backend..."
-        pkill -f 'java -jar.*app.jar' || echo "Aucun processus Java à arrêrer"
-        
-        echo "🚀 Démarrage du backend..."
-        cd ~/app/backend
-        nohup java -jar app.jar \
-          --spring.config.additional-location=file:~/app/.env \
-          > ~/app/logs/backend.log 2>&1 &
-        
-        echo "⏳ Attente du démarrage (15 secondes)..."
-        sleep 15
-        
-        echo "✅ Vérification des processus..."
-        ps aux | grep java | grep -v grep || echo "⚠️ Backend non démarré"
-        
-        echo "🔍 Test de santé..."
-        curl -f http://localhost:8081/api/user || echo "⚠️ Health check échoué"
-        
-        echo "📋 Dernières lignes des logs backend:"
-        tail -20 ~/app/logs/backend.log
-        
-        echo "✅ Déploiement terminé !"
-      ENDSSH
+  # Créer structure
+  - |
+    ssh $DEPLOY_USER@$DEPLOY_SERVER << 'ENDSSH'
+      mkdir -p ~/app/backend
+      mkdir -p ~/app/frontend
+      mkdir -p ~/app/logs
+    ENDSSH
+
+  # Backend
+  - scp back/target/*.jar $DEPLOY_USER@$DEPLOY_SERVER:~/app/backend/app.jar
+
+  # Frontend
+  - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER:~/app/frontend/
+
+  # Env
+  - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > ~/app/.env"
     
   environment:
     name: dev
