@@ -83,8 +83,13 @@ build-backend:
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend:
   stage: build
-  image: node:20-alpine
-  before_script:
+
+  script:
+    - export http_proxy=http://192.168.4.8:3128
+    - export https_proxy=http://192.168.4.8:3128
+
+    - npm config set proxy http://192.168.4.8:3128
+    - npm config set https-proxy http://192.168.4.8:3128
     - cd front
     - npm ci
   script:
