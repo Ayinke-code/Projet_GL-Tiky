@@ -29,7 +29,8 @@ public class SecurityConfig {
 
         http
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> {})
+                .cors(cors -> {
+                })
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
@@ -43,8 +44,7 @@ public class SecurityConfig {
                         .requestMatchers("/teacher/**").hasAnyAuthority("TEACHER", "ADMIN")
                         .requestMatchers("/student/**").hasAnyAuthority("STUDENT", "TEACHER", "ADMIN")
 
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -55,9 +55,9 @@ public class SecurityConfig {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of(
-                "http://localhost:3000",
-                "http://172.24.1.16:3000"
+        config.setAllowedOriginPatterns(List.of(
+                "http://localhost:*",
+                "http://172.24.1.16:*"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
