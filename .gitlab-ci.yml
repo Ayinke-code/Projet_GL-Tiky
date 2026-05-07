@@ -85,7 +85,7 @@ build-frontend:
 
     - cd front
     - npm ci
-    - npm run build
+    - NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE npm run build
     - ls -lah .output/public
 
   artifacts:
