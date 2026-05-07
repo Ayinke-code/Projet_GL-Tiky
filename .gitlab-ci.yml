@@ -113,7 +113,8 @@ unit-test:
       - back/target/surefire-reports/
     expire_in: 1 day
   dependencies:
-    - build
+    - build-frontend
+    - build-backend
   rules:
     # - if: $CI_COMMIT_BRANCH   # toutes les branches
     - when: never # Pipeline dev
