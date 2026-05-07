@@ -83,7 +83,7 @@ build-backend:
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend:
   stage: build
-
+  image: node:22
   script:
     - export http_proxy=http://192.168.4.8:3128
     - export https_proxy=http://192.168.4.8:3128
@@ -168,7 +168,7 @@ deploy:
     - scp back/target/*.jar $DEPLOY_USER@$DEPLOY_SERVER:~/app/backend/app.jar
     
     # Transférer les fichiers statiques frontend
-    - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER:~/app/frontend/
+    - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER:/var/www/html/
     
     # Transférer le fichier .env
     - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > ~/app/.env"
