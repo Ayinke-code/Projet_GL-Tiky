@@ -166,17 +166,29 @@ deploy:
     
     # Transférer le fichier .env
     - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > ~/app/.env"
+
+    # Transférer la config Apache
+    - scp apache-site.conf $DEPLOY_USER@$DEPLOY_SERVER:~/app/apache-site.conf
     
-    # Redémarrer les services sur le serveur
+    # Déployer le frontend ET configurer Apache
     - |
       ssh $DEPLOY_USER@$DEPLOY_SERVER << 'ENDSSH'
         cd ~/app
         
+        echo "📦 Déploiement du frontend..."
+        # ✅ Utiliser sudo pour rsync vers /var/www/html
+        sudo rsync -avz --delete ~/app/frontend/ /var/www/html/
+        
+        echo "🔧 Configuration Apache..."
+        sudo cp ~/app/apache-site.conf /etc/apache2/sites-available/000-default.conf
+        sudo apache2ctl configtest && sudo systemctl reload apache2 || echo "⚠️ Erreur Apache"
+        
         echo "🛑 Arrêt de l'ancienne application backend..."
-        pkill -f 'java -jar.*app.jar' || echo "Aucun processus Java à arrêter"
+        pkill -f 'java -jar.*app.jar' || echo "Aucun processus Java à arrêrer"
         
         echo "🚀 Démarrage du backend..."
-        nohup java -jar ~/app/backend/app.jar \
+        cd ~/app/backend
+        nohup java -jar app.jar \
           --spring.config.additional-location=file:~/app/.env \
           > ~/app/logs/backend.log 2>&1 &
         
