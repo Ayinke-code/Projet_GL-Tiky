@@ -29,19 +29,12 @@ stages:
   - selenium
   - sonar
 
-before_script:
-  # Install OpenSSL and add SonarQube SSL certificate to Java truststore
-  - apt-get update && apt-get install -y openssl curl
-  - echo -n | openssl s_client -connect 172.24.1.1:443 -showcerts | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/sonar.crt
-  - keytool -import -v -trustcacerts -alias sonar -file /tmp/sonar.crt -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
-  
-  # Clean ChromeDriver if needed
+before_script:  
+  # Ensure clean slate for ChromeDriver if needed by the runner
   - rm -f /usr/bin/chromedriver || true
-  
-  # Set proxy environment variables
   - export http_proxy=http://192.168.4.8:3128
   - export https_proxy=http://192.168.4.8:3128
-  
+
   # Create Maven proxy configuration
   - mkdir -p .m2
   - |
@@ -54,8 +47,7 @@ before_script:
           <protocol>http</protocol>
           <host>192.168.4.8</host>
           <port>3128</port>
-        </proxy>
-        <proxy>
+        </proxy><proxy>
           <id>https-proxy</id>
           <active>true</active>
           <protocol>https</protocol>
