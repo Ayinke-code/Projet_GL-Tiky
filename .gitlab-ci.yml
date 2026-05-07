@@ -85,7 +85,7 @@ build-frontend:
 
     - cd front
     - npm ci
-    - npm run generate
+    - npm run build
     - ls -lah .output/public
 
   artifacts:
