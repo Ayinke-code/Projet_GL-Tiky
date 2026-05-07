@@ -160,7 +160,7 @@ deploy:
     - scp back/target/*.jar $DEPLOY_USER@$DEPLOY_SERVER:~/app/backend/app.jar
     
     # Transférer les fichiers statiques frontend
-    - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER:/var/www/html/
+    - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER:~/app/frontend/
     
     # Transférer le fichier .env
     - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > ~/app/.env"
