@@ -177,11 +177,11 @@ deploy:
         
         echo "📦 Déploiement du frontend..."
         # ✅ Utiliser sudo pour rsync vers /var/www/html
-        sudo rsync -avz --delete ~/app/frontend/ /var/www/html/
+        sudo -n rsync -avz --delete ~/app/frontend/ /var/www/html/
         
         echo "🔧 Configuration Apache..."
-        sudo cp ~/app/apache-site.conf /etc/apache2/sites-available/000-default.conf
-        sudo apache2ctl configtest && sudo systemctl reload apache2 || echo "⚠️ Erreur Apache"
+        sudo -n cp ~/app/apache-site.conf /etc/apache2/sites-available/000-default.conf
+        sudo -n apache2ctl configtest && sudo -n systemctl reload apache2 || echo "⚠️ Erreur Apache"
         
         echo "🛑 Arrêt de l'ancienne application backend..."
         pkill -f 'java -jar.*app.jar' || echo "Aucun processus Java à arrêrer"
