@@ -189,7 +189,7 @@ deploy_dev:
     - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/frontend/
 
     # Env
-    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/.env"
+    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/backend/.env"
 
     # Config Apache
     - scp apache-site-dev.conf $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/apache-site.conf
@@ -254,7 +254,7 @@ deploy_prod:
     - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER_PROD:~/app/frontend/
 
     # Env
-    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_PROD "cat > ~/app/.env"
+    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_PROD "cat > ~/app/backend/.env"
 
     # Config Apache
     - scp apache-site-prod.conf $DEPLOY_USER@$DEPLOY_SERVER_PROD:~/app/apache-site.conf
