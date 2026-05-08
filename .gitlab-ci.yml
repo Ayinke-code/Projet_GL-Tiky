@@ -137,8 +137,8 @@ unit-test:
     paths:
       - back/target/surefire-reports/
     expire_in: 1 day
-  dependencies:
-    - build-backend
+  # dependencies:
+  #   - build-backend
   rules:
     # - if: $CI_COMMIT_BRANCH   # toutes les branches
     - when: never # Pipeline dev
@@ -286,8 +286,8 @@ selenium-test:
     paths:
       - back/target/selenium-reports/
     expire_in: 1 day
-  dependencies:  # Pipeline dev
-    - sonar
+  # dependencies:  # Pipeline dev
+  #   - sonar
   rules:
     # - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     # - if: $CI_COMMIT_BRANCH == "main"
@@ -301,8 +301,8 @@ sonar:
   script:
     - cd back
     - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
-  dependencies:
-    - unit-test
+  # dependencies:
+  #   - unit-test
   rules:
     # - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     # - if: $CI_COMMIT_BRANCH == 'main'
