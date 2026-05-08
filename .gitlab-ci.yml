@@ -141,29 +141,38 @@ deploy:
     - ssh-keyscan -H $DEPLOY_SERVER >> ~/.ssh/known_hosts
     
   script:
-  # Vérifier connexion
-  - ssh $DEPLOY_USER@$DEPLOY_SERVER "echo 'SSH OK'"
+    # Vérifier connexion
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER "echo '✅ SSH OK'"
 
-  # Créer structure
-  - |
-    ssh $DEPLOY_USER@$DEPLOY_SERVER << 'ENDSSH'
-      mkdir -p ~/app/backend
-      mkdir -p ~/app/frontend
-      mkdir -p ~/app/logs
-    ENDSSH
+    # Créer structure avec dossier SSL
+    - |
+      ssh $DEPLOY_USER@$DEPLOY_SERVER << 'ENDSSH'
+        mkdir -p ~/app/backend
+        mkdir -p ~/app/frontend
+        mkdir -p ~/app/ssl
+        mkdir -p ~/app/logs
+      ENDSSH
 
-  # Backend
-  - scp back/target/*.jar $DEPLOY_USER@$DEPLOY_SERVER:~/app/backend/app.jar
+    # Transférer les certificats SSL
+    - echo "$SSL_CERT_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > ~/app/ssl/server.crt"
+    - echo "$SSL_KEY_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > ~/app/ssl/server.key"
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER "chmod 644 ~/app/ssl/server.crt && chmod 600 ~/app/ssl/server.key"
 
-  # Frontend
-  - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER:~/app/frontend/
+    # Backend
+    - scp back/target/*.jar $DEPLOY_USER@$DEPLOY_SERVER:~/app/backend/app.jar
 
-  # Env
-  - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > ~/app/.env"
+    # Frontend
+    - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER:~/app/frontend/
+
+    # Env
+    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER "cat > ~/app/.env"
+
+    # Config Apache
+    - scp apache-site.conf $DEPLOY_USER@$DEPLOY_SERVER:~/app/apache-site.conf
     
   environment:
     name: dev
-    url: https://172.24.1.16
+    url: https://172.24.1.16  # ✅ HTTPS maintenant
     
   dependencies:
     - build-backend

@@ -58,8 +58,10 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost",
                 "http://172.24.1.16",
+                "https://172.24.1.16",
                 "http://localhost:*",
-                "http://172.24.1.16:*"
+                "http://172.24.1.16:*",
+                "https://172.24.1.16:*"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
