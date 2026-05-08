@@ -95,8 +95,7 @@ build-frontend-dev:
       - front/.output/public/
     expire_in: 1 day
   rules:
-    # - if: $CI_COMMIT_BRANCH == "dev"
-    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_BRANCH == "dev"
 
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend-prod:
@@ -111,7 +110,7 @@ build-frontend-prod:
 
     - cd front
     - npm ci
-    - export NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE_PROD
+    - export NUXT_PUBLIC_API_BASE="$NUXT_PUBLIC_API_BASE_PROD"
     - echo "NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE_PROD"
     - npm run build
     - ls -lah .output/public
@@ -137,11 +136,11 @@ unit-test:
     paths:
       - back/target/surefire-reports/
     expire_in: 1 day
-  # dependencies:
-  #   - build-backend
+  dependencies:
+    - build-backend
   rules:
-    # - if: $CI_COMMIT_BRANCH   # toutes les branches
-    - when: never # Pipeline dev
+    - if: $CI_COMMIT_BRANCH   # toutes les branches
+    # - when: never # Pipeline dev
 
 # Stage 3: Deploy sur serveur de dev/prod
 deploy_dev:
@@ -204,10 +203,10 @@ deploy_dev:
     - build-frontend-dev
   
   rules:
-    # - if: $CI_COMMIT_BRANCH == "dev"
+    - if: $CI_COMMIT_BRANCH == "dev"
     # - if: $CI_COMMIT_BRANCH == "main"
     # - when: never
-    - if: $CI_COMMIT_BRANCH   # toutes les branches
+    # - if: $CI_COMMIT_BRANCH   # toutes les branches
 
 deploy_prod:
   stage: deploy
@@ -286,14 +285,13 @@ selenium-test:
     paths:
       - back/target/selenium-reports/
     expire_in: 1 day
-  # dependencies:  # Pipeline dev
-  #   - sonar
+
   rules:
     # - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     # - if: $CI_COMMIT_BRANCH == "main"
     # - if: $CI_COMMIT_BRANCH == "dev"
     # - if: $CI_COMMIT_BRANCH
-    - when: never # Pipeline dev
+    - when: never # Pas encore de test SELENIUM
 
 # Stage 5: SonarQube Analysis
 sonar:
@@ -301,11 +299,9 @@ sonar:
   script:
     - cd back
     - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
-  # dependencies:
-  #   - unit-test
   rules:
-    # - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    # - if: $CI_COMMIT_BRANCH == 'main'
-    # - if: $CI_COMMIT_BRANCH == 'dev'
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH == 'dev'
     # - if: $CI_COMMIT_BRANCH # Pipeline dev
-    - when: never # Pipeline dev
+    # - when: never # Pipeline dev
