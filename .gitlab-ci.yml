@@ -85,8 +85,8 @@ build-frontend-dev:
 
     - cd front
     - npm ci
-    - export NUXT_PUBLIC_API_BASE_DEV="$NUXT_PUBLIC_API_BASE_DEV"
-    - echo "NUXT_PUBLIC_API_BASE_DEV=$NUXT_PUBLIC_API_BASE_DEV"
+    - export NUXT_PUBLIC_API_BASE="$NUXT_PUBLIC_API_BASE_DEV"
+    - echo "NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE_DEV"
     - npm run build
     - ls -lah .output/public
 
@@ -111,8 +111,8 @@ build-frontend-prod:
 
     - cd front
     - npm ci
-    - export NUXT_PUBLIC_API_BASE_PROD="$NUXT_PUBLIC_API_BASE_PROD"
-    - echo "NUXT_PUBLIC_API_BASE_PROD=$NUXT_PUBLIC_API_BASE_PROD"
+    - export NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE_PROD
+    - echo "NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE_PROD"
     - npm run build
     - ls -lah .output/public
 
