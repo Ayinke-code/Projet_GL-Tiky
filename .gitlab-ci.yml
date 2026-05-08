@@ -140,8 +140,8 @@ unit-test:
   dependencies:
     - build-backend
   rules:
-    - if: $CI_COMMIT_BRANCH   # toutes les branches
-    # - when: never # Pipeline dev
+    # - if: $CI_COMMIT_BRANCH   # toutes les branches
+    - when: never # Pipeline dev
 
 # Stage 3: Deploy sur serveur de dev/prod
 deploy_dev:
@@ -287,13 +287,13 @@ selenium-test:
       - back/target/selenium-reports/
     expire_in: 1 day
   dependencies:  # Pipeline dev
-    - deploy
+    - sonar
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_COMMIT_BRANCH == "dev"
+    # - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # - if: $CI_COMMIT_BRANCH == "main"
+    # - if: $CI_COMMIT_BRANCH == "dev"
     # - if: $CI_COMMIT_BRANCH
-    # - when: never # Pipeline dev
+    - when: never # Pipeline dev
 
 # Stage 5: SonarQube Analysis
 sonar:
@@ -304,8 +304,8 @@ sonar:
   dependencies:
     - unit-test
   rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_COMMIT_BRANCH == 'main'
-    - if: $CI_COMMIT_BRANCH == 'dev'
+    # - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    # - if: $CI_COMMIT_BRANCH == 'main'
+    # - if: $CI_COMMIT_BRANCH == 'dev'
     # - if: $CI_COMMIT_BRANCH # Pipeline dev
-    # - when: never # Pipeline dev
+    - when: never # Pipeline dev
