@@ -52,7 +52,7 @@ public class AuthController {
         // Stock le token dans un Cookie en HTTPOnly
         Cookie cookie = new Cookie("token", loginResponse.getToken());
         cookie.setHttpOnly(true);
-        cookie.setSecure(false); // Mettre à true lorsqu'on sera en https
+        cookie.setSecure(true);
         cookie.setPath("/");
         cookie.setMaxAge((int) (expiration / 1000));
 
