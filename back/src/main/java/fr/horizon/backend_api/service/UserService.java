@@ -44,6 +44,10 @@ public class UserService {
             throw new RuntimeException("Email already used");
         }
 
+        if (dto.getRoleIds() == null || dto.getRoleIds().isEmpty()) {
+            throw new RuntimeException("User must have at least one role");
+        }
+
         Set<Role> roles = roleRepository.findAllById(dto.getRoleIds())
                 .stream()
                 .collect(Collectors.toSet());
