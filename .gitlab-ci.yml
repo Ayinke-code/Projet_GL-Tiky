@@ -310,7 +310,7 @@ sonar:
     - echo "Connectivity test:"
     - curl -vk https://172.24.1.1/sonar || true
 
-    - mvn -X $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
+    - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN -Dsonar.host.url=http://172.24.1.1/sonar
   rules:
     # - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     # - if: $CI_COMMIT_BRANCH == 'main'
