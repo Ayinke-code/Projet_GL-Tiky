@@ -48,6 +48,10 @@ public class UserService {
                 .stream()
                 .collect(Collectors.toSet());
 
+        if (roles.size() != dto.getRoleIds().size()) {
+            throw new RuntimeException("One or more roles not found");
+        }
+
         User user = User.builder()
                 .name(dto.getName())
                 .email(dto.getEmail())
