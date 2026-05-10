@@ -1,5 +1,5 @@
 export const useAuth = () => {
-    const config = useRuntimeConfig()
+    const api = useApi()
 
     /**
      * État global de l'utilisateur connecté.
@@ -26,26 +26,17 @@ export const useAuth = () => {
      * @throws Error UNKNOWN_ERROR pour toute autre erreur API
      */
     const login = async (email, password) => {
-        console.log("[AUTH] login called")
-        console.log("[AUTH] apiBase:", config.public.apiBase)
-        console.log("[AUTH] url:", `${config.public.apiBase}/auth/login`)
-        console.log("[AUTH] payload:", { email, password })
         try {
             // Appel API pour créer la session (cookie HttpOnly)
-            await $fetch(`${config.public.apiBase}/auth/login`, {
+            await api('/auth/login', {
                 method: 'POST',
                 body: { email, password },
-                credentials: 'include'
             })
 
             // Récupération des informations utilisateur après login
-            console.log("[AUTH] login success")
             await fetchUser()
             return true
         } catch (e) {
-            console.error("[AUTH] login error raw:", e)
-            console.error("[AUTH] status:", e?.response?.status)
-            console.error("[AUTH] data:", e?.response?._data)
             // Réinitialisation user en cas d’erreur
             user.value = null
 
@@ -70,9 +61,7 @@ export const useAuth = () => {
      */
     const fetchUser = async () => {
         try {
-            const data = await $fetch(`${config.public.apiBase}/auth/me`, {
-                credentials: 'include'
-            })
+            const data = await api('/auth/me')
 
             user.value = data
             ready.value = true
