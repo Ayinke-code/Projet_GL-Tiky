@@ -298,10 +298,22 @@ sonar:
   stage: sonar
   script:
     - cd back
-    - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
+    - echo "Current dir:"
+    - pwd
+
+    - echo "Maven opts:"
+    - echo "$MAVEN_CLI_OPTS"
+
+    - echo "Settings.xml:"
+    - cat $CI_PROJECT_DIR/.m2/settings.xml
+
+    - echo "Connectivity test:"
+    - curl -vk https://172.24.1.1/sonar || true
+
+    - mvn -X $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
   rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_COMMIT_BRANCH == 'main'
-    - if: $CI_COMMIT_BRANCH == 'dev'
-    # - if: $CI_COMMIT_BRANCH # Pipeline dev
+    # - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    # - if: $CI_COMMIT_BRANCH == 'main'
+    # - if: $CI_COMMIT_BRANCH == 'dev'
+    - if: $CI_COMMIT_BRANCH # Pipeline dev
     # - when: never # Pipeline dev
