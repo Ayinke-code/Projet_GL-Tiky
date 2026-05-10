@@ -30,6 +30,11 @@ stages:
   - sonar
 
 before_script:  
+  # Install OpenSSL and add SonarQube SSL certificate to Java truststore
+  - apt-get update && apt-get install -y openssl
+  - echo -n | openssl s_client -connect 172.24.1.1:443 -showcerts | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/sonar.crt
+  - keytool -import -v -trustcacerts -alias sonar -file /tmp/sonar.crt -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
+
   # Ensure clean slate for ChromeDriver if needed by the runner
   - rm -f /usr/bin/chromedriver || true
   - export http_proxy=http://192.168.4.8:3128
@@ -298,19 +303,7 @@ sonar:
   stage: sonar
   script:
     - cd back
-    - echo "Current dir:"
-    - pwd
-
-    - echo "Maven opts:"
-    - echo "$MAVEN_CLI_OPTS"
-
-    - echo "Settings.xml:"
-    - cat $CI_PROJECT_DIR/.m2/settings.xml
-
-    - echo "Connectivity test:"
-    - curl -vk https://172.24.1.1/sonar || true
-
-    - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN -Dsonar.host.url=http://172.24.1.1/sonar
+    - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
   rules:
     # - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
     # - if: $CI_COMMIT_BRANCH == 'main'
