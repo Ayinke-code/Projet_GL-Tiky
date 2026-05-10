@@ -11,6 +11,8 @@ import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
+import java.util.Set;
+
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
@@ -35,15 +37,16 @@ public class DataInitializer implements CommandLineRunner {
                 .orElseGet(() -> roleRepository.save(new Role(name)));
     }
 
-    private User getOrCreateUser(String email, String name, Role role) {
+    private User getOrCreateUser(String email, String name, Set<Role> roles) {
 
         return userRepository.findByEmail(email)
                 .orElseGet(() -> {
-                    User user = new User();
-                    user.setEmail(email);
-                    user.setName(name);
-                    user.setPassword(passwordEncoder.encode(defaultPassword));
-                    user.setRole(role);
+                    User user = User.builder()
+                            .email(email)
+                            .name(name)
+                            .password(passwordEncoder.encode(defaultPassword))
+                            .roles(roles)
+                            .build();
 
                     return userRepository.save(user);
                 });
@@ -56,9 +59,8 @@ public class DataInitializer implements CommandLineRunner {
         Role teacherRole = getOrCreateRole(ROLE_TEACHER);
         Role adminRole = getOrCreateRole(ROLE_ADMIN);
 
-        getOrCreateUser(ADMIN_EMAIL, "Admin", adminRole);
-        getOrCreateUser(TEACHER_EMAIL, "Teacher", teacherRole);
-        getOrCreateUser(STUDENT_EMAIL, "Student", studentRole);
-
+        getOrCreateUser(ADMIN_EMAIL, "Admin", Set.of(adminRole, teacherRole));
+        getOrCreateUser(TEACHER_EMAIL, "Teacher", Set.of(teacherRole));
+        getOrCreateUser(STUDENT_EMAIL, "Student", Set.of(studentRole));
     }
 }

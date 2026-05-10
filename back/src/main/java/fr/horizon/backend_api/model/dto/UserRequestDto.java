@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import org.antlr.v4.runtime.misc.NotNull;
 
+import java.util.Set;
+
 @Data
 public class UserRequestDto {
 
@@ -19,5 +21,5 @@ public class UserRequestDto {
     private String password;
 
     @NotNull
-    private Long roleId;
+    private Set<Long> roleIds;
 }

@@ -13,7 +13,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -42,7 +44,7 @@ class UserServiceTest {
         dto.setName("John");
         dto.setEmail("john@test.com");
         dto.setPassword("pass");
-        dto.setRoleId(1L);
+        dto.setRoleIds(Set.of(1L));
 
         Role role = new Role();
         role.setId(1L);
@@ -51,8 +53,8 @@ class UserServiceTest {
         when(userRepository.existsByEmail("john@test.com"))
                 .thenReturn(false);
 
-        when(roleRepository.findById(1L))
-                .thenReturn(Optional.of(role));
+        when(roleRepository.findAllById(Set.of(1L)))
+                .thenReturn(List.of(role));
 
         when(passwordEncoder.encode("pass"))
                 .thenReturn("encodedPass");
@@ -60,11 +62,12 @@ class UserServiceTest {
         when(userRepository.save(any(User.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        User result = userService.createUser(dto);
+        UserDto result = userService.createUser(dto);
 
         assertNotNull(result);
         assertEquals("john@test.com", result.getEmail());
-        assertEquals("encodedPass", result.getPassword());
+        assertEquals("John", result.getName());
+        assertEquals(Set.of("USER"), result.getRoles());
     }
 
     @Test
@@ -72,6 +75,7 @@ class UserServiceTest {
 
         UserRequestDto dto = new UserRequestDto();
         dto.setEmail("john@test.com");
+        dto.setRoleIds(Set.of(1L));
 
         when(userRepository.existsByEmail("john@test.com"))
                 .thenReturn(true);
@@ -85,13 +89,13 @@ class UserServiceTest {
 
         UserRequestDto dto = new UserRequestDto();
         dto.setEmail("john@test.com");
-        dto.setRoleId(1L);
+        dto.setRoleIds(Set.of(1L));
 
-        when(userRepository.existsByEmail(anyString()))
+        when(userRepository.existsByEmail("john@test.com"))
                 .thenReturn(false);
 
-        when(roleRepository.findById(1L))
-                .thenReturn(Optional.empty());
+        when(roleRepository.findAllById(Set.of(1L)))
+                .thenReturn(List.of()); // aucun rôle trouvé
 
         assertThrows(RuntimeException.class,
                 () -> userService.createUser(dto));
@@ -131,7 +135,7 @@ class UserServiceTest {
                 .id(1L)
                 .name("John")
                 .email("john@test.com")
-                .role(role)
+                .roles(Set.of(role))
                 .build();
 
         UserDto dto = userService.toDto(user);
@@ -139,6 +143,6 @@ class UserServiceTest {
         assertEquals(1L, dto.getId());
         assertEquals("John", dto.getName());
         assertEquals("john@test.com", dto.getEmail());
-        assertEquals("USER", dto.getRole());
+        assertEquals(Set.of("USER"), dto.getRoles());
     }
 }
