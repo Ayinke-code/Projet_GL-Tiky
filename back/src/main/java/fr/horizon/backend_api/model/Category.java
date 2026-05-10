@@ -4,6 +4,9 @@ import fr.horizon.backend_api.model.enums.CategoryStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Entity
 @Getter
 @Setter
@@ -30,5 +33,13 @@ public class Category extends BaseEntity {
 
     @Column(nullable = false)
     private String subject;
+
+    @ManyToMany
+    @JoinTable(
+            name = "category_followers",
+            joinColumns = @JoinColumn(name = "category_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> followers = new HashSet<>();
 
 }
