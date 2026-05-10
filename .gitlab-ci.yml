@@ -305,8 +305,8 @@ sonar:
     - cd back
     - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
   rules:
-    # - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    # - if: $CI_COMMIT_BRANCH == 'main'
-    # - if: $CI_COMMIT_BRANCH == 'dev'
-    - if: $CI_COMMIT_BRANCH # Pipeline dev
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH == 'dev'
+    # - if: $CI_COMMIT_BRANCH # Pipeline dev
     # - when: never # Pipeline dev
