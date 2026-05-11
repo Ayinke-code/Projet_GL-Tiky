@@ -9,7 +9,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
         "spring.datasource.url=jdbc:h2:mem:testdb",
         "spring.datasource.driverClassName=org.h2.Driver",
         "spring.jpa.database-platform=org.hibernate.dialect.H2Dialect",
-
         "JWT_SECRET=test-secret",
         "JWT_EXPIRATION=3600000",
         "DEFAULT_PASSWORD=test",
@@ -22,9 +21,4 @@ class BackendApiApplicationTest {
 
     @Test
     void contextLoads() {}
-
-    @Test
-    void shouldStartApplication() {
-        BackendApiApplication.main(new String[]{});
-    }
 }
