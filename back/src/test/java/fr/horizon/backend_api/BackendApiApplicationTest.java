@@ -22,4 +22,9 @@ class BackendApiApplicationTest {
 
     @Test
     void contextLoads() {}
+
+    @Test
+    void shouldStartApplication() {
+        BackendApiApplication.main(new String[]{});
+    }
 }
