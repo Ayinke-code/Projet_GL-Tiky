@@ -10,6 +10,7 @@ import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,25 +21,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.logging.Logger;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 @Transactional
 public class IssueService {
 
     private final IssueRepository issueRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
-    private final RequestManagerRepository requestManagerRepository;
-    private final String uploadDir = "uploads/issues/";
-
-    public IssueService(IssueRepository issueRepository,
-                        CategoryRepository categoryRepository, UserRepository userRepository, RequestManagerRepository requestManagerRepository) {
-        this.issueRepository = issueRepository;
-        this.userRepository = userRepository;
-        this.requestManagerRepository = requestManagerRepository;
-        this.categoryRepository = categoryRepository;
-    }
+    private static final Logger logger = LoggerFactory.getLogger(IssueService.class);
 
     public Issue createIssue(IssueDTO dto, User creator) {
         validateIssueInput(dto);
@@ -55,18 +49,16 @@ public class IssueService {
                 .isPrivate(false)
                 .build();
 
-        Issue savedIssue = issueRepository.save(issue);
-
-        if (dto.getDocuments() != null && !dto.getDocuments().isEmpty()) {
-            saveDocuments(savedIssue, dto.getDocuments());
-        }
-
-        return savedIssue;
+        return issueRepository.save(issue);
     }
 
     public Issue getIssueById(Long id) {
         return issueRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Issue non trouvée"));
+    }
+
+    public List<Issue> getAllIssues() {
+        return issueRepository.findAll();
     }
 
     public List<Issue> getIssuesByCategory(Long categorieId) {
@@ -78,12 +70,8 @@ public class IssueService {
     }
 
     public List<Issue> getIssuesByStatus(String statut) {
-        try {
-            IssueStatus parsedStatus = IssueStatus.valueOf(statut.toUpperCase());
-            return issueRepository.findByStatus(parsedStatus);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Statut invalide");
-        }
+        IssueStatus status = IssueStatus.fromValue(statut);
+        return issueRepository.findByStatut(status);
     }
 
     public void deleteIssue(Long id) {
@@ -91,6 +79,21 @@ public class IssueService {
             throw new IllegalArgumentException("Issue non trouvée");
         }
         issueRepository.deleteById(id);
+    }
+
+    public Issue updateIssueStatus(Long id, String newStatus) {
+        logger.info("updateIssueStatus called with id={}, newStatus={}", id, newStatus);
+        Issue issue = getIssueById(id);
+        logger.info("Current status before update: {}", issue.getStatut());
+
+        IssueStatus status = IssueStatus.fromValue(newStatus);
+        logger.info("Parsed status: {}", status);
+
+        issue.setStatut(status);
+        Issue saved = issueRepository.save(issue);
+        logger.info("Status after save: {}", saved.getStatut());
+
+        return saved;
     }
 
     private void validateIssueInput(IssueDTO dto) {
@@ -104,24 +107,6 @@ public class IssueService {
             throw new IllegalArgumentException("La catégorie est obligatoire");
         }
     }
-
-    private void saveDocuments(Issue issue, List<MultipartFile> documents) {
-        try {
-            Path uploadPath = Paths.get(uploadDir + issue.getId());
-            Files.createDirectories(uploadPath);
-
-            for (MultipartFile file : documents) {
-                if (!file.isEmpty()) {
-                    String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-                    Path filePath = uploadPath.resolve(fileName);
-                    Files.copy(file.getInputStream(), filePath);
-                }
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Erreur lors du téléchargement des fichiers", e);
-        }
-    }
-
     /**
      * envoyer une demande d'assignation d'un ticket à un teacher
      * @param userId Id de l'enseignant visé par la demande.

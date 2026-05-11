@@ -4,6 +4,7 @@ import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.RequestManagerDTO;
 import fr.horizon.backend_api.model.dto.IssueDTO;
+import fr.horizon.backend_api.model.dto.UpdateIssueStatusDTO;
 import fr.horizon.backend_api.service.IssueService;
 import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,11 @@ public class IssueController {
 
         Issue issue = issueService.createIssue(dto, creator);
         return ResponseEntity.status(HttpStatus.CREATED).body(issue);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Issue>> getAllIssues() {
+        return ResponseEntity.ok(issueService.getAllIssues());
     }
 
     @GetMapping("/{id}")
@@ -93,4 +99,10 @@ public class IssueController {
 
 
 
+
+    @PutMapping("/{id}/status")
+    public ResponseEntity<Issue> updateIssueStatus(@PathVariable Long id, @RequestBody UpdateIssueStatusDTO dto) {
+        Issue updatedIssue = issueService.updateIssueStatus(id, dto.getStatut());
+        return ResponseEntity.ok(updatedIssue);
+    }
 }

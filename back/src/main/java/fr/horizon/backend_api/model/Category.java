@@ -7,6 +7,12 @@ import lombok.*;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Entité représentant une catégorie de questions.
+ *
+ * @author Tiky Team
+ * @version 1.0
+ */
 @Entity
 @Getter
 @Setter
