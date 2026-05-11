@@ -47,8 +47,8 @@ build-backend:
       - back/target/*.jar
     expire_in: 1 day
   rules:
-    # - if: $CI_COMMIT_BRANCH
-    - when: never
+    - if: $CI_COMMIT_BRANCH
+    # - when: never
 
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend-dev:
@@ -73,8 +73,8 @@ build-frontend-dev:
       - front/.output/public/
     expire_in: 1 day
   rules:
-    # - if: $CI_COMMIT_BRANCH == "dev"
-    - when: never
+    - if: $CI_COMMIT_BRANCH == "dev"
+    # - when: never
 
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend-prod:
@@ -99,8 +99,8 @@ build-frontend-prod:
       - front/.output/public/
     expire_in: 1 day
   rules:
-    # - if: $CI_COMMIT_BRANCH == "main"
-    - when: never
+    - if: $CI_COMMIT_BRANCH == "main"
+    # - when: never
 
 # Stage 2: Unit Tests
 unit-test:
@@ -119,8 +119,8 @@ unit-test:
   dependencies:
     - build-backend
   rules:
-    # - if: $CI_COMMIT_BRANCH   # toutes les branches
-    - when: never # Pipeline dev
+    - if: $CI_COMMIT_BRANCH   # toutes les branches
+    # - when: never # Pipeline dev
 
 # Stage 3: Deploy sur serveur de dev/prod
 deploy_dev:
@@ -183,9 +183,9 @@ deploy_dev:
     - build-frontend-dev
   
   rules:
-    # - if: $CI_COMMIT_BRANCH == "dev"
+    - if: $CI_COMMIT_BRANCH == "dev"
     # - if: $CI_COMMIT_BRANCH == "main"
-    - when: never
+    # - when: never
     # - if: $CI_COMMIT_BRANCH   # toutes les branches
 
 deploy_prod:
@@ -249,8 +249,8 @@ deploy_prod:
   
   rules:
     # - if: $CI_COMMIT_BRANCH == "dev"
-    # - if: $CI_COMMIT_BRANCH == "main"
-    - when: never
+    - if: $CI_COMMIT_BRANCH == "main"
+    # - when: never
     # - if: $CI_COMMIT_BRANCH   # toutes les branches
 
 # Stage 4: Selenium Tests
@@ -308,8 +308,8 @@ sonar:
     - cd back
     - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
   rules:
-    # - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    # - if: $CI_COMMIT_BRANCH == 'main'
-    # - if: $CI_COMMIT_BRANCH == 'dev'
-    - if: $CI_COMMIT_BRANCH # Pipeline dev
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH == 'dev'
+    # - if: $CI_COMMIT_BRANCH # Pipeline dev
     # - when: never # Pipeline dev
