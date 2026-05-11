@@ -38,7 +38,7 @@ before_script:
   # Create Maven proxy configuration
   - mkdir -p .m2
   - |
-    cat > .m2/settings.xml <<EOF
+    cat > back/.m2/settings.xml <<EOF
     <settings>
       <proxies>
         <proxy>
