@@ -1,5 +1,8 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.exception.EmailAlreadyUsedException;
+import fr.horizon.backend_api.exception.InvalidUserRolesException;
+import fr.horizon.backend_api.exception.RoleNotFoundException;
 import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.UserDto;
@@ -41,11 +44,11 @@ public class UserService {
     public UserDto createUser(UserRequestDto dto) {
 
         if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new RuntimeException("Email already used");
+            throw new EmailAlreadyUsedException(dto.getEmail());
         }
 
         if (dto.getRoleIds() == null || dto.getRoleIds().isEmpty()) {
-            throw new RuntimeException("User must have at least one role");
+            throw new InvalidUserRolesException("User must have at least one role");
         }
 
         Set<Role> roles = roleRepository.findAllById(dto.getRoleIds())
@@ -53,7 +56,7 @@ public class UserService {
                 .collect(Collectors.toSet());
 
         if (roles.size() != dto.getRoleIds().size()) {
-            throw new RuntimeException("One or more roles not found");
+            throw new RoleNotFoundException();
         }
 
         User user = User.builder()

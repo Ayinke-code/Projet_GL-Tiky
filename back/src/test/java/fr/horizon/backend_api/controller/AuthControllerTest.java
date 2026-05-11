@@ -48,8 +48,6 @@ class AuthControllerTest {
     @Test
     void shouldLogin_and_set_cookie() throws Exception {
 
-        LoginRequest request = new LoginRequest("test@test.com", "password");
-
         LoginResponse response = LoginResponse.builder()
                 .id(1L)
                 .name("John")
