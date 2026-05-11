@@ -2,12 +2,12 @@
   <div class="flex h-screen bg-gray-50">
 
     <!-- Sidebar -->
-    <Sidebar v-if="ready && user" />
+    <Sidebar v-if="!isAuthPage" />
 
-    <div v-if="ready && user" class="flex flex-col flex-1">
+    <div class="flex flex-col flex-1">
 
       <!-- Header -->
-      <Header />
+      <Header v-if="!isAuthPage" />
 
       <main class="flex-1 overflow-y-auto">
         <NuxtPage />
@@ -22,5 +22,7 @@
 import Header from '~/components/layout/Header.vue'
 import Sidebar from '~/components/layout/Sidebar.vue'
 
-const { user, ready } = useAuth()
+const route = useRoute()
+
+const isAuthPage = computed(() => route.path === '/login')
 </script>
