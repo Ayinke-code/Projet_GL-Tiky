@@ -1,28 +1,6 @@
-import { ref } from 'vue';
-
-export interface Message {
-  id: number;
-  auteur: string;
-  date: string;
-  contenu: string;
-  role?: 'ETUDIANT' | 'ENSEIGNANT';
-}
-
-export interface Issue {
-  id: number;
-  titre: string;
-  description: string;
-  auteur: string;
-  professeur: string;
-  abonnes: number;
-  statut: string;
-  tags: string[];
-  categorie?: {
-    idCat: number;
-    nom: string;
-    description: string;
-  };
-}
+import { ref } from 'vue'
+import type { Ref } from 'vue'
+import type { Message, Issue } from '~/types'
 
 export const useApi = () => {
   const loading = ref(false);
