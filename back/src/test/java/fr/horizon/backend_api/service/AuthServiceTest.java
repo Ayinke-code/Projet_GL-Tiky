@@ -18,7 +18,6 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -60,9 +59,9 @@ class AuthServiceTest {
                 .thenReturn(true);
 
         when(jwtToken.generateToken(
-                eq("test@test.com"),
-                eq(1L),
-                eq(Set.of("USER"))
+                "test@test.com",
+                1L,
+                Set.of("USER")
         )).thenReturn("fake-jwt-token");
 
         LoginResponse response = authService.login(request);

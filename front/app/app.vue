@@ -4,10 +4,10 @@
     <!-- Sidebar -->
     <Sidebar v-if="ready && user" />
 
-    <div class="flex flex-col flex-1">
+    <div v-if="ready && user" class="flex flex-col flex-1">
 
       <!-- Header -->
-      <Header v-if="ready && user" />
+      <Header />
 
       <main class="flex-1 overflow-y-auto">
         <NuxtPage />

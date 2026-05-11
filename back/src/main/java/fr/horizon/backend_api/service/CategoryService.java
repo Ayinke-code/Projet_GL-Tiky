@@ -1,5 +1,6 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.CategoryDto;
@@ -54,7 +55,7 @@ public class CategoryService {
      */
     public void deleteById(Long id) {
         if (!categoryRepository.existsById(id)) {
-            throw new RuntimeException("Category not found");
+            throw new CategoryNotFoundException(id);
         }
         categoryRepository.deleteById(id);
     }

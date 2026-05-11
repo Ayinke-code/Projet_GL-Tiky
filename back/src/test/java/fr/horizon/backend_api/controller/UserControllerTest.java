@@ -1,13 +1,11 @@
 package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.UserDto;
-import fr.horizon.backend_api.model.dto.UserRequestDto;
 import fr.horizon.backend_api.security.JwtAuthenticationFilter;
 import fr.horizon.backend_api.service.JwtToken;
 import fr.horizon.backend_api.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;

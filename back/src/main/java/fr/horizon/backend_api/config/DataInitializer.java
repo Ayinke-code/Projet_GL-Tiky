@@ -39,7 +39,12 @@ public class DataInitializer implements CommandLineRunner {
         Role teacherRole = getOrCreateRole("TEACHER");
         Role studentRole = getOrCreateRole("STUDENT");
 
+        // User teacher et admin
         User admin = getOrCreateUser("admin@admin.fr", "Admin", Set.of(adminRole, teacherRole));
+        // User teacher
+        getOrCreateUser("teacher@teacher.fr", "Teacher", Set.of(teacherRole));
+        // User student
+        getOrCreateUser("student@student.fr", "Student", Set.of(studentRole));
 
         // =========================
         // CATEGORIES DEFAULT

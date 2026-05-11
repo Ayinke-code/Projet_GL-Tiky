@@ -2,6 +2,7 @@ package fr.horizon.backend_api.security;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -23,6 +24,9 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     public final JwtAuthenticationFilter jwtAuthFilter;
+
+    @Value("#{'${cors.allowed-origins}'.split(',')}")
+    private List<String> allowedOrigins;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -55,21 +59,8 @@ public class SecurityConfig {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOriginPatterns(List.of(
-                "http://localhost",
+        config.setAllowedOriginPatterns(allowedOrigins);
 
-                "http://172.24.1.16",
-                "http://172.24.1.32",
-                "https://172.24.1.16",
-                "https://172.24.1.32",
-
-                "http://localhost:*",
-                
-                "http://172.24.1.16:*",
-                "http://172.24.1.32:*",
-                "https://172.24.1.16:*",
-                "https://172.24.1.32:*"
-        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

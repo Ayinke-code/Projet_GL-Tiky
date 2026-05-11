@@ -62,9 +62,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                 .map(g -> (GrantedAuthority) g)
                                 .toList();
 
-                System.out.println("ROLES JWT = " + roles);
-                System.out.println("AUTHORITIES = " + authorities);
-
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(
                                 claims.getSubject(),

@@ -23,6 +23,7 @@ public class Category extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String name;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CategoryStatus status = CategoryStatus.ACTIVE;
@@ -34,6 +35,7 @@ public class Category extends BaseEntity {
     @Column(nullable = false)
     private String subject;
 
+    @Builder.Default
     @ManyToMany
     @JoinTable(
             name = "category_followers",

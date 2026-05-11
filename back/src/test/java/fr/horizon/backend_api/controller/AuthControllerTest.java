@@ -1,7 +1,6 @@
 package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.User;
-import fr.horizon.backend_api.model.dto.LoginRequest;
 import fr.horizon.backend_api.model.dto.LoginResponse;
 import fr.horizon.backend_api.model.dto.UserDto;
 import fr.horizon.backend_api.service.AuthService;
@@ -47,8 +46,6 @@ class AuthControllerTest {
 
     @Test
     void shouldLogin_and_set_cookie() throws Exception {
-
-        LoginRequest request = new LoginRequest("test@test.com", "password");
 
         LoginResponse response = LoginResponse.builder()
                 .id(1L)
