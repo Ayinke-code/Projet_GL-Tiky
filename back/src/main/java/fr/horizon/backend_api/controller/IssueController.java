@@ -3,7 +3,6 @@ package fr.horizon.backend_api.controller;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.IssueFollower;
-import fr.horizon.backend_api.model.enums.FollowedReason;
 import fr.horizon.backend_api.model.dto.IssueDTO;
 import fr.horizon.backend_api.model.dto.UpdateIssueStatusDTO;
 import fr.horizon.backend_api.service.IssueService;
@@ -14,8 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
-
 import java.util.List;
 
 @RestController
@@ -29,13 +26,9 @@ public class IssueController {
 
     @PostMapping
     public ResponseEntity<Issue> createIssue(@RequestBody IssueDTO dto, Authentication auth) {
-        // Récupérer l'email depuis le token JWT
         String email = auth.getName();
-
-        // Chercher l'utilisateur en base de données
         User creator = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-
         Issue issue = issueService.createIssue(dto, creator);
         return ResponseEntity.status(HttpStatus.CREATED).body(issue);
     }
@@ -77,25 +70,36 @@ public class IssueController {
         return ResponseEntity.ok(updatedIssue);
     }
 
-    @PostMapping("/{id}/follow") // Suivre une issue
+    @PostMapping("/{id}/follow")
     public ResponseEntity<IssueFollower> followIssue(
             @PathVariable Long id,
-            @RequestParam int raison,
+            @RequestParam String raison,
+            Authentication auth) {
+        try {
+            String email = auth.getName();
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+            System.out.println(">>> User trouvé: " + email);
+            IssueFollower follower = issueFollowerService.followIssue(id, raison, user);
+            return ResponseEntity.status(HttpStatus.CREATED).body(follower);
+        } catch (Exception e) {
+            System.out.println(">>> ERREUR: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    @GetMapping("/{id}/follow/status")
+    public ResponseEntity<Boolean> isFollowing(
+            @PathVariable Long id,
             Authentication auth) {
         String email = auth.getName();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-        IssueFollower follower = issueFollowerService.followIssue(id, raison, user);
-        if (raison < 0 || raison > 2) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Raison invalide. Valeurs acceptées : 0, 1, 2");
-        }
-        return ResponseEntity.status(HttpStatus.CREATED).body(follower);
-
+        return ResponseEntity.ok(issueFollowerService.isFollowing(id, user));
     }
 
-    @GetMapping("/followed") // Voir les issues suivies
+    @GetMapping("/followed")
     public ResponseEntity<List<Issue>> getFollowedIssues(Authentication auth) {
         String email = auth.getName();
         User user = userRepository.findByEmail(email)

@@ -27,7 +27,7 @@ public class IssueFollower {
     private LocalDateTime dateCreation;
 
     @ManyToOne
-    @JoinColumn(name = "idTick", nullable = false)
+    @JoinColumn(name = "id_tick", nullable = false)
     private Issue issue;
 
     @ManyToOne

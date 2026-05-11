@@ -12,11 +12,11 @@ export const useApi = () => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     }
-    
+
     if (token.value) {
       headers['Authorization'] = `Bearer ${token.value}`
     }
-    
+
     return headers
   }
 
@@ -135,6 +135,43 @@ export const useApi = () => {
     }
   }
 
+  // Suivre une issue
+  const followIssue = async (id: number, raison: string) => {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await $fetch(`${BASE_URL}/issues/${id}/follow?raison=${raison}`, {
+        method: 'POST',
+        headers: getHeaders()
+      })
+      return response
+    } catch (err: any) {
+      console.error('Follow issue error:', err)
+      error.value = err.data?.message || err.message || 'Erreur lors du suivi'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // Récupérer les issues suivies
+  const getFollowedIssues = async () => {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await $fetch(`${BASE_URL}/issues/followed`, {
+        headers: getHeaders()
+      })
+      return response || []
+    } catch (err: any) {
+      console.error('Get followed issues error:', err)
+      error.value = err.data?.message || err.message || 'Erreur lors du chargement'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     loading,
     error,
@@ -143,6 +180,8 @@ export const useApi = () => {
     getIssueById,
     deleteIssue,
     getCategories,
-    updateIssueStatus
+    updateIssueStatus,
+    followIssue,
+    getFollowedIssues
   }
 }

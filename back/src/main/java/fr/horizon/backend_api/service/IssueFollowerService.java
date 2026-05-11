@@ -21,8 +21,7 @@ public class IssueFollowerService {
     private final IssueFollowerRepository issueFollowerRepository;
     private final IssueRepository issueRepository;
 
-    // Suivre une issue
-    public IssueFollower followIssue(Long issueId, int raison, User user) {
+    public IssueFollower followIssue(Long issueId, String raison, User user) {
 
         // Récupérer l'issue
         Issue issue = issueRepository.findById(issueId)
@@ -30,28 +29,45 @@ public class IssueFollowerService {
                         HttpStatus.NOT_FOUND, "Issue non trouvée"));
 
         // Vérifier que l'utilisateur ne suit pas déjà cette issue
+        System.out.println(">>> User id: " + user.getId() + " Issue id: " + issueId);
         if (issueFollowerRepository.existsByCreateurAndIssue(user, issue)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Vous suivez déjà cette issue");
         }
 
+        // Valider et convertir la raison
+        FollowedReason followedReason;
+        try {
+            followedReason = FollowedReason.valueOf(raison);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Raison invalide. Valeurs acceptées : INTERESTED, ABLE_TO_HELP, IMPACTED");
+        }
+
         // Créer l'abonnement
+        System.out.println(">>> Création abonnement: " + raison + " pour issue " + issueId);
         IssueFollower follower = IssueFollower.builder()
                 .issue(issue)
                 .createur(user)
-                .raison(FollowedReason.values()[raison])
+                .raison(followedReason)
                 .build();
 
         return issueFollowerRepository.save(follower);
     }
 
-    // Récupérer les issues suivies par un utilisateur
+    public boolean isFollowing(Long issueId, User user) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Issue non trouvée"));
+        return issueFollowerRepository.existsByCreateurAndIssue(user, issue);
+    }
+
     public List<Issue> getFollowedIssues(User user) {
         return issueFollowerRepository.findByCreateur(user)
                 .stream()
                 .map(IssueFollower::getIssue)
                 .toList();
     }
-
 }
