@@ -29,10 +29,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtToken jwtToken;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
         String token = null;
 
@@ -52,9 +53,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null) {
             try {
                 Claims claims = jwtToken.parseToken(token);
-                String role = claims.get("role", String.class);
+
+                List<String> roles = claims.get("roles", List.class);
+
+                if (roles == null) {
+                    roles = List.of();
+                }
+
                 List<GrantedAuthority> authorities =
-                        List.of(new SimpleGrantedAuthority(role));
+                        roles.stream()
+                                .map(SimpleGrantedAuthority::new)
+                                .map(g -> (GrantedAuthority) g)
+                                .toList();
+
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(
                                 claims.getSubject(),

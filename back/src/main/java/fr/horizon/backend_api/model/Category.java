@@ -1,8 +1,11 @@
 package fr.horizon.backend_api.model;
 
+import fr.horizon.backend_api.model.enums.CategoryStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -10,35 +13,37 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "categorie")
-public class Category {
+@Table(name = "category")
+public class Category extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idCat;
+    private Long id;
 
-    private String nom;
+    @Column(nullable = false, unique = true)
+    private String name;
 
-    private String description;
-
-    private Boolean estValide = false;
-
-    private LocalDateTime dateCreation;
-
-    private LocalDateTime dateModification;
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private CategoryStatus status = CategoryStatus.ACTIVE;
 
     @ManyToOne
+    @JoinColumn(name = "owner_id")
+    private User owner;
     @JoinColumn(name = "id_util")
     private User categoryOwner;
 
-    @PrePersist
-    public void prePersist() {
-        this.dateCreation = LocalDateTime.now();
-        this.dateModification = LocalDateTime.now();
-    }
+    @Column(nullable = false)
+    private String subject;
 
-    @PreUpdate
-    public void preUpdate() {
-        this.dateModification = LocalDateTime.now();
-    }
+    @Builder.Default
+    @ManyToMany
+    @JoinTable(
+            name = "category_followers",
+            joinColumns = @JoinColumn(name = "category_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> followers = new HashSet<>();
+
 }

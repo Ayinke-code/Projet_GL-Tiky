@@ -1,13 +1,8 @@
 <template>
   <div class="min-h-screen flex items-center justify-center bg-default">
 
-    <!-- Affichage d’une alerte d’erreur temporaire -->
-    <div v-if="error" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-4">
-      <Alert color="error" title="Erreur" :description="error" icon="i-lucide-alert-circle" />
-    </div>
-
     <div class="w-full max-w-md p-6 space-y-4 rounded-xl bg-elevated shadow-lg border border-default">
-      <LoginForms @submit="handleLogin" />
+      <LoginForms @submit="handleLogin" :error="error"/>
     </div>
 
   </div>
@@ -15,7 +10,6 @@
 
 <script setup>
 import LoginForms from '~/components/forms/LoginForms.vue'
-import Alert from '~/components/ui/Alert.vue';
 import { useAuth } from '~/composables/useAuth'
 
 const { login } = useAuth()
@@ -54,10 +48,10 @@ const showError = (message) => {
  * @param values données du formulaire de connexion
  */
 const handleLogin = async (values) => {
-  error.value = false
+  error.value = null
 
   // Gestion des erreurs des champs emails et password
-  const dataError = entriesFormat(values.data?.email, values.data?.password);
+  const dataError = entriesFormat(values?.email, values?.password);
   if (dataError) {
     // error.value = dataError
     showError(dataError)
@@ -66,7 +60,7 @@ const handleLogin = async (values) => {
 
   // Envoie de la requête de login
   try {
-    await login(values.data.email, values.data.password)
+    await login(values?.email, values?.password)
     await navigateTo('/')
   } catch (e) {
     // error.value = "Email ou mot de passe incorrect"
