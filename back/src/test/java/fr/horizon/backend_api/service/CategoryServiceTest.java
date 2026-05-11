@@ -1,5 +1,6 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.CategoryDto;
@@ -167,8 +168,8 @@ class CategoryServiceTest {
 
         // WHEN / THEN
         assertThatThrownBy(() -> categoryService.deleteById(999L))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessage("Category not found");
+                .isInstanceOf(CategoryNotFoundException.class)
+                .hasMessage("Category not found with id: 999");
 
         verify(categoryRepository, never()).deleteById(anyLong());
     }
