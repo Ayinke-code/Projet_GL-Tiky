@@ -22,11 +22,13 @@ public class Role extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String name;
 
+    @Builder.Default
     @ManyToMany(mappedBy = "roles")
     private Set<User> users = new HashSet<>();
 
     public Role(String name) {
         this.name = name;
+        this.users = new HashSet<>();
     }
 
 }
