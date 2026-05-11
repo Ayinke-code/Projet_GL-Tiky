@@ -4,7 +4,7 @@ import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.CategoryDto;
-import fr.horizon.backend_api.model.dto.CategoryRequestDto;
+import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.UserRepository;
@@ -86,7 +86,7 @@ class CategoryServiceTest {
     void shouldCreateCategory() {
 
         // GIVEN
-        CategoryRequestDto dto = CategoryRequestDto.builder()
+        CategoryCreateDto dto = CategoryCreateDto.builder()
                 .name("JAVA")
                 .subject("Backend Java")
                 .ownerId(1L)
@@ -121,7 +121,7 @@ class CategoryServiceTest {
     void shouldThrowExceptionWhenOwnerNotFound() {
 
         // GIVEN
-        CategoryRequestDto dto = CategoryRequestDto.builder()
+        CategoryCreateDto dto = CategoryCreateDto.builder()
                 .name("JAVA")
                 .subject("Backend")
                 .ownerId(999L)
