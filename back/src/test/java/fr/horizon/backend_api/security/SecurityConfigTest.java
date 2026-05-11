@@ -54,7 +54,7 @@ class SecurityConfigTest {
     }
 
     @Test
-    void shouldCreateSecurityFilterChain() throws Exception {
+    void shouldCreateSecurityFilterChain() {
 
         assertNotNull(securityConfig);
     }
