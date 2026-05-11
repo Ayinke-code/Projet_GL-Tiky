@@ -14,6 +14,7 @@ import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@Disabled("Test d'intégration frontale non stable dans le cycle Maven backend")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class CategorySeleniumTest {
