@@ -3,7 +3,7 @@ image: srv-proxy.openstack.etudis.eseo.fr:1973/projetgl-cicd:latest
 variables:
   # Maven configuration
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Dhttp.proxyHost=192.168.4.8 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=192.168.4.8 -Dhttps.proxyPort=3128"
-  MAVEN_CLI_OPTS: "-s .m2/settings.xml --batch-mode"
+  MAVEN_CLI_OPTS: "-s back/settings.xml --batch-mode"
   
   # SonarQube configuration
   SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
@@ -34,29 +34,6 @@ before_script:
   - rm -f /usr/bin/chromedriver || true
   - export http_proxy=http://192.168.4.8:3128
   - export https_proxy=http://192.168.4.8:3128
-
-  # Create Maven proxy configuration
-  - mkdir -p .m2
-  - |
-    cat > back/.m2/settings.xml <<EOF
-    <settings>
-      <proxies>
-        <proxy>
-          <id>proxy</id>
-          <active>true</active>
-          <protocol>http</protocol>
-          <host>192.168.4.8</host>
-          <port>3128</port>
-        </proxy><proxy>
-          <id>https-proxy</id>
-          <active>true</active>
-          <protocol>https</protocol>
-          <host>192.168.4.8</host>
-          <port>3128</port>
-        </proxy>
-      </proxies>
-    </settings>
-    EOF
 
 # Stage 1: Build Backend (JAR)
 build-backend:
