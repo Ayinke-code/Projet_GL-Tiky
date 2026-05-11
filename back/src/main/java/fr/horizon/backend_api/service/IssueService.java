@@ -1,9 +1,11 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.model.*;
-import fr.horizon.backend_api.model.dto.DemandeManagerDTO;
+import fr.horizon.backend_api.model.dto.RequestManagerDTO;
 import fr.horizon.backend_api.model.dto.IssueDTO;
-import fr.horizon.backend_api.repository.DemandeManagerRepository;
+import fr.horizon.backend_api.model.enums.IssueStatus;
+import fr.horizon.backend_api.model.enums.RequestManagerStatus;
+import fr.horizon.backend_api.repository.RequestManagerRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.UserRepository;
@@ -16,7 +18,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -28,14 +29,14 @@ public class IssueService {
     private final IssueRepository issueRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
-    private final DemandeManagerRepository demandeManagerRepository;
+    private final RequestManagerRepository requestManagerRepository;
     private final String uploadDir = "uploads/issues/";
 
     public IssueService(IssueRepository issueRepository,
-                        CategoryRepository categoryRepository, UserRepository userRepository, DemandeManagerRepository demandeManagerRepository) {
+                        CategoryRepository categoryRepository, UserRepository userRepository, RequestManagerRepository requestManagerRepository) {
         this.issueRepository = issueRepository;
         this.userRepository = userRepository;
-        this.demandeManagerRepository = demandeManagerRepository;
+        this.requestManagerRepository = requestManagerRepository;
         this.categoryRepository = categoryRepository;
     }
 
@@ -45,17 +46,13 @@ public class IssueService {
         Category category = categoryRepository.findById(dto.getCategorieId())
                 .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
 
-        if (!category.getEstValide()) {
-            throw new IllegalArgumentException("Catégorie inactive ou non validée");
-        }
-
         Issue issue = Issue.builder()
-                .titre(dto.getTitre())
+                .title(dto.getTitre())
                 .description(dto.getDescription())
-                .categorie(category)
-                .createur(creator)
-                .statut(IssueStatus.INCOMPLETE)
-                .estPrive(false)
+                .category(category)
+                .createdBy(creator)
+                .status(IssueStatus.INCOMPLET)
+                .isPrivate(false)
                 .build();
 
         Issue savedIssue = issueRepository.save(issue);
@@ -73,17 +70,17 @@ public class IssueService {
     }
 
     public List<Issue> getIssuesByCategory(Long categorieId) {
-        return issueRepository.findByCategorie_IdCat(categorieId);
+        return issueRepository.findByCategoryId(categorieId);
     }
 
     public List<Issue> getIssuesByCreator(Long creatorId) {
-        return issueRepository.findByCreateur_Id(creatorId);
+        return issueRepository.findByCreatedById(creatorId);
     }
 
     public List<Issue> getIssuesByStatus(String statut) {
         try {
             IssueStatus parsedStatus = IssueStatus.valueOf(statut.toUpperCase());
-            return issueRepository.findByStatut(parsedStatus);
+            return issueRepository.findByStatus(parsedStatus);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Statut invalide");
         }
@@ -110,7 +107,7 @@ public class IssueService {
 
     private void saveDocuments(Issue issue, List<MultipartFile> documents) {
         try {
-            Path uploadPath = Paths.get(uploadDir + issue.getIdTick());
+            Path uploadPath = Paths.get(uploadDir + issue.getId());
             Files.createDirectories(uploadPath);
 
             for (MultipartFile file : documents) {
@@ -132,14 +129,14 @@ public class IssueService {
      * @return le DTO d'une demande d'assignation
      */
     @Transactional
-    public DemandeManagerDTO assignManagerToIssue(Long issueId, Long userId) {
+    public RequestManagerDTO assignManagerToIssue(Long issueId, Long userId) {
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket non trouvé"));
 
         User teacher = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
 
-        if (demandeManagerRepository.existsByIssueAndStatut(issue, DemandeManagerStatus.PENDING)) {
+        if (requestManagerRepository.existsByIssueAndStatus(issue, RequestManagerStatus.PENDING)) {
             throw new IllegalStateException("Une demande de manager est déjà en cours pour ce ticket.");
         }
 
@@ -160,29 +157,29 @@ public class IssueService {
      * @param targetedUser Teacher visé par la demande.
      * @return le DTO d'une demande d'assignation
      */
-    private DemandeManagerDTO sendManagerRequest(Issue issue, User targetedUser) {
-        DemandeManagerStatus initialStatus = DemandeManagerStatus.PENDING;
+    private RequestManagerDTO sendManagerRequest(Issue issue, User targetedUser) {
+        RequestManagerStatus initialStatus = RequestManagerStatus.PENDING;
 
         // Correction : Comparaison par ID
-        if (targetedUser.getId().equals(issue.getCategorie().getCategoryOwner().getId())) {
-            initialStatus = DemandeManagerStatus.ACCEPTED;
+        if (targetedUser.getId().equals(issue.getCategory().getCategoryOwner().getId())) {
+            initialStatus = RequestManagerStatus.ACCEPTED;
             issue.setManager(targetedUser);
         }
 
-        DemandeManager demandeManager = DemandeManager.builder()
+        RequestManager requestManager = RequestManager.builder()
                 .targetTeacher(targetedUser)
-                .categorieOwner(issue.getCategorie().getCategoryOwner())
+                .categoryOwner(issue.getCategory().getCategoryOwner())
                 .issue(issue)
-                .statut(initialStatus)
+                .status(initialStatus)
                 .build();
 
-        DemandeManager savedDemande = demandeManagerRepository.save(demandeManager);
+        RequestManager savedDemande = requestManagerRepository.save(requestManager);
 
-        return DemandeManagerDTO.builder()
-                .cible(targetedUser.getName())
-                .statut(initialStatus.toString())
-                .dateCreation(LocalDateTime.now())
-                .titreIssue(issue.getTitre())
+        return RequestManagerDTO.builder()
+                .target(targetedUser.getName())
+                .status(initialStatus.toString())
+                .creationDate(LocalDateTime.now())
+                .issueTitle(issue.getTitle())
                 .build();
     }
 
@@ -194,29 +191,29 @@ public class IssueService {
      * @return le DTO d'une demande d'assignation
      */
     @Transactional
-    public DemandeManagerDTO respondManagerRequest(boolean response, Long demandeManagerId, Long userId) {
-        DemandeManager demandeManager = demandeManagerRepository.findById(demandeManagerId)
+    public RequestManagerDTO respondManagerRequest(boolean response, Long demandeManagerId, Long userId) {
+        RequestManager requestManager = requestManagerRepository.findById(demandeManagerId)
                 .orElseThrow(() -> new IllegalArgumentException("Demande non trouvée"));
 
-        if (!demandeManager.getTargetTeacher().getId().equals(userId)) {
+        if (!requestManager.getTargetTeacher().getId().equals(userId)) {
             throw new IllegalStateException("Vous n'êtes pas autorisé à répondre à cette demande");
         }
 
-        demandeManager.setDateTraitement(LocalDateTime.now());
+        requestManager.setProcessingDate(LocalDateTime.now());
 
         if (response) {
-            demandeManager.setStatut(DemandeManagerStatus.ACCEPTED);
-            demandeManager.getIssue().setManager(demandeManager.getTargetTeacher());
+            requestManager.setStatus(RequestManagerStatus.ACCEPTED);
+            requestManager.getIssue().setManager(requestManager.getTargetTeacher());
         } else {
-            demandeManager.setStatut(DemandeManagerStatus.DENIED);
+            requestManager.setStatus(RequestManagerStatus.DENIED);
         }
 
-        return DemandeManagerDTO.builder()
-                .cible(demandeManager.getTargetTeacher().getName())
-                .statut(demandeManager.getStatut().toString())
-                .dateCreation(demandeManager.getDateCreation())
-                .dateTraitement(demandeManager.getDateTraitement())
-                .titreIssue(demandeManager.getIssue().getTitre())
+        return RequestManagerDTO.builder()
+                .target(requestManager.getTargetTeacher().getName())
+                .status(requestManager.getStatus().toString())
+                .creationDate(requestManager.getCreatedAt())
+                .processingDate(requestManager.getProcessingDate())
+                .issueTitle(requestManager.getIssue().getTitle())
                 .build();
     }
 

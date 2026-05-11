@@ -1,11 +1,11 @@
-package fr.horizon.backend_api.model;
+package fr.horizon.backend_api.model.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @AllArgsConstructor
 @Getter
-public enum DemandeManagerStatus {
+public enum RequestManagerStatus {
     DENIED("Refusé"),
     PENDING("En attente"),
     ACCEPTED("Validé");

@@ -35,4 +35,13 @@ public class User extends BaseEntity {
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private Set<Role> roles = new HashSet<>();
+
+    public boolean isTeacher() {
+        if (this.roles == null) {
+            return false;
+        }
+        return this.roles.stream()
+                .anyMatch(role -> role.getName().equalsIgnoreCase("TEACHER"));
+    }
+
 }

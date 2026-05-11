@@ -31,6 +31,8 @@ public class Category extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "owner_id")
     private User owner;
+
+    @ManyToOne
     @JoinColumn(name = "id_util")
     private User categoryOwner;
 

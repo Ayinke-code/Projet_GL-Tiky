@@ -2,7 +2,7 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
-import fr.horizon.backend_api.model.dto.DemandeManagerDTO;
+import fr.horizon.backend_api.model.dto.RequestManagerDTO;
 import fr.horizon.backend_api.model.dto.IssueDTO;
 import fr.horizon.backend_api.service.IssueService;
 import fr.horizon.backend_api.repository.UserRepository;
@@ -66,11 +66,11 @@ public class IssueController {
      * URL : POST /demandes-manager/issue/12/target-user/5
      */
     @PostMapping("demandes-manager/issue/{issueId}/target-user/{userId}")
-    public ResponseEntity<DemandeManagerDTO> createRequest(
+    public ResponseEntity<RequestManagerDTO> createRequest(
             @PathVariable Long issueId,
             @PathVariable Long userId) {
 
-        DemandeManagerDTO dto = issueService.assignManagerToIssue(issueId, userId);
+        RequestManagerDTO dto = issueService.assignManagerToIssue(issueId, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
@@ -79,13 +79,13 @@ public class IssueController {
      * URL : PUT /demandes-manager/42/respond?accept=true&userId=5
      */
     @PutMapping("demandes-manager/{demandeId}/respond")
-    public ResponseEntity<DemandeManagerDTO> respondToRequest(
+    public ResponseEntity<RequestManagerDTO> respondToRequest(
             @PathVariable Long demandeId,
             @RequestParam boolean accept,
             // on devrait plutard remplacer par le jeton d'authentification
             @RequestParam Long userId) {
 
-        DemandeManagerDTO dto = issueService.respondManagerRequest(accept, demandeId, userId);
+        RequestManagerDTO dto = issueService.respondManagerRequest(accept, demandeId, userId);
         return ResponseEntity.ok(dto);
     }
 
