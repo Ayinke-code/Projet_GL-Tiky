@@ -74,5 +74,29 @@ export const useAuth = () => {
         }
     }
 
-    return { user, ready, login, fetchUser }
+        /**
+     * Déconnecte l'utilisateur courant.
+     * <p>
+     * Supprime le cookie de session côté serveur
+     * puis réinitialise l'état utilisateur côté client.
+     * <p>
+     * Redirige ensuite vers la page de connexion.
+     *
+     * @throws erreur API si la déconnexion échoue
+     */
+    const logout = async () => {
+        try {
+            // Suppression de la session serveur
+            await api('/auth/logout', { method: 'POST' })
+            // Réinitialisation utilisateur local
+            user.value = null
+
+            // Redirection vers login
+            await navigateTo('/login')
+        } catch (e) {
+            throw e
+        }
+    }
+
+    return { user, ready, login, fetchUser, logout }
 }
