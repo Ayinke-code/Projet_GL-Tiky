@@ -3,7 +3,7 @@ image: srv-proxy.openstack.etudis.eseo.fr:1973/projetgl-cicd:latest
 variables:
   # Maven configuration
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Dhttp.proxyHost=192.168.4.8 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=192.168.4.8 -Dhttps.proxyPort=3128"
-  MAVEN_CLI_OPTS: "-s back/settings.xml --batch-mode"
+  MAVEN_CLI_OPTS: "-s $CI_PROJECT_DIR/back/settings.xml --batch-mode"
   
   # SonarQube configuration
   SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
