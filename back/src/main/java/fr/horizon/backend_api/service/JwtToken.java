@@ -5,6 +5,7 @@ import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import io.jsonwebtoken.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,14 +14,13 @@ import org.springframework.stereotype.Service;
 import io.jsonwebtoken.security.Keys;
 
 /**
- * Service de génération et de validation des tokens JWT.
+ * Service de gestion des tokens JWT.
  * <p>
- * Responsable de :
- * <ul>
- *     <li>La création de tokens JWT contenant les informations utilisateur</li>
- *     <li>La signature des tokens avec une clé secrète</li>
- *     <li>La validation et l'extraction des claims depuis un token</li>
- * </ul>
+ * Encapsule la génération, la signature et la validation des tokens JWT utilisés
+ * pour l'authentification des utilisateurs.
+ * <p>
+ * Les tokens contiennent les informations essentielles de session (id utilisateur,
+ * email, rôles) et sont signés avec une clé secrète configurable.
  */
 @Service
 public class JwtToken {
@@ -32,26 +32,28 @@ public class JwtToken {
     private long expiration;
 
     /**
-     * Génère un token JWT pour un utilisateur.
+     * Génère un token JWT pour un utilisateur authentifié.
      *
      * @param email email utilisé comme subject du token
-     * @param id identifiant utilisateur ajouté dans les claims
-     * @param role rôle utilisateur ajouté dans les claims
+     * @param id identifiant utilisateur stocké dans les claims
+     * @param roles ensemble des rôles associés à l'utilisateur
      * @return token JWT signé
      */
-    public String generateToken(String email, Long id, String role) {
+    public String generateToken(String email, Long id, Set<String> roles) {
+
         Map<String, Object> claims = new HashMap<>();
         claims.put("id", id);
-        claims.put("role", role);
+        claims.put("roles", roles);
+
         return createToken(claims, email);
     }
 
     /**
-     * Construit le token JWT avec les claims et le sujet.
+     * Construit un token JWT à partir de claims et d'un subject.
      *
-     * @param claims données supplémentaires du token
-     * @param email sujet (email utilisateur)
-     * @return token JWT signé et compacté
+     * @param claims données embarquées dans le token
+     * @param email subject (email utilisateur)
+     * @return token JWT signé et encodé
      */
     private String createToken(Map<String, Object> claims, String email) {
         return Jwts.builder()
@@ -64,9 +66,9 @@ public class JwtToken {
     }
 
     /**
-     * Génère la clé de signature HMAC à partir du secret configuré.
+     * Génère la clé de signature HMAC à partir du secret applicatif.
      *
-     * @return clé de signature utilisée pour JWT
+     * @return clé utilisée pour signer et valider les tokens
      */
     private Key getSignKey() {
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
@@ -74,10 +76,10 @@ public class JwtToken {
     }
 
     /**
-     * Analyse et valide un token JWT.
+     * Parse et valide un token JWT.
      *
-     * @param token token JWT à parser
-     * @return claims contenus dans le token
+     * @param token token JWT à analyser
+     * @return claims extraits du token
      * @throws RuntimeException si le token est expiré ou invalide
      */
     public Claims parseToken(String token) {

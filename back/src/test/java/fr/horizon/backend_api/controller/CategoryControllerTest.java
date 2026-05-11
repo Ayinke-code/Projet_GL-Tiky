@@ -1,0 +1,90 @@
+package fr.horizon.backend_api.controller;
+
+import fr.horizon.backend_api.model.dto.CategoryDto;
+import fr.horizon.backend_api.service.CategoryService;
+import fr.horizon.backend_api.service.JwtToken;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(CategoryController.class)
+@AutoConfigureMockMvc(addFilters = false)
+class CategoryControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private CategoryService categoryService;
+
+    @MockitoBean
+    private JwtToken jwtToken;
+
+    @Test
+    void shouldGetAllCategories() throws Exception {
+
+        CategoryDto dto = CategoryDto.builder()
+                .id(1L)
+                .name("DEV")
+                .subject("Backend Java")
+                .build();
+
+        when(categoryService.findAll()).thenReturn(List.of(dto));
+
+        mockMvc.perform(get("/categories"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("DEV"))
+                .andExpect(jsonPath("$[0].subject").value("Backend Java"));
+
+        verify(categoryService).findAll();
+    }
+
+    @Test
+    void shouldCreateCategory() throws Exception {
+
+        CategoryDto response = CategoryDto.builder()
+                .id(1L)
+                .name("DEV")
+                .subject("Backend Java")
+                .build();
+
+        when(categoryService.createCategory(any())).thenReturn(response);
+
+        mockMvc.perform(post("/categories")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                    {
+                                      "name": "DEV",
+                                      "subject": "Backend Java",
+                                      "ownerId": 1
+                                    }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.name").value("DEV"));
+
+        verify(categoryService).createCategory(any());
+    }
+
+    @Test
+    void shouldDeleteCategory() throws Exception {
+
+        mockMvc.perform(delete("/categories/1"))
+                .andExpect(status().isOk());
+
+        verify(categoryService).deleteById(1L);
+    }
+}

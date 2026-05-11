@@ -14,9 +14,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,15 +39,15 @@ class AuthServiceTest {
     @Test
     void login_should_return_login_response_when_credentials_valid() {
 
-        // GIVEN
         User user = new User();
         user.setId(1L);
         user.setEmail("test@test.com");
         user.setName("Test");
         user.setPassword("encoded");
+
         Role role = new Role();
         role.setName("USER");
-        user.setRole(role);
+        user.setRoles(Set.of(role));
 
         LoginRequest request = new LoginRequest();
         request.setEmail("test@test.com");
@@ -57,13 +59,14 @@ class AuthServiceTest {
         when(passwordEncoder.matches("password", "encoded"))
                 .thenReturn(true);
 
-        when(jwtToken.generateToken("test@test.com", 1L, "USER"))
-                .thenReturn("fake-jwt-token");
+        when(jwtToken.generateToken(
+                eq("test@test.com"),
+                eq(1L),
+                eq(Set.of("USER"))
+        )).thenReturn("fake-jwt-token");
 
-        // WHEN
         LoginResponse response = authService.login(request);
 
-        // THEN
         assertNotNull(response);
         assertEquals("fake-jwt-token", response.getToken());
         assertEquals("test@test.com", response.getEmail());
