@@ -1,7 +1,5 @@
 package fr.horizon.backend_api.model.dto;
 
-import fr.horizon.backend_api.model.Role;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

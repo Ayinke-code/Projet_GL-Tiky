@@ -13,4 +13,5 @@ public interface CategoryFollowerRepository extends JpaRepository<CategoryFollow
     Optional<CategoryFollower> findByTeacherIdAndCategoryId(String teacherId, Long categoryId);
     void deleteByTeacherIdAndCategoryId(String teacherId, Long categoryId);
     boolean existsByTeacherIdAndCategoryId(String teacherId, Long categoryId);
+    List<CategoryFollower> findByCategoryId(Long categoryId);
 }

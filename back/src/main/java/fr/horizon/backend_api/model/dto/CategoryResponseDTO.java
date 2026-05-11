@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 /**
  * DTO (Data Transfer Object) pour la réponse d'une catégorie.
@@ -50,4 +51,6 @@ public class CategoryResponseDTO {
     private LocalDateTime updatedAt;
 
     private String subject;
+
+    private Set<UserDto> followers; 
 }

@@ -153,6 +153,58 @@ export const useCategory = (teacherId = 'teacher-default') => {
     }
   }
 
+  const fetchFollowers = async (categoryId) => {
+    try {
+      const response = await fetch(`${API_BASE}/${categoryId}/followers`, {
+        headers: getHeaders()
+      })
+      if (response.ok) return await response.json()
+    } catch (err) {
+      console.error('Fetch followers error', err)
+    }
+    return []
+  }
+
+  const addFollower = async (categoryId, userId) => {
+    try {
+      const response = await fetch(`${API_BASE}/${categoryId}/followers?userId=${userId}`, {
+        method: 'POST',
+        headers: getHeaders()
+      })
+      if (!response.ok) throw new Error('Erreur lors de l\'ajout du follower')
+      return await response.json()
+    } catch (err) {
+      console.error('Add follower error', err)
+      throw err
+    }
+  }
+
+  const removeFollower = async (categoryId, userId) => {
+    try {
+      const response = await fetch(`${API_BASE}/${categoryId}/followers/${userId}`, {
+        method: 'DELETE',
+        headers: getHeaders()
+      })
+      if (!response.ok) throw new Error('Erreur lors de la suppression du follower')
+      return await response.json()
+    } catch (err) {
+      console.error('Remove follower error', err)
+      throw err
+    }
+  }
+
+  const fetchAvailableTeachers = async (categoryId) => {
+    try {
+      const response = await fetch(`${API_BASE}/${categoryId}/available-teachers`, {
+        headers: getHeaders()
+      })
+      if (response.ok) return await response.json()
+    } catch (err) {
+      console.error('Fetch available teachers error', err)
+    }
+    return []
+  }
+
   return {
     categories,
     loading,
@@ -165,6 +217,10 @@ export const useCategory = (teacherId = 'teacher-default') => {
     followCategory,
     unfollowCategory,
     getFollowedCategories,
-    deleteCategoryPermanent
+    deleteCategoryPermanent,
+    fetchFollowers,
+    addFollower,
+    removeFollower,
+    fetchAvailableTeachers
   }
 }

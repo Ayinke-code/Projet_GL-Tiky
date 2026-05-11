@@ -24,6 +24,13 @@ public class UserController {
         return userRepository.findAll();
     }
 
+    @GetMapping("/teachers")
+    public List<User> getAllTeachers() {
+        return userRepository.findAll().stream()
+                .filter(u -> u.getRole() != null && "TEACHER".equals(u.getRole().getName()))
+                .toList();
+    }
+
     @PostMapping("/add")
     public User createUser(@Valid @RequestBody UserDto dto) {
         return userService.createUser(dto);

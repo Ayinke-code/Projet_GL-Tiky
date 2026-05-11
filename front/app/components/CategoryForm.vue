@@ -24,9 +24,9 @@
         <label class="block text-xs font-medium text-gray-700 mb-2">Enseignant responsable *</label>
         <select id="category-teacher-select" v-model="formData.teacher" 
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-          <option value="Teacher_default">Teacher_default</option>
-          <option value="Dr. Smith">Dr. Smith</option>
-          <option value="Prof. Martin">Prof. Martin</option>
+          <option v-for="teacher in teachers" :key="teacher.id" :value="String(teacher.id)">
+            {{ teacher.name }}
+          </option>
         </select>
       </div>
 
@@ -46,16 +46,31 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useCategory } from '~/composables/useCategory' 
 
 // Initialisation du service 
 const { createCategory, loading, error } = useCategory()
 
+const teachers = ref([])
 const formData = ref({
   name: '',
   subject: '',
-  teacher: 'teacher-default' 
+  teacher: '' 
+})
+
+onMounted(async () => {
+  try {
+    const response = await fetch('http://localhost:8080/api/users/teachers')
+    if (response.ok) {
+      teachers.value = await response.json()
+      if (teachers.value.length > 0) {
+        formData.value.teacher = String(teachers.value[0].id)
+      }
+    }
+  } catch (err) {
+    console.error('Erreur chargement profs:', err)
+  }
 })
 
 const emit = defineEmits(['submit'])
@@ -70,6 +85,10 @@ const submitForm = () => {
 }
 
 const resetForm = () => {
-  formData.value = { name: '', subject: '', teacher: 'teacher-default' }
+  formData.value = { 
+    name: '', 
+    subject: '', 
+    teacher: teachers.value.length > 0 ? String(teachers.value[0].id) : '' 
+  }
 }
 </script>

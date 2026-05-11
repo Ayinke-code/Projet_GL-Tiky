@@ -1,6 +1,7 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.model.Category;
+import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.CategoryFollower;
 import fr.horizon.backend_api.model.dto.CategoryResponseDTO;
 import fr.horizon.backend_api.model.dto.CreateCategoryDTO;
@@ -32,6 +33,7 @@ public class CategoryService {
      */
     private final CategoryRepository categoryRepository;
     private final CategoryFollowerRepository followerRepository;
+    private final fr.horizon.backend_api.repository.UserRepository userRepository;
 
     @Transactional
     public void followCategory(Long categoryId, String teacherId) {
@@ -245,6 +247,35 @@ public class CategoryService {
         categoryRepository.deleteById(id);
     }
 
+    public List<User> getFollowers(Long categoryId) {
+        List<String> teacherIds = followerRepository.findByCategoryId(categoryId).stream()
+                .map(CategoryFollower::getTeacherId)
+                .collect(Collectors.toList());
+        
+        return userRepository.findAllById(teacherIds.stream()
+                .map(Long::valueOf)
+                .collect(Collectors.toList()));
+    }
+
+    @Transactional
+    public void addFollower(Long categoryId, String teacherId) {
+        if (!followerRepository.existsByTeacherIdAndCategoryId(teacherId, categoryId)) {
+            followerRepository.save(CategoryFollower.builder()
+                    .teacherId(teacherId)
+                    .categoryId(categoryId)
+                    .build());
+        }
+    }
+
+    @Transactional
+    public void removeFollower(Long categoryId, String teacherId) {
+        followerRepository.deleteByTeacherIdAndCategoryId(teacherId, categoryId);
+    }
+
+    public List<User> getAvailableTeachers(Long categoryId) {
+        return userRepository.findTeachersNotFollowingCategory(categoryId);
+    }
+
     /**
      * Convertit une entité Category en DTO CategoryResponseDTO.
      * 
@@ -255,11 +286,12 @@ public class CategoryService {
         return CategoryResponseDTO.builder()
                 .id(category.getId())
                 .name(category.getName())
-                .subject(category.getSubject()) // Ajoute ce mapping
+                .subject(category.getSubject())
                 .status(category.getStatus())
                 .owner(category.getCategoryOwner())
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())
+                .followers(java.util.Collections.emptySet())
                 .build();
     }
 }

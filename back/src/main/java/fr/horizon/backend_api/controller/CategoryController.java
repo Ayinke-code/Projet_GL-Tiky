@@ -1,6 +1,7 @@
 package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.CategoryResponseDTO;
+import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.CreateCategoryDTO;
 import fr.horizon.backend_api.exception.CategoryAlreadyExistsException;
 import fr.horizon.backend_api.service.CategoryService;
@@ -208,6 +209,28 @@ public class CategoryController {
         return ResponseEntity.ok(categoryService.getFollowedCategoryIds(teacherId));
     }
  
+    @GetMapping("/{id}/followers")
+    public ResponseEntity<List<User>> getFollowers(@PathVariable Long id) {
+        return ResponseEntity.ok(categoryService.getFollowers(id));
+    }
+
+    @PostMapping("/{id}/followers")
+    public ResponseEntity<Void> addFollower(@PathVariable Long id, @RequestParam String userId) {
+        categoryService.addFollower(id, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{id}/followers/{userId}")
+    public ResponseEntity<Void> removeFollower(@PathVariable Long id, @PathVariable String userId) {
+        categoryService.removeFollower(id, userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/{id}/available-teachers")
+    public ResponseEntity<List<User>> getAvailableTeachers(@PathVariable Long id) {
+        return ResponseEntity.ok(categoryService.getAvailableTeachers(id));
+    }
+
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException e) {
         Map<String, String> error = new HashMap<>();
@@ -229,5 +252,4 @@ public class CategoryController {
         error.put("message", e.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
-
 }
