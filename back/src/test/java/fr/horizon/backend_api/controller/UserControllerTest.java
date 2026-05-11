@@ -2,9 +2,13 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.UserDto;
 import fr.horizon.backend_api.model.dto.UserRequestDto;
+import fr.horizon.backend_api.security.JwtAuthenticationFilter;
+import fr.horizon.backend_api.service.JwtToken;
 import fr.horizon.backend_api.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
@@ -19,6 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(UserController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class UserControllerTest {
 
     @Autowired
@@ -26,6 +31,12 @@ class UserControllerTest {
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @MockitoBean
+    private JwtToken jwtToken;
 
     @Test
     void shouldGetAllUsers() throws Exception {
@@ -60,11 +71,13 @@ class UserControllerTest {
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                        {
-                          "name": "John",
-                          "email": "john@test.com"
-                        }
-                        """))
+                            {
+                              "name": "John",
+                              "email": "john@test.com",
+                              "password": "password123",
+                              "roleIds": [1]
+                            }
+                            """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1));
 
