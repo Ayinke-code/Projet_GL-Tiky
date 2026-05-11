@@ -25,7 +25,7 @@ defineProps({
     default: () => ({
       color: 'neutral',
       variant: 'outline',
-      class: 'rounded-full'
+      class: 'rounded-full cursor-pointer'
     })
   }
 })
