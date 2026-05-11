@@ -1,9 +1,11 @@
 import { ref } from 'vue'
+import type { Ref } from 'vue'
+import type { Category } from '~/types'
 
-export const useCategory = (teacherId = 'teacher-default') => {
-  const categories = ref([])
-  const loading = ref(false)
-  const error = ref(null)
+export const useCategory = (teacherId: string = 'teacher-default') => {
+  const categories: Ref<Category[]> = ref([])
+  const loading: Ref<boolean> = ref(false)
+  const error: Ref<string | null> = ref(null)
 
   const API_BASE = 'http://localhost:8080/api/categories'
 
@@ -14,7 +16,7 @@ export const useCategory = (teacherId = 'teacher-default') => {
   })
 
   // Récupérer les catégories de l'enseignant courant
-  const fetchCategories = async () => {
+  const fetchCategories = async (): Promise<void> => {
     loading.value = true
     error.value = null
     try {
@@ -23,15 +25,15 @@ export const useCategory = (teacherId = 'teacher-default') => {
       })
       if (!response.ok) throw new Error('Erreur lors de la récupération')
       categories.value = await response.json()
-    } catch (err) {
-      error.value = err.message
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : 'Erreur lors de la récupération'
     } finally {
       loading.value = false
     }
   }
 
   // Créer une catégorie
-  const createCategory = async (categoryData) => {
+  const createCategory = async (categoryData: Partial<Category>): Promise<Category> => {
     loading.value = true
     error.value = null
     try {
@@ -46,18 +48,18 @@ export const useCategory = (teacherId = 'teacher-default') => {
         throw new Error(errData.message || 'Erreur lors de la création')
       }
 
-      const newCategory = await response.json()
+      const newCategory: Category = await response.json()
       categories.value.push(newCategory)
       return newCategory
-    } catch (err) {
-      error.value = err.message
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : 'Erreur lors de la création'
       throw err
     } finally {
       loading.value = false
     }
   }
 
-  const updateCategory = async (id, updates) => {
+  const updateCategory = async (id: number, updates: Partial<Category>): Promise<Category> => {
     loading.value = true
     error.value = null
     try {
@@ -70,15 +72,15 @@ export const useCategory = (teacherId = 'teacher-default') => {
       if (!response.ok) throw new Error('Erreur lors de la mise à jour')
 
       return await response.json()
-    } catch (err) {
-      error.value = err.message
+    } catch (err: unknown) {
+      error.value = err instanceof Error ? err.message : 'Erreur lors de la mise à jour'
       throw err
     } finally {
       loading.value = false
     }
   }
 
-  const archiveCategory = async (id) => {
+  const archiveCategory = async (id: number): Promise<Category> => {
     loading.value = true
     try {
       const response = await fetch(`${API_BASE}/${id}/archive`, {
@@ -92,7 +94,7 @@ export const useCategory = (teacherId = 'teacher-default') => {
     }
   }
 
-  const unarchiveCategory = async (id) => {
+  const unarchiveCategory = async (id: number): Promise<Category> => {
     loading.value = true
     try {
       const response = await fetch(`${API_BASE}/${id}/unarchive`, {
@@ -106,7 +108,7 @@ export const useCategory = (teacherId = 'teacher-default') => {
     }
   }
 
-  const followCategory = async (id) => {
+  const followCategory = async (id: number): Promise<void> => {
     try {
       await fetch(`${API_BASE}/${id}/follow`, {
         method: 'POST',
@@ -117,7 +119,7 @@ export const useCategory = (teacherId = 'teacher-default') => {
     }
   }
 
-  const unfollowCategory = async (id) => {
+  const unfollowCategory = async (id: number): Promise<void> => {
     try {
       await fetch(`${API_BASE}/${id}/follow`, {
         method: 'DELETE',
@@ -128,19 +130,19 @@ export const useCategory = (teacherId = 'teacher-default') => {
     }
   }
 
-  const getFollowedCategories = async () => {
+  const getFollowedCategories = async (): Promise<number[]> => {
     try {
       const response = await fetch(`${API_BASE}/followed`, {
         headers: getHeaders()
       })
       if (response.ok) return await response.json()
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Fetch followed error', err)
     }
     return []
   }
 
-  const deleteCategoryPermanent = async (id) => {
+  const deleteCategoryPermanent = async (id: number): Promise<void> => {
     loading.value = true
     try {
       const response = await fetch(`${API_BASE}/${id}`, {
