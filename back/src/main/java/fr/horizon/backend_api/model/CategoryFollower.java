@@ -23,4 +23,11 @@ public class CategoryFollower {
 
     @Column(nullable = false)
     private Long categoryId;
+
+    /**
+     * Statut de l'abonnement (PENDING, ACCEPTED).
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private String status = "ACCEPTED";
 }

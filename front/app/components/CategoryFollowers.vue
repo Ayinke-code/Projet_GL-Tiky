@@ -16,13 +16,35 @@
     </div>
     
     <!-- Followers list -->
-    <div v-if="followers.length > 0" class="space-y-2">
+    <div v-if="followers.length > 0" class="space-y-2 mb-6">
       <div v-for="follower in followers" :key="follower.id" class="flex justify-between items-center p-2 bg-gray-100 rounded">
-        <span>{{ follower.name }} ({{ follower.email }})</span>
-        <Button v-if="isOwner" @click="removeFollower(follower.id)" color="error" size="sm" label="Remove" />
+        <span class="text-sm">{{ follower.name }} ({{ follower.email }})</span>
+        <Button v-if="isOwner" @click="removeFollower(follower.id)" color="error" size="sm" label="Retirer" />
       </div>
     </div>
-    <p v-else class="text-gray-500">No followers yet</p>
+    <p v-else class="text-gray-500 text-sm mb-6">Aucun abonné pour le moment</p>
+
+    <!-- Pending Requests - only for owner -->
+    <div v-if="isOwner && pendingRequests.length > 0" class="mt-8 pt-6 border-t border-gray-100">
+      <h3 class="text-xs font-bold text-amber-600 uppercase mb-4 flex items-center">
+        <i class="fa-solid fa-clock mr-2"></i> Demandes en attente
+      </h3>
+      <div class="space-y-3">
+        <div v-for="req in pendingRequests" :key="req.id" class="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-100">
+          <div class="flex flex-col">
+            <span class="text-xs font-bold text-amber-800">ID Professeur: {{ req.teacherId }}</span>
+          </div>
+          <div class="flex gap-2">
+            <button @click="handleApprove(req.teacherId)" class="p-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors" title="Accepter">
+              <i class="fa-solid fa-check"></i>
+            </button>
+            <button @click="handleReject(req.teacherId)" class="p-1.5 bg-red-600 text-white rounded hover:bg-red-700 transition-colors" title="Refuser">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -40,16 +62,28 @@ const props = defineProps({
 })
 
 const { user } = useAuth()
-const { fetchFollowers, addFollower: apiAddFollower, removeFollower: apiRemoveFollower, fetchAvailableTeachers } = useCategory()
+const { 
+  fetchFollowers, 
+  addFollower: apiAddFollower, 
+  removeFollower: apiRemoveFollower, 
+  fetchAvailableTeachers,
+  approveFollower: apiApprove,
+  rejectFollower: apiReject,
+  fetchPendingRequests
+} = useCategory()
 
 const followers = ref([])
+const pendingRequests = ref([])
 const availableTeachers = ref([])
 const selectedTeacherId = ref('')
 
-const isOwner = computed(() => user.value?.id === props.category.ownerId) // Assuming ownerId is added to category
+const isOwner = computed(() => String(user.value?.id) === String(props.category.owner))
 
 const loadFollowers = async () => {
   followers.value = await fetchFollowers(props.category.id)
+  if (isOwner.value) {
+    pendingRequests.value = await fetchPendingRequests(props.category.id)
+  }
 }
 
 const loadAvailableTeachers = async () => {
@@ -76,7 +110,27 @@ const removeFollower = async (userId) => {
     await loadFollowers()
     await loadAvailableTeachers()
   } catch (e) {
-    alert('Error removing follower: ' + e.message)
+    alert('Erreur lors de la suppression: ' + e.message)
+  }
+}
+
+const handleApprove = async (teacherId) => {
+  try {
+    await apiApprove(props.category.id, teacherId)
+    await loadFollowers()
+    await loadAvailableTeachers()
+  } catch (e) {
+    alert('Erreur lors de l\'approbation: ' + e.message)
+  }
+}
+
+const handleReject = async (teacherId) => {
+  try {
+    await apiReject(props.category.id, teacherId)
+    await loadFollowers()
+    await loadAvailableTeachers()
+  } catch (e) {
+    alert('Erreur lors du rejet: ' + e.message)
   }
 }
 

@@ -52,5 +52,5 @@ public class CategoryResponseDTO {
 
     private String subject;
 
-    private Set<UserDto> followers; 
+    private Set<fr.horizon.backend_api.model.User> followers; 
 }

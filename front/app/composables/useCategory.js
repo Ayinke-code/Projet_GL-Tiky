@@ -205,6 +205,44 @@ export const useCategory = (teacherId = 'teacher-default') => {
     return []
   }
 
+  const approveFollower = async (categoryId, teacherId) => {
+    try {
+      const response = await fetch(`${API_BASE}/${categoryId}/approve/${teacherId}`, {
+        method: 'POST',
+        headers: getHeaders()
+      })
+      if (!response.ok) throw new Error('Erreur lors de l\'approbation')
+    } catch (err) {
+      console.error('Approve follower error', err)
+      throw err
+    }
+  }
+
+  const rejectFollower = async (categoryId, teacherId) => {
+    try {
+      const response = await fetch(`${API_BASE}/${categoryId}/reject/${teacherId}`, {
+        method: 'DELETE',
+        headers: getHeaders()
+      })
+      if (!response.ok) throw new Error('Erreur lors du rejet')
+    } catch (err) {
+      console.error('Reject follower error', err)
+      throw err
+    }
+  }
+
+  const fetchPendingRequests = async (categoryId) => {
+    try {
+      const response = await fetch(`${API_BASE}/${categoryId}/pending`, {
+        headers: getHeaders()
+      })
+      if (response.ok) return await response.json()
+    } catch (err) {
+      console.error('Fetch pending requests error', err)
+    }
+    return []
+  }
+
   return {
     categories,
     loading,
@@ -221,6 +259,9 @@ export const useCategory = (teacherId = 'teacher-default') => {
     fetchFollowers,
     addFollower,
     removeFollower,
-    fetchAvailableTeachers
+    fetchAvailableTeachers,
+    approveFollower,
+    rejectFollower,
+    fetchPendingRequests
   }
 }

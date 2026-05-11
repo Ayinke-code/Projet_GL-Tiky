@@ -37,10 +37,17 @@ public class CategoryService {
 
     @Transactional
     public void followCategory(Long categoryId, String teacherId) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
+
         if (!followerRepository.existsByTeacherIdAndCategoryId(teacherId, categoryId)) {
+            // Si c'est le proprio, on accepte d'office. Sinon, c'est PENDING.
+            String status = String.valueOf(category.getCategoryOwner()).equals(teacherId) ? "ACCEPTED" : "PENDING";
+            
             followerRepository.save(CategoryFollower.builder()
                     .teacherId(teacherId)
                     .categoryId(categoryId)
+                    .status(status)
                     .build());
         }
     }
@@ -88,17 +95,26 @@ public class CategoryService {
         }
 
         // 3. Création de l'entité
+        String owner = (dto.getTeacher() != null && !dto.getTeacher().isEmpty()) ? dto.getTeacher() : teacherId;
+        
         Category category = Category.builder()
                 .name(dto.getName().trim())
-                .subject(dto.getSubject().trim()) // Assure-toi que ce champ existe dans ton Entity
+                .subject(dto.getSubject().trim())
                 .status("active")
-                .categoryOwner(teacherId)
+                .categoryOwner(owner)
                 .build();
 
         Category savedCategory = categoryRepository.save(category);
         
-        // Auto-follow pour le créateur
-        followCategory(savedCategory.getId(), teacherId);
+        // Auto-follow pour le propriétaire
+        followCategory(savedCategory.getId(), owner);
+
+        // Ajouter les followers initiaux si spécifiés
+        if (dto.getInitialFollowers() != null) {
+            for (String fId : dto.getInitialFollowers()) {
+                addFollower(savedCategory.getId(), fId);
+            }
+        }
         
         return convertToDTO(savedCategory);
     }
@@ -249,9 +265,12 @@ public class CategoryService {
 
     public List<User> getFollowers(Long categoryId) {
         List<String> teacherIds = followerRepository.findByCategoryId(categoryId).stream()
+                .filter(f -> "ACCEPTED".equals(f.getStatus())) // Uniquement les acceptés
                 .map(CategoryFollower::getTeacherId)
                 .collect(Collectors.toList());
         
+        if (teacherIds.isEmpty()) return java.util.Collections.emptyList();
+
         return userRepository.findAllById(teacherIds.stream()
                 .map(Long::valueOf)
                 .collect(Collectors.toList()));
@@ -263,6 +282,7 @@ public class CategoryService {
             followerRepository.save(CategoryFollower.builder()
                     .teacherId(teacherId)
                     .categoryId(categoryId)
+                    .status("ACCEPTED") // Ajout par le proprio = d'office accepté
                     .build());
         }
     }
@@ -276,6 +296,40 @@ public class CategoryService {
         return userRepository.findTeachersNotFollowingCategory(categoryId);
     }
 
+    @Transactional
+    public void approveFollower(Long categoryId, String teacherId, String requesterId) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
+
+        if (!category.getCategoryOwner().equals(requesterId)) {
+            throw new SecurityException("Seul le propriétaire peut approuver un follower.");
+        }
+
+        CategoryFollower follower = followerRepository.findByTeacherIdAndCategoryId(teacherId, categoryId)
+                .orElseThrow(() -> new IllegalArgumentException("Demande d'abonnement non trouvée"));
+
+        follower.setStatus("ACCEPTED");
+        followerRepository.save(follower);
+    }
+
+    @Transactional
+    public void rejectFollower(Long categoryId, String teacherId, String requesterId) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
+
+        if (!category.getCategoryOwner().equals(requesterId)) {
+            throw new SecurityException("Seul le propriétaire peut rejeter un follower.");
+        }
+
+        followerRepository.deleteByTeacherIdAndCategoryId(teacherId, categoryId);
+    }
+
+    public List<CategoryFollower> getPendingRequests(Long categoryId) {
+        return followerRepository.findByCategoryId(categoryId).stream()
+                .filter(f -> "PENDING".equals(f.getStatus()))
+                .collect(Collectors.toList());
+    }
+
     /**
      * Convertit une entité Category en DTO CategoryResponseDTO.
      * 
@@ -283,6 +337,8 @@ public class CategoryService {
      * @return Le DTO correspondant
      */
     private CategoryResponseDTO convertToDTO(Category category) {
+        List<User> followers = getFollowers(category.getId());
+        
         return CategoryResponseDTO.builder()
                 .id(category.getId())
                 .name(category.getName())
@@ -291,7 +347,7 @@ public class CategoryService {
                 .owner(category.getCategoryOwner())
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())
-                .followers(java.util.Collections.emptySet())
+                .followers(new java.util.HashSet<>(followers))
                 .build();
     }
 }

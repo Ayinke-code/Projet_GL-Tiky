@@ -38,4 +38,9 @@ public class CreateCategoryDTO {
      * Identifiant de l'enseignant (utilisé pour la création initiale ou le transfert de propriété).
      */
     private String teacher;
+
+    /**
+     * Liste des identifiants des enseignants à ajouter comme followers dès la création.
+     */
+    private java.util.List<String> initialFollowers;
 }

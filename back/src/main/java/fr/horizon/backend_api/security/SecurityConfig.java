@@ -36,6 +36,8 @@ public class SecurityConfig {
                         // pour les profs
                         .requestMatchers("/categories/**").permitAll()
                         .requestMatchers("/auth/login").permitAll()
+                        .requestMatchers("/users/teachers").permitAll()
+                        .requestMatchers("/users/debug/**").permitAll()
                         .requestMatchers("/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/users/**").hasAuthority("ADMIN")
                         .requestMatchers("/teacher/**").hasAnyAuthority("TEACHER", "ADMIN")

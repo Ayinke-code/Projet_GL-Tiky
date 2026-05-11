@@ -51,6 +51,8 @@ public class CategoryController {
     public ResponseEntity<CategoryResponseDTO> createCategory(
             @Valid @RequestBody CreateCategoryDTO dto,
             @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String teacherId) {
+        System.out.println("DEBUG: Creating category with DTO: " + dto);
+        System.out.println("DEBUG: Owner header: " + teacherId);
 
         CategoryResponseDTO createdCategory = categoryService.createCategory(dto, teacherId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdCategory);
@@ -229,6 +231,25 @@ public class CategoryController {
     @GetMapping("/{id}/available-teachers")
     public ResponseEntity<List<User>> getAvailableTeachers(@PathVariable Long id) {
         return ResponseEntity.ok(categoryService.getAvailableTeachers(id));
+    }
+
+    @GetMapping("/{id}/pending")
+    public ResponseEntity<List<fr.horizon.backend_api.model.CategoryFollower>> getPendingRequests(@PathVariable Long id) {
+        return ResponseEntity.ok(categoryService.getPendingRequests(id));
+    }
+
+    @PostMapping("/{id}/approve/{teacherId}")
+    public ResponseEntity<Void> approveFollower(@PathVariable Long id, @PathVariable String teacherId,
+            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String requesterId) {
+        categoryService.approveFollower(id, teacherId, requesterId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{id}/reject/{teacherId}")
+    public ResponseEntity<Void> rejectFollower(@PathVariable Long id, @PathVariable String teacherId,
+            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String requesterId) {
+        categoryService.rejectFollower(id, teacherId, requesterId);
+        return ResponseEntity.ok().build();
     }
 
     @ExceptionHandler(IllegalStateException.class)

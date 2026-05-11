@@ -52,6 +52,12 @@ public class Category {
     private String subject;
 
     /**
+     * Liste des profs ayant accès (stocké en JSON).
+     */
+    @Column(columnDefinition = "JSON")
+    private String teacherIds;
+
+    /**
      * Date et heure de création de la catégorie.
      */
     @Column(nullable = false)
