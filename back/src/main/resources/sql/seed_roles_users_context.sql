@@ -105,6 +105,78 @@ JOIN users u ON u.email = 'student1@horizon.fr'
 WHERE c.name = 'Maintenance & Infrastructure'
   AND NOT EXISTS (SELECT 1 FROM ticket t WHERE t.titre = 'Climatisation en panne');
 
+INSERT INTO ticket (titre, description, statut, est_prive, id_cat, id_util, date_creation, date_modification)
+SELECT 'Eclairage salle B12 defaillant',
+       'Deux neons clignotent en continu dans la salle B12 depuis 3 jours',
+       'OUVERT',
+       0,
+       c.id,
+       u.id,
+       NOW(),
+       NOW()
+FROM categories c
+JOIN users u ON u.email = 'student1@horizon.fr'
+WHERE c.name = 'Maintenance & Infrastructure'
+  AND NOT EXISTS (
+    SELECT 1 FROM ticket t
+    WHERE t.titre = 'Eclairage salle B12 defaillant'
+      AND t.id_cat = c.id
+  );
+
+INSERT INTO ticket (titre, description, statut, est_prive, id_cat, id_util, date_creation, date_modification)
+SELECT 'Projecteur amphi C HS',
+       'Le projecteur de l amphi C ne s allume plus pendant les cours du matin',
+       'OUVERT',
+       0,
+       c.id,
+       u.id,
+       NOW(),
+       NOW()
+FROM categories c
+JOIN users u ON u.email = 'student2@horizon.fr'
+WHERE c.name = 'Maintenance & Infrastructure'
+  AND NOT EXISTS (
+    SELECT 1 FROM ticket t
+    WHERE t.titre = 'Projecteur amphi C HS'
+      AND t.id_cat = c.id
+  );
+
+INSERT INTO ticket (titre, description, statut, est_prive, id_cat, id_util, date_creation, date_modification)
+SELECT 'Erreur sur mon releve de notes',
+       'La note du devoir 2 n apparait pas sur mon releve semestriel',
+       'OUVERT',
+       0,
+       c.id,
+       u.id,
+       NOW(),
+       NOW()
+FROM categories c
+JOIN users u ON u.email = 'student1@horizon.fr'
+WHERE c.name = 'Scolarite & Administration'
+  AND NOT EXISTS (
+    SELECT 1 FROM ticket t
+    WHERE t.titre = 'Erreur sur mon releve de notes'
+      AND t.id_cat = c.id
+  );
+
+INSERT INTO ticket (titre, description, statut, est_prive, id_cat, id_util, date_creation, date_modification)
+SELECT 'Carte etudiante non recue',
+       'Je n ai toujours pas recu ma carte etudiante alors que l inscription est validee',
+       'OUVERT',
+       0,
+       c.id,
+       u.id,
+       NOW(),
+       NOW()
+FROM categories c
+JOIN users u ON u.email = 'student2@horizon.fr'
+WHERE c.name = 'Scolarite & Administration'
+  AND NOT EXISTS (
+    SELECT 1 FROM ticket t
+    WHERE t.titre = 'Carte etudiante non recue'
+      AND t.id_cat = c.id
+  );
+
 -- ============================================================
 -- 5) Issue followers (ABAC relationnel)
 -- ============================================================

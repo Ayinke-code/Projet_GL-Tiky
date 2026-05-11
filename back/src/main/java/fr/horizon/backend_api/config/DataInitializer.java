@@ -41,6 +41,37 @@ public class DataInitializer implements CommandLineRunner {
                 });
     }
 
+    private Category getOrCreateCategory(String name, String subject, User owner) {
+        return categoryRepository.findByNameIgnoreCase(name)
+                .orElseGet(() -> {
+                    Category cat = Category.builder()
+                            .name(name)
+                            .subject(subject)
+                            .status("active")
+                            .categoryOwner(String.valueOf(owner.getId()))
+                            .build();
+                    return categoryRepository.save(cat);
+                });
+    }
+
+    private void createIssueIfMissing(String titre, String description, Category category, User createur) {
+        boolean exists = issueRepository.findAll().stream()
+                .anyMatch(i -> titre.equalsIgnoreCase(i.getTitre())
+                        && i.getCategorie() != null
+                        && category.getId().equals(i.getCategorie().getId()));
+
+        if (!exists) {
+            Issue issue = new Issue();
+            issue.setTitre(titre);
+            issue.setDescription(description);
+            issue.setStatut(IssueStatus.OUVERT);
+            issue.setEstPrive(false);
+            issue.setCategorie(category);
+            issue.setCreateur(createur);
+            issueRepository.save(issue);
+        }
+    }
+
     @Override
     public void run(String... args) {
 
@@ -54,61 +85,40 @@ public class DataInitializer implements CommandLineRunner {
         User student1 = getOrCreateUser("student1@horizon.fr", "Alice Student", "password", studentRole);
         User student2 = getOrCreateUser("student2@horizon.fr", "Bob Student", "password", studentRole);
 
-        // Créer les catégories si elles n'existent pas
-        if (categoryRepository.count() == 0 && admin != null) {
-            String[] categories = {
-                "Maintenance & Infrastructure",
-                "Scolarité & Administration",
-                "Sécurité",
-                "Vie étudiante",
-                "Pédagogie",
-                "Discrimination & Harcèlement",
-                "Réseau & Informatique",
-                "Bibliothèque & Documentation"
-            };
+        // Créer les catégories manquantes (seed idempotent)
+        Category maintenance = getOrCreateCategory("Maintenance & Infrastructure", "Maintenance", teacher1);
+        Category scolarite = getOrCreateCategory("Scolarité & Administration", "Scolarité", teacher2);
+        getOrCreateCategory("Sécurité", "Sécurité", teacher1);
+        getOrCreateCategory("Vie étudiante", "Vie Étudiante", teacher2);
+        getOrCreateCategory("Pédagogie", "Pédagogie", teacher1);
+        getOrCreateCategory("Discrimination & Harcèlement", "Discrimination", teacher2);
+        getOrCreateCategory("Réseau & Informatique", "Réseau", teacher1);
+        getOrCreateCategory("Bibliothèque & Documentation", "Bibliothèque", teacher2);
 
-            String[] subjects = {
-                "Maintenance",
-                "Scolarité",
-                "Sécurité",
-                "Vie Étudiante",
-                "Pédagogie",
-                "Discrimination",
-                "Réseau",
-                "Bibliothèque"
-            };
+        // Créer les issues manquantes, même si la base contient déjà des catégories
+        createIssueIfMissing(
+            "Climatisation en panne",
+            "La climatisation de l'amphithéâtre A n'a plus de climatisation depuis lundi",
+            maintenance,
+            student1);
 
-            for (int i = 0; i < categories.length; i++) {
-                User owner = (i % 2 == 0) ? teacher1 : teacher2;
-                Category cat = Category.builder()
-                        .name(categories[i])
-                        .subject(subjects[i])
-                        .status("active")
-                        .categoryOwner(String.valueOf(owner.getId()))
-                        .build();
-                categoryRepository.save(cat);
-            }
+        createIssueIfMissing(
+            "Vidéoprojecteur salle B HS",
+            "Le vidéoprojecteur ne s'allume plus depuis ce matin",
+            maintenance,
+            student2);
 
-            // Créer des issues de test (Issue Creator = createur)
-            Category firstCategory = categoryRepository.findAll().get(0);
-            Issue testIssue = new Issue();
-            testIssue.setTitre("Climatisation en panne");
-            testIssue.setDescription("La climatisation de l'amphithéâtre A n'a plus de climatisation depuis lundi");
-            testIssue.setStatut(IssueStatus.OUVERT);
-            testIssue.setEstPrive(false);
-            testIssue.setCategorie(firstCategory);
-            testIssue.setCreateur(student1);
-            issueRepository.save(testIssue);
+        createIssueIfMissing(
+            "Erreur sur mon relevé de notes",
+            "La note du devoir 2 n'apparait pas sur mon relevé semestriel",
+            scolarite,
+            student1);
 
-            Issue secondIssue = new Issue();
-            secondIssue.setTitre("Vidéoprojecteur salle B HS");
-            secondIssue.setDescription("Le vidéoprojecteur ne s'allume plus depuis ce matin");
-            secondIssue.setStatut(IssueStatus.OUVERT);
-            secondIssue.setEstPrive(false);
-            secondIssue.setCategorie(firstCategory);
-            secondIssue.setCreateur(student2);
-            issueRepository.save(secondIssue);
-        }
+        createIssueIfMissing(
+            "Carte étudiante non reçue",
+            "Je n'ai toujours pas reçu ma carte étudiante alors que l'inscription est validée",
+            scolarite,
+            student2);
 
     }
 }
