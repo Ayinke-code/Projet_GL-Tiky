@@ -65,6 +65,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import type { User } from '~/types'
 
 definePageMeta({
   layout: 'blank'
@@ -72,6 +73,14 @@ definePageMeta({
 
 const router = useRouter()
 const { syncSession } = useAuth()
+
+type LoginResponse = {
+  id: string | number
+  name: string
+  email: string
+  role: User['role']
+  token: string
+}
 
 const form = ref({
   email: 'admin@admin.fr',
@@ -86,7 +95,7 @@ const handleLogin = async () => {
   error.value = null
 
   try {
-    const response = await $fetch('http://localhost:8080/api/auth/login', {
+    const response = await $fetch<LoginResponse>('http://localhost:8080/api/auth/login', {
       method: 'POST',
       body: {
         email: form.value.email,
@@ -109,9 +118,9 @@ const handleLogin = async () => {
       // Redirige vers l'espace le plus cohérent avec le rôle métier
       await router.push((response.role === 'STUDENT' || response.role === 'USER') ? '/issues' : '/categorie')
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Login error:', err)
-    error.value = err.data?.message || 'Email ou mot de passe incorrect'
+    error.value = err instanceof Error ? err.message : 'Email ou mot de passe incorrect'
   } finally {
     loading.value = false
   }

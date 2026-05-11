@@ -180,6 +180,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useCategory } from '~/composables/useCategory' 
  
 const { 
@@ -276,8 +277,6 @@ const isEditing = ref(false)
 const isCreateModalOpen = ref(false)
 const editForm = ref({ name: '', subject: '', teacher: 'Teacher_default' })
  
- 
-import { useRouter } from 'vue-router'
 const router = useRouter()
  
 onMounted(async () => {

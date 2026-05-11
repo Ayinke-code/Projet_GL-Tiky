@@ -100,7 +100,7 @@
 
     <UAlert
       v-if="error"
-      color="red"
+      color="error"
       class="mt-4"
       @close="error = null"
     >
