@@ -65,13 +65,17 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+// On importe useAuth pour accéder à la méthode login centralisée
+import { useAuth } from '~/composables/useAuth'
 
 definePageMeta({
   layout: 'blank'
 })
 
 const router = useRouter()
-const { syncSession } = useAuth()
+// Utilisez uniquement 'login' du composable.
+// 'syncSession' n'existe pas dans votre useAuth.js et n'est pas nécessaire ici.
+const { login } = useAuth()
 
 const form = ref({
   email: 'admin@admin.fr',
@@ -86,32 +90,23 @@ const handleLogin = async () => {
   error.value = null
 
   try {
-    const response = await $fetch('http://localhost:8080/api/auth/login', {
-      method: 'POST',
-      body: {
-        email: form.value.email,
-        password: form.value.password
-      }
-    })
+    // 1. Appelez la méthode login du composable.
+    // Elle s'occupe de l'appel API ET de mettre à jour l'utilisateur (fetchUser).
+    await login(form.value.email, form.value.password)
 
-    if (response.token) {
-      // Store token in cookie using nuxt composable
-      const token = useCookie('auth_token')
-      token.value = response.token
-      syncSession({
-        id: response.id,
-        name: response.name,
-        email: response.email,
-        role: response.role
-      })
-      console.log('Connexion réussie! Token:', response.token.substring(0, 20) + '...')
+    console.log('Connexion réussie !')
 
-      // Redirige vers l'espace le plus cohérent avec le rôle métier
-      await router.push(response.role === 'USER' ? '/issues' : '/categorie')
-    }
+    // 2. Redirection simple vers l'accueil ou une page spécifique
+    // Note : Si vous avez besoin du rôle pour la redirection,
+    // récupérez-le via la variable 'user' du composable.
+    await navigateTo('/')
+
   } catch (err: any) {
     console.error('Login error:', err)
-    error.value = err.data?.message || 'Email ou mot de passe incorrect'
+    // Gestion des erreurs basée sur les erreurs renvoyées par useAuth.js
+    error.value = err.message === 'INVALID_CREDENTIALS'
+      ? 'Email ou mot de passe incorrect'
+      : 'Une erreur est survenue lors de la connexion'
   } finally {
     loading.value = false
   }

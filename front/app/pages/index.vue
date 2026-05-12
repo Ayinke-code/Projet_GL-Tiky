@@ -72,7 +72,7 @@
         }]"
       />
     </UPageSection>
-    
+
     <!-- Redirection vers les catégories -->
     <div class="flex items-center justify-center h-full">
       <p class="text-gray-500">Redirection vers les catégories...</p>
@@ -92,6 +92,6 @@ definePageMeta({
 const router = useRouter()
 
 onMounted(() => {
-  router.push('/categorie')
+  router.push('/categories')
 })
 </script>

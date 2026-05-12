@@ -22,9 +22,9 @@
         Activités
       </p>
 
-      <NuxtLink 
+      <NuxtLink
         v-if="canAccessIssues"
-        to="/issues" 
+        to="/issues"
         class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
         :class="isActive('/issues') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
       >
@@ -32,13 +32,13 @@
         <span class="font-medium">Mes issues</span>
       </NuxtLink>
 
-      <NuxtLink 
+      <NuxtLink
         v-if="canAccessCategories"
-        to="/categorie" 
+        to="/categories"
         class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
-        :class="isActive('/categorie') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
+        :class="isActive('/categories') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
       >
-        <i class="fa-solid fa-folder w-6"></i> 
+        <i class="fa-solid fa-folder w-6"></i>
         <span class="font-medium">Mes catégories</span>
       </NuxtLink>
 
@@ -47,7 +47,7 @@
 
     <!-- Footer Sidebar : Fixé en bas -->
     <div class="p-4 border-t border-slate-800 bg-slate-950">
-      <button 
+      <button
         @click="logout"
         class="w-full flex items-center justify-center px-4 py-2 bg-slate-800 hover:bg-red-900/30 text-slate-400 hover:text-red-400 rounded-lg transition-all duration-200 text-sm font-medium"
       >
