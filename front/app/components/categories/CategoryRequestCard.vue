@@ -44,11 +44,12 @@
                 Accepter
             </button>
 
-            <button @click.stop="handleAcceptCategoryRequest"
+            <!-- US pas dans le Sprint 1 à faire plus tard -->
+            <!-- <button @click.stop="handleAcceptCategoryRequest"
                 class="text-[10px] bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-bold hover:bg-red-600 hover:text-white transition-all cursor-pointer">
                 <i class="fa-solid fa-xmark mr-1"></i>
                 Refuser
-            </button>
+            </button> -->
         </div>
 
     </div>
