@@ -17,7 +17,10 @@ export const useCategoryRequest = () => {
   const error = ref(null)
 
   /**
-   * Récupère toutes les demandes.
+   * Récupère toutes les demandes de catégories depuis l'API
+   * et met à jour l'état global `categoryRequests`.
+   *
+   * @returns {Array} liste des demandes de catégories
    */
   const fetchCategoryRequests = async () => {
     const data = await api('/category-requests')
@@ -26,7 +29,13 @@ export const useCategoryRequest = () => {
   }
 
   /**
-   * Crée une demande de catégorie.
+   * Crée une nouvelle demande de catégorie.
+   *
+   * Nettoie les données (suppression du champ description si vide),
+   * envoie la requête au backend puis recharge la liste des demandes.
+   *
+   * @param {Object} payload - données du formulaire
+   * @returns {Object|null} demande créée ou null en cas d'erreur
    */
   const createCategoryRequest = async (payload) => {
     error.value = null
@@ -63,7 +72,11 @@ export const useCategoryRequest = () => {
   }
 
   /**
-   * Supprime une demande.
+   * Supprime une demande de catégorie.
+   *
+   * Met à jour immédiatement le state local après suppression API.
+   *
+   * @param {number} id - identifiant de la demande à supprimer
    */
   const deleteCategoryRequest = async (id) => {
     await api(`/category-requests/${id}`, {
@@ -74,11 +87,43 @@ export const useCategoryRequest = () => {
       categoryRequests.value.filter(r => r.id !== id)
   }
 
+    /**
+   * Valide une demande de catégorie (acceptation par un teacher).
+   *
+   * Envoie la validation au backend.
+   * Le backend se charge de créer la catégorie associée.
+   *
+   * @param {number} id - identifiant de la demande
+   * @returns {boolean|null} true si succès, null si erreur
+   */
+  const acceptCategoryRequest = async (id) => {
+    if (!user?.value?.id) {
+      await navigateTo('/login')
+      return null
+    }
+
+    if (!id) {
+      return null
+    }
+
+    try {
+      await api(`/category-requests/${id}/accept`, {
+        method: 'POST'
+      })
+
+      return true
+    } catch (e) {
+      error.value = e?.data?.message || 'UNKNOWN_ERROR'
+      return null
+    }
+  }
+
   return {
     categoryRequests,
     fetchCategoryRequests,
     createCategoryRequest,
     deleteCategoryRequest,
+    acceptCategoryRequest,
     error
   }
 }

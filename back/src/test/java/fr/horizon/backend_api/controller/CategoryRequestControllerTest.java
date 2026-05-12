@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -95,5 +96,21 @@ class CategoryRequestControllerTest {
                 .andExpect(status().isOk());
 
         verify(categoryRequestService, times(1)).deleteById(1L);
+    }
+
+    @Test
+    void shouldAcceptCategoryRequest() throws Exception {
+
+        Authentication authentication = mock(Authentication.class);
+
+        when(authentication.getName())
+                .thenReturn("teacher@test.com");
+
+        mockMvc.perform(post("/category-requests/1/accept")
+                        .principal(authentication))
+                .andExpect(status().isOk());
+
+        verify(categoryRequestService, times(1))
+                .accept(1L, "teacher@test.com");
     }
 }

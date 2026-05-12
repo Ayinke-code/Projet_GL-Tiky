@@ -1,10 +1,12 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.CategoryRequest;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.CategoryRequestCreateDto;
 import fr.horizon.backend_api.model.dto.CategoryRequestDto;
 import fr.horizon.backend_api.model.enums.CategoryRequestStatus;
+import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.CategoryRequestRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,9 @@ class CategoryRequestServiceTest {
 
     @Mock
     private CategoryRequestRepository categoryRequestRepository;
+
+    @Mock
+    private CategoryRepository categoryRepository;
 
     @Mock
     private UserRepository userRepository;
@@ -109,5 +114,87 @@ class CategoryRequestServiceTest {
         categoryRequestService.deleteById(id);
 
         verify(categoryRequestRepository, times(1)).deleteById(id);
+    }
+
+    @Test
+    void shouldAcceptCategoryRequest() {
+
+        // GIVEN
+        User requester = User.builder()
+                .id(1L)
+                .name("Student")
+                .build();
+
+        User validator = User.builder()
+                .id(2L)
+                .name("Teacher")
+                .email("teacher@test.com")
+                .build();
+
+        CategoryRequest request = CategoryRequest.builder()
+                .id(10L)
+                .name("Java")
+                .subject("Programmation")
+                .status(CategoryRequestStatus.PENDING)
+                .requester(requester)
+                .build();
+
+        when(categoryRequestRepository.findById(10L))
+                .thenReturn(Optional.of(request));
+
+        when(userRepository.findByEmail("teacher@test.com"))
+                .thenReturn(Optional.of(validator));
+
+        when(categoryRepository.save(any(Category.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // WHEN
+        categoryRequestService.accept(10L, "teacher@test.com");
+
+        // THEN
+        assertEquals(CategoryRequestStatus.APPROVED, request.getStatus());
+        assertEquals(validator, request.getValidator());
+        assertNotNull(request.getCategory());
+
+        verify(categoryRepository).save(any(Category.class));
+        verify(categoryRequestRepository).save(request);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenCategoryRequestNotFound() {
+
+        // GIVEN
+        when(categoryRequestRepository.findById(999L))
+                .thenReturn(Optional.empty());
+
+        // WHEN / THEN
+        assertThrows(EntityNotFoundException.class,
+                () -> categoryRequestService.accept(999L, "teacher@test.com"));
+
+        verify(categoryRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenValidatorNotFound() {
+
+        // GIVEN
+        CategoryRequest request = CategoryRequest.builder()
+                .id(1L)
+                .name("Java")
+                .subject("Programmation")
+                .status(CategoryRequestStatus.PENDING)
+                .build();
+
+        when(categoryRequestRepository.findById(1L))
+                .thenReturn(Optional.of(request));
+
+        when(userRepository.findByEmail("teacher@test.com"))
+                .thenReturn(Optional.empty());
+
+        // WHEN / THEN
+        assertThrows(EntityNotFoundException.class,
+                () -> categoryRequestService.accept(1L, "teacher@test.com"));
+
+        verify(categoryRepository, never()).save(any());
     }
 }

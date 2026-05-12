@@ -2,14 +2,17 @@ package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.Category;
+import fr.horizon.backend_api.model.CategoryRequest;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.CategoryDto;
 import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
+import fr.horizon.backend_api.repository.CategoryRequestRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -19,6 +22,7 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final CategoryRequestRepository categoryRequestRepository;
 
     /**
      * Récupère toutes les catégories.
@@ -53,11 +57,16 @@ public class CategoryService {
     /**
      * Supprime une catégorie par ID.
      */
+    @Transactional
     public void deleteById(Long id) {
-        if (!categoryRepository.existsById(id)) {
-            throw new CategoryNotFoundException(id);
-        }
-        categoryRepository.deleteById(id);
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new CategoryNotFoundException(id));
+
+        List<CategoryRequest> requests = categoryRequestRepository.findAllByCategory(category);
+
+        categoryRequestRepository.deleteAll(requests);
+
+        categoryRepository.delete(category);
     }
 
     /**

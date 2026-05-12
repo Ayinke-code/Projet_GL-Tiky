@@ -1,5 +1,5 @@
 <template>
-    <div class="p-8 h-full bg-gray-50">
+    <div class="p-8 pb-8 min-h-screen bg-gray-50">
 
         <!-- Header page -->
         <div class="flex justify-between items-center mb-8">
@@ -17,7 +17,8 @@
         <Modal v-model:open="isCreateModalOpen" title="Création de catégorie">
 
             <!-- Affichage erreur API -->
-            <Alert v-if="categoriesError" color="error" title="Erreur" description="La catégorie renseigné existe déja !">
+            <Alert v-if="categoriesError" color="error" title="Erreur"
+                description="La catégorie renseigné existe déja !">
                 {{ categoriesError }}
             </Alert>
 
@@ -34,16 +35,30 @@
             </div>
         </Modal>
 
-        <!-- LISTE -->
+        <!-- LISTE DES CATEGORIES -->
         <div v-if="categories.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
             <CategoryCard v-for="cat in categories" :key="cat.id" :category="cat"
-                @click="selectedCat = cat; isDetailOpen = true" />
+                @click="handleClick(cat)" />
 
         </div>
 
-        <!-- Etat vide -->
-        <p v-else class="text-gray-500">Aucune catégorie</p>
+        <!-- LISTE DES DEMANDES DES ETUDIANTS -->
+        <div v-if="categoryRequests.length > 0">
+            <Separator class="my-8" />
+
+            <!-- Header page -->
+            <div class="flex justify-between items-center mb-8">
+                <h1 class="text-2xl font-bold text-gray-800">Demande des étudiants</h1>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                <!-- Affichage des catégories request si pas encore validé -->
+                <CategoryRequestCard v-for="categoryRequest in categoryRequests.filter(r => r.status !== 'APPROVED')" :categoryRequest="categoryRequest"
+                    @accept="handleAcceptCategoryRequest" />
+
+            </div>
+        </div>
 
         <!-- MODALE DETAIL -->
         <Modal v-model:open="isDetailOpen" title="Détails de la catégorie">
@@ -86,6 +101,8 @@ import CategoryCard from '~/components/categories/CategoryCard.vue'
 import Modal from '~/components/ui/Modal.vue'
 import Alert from '~/components/ui/Alert.vue'
 import CategoryRequestForms from '~/components/forms/CategoryRequestForms.vue'
+import Separator from '~/components/ui/Separator.vue'
+import CategoryRequestCard from '~/components/categories/CategoryRequestCard.vue'
 
 import { ref, onMounted } from 'vue'
 import { useCategories } from '~/composables/useCategories'
@@ -117,6 +134,7 @@ const {
     categoryRequests,
     fetchCategoryRequests,
     createCategoryRequest,
+    acceptCategoryRequest,
     deleteCategoryRequest,
     error: categoryRequestsError
 } = useCategoryRequest()
@@ -146,12 +164,29 @@ const isDetailOpen = ref(false)
  */
 onMounted(async () => {
     await fetchCategories()
+    await fetchCategoryRequests()
 })
+
+/**
+ * Gestion du clic sur une catégorie.
+ *
+ * Ouvre la modal de détail uniquement si l'utilisateur est autorisé (TEACHER).
+ *
+ * @param {Object} cat - catégorie sélectionnée
+ */
+const handleClick = (cat) => {
+  if (ready && !user?.value?.roles?.includes('TEACHER')) return
+
+  selectedCat.value = cat
+  isDetailOpen.value = true
+}
 
 /**
  * Création d'une nouvelle catégorie.
  *
- * @param data données du formulaire
+ * Appelle l'API puis rafraîchit la liste des catégories si succès.
+ *
+ * @param {Object} data - données du formulaire de création
  */
 const handleCreate = async (data) => {
     const res = await createCategory(data)
@@ -165,7 +200,10 @@ const handleCreate = async (data) => {
 /**
  * Suppression d'une catégorie.
  *
- * @param id identifiant de la catégorie
+ * Ferme la modal de détail, supprime la catégorie côté API,
+ * puis recharge la liste des catégories.
+ *
+ * @param {number} id - identifiant de la catégorie à supprimer
  */
 const handleDelete = async (id) => {
     // fermeture modal
@@ -184,7 +222,10 @@ const handleDelete = async (id) => {
 /**
  * Création d'une demande de catégorie.
  *
- * @param data données du formulaire
+ * Envoie la demande à l'API puis ferme la modal.
+ * Recharge ensuite l'application pour synchroniser les données.
+ *
+ * @param {Object} data - données du formulaire de demande
  */
 const handleRequestCreate = async (data) => {
     const res = await createCategoryRequest(data)
@@ -196,5 +237,21 @@ const handleRequestCreate = async (data) => {
 
     // rechargement application
     reloadNuxtApp()
+}
+
+/**
+ * Acceptation d'une demande de catégorie.
+ *
+ * Valide la demande côté backend, puis rafraîchit les listes
+ * des catégories et des demandes.
+ *
+ * @param {Object} data - demande à valider (contient l'id)
+ */
+const handleAcceptCategoryRequest = async (data) => {
+    const res = await acceptCategoryRequest(data.id)
+    if (!res) return
+
+    await fetchCategories()
+    await fetchCategoryRequests()
 }
 </script>

@@ -55,7 +55,7 @@ public class CategoryController {
      *
      * @param id identifiant de la catégorie
      */
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     @DeleteMapping("/{id}")
     public void deleteCategory(@PathVariable Long id) {
         categoryService.deleteById(id);
