@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RequestManagerDTO {
+    Long id;
     String issueTitle;
     LocalDateTime creationDate;
     LocalDateTime processingDate;

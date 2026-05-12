@@ -95,8 +95,25 @@ public class IssueController {
         return ResponseEntity.ok(dto);
     }
 
+    /**
+     * Récupère les demandes d'assignation en attente pour un enseignant spécifique.
+     * URL : GET /demandes-manager/teacher?userId=5
+     */
+    @GetMapping("demandes-manager/teacher")
+    public ResponseEntity<List<RequestManagerDTO>> getTeacherAssignations(@RequestParam Long userId) {
+        List<RequestManagerDTO> list = issueService.getTeacherAssignations(userId);
+        return ResponseEntity.ok(list);
+    }
 
-
+    /**
+     * Récupère les alertes pour un propriétaire de catégorie (tickets sans manager assigné).
+     * URL : GET /demandes-manager/owner-alerts?userId=1
+     */
+    @GetMapping("demandes-manager/owner-alerts")
+    public ResponseEntity<List<RequestManagerDTO>> alertCategoryOwner(@RequestParam Long userId) {
+        List<RequestManagerDTO> list = issueService.alertCategoryOwner(userId);
+        return ResponseEntity.ok(list);
+    }
 
 
 

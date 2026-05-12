@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -46,6 +47,7 @@ public class IssueService {
                 .isPrivate(false)
                 .build();
 
+        createRequestManager(issue);
         return issueRepository.save(issue);
     }
 
@@ -110,7 +112,6 @@ public class IssueService {
      * @param issueId Id du ticket visé par la demande.
      * @return le DTO d'une demande d'assignation
      */
-    @Transactional
     public RequestManagerDTO assignManagerToIssue(Long issueId, Long userId) {
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket non trouvé"));
@@ -140,29 +141,21 @@ public class IssueService {
      * @return le DTO d'une demande d'assignation
      */
     private RequestManagerDTO sendManagerRequest(Issue issue, User targetedUser) {
+        RequestManager requestManager = requestManagerRepository.findByIssue(issue)
+                .orElseThrow(() -> new EntityNotFoundException("Demande initiale introuvable"));
+
         RequestManagerStatus initialStatus = RequestManagerStatus.PENDING;
 
-        // Correction : Comparaison par ID
-        if (targetedUser.getId().equals(issue.getCategory().getCategoryOwner().getId())) {
+        if (targetedUser.getId().equals(issue.getCategory().getOwner().getId())) {
             initialStatus = RequestManagerStatus.ACCEPTED;
             issue.setManager(targetedUser);
+            requestManager.setProcessingDate(LocalDateTime.now());
         }
 
-        RequestManager requestManager = RequestManager.builder()
-                .targetTeacher(targetedUser)
-                .categoryOwner(issue.getCategory().getCategoryOwner())
-                .issue(issue)
-                .status(initialStatus)
-                .build();
+        requestManager.setTargetTeacher(targetedUser);
+        requestManager.setStatus(initialStatus);
 
-        RequestManager savedDemande = requestManagerRepository.save(requestManager);
-
-        return RequestManagerDTO.builder()
-                .target(targetedUser.getName())
-                .status(initialStatus.toString())
-                .creationDate(LocalDateTime.now())
-                .issueTitle(issue.getTitle())
-                .build();
+        return toDto(requestManagerRepository.save(requestManager));
     }
 
     /**
@@ -172,7 +165,6 @@ public class IssueService {
      * @param response Réponse de l'enseignant.
      * @return le DTO d'une demande d'assignation
      */
-    @Transactional
     public RequestManagerDTO respondManagerRequest(boolean response, Long demandeManagerId, Long userId) {
         RequestManager requestManager = requestManagerRepository.findById(demandeManagerId)
                 .orElseThrow(() -> new IllegalArgumentException("Demande non trouvée"));
@@ -190,14 +182,58 @@ public class IssueService {
             requestManager.setStatus(RequestManagerStatus.DENIED);
         }
 
+        issueRepository.save(requestManager.getIssue());
+        return toDto(requestManager);
+    }
+
+
+    /**
+     * Récupére un RequestManager en DTO pour un utilsateur spécifique.
+     */
+    public List<RequestManagerDTO> getTeacherAssignations(Long userId) {
+        List<RequestManager> entities = requestManagerRepository.findByTargetTeacher_Id(userId);
+
+        return entities.stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+
+
+    public List<RequestManagerDTO> alertCategoryOwner(Long userId){
+        List<RequestManager> entities = requestManagerRepository.findByCategoryOwner_IdAndTargetTeacherIsNull(userId);
+
+        return entities.stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+
+    /**
+     * Transforme un RequestManager en DTO.
+     * Si l'entité est nouvelle (pas encore de date de création), on peut passer une date par défaut.
+     */
+    private RequestManagerDTO toDto(RequestManager entity) {
         return RequestManagerDTO.builder()
-                .target(requestManager.getTargetTeacher().getName())
-                .status(requestManager.getStatus().toString())
-                .creationDate(requestManager.getCreatedAt())
-                .processingDate(requestManager.getProcessingDate())
-                .issueTitle(requestManager.getIssue().getTitle())
+                .id(entity.getRequestId())
+                .target(entity.getTargetTeacher() != null ? entity.getTargetTeacher().getName() : "En attente")
+                .status(entity.getStatus().toString())
+                .creationDate(entity.getCreatedAt() != null ? entity.getCreatedAt() : LocalDateTime.now())
+                .processingDate(entity.getProcessingDate())
+                .issueTitle(entity.getIssue().getTitle())
                 .build();
     }
+
+    private void createRequestManager(Issue issue){
+        RequestManager requestManager = RequestManager.builder()
+                .issue(issue)
+                .categoryOwner(issue.getCategory().getOwner())
+                .build();
+
+        requestManagerRepository.save(requestManager);
+    }
+
+
 
 
 }
