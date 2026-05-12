@@ -12,7 +12,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "Demande_cat")
+@Table(name = "request_manager")
 
 public class RequestManager extends BaseEntity {
 

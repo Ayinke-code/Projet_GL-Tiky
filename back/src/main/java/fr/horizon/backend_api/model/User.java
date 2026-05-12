@@ -44,4 +44,7 @@ public class User extends BaseEntity {
                 .anyMatch(role -> role.getName().equalsIgnoreCase("TEACHER"));
     }
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<CategoryFollower> followedCategories = new HashSet<>();
+
 }

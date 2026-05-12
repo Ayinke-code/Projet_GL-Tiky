@@ -11,18 +11,14 @@ import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.logging.Logger;
-import java.util.UUID;
+
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +28,7 @@ public class IssueService {
     private final IssueRepository issueRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final RequestManagerRepository requestManagerRepository;
     private static final Logger logger = LoggerFactory.getLogger(IssueService.class);
 
     public Issue createIssue(IssueDTO dto, User creator) {
@@ -71,7 +68,7 @@ public class IssueService {
 
     public List<Issue> getIssuesByStatus(String statut) {
         IssueStatus status = IssueStatus.fromValue(statut);
-        return issueRepository.findByStatut(status);
+        return issueRepository.findByStatus(status);
     }
 
     public void deleteIssue(Long id) {
@@ -84,14 +81,14 @@ public class IssueService {
     public Issue updateIssueStatus(Long id, String newStatus) {
         logger.info("updateIssueStatus called with id={}, newStatus={}", id, newStatus);
         Issue issue = getIssueById(id);
-        logger.info("Current status before update: {}", issue.getStatut());
+        logger.info("Current status before update: {}", issue.getStatus());
 
         IssueStatus status = IssueStatus.fromValue(newStatus);
         logger.info("Parsed status: {}", status);
 
-        issue.setStatut(status);
+        issue.setStatus(status);
         Issue saved = issueRepository.save(issue);
-        logger.info("Status after save: {}", saved.getStatut());
+        logger.info("Status after save: {}", saved.getStatus());
 
         return saved;
     }

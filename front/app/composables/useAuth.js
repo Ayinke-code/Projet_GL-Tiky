@@ -60,9 +60,10 @@ export const useAuth = () => {
      * @throws erreur API si le token est invalide ou expiré
      */
     const fetchUser = async () => {
+        console.log("fetching")
         try {
             const data = await api('/auth/me')
-
+            console.log("data", data)
             user.value = data
             ready.value = true
         } catch (e) {
