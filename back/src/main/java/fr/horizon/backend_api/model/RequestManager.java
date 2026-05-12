@@ -31,11 +31,11 @@ public class RequestManager extends BaseEntity {
     private Issue issue;
 
     @ManyToOne
-    @JoinColumn(name = "user1_id", nullable = false)
+    @JoinColumn(name = "user1_id", nullable = true)
     private User targetTeacher;
 
     @ManyToOne
-    @JoinColumn(name = "user2_id")
+    @JoinColumn(name = "user2_id", nullable = false)
     private User categoryOwner;
 
 }

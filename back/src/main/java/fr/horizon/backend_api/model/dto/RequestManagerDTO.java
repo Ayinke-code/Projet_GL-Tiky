@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Builder
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class RequestManagerDTO {
@@ -17,5 +18,6 @@ public class RequestManagerDTO {
     LocalDateTime processingDate;
     String status;
     String target;
+    String creator;
 
 }

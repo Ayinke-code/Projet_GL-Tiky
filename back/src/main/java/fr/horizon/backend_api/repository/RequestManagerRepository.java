@@ -12,9 +12,9 @@ import java.util.Optional;
 
 @Repository
 public interface RequestManagerRepository extends JpaRepository<RequestManager, Long> {
-    boolean existsByIssueAndStatus(Issue issue, RequestManagerStatus status);
-
+    boolean existsByIssueAndStatusAndTargetTeacherIsNotNull(Issue issue, RequestManagerStatus status);
     List<RequestManager> findByTargetTeacher_Id(Long targetTeacherId);
-    Optional<RequestManager> findByIssue(Issue issue);
+    Optional<RequestManager> findFirstByIssueOrderByCreatedAtDesc(Issue issue);
     List<RequestManager> findByCategoryOwner_IdAndTargetTeacherIsNull(long id);
+    List<RequestManager> findByCategoryOwner_IdAndTargetTeacherIsNotNullOrderByCreatedAtDesc(Long userId);
 }

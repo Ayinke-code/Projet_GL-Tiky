@@ -119,7 +119,7 @@ public class IssueService {
         User teacher = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
 
-        if (requestManagerRepository.existsByIssueAndStatus(issue, RequestManagerStatus.PENDING)) {
+        if (requestManagerRepository.existsByIssueAndStatusAndTargetTeacherIsNotNull(issue, RequestManagerStatus.PENDING)) {
             throw new IllegalStateException("Une demande de manager est déjà en cours pour ce ticket.");
         }
 
@@ -141,7 +141,7 @@ public class IssueService {
      * @return le DTO d'une demande d'assignation
      */
     private RequestManagerDTO sendManagerRequest(Issue issue, User targetedUser) {
-        RequestManager requestManager = requestManagerRepository.findByIssue(issue)
+        RequestManager requestManager = requestManagerRepository.findFirstByIssueOrderByCreatedAtDesc(issue)
                 .orElseThrow(() -> new EntityNotFoundException("Demande initiale introuvable"));
 
         RequestManagerStatus initialStatus = RequestManagerStatus.PENDING;
@@ -180,6 +180,7 @@ public class IssueService {
             requestManager.getIssue().setManager(requestManager.getTargetTeacher());
         } else {
             requestManager.setStatus(RequestManagerStatus.DENIED);
+            createRequestManager(requestManager.getIssue());
         }
 
         issueRepository.save(requestManager.getIssue());
@@ -213,14 +214,17 @@ public class IssueService {
      * Transforme un RequestManager en DTO.
      * Si l'entité est nouvelle (pas encore de date de création), on peut passer une date par défaut.
      */
-    private RequestManagerDTO toDto(RequestManager entity) {
+    public RequestManagerDTO toDto(RequestManager entity) {
         return RequestManagerDTO.builder()
                 .id(entity.getRequestId())
-                .target(entity.getTargetTeacher() != null ? entity.getTargetTeacher().getName() : "En attente")
-                .status(entity.getStatus().toString())
-                .creationDate(entity.getCreatedAt() != null ? entity.getCreatedAt() : LocalDateTime.now())
+                // Renvoyer NULL si pas de prof, c'est ce que le JS attend avec !r.target
+                .target(entity.getTargetTeacher() != null ? entity.getTargetTeacher().getName() : null)
+                // Renvoyer le nom technique de l'Enum (PENDING, ACCEPTED, etc.)
+                .status(entity.getStatus() != null ? entity.getStatus().name() : "PENDING")
+                .creationDate(entity.getCreatedAt())
                 .processingDate(entity.getProcessingDate())
                 .issueTitle(entity.getIssue().getTitle())
+                .creator(entity.getIssue().getCreatedBy().getName())
                 .build();
     }
 
@@ -231,6 +235,20 @@ public class IssueService {
                 .build();
 
         requestManagerRepository.save(requestManager);
+    }
+
+    /**
+     * récupérer la liste des demandes assignés
+     * @param userId Id du categorie Owner
+     * @return le DTO d'une demande d'assignation
+     */
+    public List<RequestManagerDTO> getHistoricalRequestManager(long userId) {
+        List<RequestManager> entities = requestManagerRepository
+                .findByCategoryOwner_IdAndTargetTeacherIsNotNullOrderByCreatedAtDesc(userId);
+
+        return entities.stream()
+                .map(this::toDto)
+                .toList();
     }
 
 

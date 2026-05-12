@@ -36,19 +36,27 @@ public class SecurityConfig {
                 .cors(cors -> {
                 })
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // Dans ton SecurityFilterChain
                 .authorizeHttpRequests(auth -> auth
-
                         .requestMatchers("/auth/login").permitAll()
                         .requestMatchers("/auth/logout").authenticated()
-                        .requestMatchers("/auth/me", "/categories/**").authenticated()
+                        .requestMatchers("/auth/me", "/categories/**", "/issues/**").authenticated()
 
-                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers("/users/**").hasAuthority("ROLE_ADMIN")
+                        // 1. On ouvre spécifiquement la liste des profs (plus précis que /users/**)
+                        .requestMatchers("/users/teachers").hasAnyAuthority("TEACHER", "ADMIN")
 
-                        .requestMatchers("/teacher/**").hasAnyAuthority("ROLE_TEACHER", "ROLE_ADMIN")
-                        .requestMatchers("/student/**").hasAnyAuthority("ROLE_STUDENT", "ROLE_TEACHER", "ROLE_ADMIN")
+                        // 2. On protège le reste de /users pour les Admins uniquement
+                        .requestMatchers("/users/**").hasAuthority("ADMIN")
 
-                        .anyRequest().authenticated())
+                        .requestMatchers("/issues/**").authenticated()
+
+                        // 3. On utilise les noms exacts sans le préfixe ROLE_
+                        .requestMatchers("/admin/**").hasAuthority("ADMIN")
+                        .requestMatchers("/teacher/**").hasAnyAuthority("TEACHER", "ADMIN")
+                        .requestMatchers("/student/**").hasAnyAuthority("STUDENT", "TEACHER", "ADMIN")
+
+                        .anyRequest().authenticated()
+                )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -69,10 +69,10 @@ public class IssueController {
 
     /**
      * Endpoint pour créer une demande d'assignation de manager.
-     * URL : POST /demandes-manager/issue/12/target-user/5
+     * URL : POST /assign-manager/issue/12/target-user/5
      */
-    @PostMapping("demandes-manager/issue/{issueId}/target-user/{userId}")
-    public ResponseEntity<RequestManagerDTO> createRequest(
+    @PostMapping("assign-manager/issue/{issueId}/target-user/{userId}")
+    public ResponseEntity<RequestManagerDTO> assignManager(
             @PathVariable Long issueId,
             @PathVariable Long userId) {
 
@@ -97,7 +97,7 @@ public class IssueController {
 
     /**
      * Récupère les demandes d'assignation en attente pour un enseignant spécifique.
-     * URL : GET /demandes-manager/teacher?userId=5
+     * URL : GET issues/demandes-manager/teacher?userId=5
      */
     @GetMapping("demandes-manager/teacher")
     public ResponseEntity<List<RequestManagerDTO>> getTeacherAssignations(@RequestParam Long userId) {
@@ -107,7 +107,7 @@ public class IssueController {
 
     /**
      * Récupère les alertes pour un propriétaire de catégorie (tickets sans manager assigné).
-     * URL : GET /demandes-manager/owner-alerts?userId=1
+     * URL : GET issues/demandes-manager/owner-alerts?userId=1
      */
     @GetMapping("demandes-manager/owner-alerts")
     public ResponseEntity<List<RequestManagerDTO>> alertCategoryOwner(@RequestParam Long userId) {
@@ -121,5 +121,15 @@ public class IssueController {
     public ResponseEntity<Issue> updateIssueStatus(@PathVariable Long id, @RequestBody UpdateIssueStatusDTO dto) {
         Issue updatedIssue = issueService.updateIssueStatus(id, dto.getStatut());
         return ResponseEntity.ok(updatedIssue);
+    }
+
+    /**
+     * Récupère l'historique des demandes (Acceptées, Refusées, ou En attente avec cible)
+     * URL : GET /issues/demandes-manager/history?userId=1
+     */
+    @GetMapping("/demandes-manager/history")
+    public ResponseEntity<List<RequestManagerDTO>> getHistory(@RequestParam Long userId) {
+        List<RequestManagerDTO> list = issueService.getHistoricalRequestManager(userId);
+        return ResponseEntity.ok(list);
     }
 }
