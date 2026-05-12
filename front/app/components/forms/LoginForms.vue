@@ -32,7 +32,7 @@
 
     <!-- Submit Button -->
     <button type="submit" :disabled="!form.email || !form.password"
-      class="w-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition duration-200">
+      class="w-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition duration-200 cursor-pointer">
       Se connecter
     </button>
   </form>
