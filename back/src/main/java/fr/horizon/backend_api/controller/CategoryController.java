@@ -28,7 +28,6 @@ import java.util.Map;
 @RequestMapping("/categories")
 @RequiredArgsConstructor
 @Validated
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class CategoryController {
 
     /**
@@ -51,9 +50,6 @@ public class CategoryController {
     public ResponseEntity<CategoryResponseDTO> createCategory(
             @Valid @RequestBody CreateCategoryDTO dto,
             @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String teacherId) {
-        System.out.println("DEBUG: Creating category with DTO: " + dto);
-        System.out.println("DEBUG: Owner header: " + teacherId);
-
         CategoryResponseDTO createdCategory = categoryService.createCategory(dto, teacherId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdCategory);
     }
@@ -145,7 +141,7 @@ public class CategoryController {
             @PathVariable Long id,
             @Valid @RequestBody CreateCategoryDTO dto,
             @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String requesterId) {
- 
+
         CategoryResponseDTO updatedCategory = categoryService.updateCategory(id, dto, requesterId);
         return ResponseEntity.ok(updatedCategory);
     }
@@ -156,14 +152,14 @@ public class CategoryController {
             @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String requesterId) {
         return ResponseEntity.ok(categoryService.archiveCategory(id, requesterId));
     }
- 
+
     @PatchMapping("/{id}/unarchive")
     public ResponseEntity<CategoryResponseDTO> unarchiveCategory(
             @PathVariable Long id,
             @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String requesterId) {
         return ResponseEntity.ok(categoryService.unarchiveCategory(id, requesterId));
     }
- 
+
     /**
      * Supprime une catégorie.
      */
@@ -196,7 +192,7 @@ public class CategoryController {
         categoryService.followCategory(id, teacherId);
         return ResponseEntity.ok().build();
     }
- 
+
     @DeleteMapping("/{id}/follow")
     public ResponseEntity<Void> unfollowCategory(
             @PathVariable Long id,
@@ -204,13 +200,13 @@ public class CategoryController {
         categoryService.unfollowCategory(id, teacherId);
         return ResponseEntity.ok().build();
     }
- 
+
     @GetMapping("/followed")
     public ResponseEntity<List<Long>> getFollowedCategoryIds(
             @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String teacherId) {
         return ResponseEntity.ok(categoryService.getFollowedCategoryIds(teacherId));
     }
- 
+
     @GetMapping("/{id}/followers")
     public ResponseEntity<List<User>> getFollowers(@PathVariable Long id) {
         return ResponseEntity.ok(categoryService.getFollowers(id));
@@ -234,7 +230,8 @@ public class CategoryController {
     }
 
     @GetMapping("/{id}/pending")
-    public ResponseEntity<List<fr.horizon.backend_api.model.CategoryFollower>> getPendingRequests(@PathVariable Long id) {
+    public ResponseEntity<List<fr.horizon.backend_api.model.CategoryFollower>> getPendingRequests(
+            @PathVariable Long id) {
         return ResponseEntity.ok(categoryService.getPendingRequests(id));
     }
 
@@ -272,5 +269,13 @@ public class CategoryController {
         error.put("error", "INVALID_ARGUMENT");
         error.put("message", e.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<Map<String, String>> handleSecurityException(SecurityException e) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "FORBIDDEN");
+        error.put("message", e.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 }
