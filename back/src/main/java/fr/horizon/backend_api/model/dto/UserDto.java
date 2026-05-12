@@ -3,6 +3,8 @@ package fr.horizon.backend_api.model.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.Set;
+
 @Data
 @Builder
 public class UserDto {
@@ -10,5 +12,5 @@ public class UserDto {
     private Long id;
     private String name;
     private String email;
-    private String role;
+    private Set<String> roles;
 }

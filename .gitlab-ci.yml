@@ -3,7 +3,7 @@ image: srv-proxy.openstack.etudis.eseo.fr:1973/projetgl-cicd:latest
 variables:
   # Maven configuration
   MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Dhttp.proxyHost=192.168.4.8 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=192.168.4.8 -Dhttps.proxyPort=3128"
-  MAVEN_CLI_OPTS: "-s $CI_PROJECT_DIR/.m2/settings.xml --batch-mode"
+  MAVEN_CLI_OPTS: "-s $CI_PROJECT_DIR/back/settings.xml --batch-mode"
   
   # SonarQube configuration
   SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
@@ -35,29 +35,6 @@ before_script:
   - export http_proxy=http://192.168.4.8:3128
   - export https_proxy=http://192.168.4.8:3128
 
-  # Create Maven proxy configuration
-  - mkdir -p .m2
-  - |
-    cat > .m2/settings.xml <<EOF
-    <settings>
-      <proxies>
-        <proxy>
-          <id>proxy</id>
-          <active>true</active>
-          <protocol>http</protocol>
-          <host>192.168.4.8</host>
-          <port>3128</port>
-        </proxy><proxy>
-          <id>https-proxy</id>
-          <active>true</active>
-          <protocol>https</protocol>
-          <host>192.168.4.8</host>
-          <port>3128</port>
-        </proxy>
-      </proxies>
-    </settings>
-    EOF
-
 # Stage 1: Build Backend (JAR)
 build-backend:
   stage: build
@@ -71,6 +48,7 @@ build-backend:
     expire_in: 1 day
   rules:
     - if: $CI_COMMIT_BRANCH
+    # - when: never
 
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend-dev:
@@ -96,6 +74,7 @@ build-frontend-dev:
     expire_in: 1 day
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
+    # - when: never
 
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend-prod:
@@ -121,6 +100,7 @@ build-frontend-prod:
     expire_in: 1 day
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+    # - when: never
 
 # Stage 2: Unit Tests
 unit-test:
@@ -294,14 +274,39 @@ selenium-test:
     - when: never # Pas encore de test SELENIUM
 
 # Stage 5: SonarQube Analysis
-sonar:
+sonar-dev:
   stage: sonar
+  before_script:
+    - apt-get update && apt-get install -y openssl
+    - echo -n | openssl s_client -connect 172.24.1.1:443 -showcerts | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/sonar.crt
+    - keytool -import -v -trustcacerts -alias sonar -file /tmp/sonar.crt -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
+
   script:
     - cd back
-    - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
+    - |
+      mvn $MAVEN_CLI_OPTS verify sonar:sonar \
+        -Dsonar.token=$SONAR_TOKEN_DEV \
+        -Dsonar.projectKey=Team3_2026_DevBranch_Project \
+        -Dsonar.projectName=Team3_2026_DevBranch
+  
   rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_COMMIT_BRANCH == 'main'
     - if: $CI_COMMIT_BRANCH == 'dev'
-    # - if: $CI_COMMIT_BRANCH # Pipeline dev
-    # - when: never # Pipeline dev
+
+# Stage 5: SonarQube Analysis
+sonar-prod:
+  stage: sonar
+  before_script:
+    - apt-get update && apt-get install -y openssl
+    - echo -n | openssl s_client -connect 172.24.1.1:443 -showcerts | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/sonar.crt
+    - keytool -import -v -trustcacerts -alias sonar -file /tmp/sonar.crt -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
+
+  script:
+    - cd back
+    - |
+      mvn $MAVEN_CLI_OPTS verify sonar:sonar \
+        -Dsonar.token=$SONAR_TOKEN_PROD \
+        -Dsonar.projectKey=Team3_2026_MasterBranch_Project \
+        -Dsonar.projectName=Team3_2026_MasterBranch
+  
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'main'

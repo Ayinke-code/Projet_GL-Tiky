@@ -4,7 +4,7 @@
     <div v-if="user">
       <p>Connecté : {{ user.name }}</p>
       <p>{{ user.email }}</p>
-      <p>{{ user.role }}</p>
+      <p>{{ user.roles }}</p>
     </div>
 
     <div v-else>
