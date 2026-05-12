@@ -13,6 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
+/**
+ * Service gérant l'abonnement des utilisateurs aux issues.
+ * Permet de suivre une issue avec une raison et d'appliquer les droits selon la raison choisie.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -21,6 +25,16 @@ public class IssueFollowerService {
     private final IssueFollowerRepository issueFollowerRepository;
     private final IssueRepository issueRepository;
 
+    /**
+     * Abonne un utilisateur à une issue avec une raison.
+     * @param issueId identifiant de l'issue à suivre
+     * @param raison raison du suivi (INTERESTED, ABLE_TO_HELP, IMPACTED)
+     * @param user utilisateur qui souhaite suivre l'issue
+     * @return l'abonnement créé
+     * @throws ResponseStatusException 404 si l'issue n'existe pas
+     * @throws ResponseStatusException 409 si l'utilisateur suit déjà l'issue
+     * @throws ResponseStatusException 400 si la raison est invalide
+     */
     public IssueFollower followIssue(Long issueId, String raison, User user) {
 
         // Récupérer l'issue
@@ -29,7 +43,6 @@ public class IssueFollowerService {
                         HttpStatus.NOT_FOUND, "Issue non trouvée"));
 
         // Vérifier que l'utilisateur ne suit pas déjà cette issue
-        System.out.println(">>> User id: " + user.getId() + " Issue id: " + issueId);
         if (issueFollowerRepository.existsByCreateurAndIssue(user, issue)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
@@ -46,8 +59,7 @@ public class IssueFollowerService {
                     "Raison invalide. Valeurs acceptées : INTERESTED, ABLE_TO_HELP, IMPACTED");
         }
 
-        // Créer l'abonnement
-        System.out.println(">>> Création abonnement: " + raison + " pour issue " + issueId);
+        // Créer et sauvegarder l'abonnement
         IssueFollower follower = IssueFollower.builder()
                 .issue(issue)
                 .createur(user)
@@ -57,6 +69,13 @@ public class IssueFollowerService {
         return issueFollowerRepository.save(follower);
     }
 
+    /**
+     * Vérifie si un utilisateur suit déjà une issue.
+     * @param issueId identifiant de l'issue
+     * @param user utilisateur à vérifier
+     * @return true si l'utilisateur suit l'issue, false sinon
+     * @throws ResponseStatusException 404 si l'issue n'existe pas
+     */
     public boolean isFollowing(Long issueId, User user) {
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -64,6 +83,11 @@ public class IssueFollowerService {
         return issueFollowerRepository.existsByCreateurAndIssue(user, issue);
     }
 
+    /**
+     * Retourne la liste des issues suivies par un utilisateur.
+     * @param user utilisateur dont on veut récupérer les issues suivies
+     * @return liste des issues suivies
+     */
     public List<Issue> getFollowedIssues(User user) {
         return issueFollowerRepository.findByCreateur(user)
                 .stream()
@@ -71,6 +95,14 @@ public class IssueFollowerService {
                 .toList();
     }
 
+    /**
+     * Vérifie si un utilisateur peut interagir sur une issue (répondre, commenter).
+     * Seuls les utilisateurs avec la raison ABLE_TO_HELP ou IMPACTED peuvent interagir.
+     * @param issueId identifiant de l'issue
+     * @param user utilisateur à vérifier
+     * @return true si l'utilisateur peut interagir, false sinon
+     * @throws ResponseStatusException 404 si l'issue n'existe pas
+     */
     public boolean canInteract(Long issueId, User user) {
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new ResponseStatusException(

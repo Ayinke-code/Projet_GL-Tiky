@@ -21,6 +21,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/**
+ * Tests unitaires pour IssueFollowerService.
+ * Vérifie les cas nominaux et les cas d'erreur pour chaque méthode du service.
+ */
 @ExtendWith(MockitoExtension.class)
 class IssueFollowerServiceTest {
 
@@ -36,6 +40,7 @@ class IssueFollowerServiceTest {
     private User user;
     private Issue issue;
 
+    /** Initialise les objets de test avant chaque test */
     @BeforeEach
     void setUp() {
         user = new User();
@@ -45,6 +50,7 @@ class IssueFollowerServiceTest {
         issue.setIdTick(1L);
     }
 
+    /** Vérifie qu'un utilisateur peut suivre une issue avec succès */
     @Test
     void followIssue_success() {
         when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
@@ -58,6 +64,7 @@ class IssueFollowerServiceTest {
         verify(issueFollowerRepository, times(1)).save(any());
     }
 
+    /** Vérifie qu'une exception CONFLICT est levée si l'utilisateur suit déjà l'issue */
     @Test
     void followIssue_alreadyFollowing_throwsConflict() {
         when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
@@ -67,6 +74,7 @@ class IssueFollowerServiceTest {
                 issueFollowerService.followIssue(1L, "INTERESTED", user));
     }
 
+    /** Vérifie qu'une exception BAD_REQUEST est levée si la raison est invalide */
     @Test
     void followIssue_invalidReason_throwsBadRequest() {
         when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
@@ -76,6 +84,7 @@ class IssueFollowerServiceTest {
                 issueFollowerService.followIssue(1L, "INVALID_REASON", user));
     }
 
+    /** Vérifie qu'une exception NOT_FOUND est levée si l'issue n'existe pas */
     @Test
     void followIssue_issueNotFound_throwsNotFound() {
         when(issueRepository.findById(99L)).thenReturn(Optional.empty());
@@ -84,6 +93,7 @@ class IssueFollowerServiceTest {
                 issueFollowerService.followIssue(99L, "INTERESTED", user));
     }
 
+    /** Vérifie que isFollowing retourne true si l'utilisateur suit l'issue */
     @Test
     void isFollowing_true() {
         when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
@@ -94,6 +104,7 @@ class IssueFollowerServiceTest {
         assertTrue(result);
     }
 
+    /** Vérifie que isFollowing retourne false si l'utilisateur ne suit pas l'issue */
     @Test
     void isFollowing_false() {
         when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
@@ -104,6 +115,7 @@ class IssueFollowerServiceTest {
         assertFalse(result);
     }
 
+    /** Vérifie que canInteract retourne true pour la raison ABLE_TO_HELP */
     @Test
     void canInteract_withAbleToHelp_returnsTrue() {
         IssueFollower follower = new IssueFollower();
@@ -118,6 +130,7 @@ class IssueFollowerServiceTest {
         assertTrue(result);
     }
 
+    /** Vérifie que canInteract retourne false pour la raison INTERESTED */
     @Test
     void canInteract_withInterested_returnsFalse() {
         IssueFollower follower = new IssueFollower();
@@ -132,6 +145,7 @@ class IssueFollowerServiceTest {
         assertFalse(result);
     }
 
+    /** Vérifie que getFollowedIssues retourne bien la liste des issues suivies */
     @Test
     void getFollowedIssues_returnsList() {
         IssueFollower follower = new IssueFollower();
