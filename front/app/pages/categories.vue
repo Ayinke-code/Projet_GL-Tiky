@@ -236,7 +236,7 @@ const handleRequestCreate = async (data) => {
     isRequestCreateModalOpen.value = false
 
     // rechargement application
-    reloadNuxtApp()
+    await navigateTo('/categories')
 }
 
 /**
