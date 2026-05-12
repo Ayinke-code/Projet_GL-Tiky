@@ -32,6 +32,7 @@
           </UButton>
         </div>
 
+        <!-- Description -->
         <UCard class="mb-6">
           <template #header>
             <h2 class="font-semibold">Description</h2>
@@ -44,6 +45,17 @@
           </template>
         </UCard>
 
+        <!-- Droits d'interaction -->
+        <div v-if="alreadyFollowing" class="mt-4">
+          <UBadge v-if="canInteractValue" color="green" variant="soft">
+            ✅ Vous pouvez interagir sur cette issue
+          </UBadge>
+          <UBadge v-else color="gray" variant="soft">
+            Consultation uniquement
+          </UBadge>
+        </div>
+
+        <!-- Message succès -->
         <UAlert
           v-if="followSuccess"
           color="green"
@@ -74,13 +86,15 @@ definePageMeta({
 })
 
 const route = useRoute()
-const { getIssueById } = useApi()
+const { getIssueById, isFollowing, canInteract } = useApi()
 
 const issue = ref<any>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const showFollowModal = ref(false)
 const followSuccess = ref(false)
+const canInteractValue = ref(false)
+const alreadyFollowing = ref(false)
 
 const statusColor = (status: string): any => {
   const colors: Record<string, string> = {
@@ -118,10 +132,26 @@ const onFollowed = () => {
 onMounted(async () => {
   try {
     issue.value = await getIssueById(Number(route.params.id))
+    console.log('Issue chargée ✅')
   } catch (err: any) {
     error.value = err.message || 'Erreur lors du chargement'
+    console.log('Erreur issue:', err)
   } finally {
     loading.value = false
+  }
+
+  try {
+    alreadyFollowing.value = await isFollowing(Number(route.params.id))
+    console.log('alreadyFollowing:', alreadyFollowing.value)
+  } catch (err: any) {
+    console.log('Erreur isFollowing:', err)
+  }
+
+  try {
+    canInteractValue.value = await canInteract(Number(route.params.id))
+    console.log('canInteract:', canInteractValue.value)
+  } catch (err: any) {
+    console.log('Erreur canInteract:', err)
   }
 })
 </script>

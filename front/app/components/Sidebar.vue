@@ -7,21 +7,30 @@
 
     <!-- Navigation Scrollable -->
     <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
-      <NuxtLink 
-        to="/issues" 
+      <NuxtLink
+        to="/issues"
         class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
         :class="isActive('/issues') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
       >
-        <i class="fa-solid fa-list-check w-6"></i> 
+        <i class="fa-solid fa-list-check w-6"></i>
         <span class="font-medium">Gestion Issues</span>
       </NuxtLink>
 
-      <NuxtLink 
-        to="/categorie" 
+      <NuxtLink
+        to="/issues/followed"
+        class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
+        :class="isActive('/issues/followed') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
+      >
+        <i class="fa-solid fa-bell w-6"></i>
+        <span class="font-medium">Issues suivies</span>
+      </NuxtLink>
+
+      <NuxtLink
+        to="/categorie"
         class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
         :class="isActive('/categorie') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
       >
-        <i class="fa-solid fa-folder w-6"></i> 
+        <i class="fa-solid fa-folder w-6"></i>
         <span class="font-medium">Gestion Catégories</span>
       </NuxtLink>
     </nav>

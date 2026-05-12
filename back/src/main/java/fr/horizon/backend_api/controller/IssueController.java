@@ -106,4 +106,14 @@ public class IssueController {
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
         return ResponseEntity.ok(issueFollowerService.getFollowedIssues(user));
     }
+
+    @GetMapping("/{id}/can-interact")
+    public ResponseEntity<Boolean> canInteract(
+            @PathVariable Long id,
+            Authentication auth) {
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        return ResponseEntity.ok(issueFollowerService.canInteract(id, user));
+    }
 }

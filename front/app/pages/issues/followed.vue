@@ -97,6 +97,7 @@ const formatDate = (date: string) => {
 onMounted(async () => {
   try {
     issues.value = await getFollowedIssues()
+    console.log('Issues suivies:', JSON.stringify(issues.value[0]))
   } catch (err: any) {
     error.value = err.message || 'Erreur lors du chargement'
   } finally {

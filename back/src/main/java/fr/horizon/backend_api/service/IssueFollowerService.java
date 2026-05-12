@@ -70,4 +70,15 @@ public class IssueFollowerService {
                 .map(IssueFollower::getIssue)
                 .toList();
     }
+
+    public boolean canInteract(Long issueId, User user) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Issue non trouvée"));
+
+        return issueFollowerRepository.findByCreateurAndIssue(user, issue)
+                .map(f -> f.getRaison() == FollowedReason.ABLE_TO_HELP
+                        || f.getRaison() == FollowedReason.IMPACTED)
+                .orElse(false);
+    }
 }

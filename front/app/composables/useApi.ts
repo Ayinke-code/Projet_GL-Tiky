@@ -172,6 +172,28 @@ export const useApi = () => {
     }
   }
 
+  const canInteract = async (id: number): Promise<boolean> => {
+    try {
+      const response = await $fetch<boolean>(`${BASE_URL}/issues/${id}/can-interact`, {
+        headers: getHeaders()  // ← vérifie que c'est là
+      })
+      return response
+    } catch (err: any) {
+      return false
+    }
+  }
+
+  const isFollowing = async (id: number): Promise<boolean> => {
+    try {
+      const response = await $fetch<boolean>(`${BASE_URL}/issues/${id}/follow/status`, {
+        headers: getHeaders()
+      })
+      return response
+    } catch (err: any) {
+      return false
+    }
+  }
+
   return {
     loading,
     error,
@@ -182,6 +204,8 @@ export const useApi = () => {
     getCategories,
     updateIssueStatus,
     followIssue,
-    getFollowedIssues
+    getFollowedIssues,
+    isFollowing,
+    canInteract
   }
 }

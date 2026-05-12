@@ -5,6 +5,7 @@ import fr.horizon.backend_api.model.IssueFollower;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
 import java.util.List;
+import java.util.Optional;
 
 public interface IssueFollowerRepository extends JpaRepository<IssueFollower, Long> {
 
@@ -13,4 +14,6 @@ public interface IssueFollowerRepository extends JpaRepository<IssueFollower, Lo
 
     // Récupérer tous les abonnements d'un utilisateur
     List<IssueFollower> findByCreateur(User createur);
+
+    Optional<IssueFollower> findByCreateurAndIssue(User createur, Issue issue);
 }
