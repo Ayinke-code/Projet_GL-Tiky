@@ -151,12 +151,6 @@ class CategoryServiceTest {
     void shouldDeleteCategory() {
 
         // GIVEN
-        Category category = Category.builder()
-                .id(10L)
-                .name("Java")
-                .subject("Programmation")
-                .build();
-
         List<CategoryRequest> requests = List.of(
                 CategoryRequest.builder().id(1L).build(),
                 CategoryRequest.builder().id(2L).build()
