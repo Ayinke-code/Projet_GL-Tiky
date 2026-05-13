@@ -103,6 +103,8 @@ public class CategoryRequestService {
                 .requesterId(request.getRequester().getId())
                 .requesterName(request.getRequester().getName())
                 .description(request.getDescription())
+                .createdAt(request.getCreatedAt())
+                .updatedAt(request.getUpdatedAt())
                 .build();
     }
 }
