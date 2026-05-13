@@ -50,13 +50,25 @@ export const useAuth = () => {
             return null
         }
 
-        const roles = normalizeRoles(data)
-        const primaryRole = String(data.role || roles[0] || 'USER').toUpperCase()
+        // Le backend renvoie déjà le rôle filtré par priorité (ADMIN > TEACHER > STUDENT)
+        // Mais par sécurité, on recalcule la priorité si une liste de rôles est présente
+        const rawRoles = Array.isArray(data.roles) ? data.roles : (data.role ? [data.role] : [])
+        const upperRoles = rawRoles.map(r => String(r).toUpperCase())
+
+        let primaryRole = String(data.role || 'STUDENT').toUpperCase()
+
+        if (upperRoles.includes('ADMIN') || upperRoles.includes('ROLE_ADMIN')) {
+            primaryRole = 'ADMIN'
+        } else if (upperRoles.includes('TEACHER') || upperRoles.includes('ROLE_TEACHER')) {
+            primaryRole = 'TEACHER'
+        } else if (upperRoles.includes('STUDENT') || upperRoles.includes('ROLE_STUDENT')) {
+            primaryRole = 'STUDENT'
+        }
 
         return {
             ...data,
             role: primaryRole,
-            roles: roles.length > 0 ? roles : [primaryRole],
+            roles: [primaryRole],
         }
     }
 

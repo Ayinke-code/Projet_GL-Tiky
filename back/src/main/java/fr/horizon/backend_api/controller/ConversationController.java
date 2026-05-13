@@ -43,11 +43,8 @@ public class ConversationController {
             userMap.put("id", msg.getUser().getId());
             userMap.put("name", msg.getUser().getName());
             userMap.put("email", msg.getUser().getEmail());
-            userMap.put("role", msg.getUser().getRoles().stream()
-                    .map(Role::getName)
-                    .map(name -> name.startsWith("ROLE_") ? name.substring(5) : name)
-                    .findFirst()
-                    .orElse("USER"));
+            userMap.put("role", msg.getUser().getDisplayRole());
+            userMap.put("roles", msg.getUser().getRoleNames());
 
             Map<String, Object> msgMap = new HashMap<>();
             msgMap.put("id", msg.getId());
@@ -65,7 +62,9 @@ public class ConversationController {
             userMap.put("id", cu.getUser().getId());
             userMap.put("name", cu.getUser().getName());
             userMap.put("email", cu.getUser().getEmail());
-            userMap.put("role", cu.getRole().toString());
+            userMap.put("role", cu.getUser().getDisplayRole()); // Utilisation du rôle métier
+            userMap.put("roles", cu.getUser().getRoleNames());
+            userMap.put("conversationRole", cu.getRole().toString());
             usersList.add(userMap);
         }
 
@@ -102,11 +101,8 @@ public class ConversationController {
         userMap.put("id", message.getUser().getId());
         userMap.put("name", message.getUser().getName());
         userMap.put("email", message.getUser().getEmail());
-        userMap.put("role", message.getUser().getRoles().stream()
-                .map(Role::getName)
-                .map(name -> name.startsWith("ROLE_") ? name.substring(5) : name)
-                .findFirst()
-                .orElse("USER"));
+        userMap.put("role", message.getUser().getDisplayRole());
+        userMap.put("roles", message.getUser().getRoleNames());
 
         Map<String, Object> messageMap = new HashMap<>();
         messageMap.put("id", message.getId());

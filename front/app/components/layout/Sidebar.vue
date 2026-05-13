@@ -11,7 +11,9 @@
         <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Mon espace</p>
         <p class="text-sm font-semibold text-white">{{ user?.name || 'Utilisateur' }}</p>
         <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wide">
-          <span class="rounded-full bg-slate-800 px-2.5 py-1 text-slate-300">{{ user?.role || 'USER' }}</span>
+          <span v-for="r in filteredRoles" :key="r" class="rounded-full bg-slate-800 px-2.5 py-1 text-slate-300">
+            {{ formatRole(r) }}
+          </span>
           <span v-if="isIssueCreator" class="rounded-full bg-emerald-500/20 px-2.5 py-1 text-emerald-300">Issue
             Creator</span>
           <span v-if="isIssueFollower" class="rounded-full bg-blue-500/20 px-2.5 py-1 text-blue-300">Issue
@@ -61,9 +63,25 @@ const route = useRoute()
 const { user, isAuthenticated, isIssueCreator, isIssueFollower, isParticipant, canAccessCategories, canAccessIssues, canCreateIssue, logout } = useAuth()
 const isActive = (path) => route.path === path
 
+const filteredRoles = computed(() => {
+  return user.value?.roles || [user.value?.role || 'STUDENT']
+})
+
 // Redirection vers la page de connexion
 const goToLogin = () => navigateTo('/login')
 
+const formatRole = (role) => {
+  if (!role) return 'ÉTUDIANT'
+  const upperRole = String(role).toUpperCase()
+  const cleanRole = upperRole.startsWith('ROLE_') ? upperRole.substring(5) : upperRole
+  const roleMap = {
+    'ADMIN': 'ADMIN',
+    'TEACHER': 'ENSEIGNANT',
+    'STUDENT': 'ÉTUDIANT',
+    'USER': 'UTILISATEUR'
+  }
+  return roleMap[cleanRole] || cleanRole
+}
 </script>
 
 <style scoped>

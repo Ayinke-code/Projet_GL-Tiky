@@ -57,6 +57,7 @@ public class IssueResponseDTO {
         private String name;
         private String email;
         private String role;
+        private java.util.Set<String> roles;
     }
 }
 

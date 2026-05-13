@@ -16,6 +16,7 @@ public class LoginResponse {
     private Long id;
     private String name;
     private String token;
+    private String role;
     private Set<String> roles;
     private String email;
 

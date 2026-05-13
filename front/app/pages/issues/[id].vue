@@ -110,6 +110,7 @@ const toggleVisibility = async () => {
               :key="msg.id"
               :auteur="msg.auteur"
               :role="msg.role"
+              :roles="msg.roles"
               :date="msg.date"
               :contenu="msg.contenu"
             />
@@ -134,8 +135,10 @@ const toggleVisibility = async () => {
           <IssueInfoCard
             :auteur="issue.auteur"
             :auteurRole="issue.auteurRole"
+            :auteurRoles="issue.auteurRoles"
             :professeur="issue.professeur"
             :professeurRole="issue.professeurRole"
+            :professeurRoles="issue.professeurRoles"
             :abonnes="issue.abonnes"
           />
 

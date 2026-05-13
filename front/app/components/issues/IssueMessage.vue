@@ -17,19 +17,24 @@ import { computed } from 'vue'
 const props = defineProps({
   auteur: { type: String, default: 'Anonyme' },
   role: { type: String, default: '' },
+  roles: { type: Array, default: () => [] },
   date: { type: [String, Date], default: '' },
   contenu: { type: String, default: '' }
 })
 
 const displayRole = computed(() => {
-  if (!props.role) return ''
+  const roleToDisplay = props.role?.toUpperCase() || ''
+  if (!roleToDisplay) return ''
+
   const roleMap = {
     'ADMIN': 'Administrateur',
     'TEACHER': 'Enseignant',
     'STUDENT': 'Étudiant',
     'USER': 'Utilisateur'
   }
-  return roleMap[props.role.toUpperCase()] || props.role
+
+  const normalizedRole = roleToDisplay.startsWith('ROLE_') ? roleToDisplay.substring(5) : roleToDisplay
+  return roleMap[normalizedRole] || normalizedRole
 })
 
 const formattedDate = computed(() => {

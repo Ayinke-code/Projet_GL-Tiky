@@ -1,5 +1,6 @@
 package fr.horizon.backend_api.model;
 
+import java.util.stream.Collectors;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -41,7 +42,33 @@ public class User extends BaseEntity {
             return false;
         }
         return this.roles.stream()
-                .anyMatch(role -> role.getName().equalsIgnoreCase("TEACHER"));
+                .anyMatch(role -> role.getName().equalsIgnoreCase("ROLE_TEACHER") || role.getName().equalsIgnoreCase("TEACHER"));
+    }
+
+    public Set<String> getRoleNames() {
+        if (this.roles == null) {
+            return new HashSet<>();
+        }
+        return this.roles.stream()
+                .map(role -> role.getName().toUpperCase())
+                .collect(Collectors.toSet());
+    }
+
+    public String getDisplayRole() {
+        Set<String> roleNames = getRoleNames();
+        
+        // Priorité 1 : ADMIN (Si l'utilisateur a le rôle ADMIN, il est ADMIN avant tout)
+        if (roleNames.contains("ROLE_ADMIN") || roleNames.contains("ADMIN")) {
+            return "ADMIN";
+        }
+        
+        // Priorité 2 : TEACHER
+        if (roleNames.contains("ROLE_TEACHER") || roleNames.contains("TEACHER")) {
+            return "TEACHER";
+        }
+        
+        // Par défaut : STUDENT
+        return "STUDENT";
     }
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)

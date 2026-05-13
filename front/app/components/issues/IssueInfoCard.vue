@@ -6,12 +6,12 @@
       <div>
         <dt class="text-gray-500">Auteur</dt>
         <dd class="font-medium text-gray-900">{{ auteur || '—' }}</dd>
-        <dd v-if="auteurRole" class="text-xs text-gray-400">{{ formatRole(auteurRole) }}</dd>
+        <dd v-if="displayAuteurRoles" class="text-xs text-gray-400">{{ displayAuteurRoles }}</dd>
       </div>
       <div>
         <dt class="text-gray-500">Responsable</dt>
         <dd class="font-medium text-gray-900">{{ professeur || '—' }}</dd>
-        <dd v-if="professeurRole" class="text-xs text-gray-400">{{ formatRole(professeurRole) }}</dd>
+        <dd v-if="displayProfesseurRoles" class="text-xs text-gray-400">{{ displayProfesseurRoles }}</dd>
       </div>
       <div>
         <dt class="text-gray-500">Abonnés</dt>
@@ -22,23 +22,34 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   auteur: { type: String, default: '' },
   auteurRole: { type: String, default: '' },
+  auteurRoles: { type: Array, default: () => [] },
   professeur: { type: String, default: '' },
   professeurRole: { type: String, default: '' },
+  professeurRoles: { type: Array, default: () => [] },
   abonnes: { type: Array, default: () => [] }
 })
 
-const formatRole = (role) => {
-  if (!role) return ''
+const formatRoles = (role) => {
+  const roleToDisplay = role?.toUpperCase() || ''
+  if (!roleToDisplay) return ''
+
   const roleMap = {
     'ADMIN': 'Administrateur',
     'TEACHER': 'Enseignant',
     'STUDENT': 'Étudiant',
     'USER': 'Utilisateur'
   }
-  return roleMap[role.toUpperCase()] || role
+
+  const normalizedRole = roleToDisplay.startsWith('ROLE_') ? roleToDisplay.substring(5) : roleToDisplay
+  return roleMap[normalizedRole] || normalizedRole
 }
+
+const displayAuteurRoles = computed(() => formatRoles(props.auteurRole))
+const displayProfesseurRoles = computed(() => formatRoles(props.professeurRole))
 </script>
 
