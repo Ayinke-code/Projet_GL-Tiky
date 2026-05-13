@@ -169,7 +169,7 @@ deploy_dev:
     - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/frontend/
 
     # Env
-    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/.env"
+    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/backend/.env"
 
     # Config Apache
     - scp apache-site-dev.conf $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/apache-site.conf
@@ -234,7 +234,7 @@ deploy_prod:
     - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER_PROD:~/app/frontend/
 
     # Env
-    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_PROD "cat > ~/app/.env"
+    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_PROD "cat > ~/app/backend/.env"
 
     # Config Apache
     - scp apache-site-prod.conf $DEPLOY_USER@$DEPLOY_SERVER_PROD:~/app/apache-site.conf
@@ -274,7 +274,7 @@ selenium-test:
     - when: never # Pas encore de test SELENIUM
 
 # Stage 5: SonarQube Analysis
-sonar:
+sonar-dev:
   stage: sonar
   before_script:
     - apt-get update && apt-get install -y openssl
@@ -283,10 +283,30 @@ sonar:
 
   script:
     - cd back
-    - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
+    - |
+      mvn $MAVEN_CLI_OPTS verify sonar:sonar \
+        -Dsonar.token=$SONAR_TOKEN_DEV \
+        -Dsonar.projectKey=Team3_2026_DevBranch_Project \
+        -Dsonar.projectName=Team3_2026_DevBranch
+  
   rules:
-    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
-    - if: $CI_COMMIT_BRANCH == 'main'
     - if: $CI_COMMIT_BRANCH == 'dev'
-    # - if: $CI_COMMIT_BRANCH # Pipeline dev
-    # - when: never # Pipeline dev
+
+# Stage 5: SonarQube Analysis
+sonar-prod:
+  stage: sonar
+  before_script:
+    - apt-get update && apt-get install -y openssl
+    - echo -n | openssl s_client -connect 172.24.1.1:443 -showcerts | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/sonar.crt
+    - keytool -import -v -trustcacerts -alias sonar -file /tmp/sonar.crt -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
+
+  script:
+    - cd back
+    - |
+      mvn $MAVEN_CLI_OPTS verify sonar:sonar \
+        -Dsonar.token=$SONAR_TOKEN_PROD \
+        -Dsonar.projectKey=Team3_2026_MasterBranch_Project \
+        -Dsonar.projectName=Team3_2026_MasterBranch
+  
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'main'
