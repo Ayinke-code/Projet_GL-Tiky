@@ -14,6 +14,19 @@
                 <h3 class="text-xl font-bold text-gray-900 mt-1">
                     {{ categoryRequest.subject }}
                 </h3>
+
+                <!-- Meta - Date de création et ID -->
+                <div class="flex items-center text-xs text-gray-500 gap-2">
+                    <span>
+                        {{ formatDateTime(categoryRequest.createdAt) }}
+                    </span>
+
+                    <span class="w-1 h-1 rounded-full bg-gray-400"></span>
+
+                    <span>
+                        ID #{{ categoryRequest.id }}
+                    </span>
+                </div>
             </div>
 
             <!-- Badge utilisateur -->
@@ -85,6 +98,7 @@
 
 <script setup>
 import Modal from '../ui/Modal.vue'
+import { formatDateTime } from '#imports'
 
 const props = defineProps({
     categoryRequest: {

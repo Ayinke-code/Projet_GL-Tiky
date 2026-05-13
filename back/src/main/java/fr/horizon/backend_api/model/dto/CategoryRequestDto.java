@@ -3,6 +3,8 @@ package fr.horizon.backend_api.model.dto;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 public class CategoryRequestDto {
@@ -12,6 +14,8 @@ public class CategoryRequestDto {
     private String status;
     private Long requesterId;
     private String requesterName;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     private String description; // Optionnel
 }
