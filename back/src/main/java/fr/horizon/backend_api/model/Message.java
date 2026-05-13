@@ -18,7 +18,7 @@ public class Message extends BaseEntity {
     @Column(name = "id_mes")
     private Long id;
 
-    @Column(name = "contenu", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "contenu", nullable = false, columnDefinition = "TEXT", length = 4000)
     private String content;
 
     @ManyToOne

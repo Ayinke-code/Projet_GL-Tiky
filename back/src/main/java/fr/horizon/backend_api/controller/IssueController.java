@@ -33,6 +33,10 @@ public class IssueController {
         User creator = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
+        if (dto.getDescription() != null && dto.getDescription().length() > 4000) {
+            throw new RuntimeException("La description dépasse la limite de 4000 caractères");
+        }
+
         Issue issue = issueService.createIssue(dto, creator);
         IssueResponseDTO response = IssueResponseDTO.builder()
                 .idTick(issue.getId())

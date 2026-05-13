@@ -91,6 +91,9 @@ public class ConversationController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         String content = payload.get("content");
+        if (content != null && content.length() > 4000) {
+            throw new RuntimeException("Le message dépasse la limite de 4000 caractères");
+        }
         Long issueId = Long.parseLong(payload.get("issueId"));
 
         Message message = conversationService.addMessageToConversation(conversationId, content, user, issueId);

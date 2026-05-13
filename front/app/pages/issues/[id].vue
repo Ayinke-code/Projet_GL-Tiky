@@ -37,6 +37,10 @@ watch(issueId, () => {
 
 const handleSend = async () => {
   if (!newMessage.value.trim()) return
+  if (newMessage.value.length > 4000) {
+    error.value = 'Le message ne doit pas dépasser 4000 caractères'
+    return
+  }
   sending.value = true
   try {
     const sentMessage = await sendIssueMessage(issueId.value, newMessage.value)
