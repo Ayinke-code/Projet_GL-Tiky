@@ -11,14 +11,18 @@ import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @Service
@@ -35,7 +39,7 @@ public class IssueService {
     public Issue createIssue(IssueDTO dto, User creator) {
         validateIssueInput(dto);
 
-        Category category = categoryRepository.findById(dto.getCategorieId())
+        Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
 
         Issue issue = Issue.builder()
@@ -54,6 +58,11 @@ public class IssueService {
     public Issue getIssueById(Long id) {
         return issueRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Issue non trouvée"));
+    }
+
+    public IssueDTO getIssueDTOById(Long id) {
+        return convertIssueToDTO(issueRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Issue non trouvée")));
     }
 
     public List<Issue> getAllIssues() {
@@ -102,10 +111,29 @@ public class IssueService {
         if (dto.getDescription() == null || dto.getDescription().isBlank()) {
             throw new IllegalArgumentException("La description est obligatoire");
         }
-        if (dto.getCategorieId() == null) {
+        if (dto.getCategoryId() == null) {
             throw new IllegalArgumentException("La catégorie est obligatoire");
         }
     }
+
+    public List<IssueDTO> getIncompleteIssuesToResent(Long userId) {
+        List<Issue> issues = issueRepository.findByStatusAndCreatedBy_Id(IssueStatus.INCOMPLET, userId);
+
+        return issues.stream()
+                .map(this::convertIssueToDTO)
+                .collect(Collectors.toList());
+    }
+
+    private IssueDTO convertIssueToDTO(Issue issue) {
+        IssueDTO dto = new IssueDTO();
+        dto.setTitre(issue.getTitle());
+        dto.setDescription(issue.getDescription());
+        dto.setCategory(issue.getCategory().getName());
+        dto.setCategoryId(issue.getCategory() != null ? issue.getCategory().getId() : null);
+        dto.setCreator(issue.getCreatedBy().getName());
+        return dto;
+    }
+
     /**
      * envoyer une demande d'assignation d'un ticket à un teacher
      * @param userId Id de l'enseignant visé par la demande.
@@ -243,12 +271,37 @@ public class IssueService {
      * @return le DTO d'une demande d'assignation
      */
     public List<RequestManagerDTO> getHistoricalRequestManager(long userId) {
-        List<RequestManager> entities = requestManagerRepository
+        List<RequestManager> requestApproved = requestManagerRepository
                 .findByCategoryOwner_IdAndTargetTeacherIsNotNullOrderByCreatedAtDesc(userId);
 
-        return entities.stream()
+        List<RequestManager> requestDenied = requestManagerRepository
+                .findByCategoryOwner_IdAndTargetTeacherIsNullAndStatusOrderByCreatedAtDesc(userId, RequestManagerStatus.DENIED);
+
+        List<RequestManager> merge = Stream.concat(requestApproved.stream(), requestDenied.stream())
+                .sorted(Comparator.comparing(RequestManager::getCreatedAt).reversed())
+                .toList();
+
+        return merge.stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    public void markIssueAsIncomplete(Long idIssue) {
+        Issue issue = issueRepository.findById(idIssue)
+                .orElseThrow(() -> new EntityNotFoundException("Issue introuvable avec l'ID : " + idIssue));
+
+        if (issue.getStatus() == IssueStatus.TERMINE) {
+            throw new IllegalStateException("Impossible de marquer comme incomplète une issue déjà résolue.");
+        }
+
+        issue.setStatus(IssueStatus.INCOMPLET);
+        issueRepository.save(issue);
+
+        RequestManager requestManager = requestManagerRepository.findByIssue_Id(idIssue)
+                .orElseThrow(() -> new EntityNotFoundException("Aucune demande associée à l'issue " + idIssue));
+
+        requestManager.setStatus(RequestManagerStatus.DENIED);
+        requestManagerRepository.save(requestManager);
     }
 
 

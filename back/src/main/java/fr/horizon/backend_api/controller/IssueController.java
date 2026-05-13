@@ -7,6 +7,7 @@ import fr.horizon.backend_api.model.dto.IssueDTO;
 import fr.horizon.backend_api.model.dto.UpdateIssueStatusDTO;
 import fr.horizon.backend_api.service.IssueService;
 import fr.horizon.backend_api.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +44,11 @@ public class IssueController {
     @GetMapping("/{id}")
     public ResponseEntity<Issue> getIssueById(@PathVariable Long id) {
         return ResponseEntity.ok(issueService.getIssueById(id));
+    }
+
+    @GetMapping("dto/{id}")
+    public ResponseEntity<IssueDTO> getIssueDTOById(@PathVariable Long id) {
+        return ResponseEntity.ok(issueService.getIssueDTOById(id));
     }
 
     @GetMapping("/category/{categorieId}")
@@ -132,4 +138,34 @@ public class IssueController {
         List<RequestManagerDTO> list = issueService.getHistoricalRequestManager(userId);
         return ResponseEntity.ok(list);
     }
+
+    /**
+     * Récupère la liste des issues incomplètes pour un utilisateur spécifique
+     */
+    @GetMapping("/incomplete/{userId}")
+    public ResponseEntity<List<IssueDTO>> getIncompleteIssues(@PathVariable Long userId) {
+        List<IssueDTO> issues = issueService.getIncompleteIssuesToResent(userId);
+
+        if (issues.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok(issues);
+    }
+
+    @PutMapping("/{id}/mark-incomplete")
+    public ResponseEntity<String> markAsIncomplete(@PathVariable Long id) {
+        try {
+            issueService.markIssueAsIncomplete(id);
+            return ResponseEntity.ok("L'issue a été marquée comme incomplète et la demande a été refusée.");
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Une erreur inattendue est survenue.");
+        }
+    }
+
+
 }

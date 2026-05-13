@@ -15,7 +15,10 @@ public class IssueDTO {
 
     private String description;
 
-    private Long categorieId;
+    private Long categoryId;
+
+    private String category;
 
     private List<MultipartFile> documents;
+    private String creator;
 }

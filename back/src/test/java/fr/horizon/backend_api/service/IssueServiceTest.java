@@ -74,7 +74,7 @@ class IssueServiceTest {
         issueDTO = new IssueDTO();
         issueDTO.setTitre("Test Issue");
         issueDTO.setDescription("Test Description");
-        issueDTO.setCategorieId(1L);
+        issueDTO.setCategoryId(1L);
     }
 
     @Test
@@ -95,7 +95,7 @@ class IssueServiceTest {
     void testCreateIssueWithInvalidCategory() {
         when(categoryRepository.findById(999L)).thenReturn(Optional.empty());
 
-        issueDTO.setCategorieId(999L);
+        issueDTO.setCategoryId(999L);
         assertThrows(IllegalArgumentException.class, () -> issueService.createIssue(issueDTO, testUser));
     }
 
