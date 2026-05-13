@@ -32,7 +32,9 @@ export const useApi = () => {
       estPrive: issue?.estPrive ?? issue?.isPrivate ?? false,
       visibilite: issue?.visibilite ?? (issue?.isPrivate ? 'Privé' : 'Public'),
       auteur: issue?.auteur ?? issue?.createdBy?.name ?? issue?.createdBy?.email ?? '',
+      auteurRole: issue?.createdBy?.role || 'USER',
       professeur: issue?.professeur ?? issue?.manager?.name ?? issue?.manager?.email ?? '',
+      professeurRole: issue?.manager?.role || 'TEACHER',
       abonnes: issue?.abonnes ?? []
     }
   }
@@ -92,7 +94,7 @@ export const useApi = () => {
       return response.conversation.messages.map(msg => ({
         id: msg.id,
         auteur: msg.user?.name || msg.user?.email || 'Anonyme',
-        role: 'user',
+        role: msg.user?.role || 'USER',
         date: msg.createdAt,
         contenu: msg.content
       }))
@@ -109,11 +111,17 @@ export const useApi = () => {
         throw new Error('Conversation not found')
       }
       const conversationId = response.conversation.id
-      await request(`/conversations/${conversationId}/messages`, {
+      const message = await request(`/conversations/${conversationId}/messages`, {
         method: 'POST',
         body: { content, issueId }
       })
-      return true
+      return {
+        id: message.id,
+        auteur: message.user?.name || message.user?.email || 'Anonyme',
+        role: message.user?.role || 'USER',
+        date: message.createdAt,
+        contenu: message.content
+      }
     } catch (error) {
       console.error('Error sending message:', error)
       throw error

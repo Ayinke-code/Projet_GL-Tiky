@@ -6,10 +6,12 @@
       <div>
         <dt class="text-gray-500">Auteur</dt>
         <dd class="font-medium text-gray-900">{{ auteur || '—' }}</dd>
+        <dd v-if="auteurRole" class="text-xs text-gray-400">{{ formatRole(auteurRole) }}</dd>
       </div>
       <div>
         <dt class="text-gray-500">Responsable</dt>
         <dd class="font-medium text-gray-900">{{ professeur || '—' }}</dd>
+        <dd v-if="professeurRole" class="text-xs text-gray-400">{{ formatRole(professeurRole) }}</dd>
       </div>
       <div>
         <dt class="text-gray-500">Abonnés</dt>
@@ -22,8 +24,21 @@
 <script setup>
 defineProps({
   auteur: { type: String, default: '' },
+  auteurRole: { type: String, default: '' },
   professeur: { type: String, default: '' },
+  professeurRole: { type: String, default: '' },
   abonnes: { type: Array, default: () => [] }
 })
+
+const formatRole = (role) => {
+  if (!role) return ''
+  const roleMap = {
+    'ADMIN': 'Administrateur',
+    'TEACHER': 'Enseignant',
+    'STUDENT': 'Étudiant',
+    'USER': 'Utilisateur'
+  }
+  return roleMap[role.toUpperCase()] || role
+}
 </script>
 

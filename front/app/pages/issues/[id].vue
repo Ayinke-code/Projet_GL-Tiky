@@ -39,8 +39,8 @@ const handleSend = async () => {
   if (!newMessage.value.trim()) return
   sending.value = true
   try {
-    await sendIssueMessage(issueId.value, newMessage.value)
-    messages.value = await getIssueMessages(issueId.value)
+    const sentMessage = await sendIssueMessage(issueId.value, newMessage.value)
+    messages.value.push(sentMessage)
     newMessage.value = ''
   } catch (err: any) {
     error.value = err.message
@@ -130,7 +130,9 @@ const toggleVisibility = async () => {
           <!-- Carte INFORMATIONS -->
           <IssueInfoCard
             :auteur="issue.auteur"
+            :auteurRole="issue.auteurRole"
             :professeur="issue.professeur"
+            :professeurRole="issue.professeurRole"
             :abonnes="issue.abonnes"
           />
 

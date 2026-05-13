@@ -3,7 +3,7 @@
     <div class="mb-2 flex items-start justify-between gap-4">
       <div>
         <p class="text-sm font-semibold text-gray-900">{{ auteur }}</p>
-        <p class="text-xs text-gray-500">{{ role }}</p>
+        <p class="text-xs text-gray-500">{{ displayRole }}</p>
       </div>
       <time class="text-xs text-gray-400">{{ formattedDate }}</time>
     </div>
@@ -19,6 +19,17 @@ const props = defineProps({
   role: { type: String, default: '' },
   date: { type: [String, Date], default: '' },
   contenu: { type: String, default: '' }
+})
+
+const displayRole = computed(() => {
+  if (!props.role) return ''
+  const roleMap = {
+    'ADMIN': 'Administrateur',
+    'TEACHER': 'Enseignant',
+    'STUDENT': 'Étudiant',
+    'USER': 'Utilisateur'
+  }
+  return roleMap[props.role.toUpperCase()] || props.role
 })
 
 const formattedDate = computed(() => {
