@@ -238,7 +238,6 @@ class IssueServiceTest {
     }
 
     @Test
-    @DisplayName("Erreur : Devrait lancer IllegalArgumentException si l'utilisateur n'est pas un prof")
     void assignManagerToIssue_NotATeacher_ThrowsException() {
         // précondition
         testUser.setRoles(Set.of(new Role("STUDENT")));
@@ -252,4 +251,66 @@ class IssueServiceTest {
                 issueService.assignManagerToIssue(1L, 2L)
         );
     }
+
+    @Test
+    void markIssueAsIncomplete_Success() {
+        // Arrange
+        Long issueId = 1L;
+        Issue issue = new Issue();
+        issue.setId(issueId);
+        issue.setStatus(IssueStatus.OUVERT);
+
+        RequestManager requestManager = new RequestManager();
+        requestManager.setStatus(RequestManagerStatus.PENDING);
+
+        when(issueRepository.findById(issueId)).thenReturn(Optional.of(issue));
+        when(requestManagerRepository.findByIssue_Id(issueId)).thenReturn(Optional.of(requestManager));
+
+        // Act
+        issueService.markIssueAsIncomplete(issueId);
+
+        // Assert
+        assertEquals(IssueStatus.INCOMPLET, issue.getStatus());
+        assertEquals(RequestManagerStatus.DENIED, requestManager.getStatus());
+
+        verify(issueRepository).save(issue);
+        verify(requestManagerRepository).save(requestManager);
+    }
+
+    @Test
+    void markIssueAsIncomplete_Already_Close() {
+        // Arrange
+        Long issueId = 1L;
+        Issue issue = new Issue();
+        issue.setId(issueId);
+        issue.setStatus(IssueStatus.TERMINE); // Déjà résolue
+
+        when(issueRepository.findById(issueId)).thenReturn(Optional.of(issue));
+
+        // Act & Assert
+        assertThrows(IllegalStateException.class, () -> {
+            issueService.markIssueAsIncomplete(issueId);
+        });
+
+        // On vérifie qu'aucun save n'a été appelé car l'exception est jetée avant
+        verify(issueRepository, never()).save(any());
+        verify(requestManagerRepository, never()).save(any());
+    }
+
+    @Test
+    void markIssueAsIncomplete_IssueNotFound() {
+        // Arrange
+        Long issueId = 1L;
+        when(issueRepository.findById(issueId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(EntityNotFoundException.class, () -> {
+            issueService.markIssueAsIncomplete(issueId);
+        });
+
+        verify(requestManagerRepository, never()).findByIssue_Id(anyLong());
+    }
+
+
+
 }

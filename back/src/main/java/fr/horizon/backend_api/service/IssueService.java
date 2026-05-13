@@ -286,6 +286,9 @@ public class IssueService {
                 .toList();
     }
 
+    /**
+     * Marquer une issue comme imcomplète
+     */
     public void markIssueAsIncomplete(Long idIssue) {
         Issue issue = issueRepository.findById(idIssue)
                 .orElseThrow(() -> new EntityNotFoundException("Issue introuvable avec l'ID : " + idIssue));
