@@ -22,6 +22,7 @@ public class ConversationController {
 
     private final ConversationService conversationService;
     private final UserRepository userRepository;
+    private final fr.horizon.backend_api.websocket.IssueWebSocketHandler issueWebSocketHandler;
 
     @GetMapping("/issue/{issueId}")
     public ResponseEntity<?> getConversationByIssue(@PathVariable Long issueId) {
@@ -109,6 +110,31 @@ public class ConversationController {
         messageMap.put("content", message.getContent());
         messageMap.put("user", userMap);
         messageMap.put("createdAt", message.getCreatedAt());
+
+        // Broadcast via WebSocket
+        try {
+            org.json.JSONObject wsResponse = new org.json.JSONObject();
+            wsResponse.put("type", "new_message");
+            wsResponse.put("issueId", issueId);
+
+            org.json.JSONObject msgJson = new org.json.JSONObject();
+            msgJson.put("id", message.getId());
+            msgJson.put("content", message.getContent());
+            msgJson.put("createdAt", message.getCreatedAt());
+
+            org.json.JSONObject userJson = new org.json.JSONObject();
+            userJson.put("id", user.getId());
+            userJson.put("name", user.getName());
+            userJson.put("email", user.getEmail());
+            userJson.put("roles", user.getRoleNames());
+            msgJson.put("user", userJson);
+
+            wsResponse.put("message", msgJson);
+            issueWebSocketHandler.broadcastToIssue(issueId, wsResponse.toString());
+        } catch (Exception e) {
+            // Log error but don't fail the request
+            System.err.println("WS Broadcast error: " + e.getMessage());
+        }
 
         return ResponseEntity.status(HttpStatus.CREATED).body(messageMap);
     }

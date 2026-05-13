@@ -102,32 +102,34 @@ export const useApi = () => {
     return normalizeIssue(updated)
   }
 
+  const getPriorityRole = (roles) => {
+    if (!roles) return 'STUDENT'
+    const upperRoles = roles.map(r => String(r).toUpperCase())
+    if (upperRoles.includes('ADMIN') || upperRoles.includes('ROLE_ADMIN')) return 'ADMIN'
+    if (upperRoles.includes('TEACHER') || upperRoles.includes('ROLE_TEACHER')) return 'TEACHER'
+    return 'STUDENT'
+  }
+
+  const normalizeMessage = (msg) => {
+    const rawRoles = Array.isArray(msg.user?.roles) ? msg.user.roles : [msg.user?.role || 'STUDENT']
+    const role = getPriorityRole(rawRoles)
+    return {
+      id: msg.id,
+      auteur: msg.user?.name || msg.user?.email || 'Anonyme',
+      role: role,
+      roles: [role],
+      date: msg.createdAt,
+      contenu: msg.content ?? msg.contenu
+    }
+  }
+
   const getIssueMessages = async (issueId) => {
     try {
       const response = await request(`/conversations/issue/${issueId}`)
       if (!response?.conversation?.messages) {
         return []
       }
-      return response.conversation.messages.map(msg => {
-        const rawRoles = Array.isArray(msg.user?.roles) ? msg.user.roles : [msg.user?.role || 'STUDENT']
-
-        const getPriorityRole = (roles) => {
-          const upperRoles = roles.map(r => String(r).toUpperCase())
-          if (upperRoles.includes('ADMIN') || upperRoles.includes('ROLE_ADMIN')) return 'ADMIN'
-          if (upperRoles.includes('TEACHER') || upperRoles.includes('ROLE_TEACHER')) return 'TEACHER'
-          return 'STUDENT'
-        }
-
-        const role = getPriorityRole(rawRoles)
-        return {
-          id: msg.id,
-          auteur: msg.user?.name || msg.user?.email || 'Anonyme',
-          role: role,
-          roles: [role],
-          date: msg.createdAt,
-          contenu: msg.content
-        }
-      })
+      return response.conversation.messages.map(normalizeMessage)
     } catch (error) {
       console.error('Error fetching messages:', error)
       return []
@@ -146,25 +148,7 @@ export const useApi = () => {
         body: { content, issueId }
       })
 
-      const rawRoles = Array.isArray(message.user?.roles) ? message.user.roles : [message.user?.role || 'STUDENT']
-
-      const getPriorityRole = (roles) => {
-        const upperRoles = roles.map(r => String(r).toUpperCase())
-        if (upperRoles.includes('ADMIN') || upperRoles.includes('ROLE_ADMIN')) return 'ADMIN'
-        if (upperRoles.includes('TEACHER') || upperRoles.includes('ROLE_TEACHER')) return 'TEACHER'
-        return 'STUDENT'
-      }
-
-      const role = getPriorityRole(rawRoles)
-
-      return {
-        id: message.id,
-        auteur: message.user?.name || message.user?.email || 'Anonyme',
-        role: role,
-        roles: [role],
-        date: message.createdAt,
-        contenu: message.content
-      }
+      return normalizeMessage(message)
     } catch (error) {
       console.error('Error sending message:', error)
       throw error
@@ -184,6 +168,8 @@ export const useApi = () => {
     getIssueMessages,
     sendIssueMessage,
     normalizeCategory,
-    normalizeIssue
+    normalizeIssue,
+    normalizeMessage,
+    getPriorityRole
   })
 }

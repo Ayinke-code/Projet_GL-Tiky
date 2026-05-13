@@ -1,6 +1,8 @@
 <script setup lang="ts">
 const route = useRoute()
-const { getIssueById, getIssueMessages, sendIssueMessage, updateIssueStatus } = useApi()
+const { getIssueById, getIssueMessages, sendIssueMessage, updateIssueStatus, normalizeMessage } = useApi()
+const { user, wsToken } = useAuth()
+const config = useRuntimeConfig()
 
 const issueId = computed(() => Number(route.params.id))
 
@@ -10,9 +12,39 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const newMessage = ref('')
 const sending = ref(false)
+const socket = ref<WebSocket | null>(null)
 
 const isResolveModalOpen = ref(false)
 const isVisibilityModalOpen = ref(false)
+
+const connectWebSocket = () => {
+  if (process.server) return
+  if (socket.value) socket.value.close()
+
+  const token = wsToken.value || localStorage.getItem('wsToken')
+  if (!token) return
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const apiBase = config.public.apiBase
+  const host = apiBase.startsWith('/') ? window.location.host + apiBase : new URL(apiBase).host + new URL(apiBase).pathname
+  const wsUrl = `${protocol}//${host}/ws/issue?token=${token}&issueId=${issueId.value}`
+
+  socket.value = new WebSocket(wsUrl)
+
+  socket.value.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      if (data.type === 'new_message' && data.message) {
+        const normalized = normalizeMessage(data.message)
+        if (!messages.value.find((m: any) => m.id === normalized.id)) {
+          messages.value.push(normalized)
+        }
+      }
+    } catch (e) {}
+  }
+
+  socket.value.onerror = () => socket.value?.close()
+}
 
 const loadIssue = async () => {
   loading.value = true
@@ -20,6 +52,7 @@ const loadIssue = async () => {
   try {
     issue.value = await getIssueById(issueId.value)
     messages.value = await getIssueMessages(issueId.value)
+    connectWebSocket()
   } catch (err: any) {
     error.value = err.message || 'Erreur de chargement'
   } finally {
@@ -27,11 +60,11 @@ const loadIssue = async () => {
   }
 }
 
-onMounted(() => {
-  loadIssue()
-})
+onMounted(() => loadIssue())
+onUnmounted(() => socket.value?.close())
 
 watch(issueId, () => {
+  socket.value?.close()
   loadIssue()
 })
 
@@ -41,10 +74,13 @@ const handleSend = async () => {
     error.value = 'Le message ne doit pas dépasser 4000 caractères'
     return
   }
+
   sending.value = true
   try {
     const sentMessage = await sendIssueMessage(issueId.value, newMessage.value)
-    messages.value.push(sentMessage)
+    if (!messages.value.find((m: any) => m.id === sentMessage.id)) {
+      messages.value.push(sentMessage)
+    }
     newMessage.value = ''
   } catch (err: any) {
     error.value = err.message

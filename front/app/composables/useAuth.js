@@ -8,6 +8,7 @@ export const useAuth = () => {
      * Null si aucun utilisateur n'est authentifié.
      */
     const user = useState('user', () => null)
+    const wsToken = useState('wsToken', () => null)
 
     /**
      * Indique si l'état d'authentification a été initialisé.
@@ -50,8 +51,6 @@ export const useAuth = () => {
             return null
         }
 
-        // Le backend renvoie déjà le rôle filtré par priorité (ADMIN > TEACHER > STUDENT)
-        // Mais par sécurité, on recalcule la priorité si une liste de rôles est présente
         const rawRoles = Array.isArray(data.roles) ? data.roles : (data.role ? [data.role] : [])
         const upperRoles = rawRoles.map(r => String(r).toUpperCase())
 
@@ -74,6 +73,10 @@ export const useAuth = () => {
 
     const setSession = (data, { resetIssueRoles = false } = {}) => {
         user.value = normalizeUser(data)
+        if (data?.wsToken) {
+            wsToken.value = data.wsToken
+            if (process.client) localStorage.setItem('wsToken', data.wsToken)
+        }
         ready.value = true
 
         if (resetIssueRoles) {
@@ -122,6 +125,8 @@ export const useAuth = () => {
 
     const clearSession = () => {
         user.value = null
+        wsToken.value = null
+        if (process.client) localStorage.removeItem('wsToken')
         issueRoles.value = []
         ready.value = true
     }
@@ -210,6 +215,7 @@ export const useAuth = () => {
     }
 
     return {
+        wsToken,
         user,
         ready,
         isAuthenticated,
