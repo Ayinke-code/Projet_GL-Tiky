@@ -80,18 +80,18 @@ public class AuthController {
      * @param response réponse HTTP utilisée pour supprimer le cookie
      * @return réponse HTTP 200 sans contenu
      */
-    @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletResponse response) {
+        @PostMapping("/logout")
+        public ResponseEntity<Void> logout(HttpServletResponse response) {
 
-        Cookie cookie = new Cookie("token", null);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(false);
-        cookie.setPath("/");
-        cookie.setMaxAge(0); // supprime le cookie
+            Cookie cookie = new Cookie("token", null);
+            cookie.setHttpOnly(true);
+            cookie.setSecure(false);
+            cookie.setPath("/");
+            cookie.setMaxAge(0); // supprime le cookie
 
-        response.addCookie(cookie);
+            response.addCookie(cookie);
 
-        return ResponseEntity.ok(loginResponse);
-    }
+            return ResponseEntity.ok().build();
+        }
 
 }
