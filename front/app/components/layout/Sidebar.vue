@@ -7,7 +7,7 @@
 
     <!-- Navigation Scrollable -->
     <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
-      <div v-if="isAuthenticated" class="mb-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+      <div v-if="user" class="mb-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
         <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Mon espace</p>
         <p class="text-sm font-semibold text-white">{{ user?.name || 'Utilisateur' }}</p>
         <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wide">

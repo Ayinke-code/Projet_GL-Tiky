@@ -1,13 +1,7 @@
-//package fr.horizon.backend_api.controller;
-//
-//import fr.horizon.backend_api.model.dto.CategoryResponseDTO;
-//import fr.horizon.backend_api.model.dto.CreateCategoryDTO;
-//import fr.horizon.backend_api.exception.CategoryAlreadyExistsException;
-//import fr.horizon.backend_api.service.CategoryService;
 package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.CategoryResponseDTO;
-import fr.horizon.backend_api.model.dto.CreateCategoryDTO;
+import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -42,7 +36,7 @@ public class CategoryController {
 
 	@PostMapping
 	public ResponseEntity<CategoryResponseDTO> createCategory(
-			@Valid @RequestBody CreateCategoryDTO dto,
+			@Valid @RequestBody CategoryCreateDto dto,
 			Authentication authentication) {
 
 		String teacherId = authentication != null ? authentication.getName() : null;
@@ -99,7 +93,7 @@ public class CategoryController {
 	@PutMapping("/{id}")
 	public ResponseEntity<CategoryResponseDTO> updateCategory(
 			@PathVariable Long id,
-			@Valid @RequestBody CreateCategoryDTO dto,
+			@Valid @RequestBody CategoryCreateDto dto,
 			Authentication authentication) {
 
 		String requesterEmail = authentication != null ? authentication.getName() : null;
