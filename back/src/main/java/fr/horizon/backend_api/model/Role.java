@@ -31,6 +31,4 @@ public class Role extends BaseEntity {
         this.users = new HashSet<>();
     }
 
-
-
 }

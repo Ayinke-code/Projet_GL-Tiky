@@ -1,22 +1,25 @@
 package fr.horizon.backend_api.service;
 
-import fr.horizon.backend_api.model.Issue;
-import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.*;
+import fr.horizon.backend_api.model.dto.RequestManagerDTO;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.dto.IssueDTO;
+import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.CategoryRepository;
+import fr.horizon.backend_api.repository.RequestManagerRepository;
+import fr.horizon.backend_api.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -30,6 +33,12 @@ class IssueServiceTest {
     @Mock
     private CategoryRepository categoryRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private RequestManagerRepository requestManagerRepository;
+
     @InjectMocks
     private IssueService issueService;
 
@@ -38,8 +47,14 @@ class IssueServiceTest {
     private User testUser;
     private IssueDTO issueDTO;
 
+    private Role teacherRole;
+    private Role studentRole;
+
     @BeforeEach
     void setUp() {
+        teacherRole = new Role("TEACHER");
+        studentRole = new Role("STUDENT");
+
         testCategory = new Category();
         testCategory.setId(1L);
         testCategory.setName("Test Category");
@@ -49,12 +64,12 @@ class IssueServiceTest {
         testUser.setEmail("test@test.fr");
 
         testIssue = new Issue();
-        testIssue.setIdTick(1L);
-        testIssue.setTitre("Test Issue");
+        testIssue.setId(1L);
+        testIssue.setTitle("Test Issue");
         testIssue.setDescription("Test Description");
-        testIssue.setStatut(IssueStatus.OUVERT);
-        testIssue.setCategorie(testCategory);
-        testIssue.setCreateur(testUser);
+        testIssue.setStatus(IssueStatus.OUVERT);
+        testIssue.setCategory(testCategory);
+        testIssue.setCreatedBy(testUser);
 
         issueDTO = new IssueDTO();
         issueDTO.setTitre("Test Issue");
@@ -70,8 +85,8 @@ class IssueServiceTest {
         Issue createdIssue = issueService.createIssue(issueDTO, testUser);
 
         assertNotNull(createdIssue);
-        assertEquals("Test Issue", createdIssue.getTitre());
-        assertEquals(IssueStatus.OUVERT, createdIssue.getStatut());
+        assertEquals("Test Issue", createdIssue.getTitle());
+        assertEquals(IssueStatus.OUVERT, createdIssue.getStatus());
         verify(categoryRepository).findById(1L);
         verify(issueRepository).save(any(Issue.class));
     }
@@ -91,7 +106,7 @@ class IssueServiceTest {
         Issue foundIssue = issueService.getIssueById(1L);
 
         assertNotNull(foundIssue);
-        assertEquals("Test Issue", foundIssue.getTitre());
+        assertEquals("Test Issue", foundIssue.getTitle());
         verify(issueRepository).findById(1L);
     }
 
@@ -140,5 +155,101 @@ class IssueServiceTest {
         when(issueRepository.existsById(999L)).thenReturn(false);
 
         assertThrows(IllegalArgumentException.class, () -> issueService.deleteIssue(999L));
+    }
+
+    @Test
+    void assignManagerToIssue_Success() {
+        // Précondition
+        testUser.setRoles(Set.of(new Role("TEACHER")));
+
+        // Setup de l'Issue
+        User categoryOwner = new User();
+        categoryOwner.setId(99L);
+
+        Category category = new Category();
+        category.setOwner(categoryOwner);
+        testIssue.setCategory(category);
+
+        // Setup de la RequestManager
+        RequestManager existingRequest = new RequestManager();
+        existingRequest.setIssue(testIssue);
+
+
+        // Mocks
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(testIssue));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(testUser));
+        when(requestManagerRepository.existsByIssueAndStatusAndTargetTeacherIsNotNull(any(), any()))
+                .thenReturn(false);
+
+        when(requestManagerRepository.findFirstByIssueOrderByCreatedAtDesc(testIssue))
+                .thenReturn(Optional.of(existingRequest));
+
+        // On simule la sauvegarde et le retour de l'objet
+        when(requestManagerRepository.save(any(RequestManager.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Si 'toDto' utilise un mapper injecté (ex: RequestManagerMapper), décommente la ligne suivante :
+        // when(requestManagerMapper.toDto(any())).thenReturn(new RequestManagerDTO());
+
+        // action
+        RequestManagerDTO result = issueService.assignManagerToIssue(1L, 2L);
+
+        // assertion
+        assertNotNull(result);
+
+        assertEquals(RequestManagerStatus.PENDING, existingRequest.getStatus());
+        assertEquals(testUser, existingRequest.getTargetTeacher());
+
+        // Vérification des appels
+        verify(issueRepository).findById(1L);
+        verify(userRepository).findById(2L);
+        verify(requestManagerRepository).save(any(RequestManager.class));
+    }
+
+    @Test
+    void assignManagerToIssue_IssueNotFound_ThrowsException() {
+        // précondtion
+        testUser.setRoles(Set.of(new Role("TEACHER")));
+
+        // Mock
+        when(issueRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // Action et Assertion
+        assertThrows(EntityNotFoundException.class, () ->
+                issueService.assignManagerToIssue(1L, 2L)
+        );
+    }
+
+    @Test
+    void assignManagerToIssue_PendingRequest_ThrowsException() {
+        // précondition
+        testUser.setRoles(Set.of(new Role("TEACHER")));
+
+        // Arrange
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(testIssue));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(testUser));
+        when(requestManagerRepository.existsByIssueAndStatusAndTargetTeacherIsNotNull(testIssue, RequestManagerStatus.PENDING))
+                .thenReturn(true);
+
+        // Action et Assertion
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
+                issueService.assignManagerToIssue(1L, 2L)
+        );
+        assertEquals("Une demande de manager est déjà en cours pour ce ticket.", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Erreur : Devrait lancer IllegalArgumentException si l'utilisateur n'est pas un prof")
+    void assignManagerToIssue_NotATeacher_ThrowsException() {
+        // précondition
+        testUser.setRoles(Set.of(new Role("STUDENT")));
+
+        // Mock
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(testIssue));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(testUser));
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () ->
+                issueService.assignManagerToIssue(1L, 2L)
+        );
     }
 }

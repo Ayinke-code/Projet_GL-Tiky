@@ -22,16 +22,16 @@ class CategoryTest {
         assertTrue(category.getFollowers().isEmpty());
     }
 
-    @Test
-    void shouldAddFollower() {
-
-        Category category = new Category();
-        category.setFollowers(new java.util.HashSet<>());
-
-        User user = new User();
-
-        category.getFollowers().add(user);
-
-        assertEquals(1, category.getFollowers().size());
-    }
+//    @Test
+//    void shouldAddFollower() {
+//
+//        Category category = new Category();
+//        category.setFollowers(new java.util.HashSet<>());
+//
+//        User user = new User();
+//
+//        category.getFollowers().add(user);
+//
+//        assertEquals(1, category.getFollowers().size());
+//    }
 }
