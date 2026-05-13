@@ -1,8 +1,8 @@
 package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.User;
-import fr.horizon.backend_api.model.dto.CategoryDto;
-import fr.horizon.backend_api.model.dto.CategoryRequestDto;
+import fr.horizon.backend_api.model.dto.CategoryResponseDto;
+import fr.horizon.backend_api.model.dto.CreateCategoryDTO;
 import fr.horizon.backend_api.exception.CategoryAlreadyExistsException;
 import fr.horizon.backend_api.service.CategoryService;
 import jakarta.validation.Valid;
@@ -30,19 +30,19 @@ public class CategoryController {
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping
-    public ResponseEntity<List<CategoryDto>> getAllCategories() {
+    public ResponseEntity<List<CategoryResponseDto>> getAllCategories() {
         return ResponseEntity.ok(categoryService.findAll());
     }
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/active")
-    public ResponseEntity<List<CategoryDto>> getAllActiveCategories() {
+    public ResponseEntity<List<CategoryResponseDto>> getAllActiveCategories() {
         return ResponseEntity.ok(categoryService.getAllActiveCategories());
     }
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
-    public ResponseEntity<CategoryDto> getCategoryById(@PathVariable Long id) {
+    public ResponseEntity<CategoryResponseDto> getCategoryById(@PathVariable Long id) {
         return categoryService.getCategoryById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -50,25 +50,25 @@ public class CategoryController {
 
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     @GetMapping("/teacher")
-    public ResponseEntity<List<CategoryDto>> getCategoriesByTeacher(
+    public ResponseEntity<List<CategoryResponseDto>> getCategoriesByTeacher(
             @RequestHeader(value = "X-Teacher-ID") String teacherId) {
         return ResponseEntity.ok(categoryService.getAllActiveCategoriesForTeacher(teacherId));
     }
 
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     @PostMapping
-    public ResponseEntity<CategoryDto> createCategory(
-            @Valid @RequestBody CategoryRequestDto dto,
+    public ResponseEntity<CategoryResponseDto> createCategory(
+            @Valid @RequestBody CreateCategoryDTO dto,
             @RequestHeader(value = "X-Teacher-ID") String teacherId) {
-        CategoryDto created = categoryService.createCategory(dto, teacherId);
+        CategoryResponseDto created = categoryService.createCategory(dto, teacherId);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     @PutMapping("/{id}")
-    public ResponseEntity<CategoryDto> updateCategory(
+    public ResponseEntity<CategoryResponseDto> updateCategory(
             @PathVariable Long id,
-            @Valid @RequestBody CategoryRequestDto dto,
+            @Valid @RequestBody CreateCategoryDTO dto,
             @RequestHeader(value = "X-Teacher-ID") String requesterId) {
         return ResponseEntity.ok(categoryService.updateCategory(id, dto, requesterId));
     }
@@ -84,7 +84,7 @@ public class CategoryController {
 
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     @PatchMapping("/{id}/archive")
-    public ResponseEntity<CategoryDto> archiveCategory(
+    public ResponseEntity<CategoryResponseDto> archiveCategory(
             @PathVariable Long id,
             @RequestHeader(value = "X-Teacher-ID") String requesterId) {
         return ResponseEntity.ok(categoryService.archiveCategory(id, requesterId));

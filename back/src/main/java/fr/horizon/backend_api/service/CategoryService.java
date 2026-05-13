@@ -5,7 +5,7 @@ import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.CategoryFollower;
 import fr.horizon.backend_api.model.User;
-import fr.horizon.backend_api.model.dto.CategoryResponseDTO;
+import fr.horizon.backend_api.model.dto.CategoryResponseDto;
 import fr.horizon.backend_api.model.dto.CategoryRequestDto;
 import fr.horizon.backend_api.model.dto.CreateCategoryDTO;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
@@ -37,18 +37,37 @@ public class CategoryService {
     /**
      * Récupère toutes les catégories (Premier code).
      */
-    public List<CategoryResponseDTO> findAll() {
+    public List<CategoryResponseDto> findAll() {
         return categoryRepository.findAll()
                 .stream()
                 .map(this::convertToDTO)
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<CategoryResponseDto> getAllActiveCategories() {
+        return categoryRepository.findByStatus(CategoryStatus.ACTIVE)
+                .stream()
+                .map(this::convertToDTO)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<CategoryResponseDto> getCategoryById(Long id) {
+        return categoryRepository.findById(id)
+                .map(this::convertToDTO);
+    }
+
+    @Transactional(readOnly = true)
+    public List<User> getAvailableTeachers(Long categoryId) {
+        return userRepository.findTeachersNotFollowingCategory(categoryId);
+    }
+
     /**
      * Crée une catégorie à partir de CategoryRequestDto (Premier code).
      */
     @Transactional
-    public CategoryResponseDTO createCategory(CategoryRequestDto dto) {
+    public CategoryResponseDto createCategory(CategoryRequestDto dto) {
         User owner = userRepository.findById(dto.getOwnerId())
                 .orElseThrow(() -> new RuntimeException("Owner not found"));
 
@@ -75,7 +94,7 @@ public class CategoryService {
     }
 
     @Transactional
-    public CategoryResponseDTO createCategory(CreateCategoryDTO dto, String teacherId) {
+    public CategoryResponseDto createCategory(CreateCategoryDTO dto, String teacherId) {
         if (dto.getName() == null || dto.getName().trim().isEmpty()) {
             throw new IllegalArgumentException("Le nom est requis");
         }
@@ -104,7 +123,7 @@ public class CategoryService {
     }
 
     @Transactional
-    public CategoryResponseDTO updateCategory(Long id, CreateCategoryDTO dto, String requesterId) {
+    public CategoryResponseDto updateCategory(Long id, CreateCategoryDTO dto, String requesterId) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new CategoryNotFoundException(id));
 
@@ -138,7 +157,7 @@ public class CategoryService {
     }
 
     @Transactional(readOnly = true)
-    public List<CategoryResponseDTO> getAllActiveCategoriesForTeacher(String teacherId) {
+    public List<CategoryResponseDto> getAllActiveCategoriesForTeacher(String teacherId) {
         List<Category> allActive = categoryRepository.findByStatus(CategoryStatus.ACTIVE);
         List<Category> ownedByMe = categoryRepository.findByOwnerId(Long.valueOf(teacherId));
 
@@ -149,7 +168,7 @@ public class CategoryService {
     }
 
     @Transactional
-    public CategoryResponseDTO archiveCategory(Long id, String requesterId) {
+    public CategoryResponseDto archiveCategory(Long id, String requesterId) {
         Category category = categoryRepository.findById(id).orElseThrow(() -> new CategoryNotFoundException(id));
         checkOwnership(category, requesterId);
         category.setStatus(CategoryStatus.ARCHIVED);

@@ -18,15 +18,10 @@ public class CategoryFollower {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String teacherId;
 
-    @Column(nullable = false)
     private Long categoryId;
 
-    /**
-     * Statut de l'abonnement (PENDING, ACCEPTED).
-     */
     @Column(nullable = false)
     @Builder.Default
     private String status = "ACCEPTED";

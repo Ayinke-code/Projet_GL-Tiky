@@ -39,13 +39,14 @@ public class Category extends BaseEntity {
     private User owner;
 
     @Builder.Default
-    @ManyToMany
-    @JoinTable(name = "category_followers", joinColumns = @JoinColumn(name = "category_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
-    private Set<User> followers = new HashSet<>();
+    @OneToMany(mappedBy = "categoryId", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<CategoryFollower> followerRefs = new HashSet<>();
 
     @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
+    @Column(name = "updated_at", nullable = true, updatable = true)
     private LocalDateTime updatedAt;
 }

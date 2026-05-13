@@ -16,6 +16,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Component
@@ -92,6 +93,8 @@ public class DataInitializer implements CommandLineRunner {
                         .subject(subject)
                         .status(CategoryStatus.ACTIVE)
                         .owner(owner)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
                         .build());
     }
 }
