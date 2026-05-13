@@ -1,19 +1,20 @@
 package fr.horizon.backend_api.security;
 
 import fr.horizon.backend_api.service.JwtToken;
-import io.jsonwebtoken.impl.DefaultClaims;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.DisplayName;
+import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.Authentication;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -25,10 +26,7 @@ class JwtAuthenticationFilterTest {
     private JwtToken jwtToken;
 
     @Mock
-    private HttpServletRequest request;
-
-    @Mock
-    private HttpServletResponse response;
+    private Claims claims;
 
     @Mock
     private FilterChain filterChain;
@@ -36,41 +34,119 @@ class JwtAuthenticationFilterTest {
     @InjectMocks
     private JwtAuthenticationFilter filter;
 
-    @AfterEach
-    void tearDown() {
+    @BeforeEach
+    void clearContext() {
         SecurityContextHolder.clearContext();
     }
 
     @Test
-    @DisplayName("Doit ignorer les routes /auth")
-    void doFilterInternal_SkipsAuthRoutes() throws Exception {
-        when(request.getServletPath()).thenReturn("/auth/login");
+    void shouldAuthenticateFromBearerToken() throws Exception {
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        request.addHeader("Authorization", "Bearer fake-token");
+
+        when(jwtToken.parseToken("fake-token"))
+                .thenReturn(claims);
+
+        when(claims.getSubject())
+                .thenReturn("test@test.com");
+
+        when(claims.get("roles", List.class))
+                .thenReturn(List.of("ADMIN"));
 
         filter.doFilterInternal(request, response, filterChain);
 
+        assertNotNull(SecurityContextHolder.getContext().getAuthentication());
+
+        assertEquals(
+                "test@test.com",
+                SecurityContextHolder.getContext().getAuthentication().getName()
+        );
+
         verify(filterChain).doFilter(request, response);
-        verifyNoInteractions(jwtToken);
-        assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
     @Test
-    @DisplayName("Doit positionner l'authentification à partir du token Bearer")
-    void doFilterInternal_SetsAuthenticationFromToken() throws Exception {
-        when(request.getServletPath()).thenReturn("/issues/1");
-        when(request.getHeader("Authorization")).thenReturn("Bearer fake-token");
+    void shouldAuthenticateFromCookie() throws Exception {
 
-        DefaultClaims claims = new DefaultClaims();
-        claims.setSubject("john@example.com");
-        claims.put("role", "ROLE_TEACHER");
-        when(jwtToken.parseToken("fake-token")).thenReturn(claims);
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        request.setCookies(new Cookie("token", "cookie-token"));
+
+        when(jwtToken.parseToken("cookie-token"))
+                .thenReturn(claims);
+
+        when(claims.getSubject())
+                .thenReturn("student@test.com");
+
+        when(claims.get("roles", List.class))
+                .thenReturn(List.of("STUDENT"));
 
         filter.doFilterInternal(request, response, filterChain);
 
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        assertNotNull(authentication);
-        assertEquals("john@example.com", authentication.getName());
-        assertTrue(authentication.getAuthorities().stream()
-                .anyMatch(authority -> authority.getAuthority().equals("ROLE_TEACHER")));
+        assertNotNull(SecurityContextHolder.getContext().getAuthentication());
+
+        assertEquals(
+                "student@test.com",
+                SecurityContextHolder.getContext().getAuthentication().getName()
+        );
+    }
+
+    @Test
+    void shouldClearContextWhenTokenInvalid() throws Exception {
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        request.addHeader("Authorization", "Bearer invalid");
+
+        when(jwtToken.parseToken("invalid"))
+                .thenThrow(new RuntimeException());
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void shouldContinueFilterChainWhenNoToken() throws Exception {
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void shouldHandleNullRoles() throws Exception {
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        request.addHeader("Authorization", "Bearer fake-token");
+
+        when(jwtToken.parseToken("fake-token"))
+                .thenReturn(claims);
+
+        when(claims.getSubject())
+                .thenReturn("user@test.com");
+
+        when(claims.get("roles", List.class))
+                .thenReturn(null);
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        assertNotNull(SecurityContextHolder.getContext().getAuthentication());
+
         verify(filterChain).doFilter(request, response);
     }
 }

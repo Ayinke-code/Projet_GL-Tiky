@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
@@ -46,7 +47,7 @@ class AuthServiceTest {
                 .email("test@example.com")
                 .password("encodedPassword")
                 .name("John Doe")
-                .role(role)
+                .roles(Set.of(role))
                 .build();
 
         loginRequest = new LoginRequest("test@example.com", "password123");
@@ -57,22 +58,22 @@ class AuthServiceTest {
     void login_Success() {
         when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
-        when(jwtToken.generateToken("test@example.com", 1L, "ROLE_TEACHER")).thenReturn("mock-jwt-token");
+        when(jwtToken.generateToken("test@example.com", 1L, Set.of("ROLE_TEACHER"))).thenReturn("mock-jwt-token");
 
         LoginResponse response = authService.login(loginRequest);
 
         assertNotNull(response);
         assertEquals("mock-jwt-token", response.getToken());
         assertEquals("John Doe", response.getName());
-        assertEquals("ROLE_TEACHER", response.getRole());
+        assertEquals("test@example.com", response.getEmail());
+        assertTrue(response.getRoles().contains("ROLE_TEACHER"));
     }
 
     @Test
     @DisplayName("Login avec email inexistant")
     void login_EmailNotFound() {
-        when(userRepository.findByEmail("wrong@example.com")).thenReturn(Optional.empty());
-
         loginRequest = new LoginRequest("wrong@example.com", "password");
+        when(userRepository.findByEmail("wrong@example.com")).thenReturn(Optional.empty());
 
         assertThrows(ResponseStatusException.class, () -> authService.login(loginRequest));
     }

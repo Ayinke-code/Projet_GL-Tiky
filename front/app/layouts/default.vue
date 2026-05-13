@@ -26,6 +26,8 @@
 
 <script setup>
 import { ref } from 'vue'
+import Header from '~/components/layout/Header.vue'
+import Sidebar from '~/components/layout/Sidebar.vue'
 
 const isSidebarOpen = ref(false)
 </script>

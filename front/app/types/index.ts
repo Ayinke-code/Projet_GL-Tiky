@@ -7,6 +7,7 @@ export interface User {
   name: string
   email: string
   role: 'ADMIN' | 'ENSEIGNANT' | 'ETUDIANT' | 'TEACHER' | 'STUDENT' | 'USER'
+  roles?: string[]
   followedCategories?: number[]
   issueRoles?: string[]
 }

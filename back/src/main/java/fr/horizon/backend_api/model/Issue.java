@@ -1,6 +1,5 @@
 package fr.horizon.backend_api.model;
 
-import java.time.LocalDateTime;
 import jakarta.persistence.*;
 import lombok.*;
 import fr.horizon.backend_api.model.enums.IssueStatus;
@@ -11,50 +10,40 @@ import fr.horizon.backend_api.model.enums.IssueStatus;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "ticket")
-public class Issue {
+@Table(name = "issue")
+public class Issue extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idTick;
+    private Long id;
 
-    private String titre;
+    @Column(nullable = false)
+    private String title;
 
+    @Column(nullable = false)
     private String description;
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private IssueStatus statut = IssueStatus.OUVERT;
+    @Column(nullable = false)
+    private IssueStatus status = IssueStatus.OUVERT;
 
     @Builder.Default
-    private Boolean estPrive = false;
+    @Column(nullable = false)
+    private boolean isPrivate = false;
 
-    private LocalDateTime dateCreation;
+    private String rejectType;
 
-    private LocalDateTime dateModification;
+    private String rejectReason;
 
-    private String typeRejet;
-
-    private String raisonRejet;
-
-    private String commentaire;
+    private String rejectComment;
 
     @ManyToOne
-    @JoinColumn(name = "id_cat", nullable = false)
-    private Category categorie;
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 
     @ManyToOne
-    @JoinColumn(name = "id_util", nullable = false)
-    private User createur;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User createdBy;
 
-    @PrePersist
-    public void prePersist() {
-        this.dateCreation = LocalDateTime.now();
-        this.dateModification = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    public void preUpdate() {
-        this.dateModification = LocalDateTime.now();
-    }
 }

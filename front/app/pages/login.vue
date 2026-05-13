@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-indigo-600 to-slate-900 flex items-center justify-center p-4">
+  <div class="min-h-screen bg-linear-to-br from-indigo-600 to-slate-900 flex items-center justify-center p-4">
     <div class="w-full max-w-md bg-white rounded-xl shadow-2xl p-8">
       <!-- Header -->
       <div class="text-center mb-8">
@@ -78,7 +78,7 @@ type LoginResponse = {
   id: string | number
   name: string
   email: string
-  role: User['role']
+  roles: string[]
   token: string
 }
 
@@ -104,19 +104,24 @@ const handleLogin = async () => {
     })
 
     if (response.token) {
-      // Store token in cookie using nuxt composable
       const token = useCookie('auth_token')
       token.value = response.token
+
+      const primaryRole = (['ADMIN', 'TEACHER', 'ENSEIGNANT', 'STUDENT', 'USER', 'ETUDIANT']
+        .find(r => response.roles?.includes(r)) ?? 'STUDENT') as User['role']
+
       syncSession({
         id: response.id,
         name: response.name,
         email: response.email,
-        role: response.role
+        role: primaryRole,
+        roles: response.roles ?? [primaryRole]
       })
-      console.log('Connexion réussie! Token:', response.token.substring(0, 20) + '...')
-
-      // Redirige vers l'espace le plus cohérent avec le rôle métier
-      await router.push((response.role === 'STUDENT' || response.role === 'USER') ? '/issues' : '/categorie')
+      await router.push(
+        (primaryRole === 'STUDENT' || primaryRole === 'USER' || primaryRole === 'ETUDIANT')
+          ? '/issues'
+          : '/categorie'
+      )
     }
   } catch (err: unknown) {
     console.error('Login error:', err)

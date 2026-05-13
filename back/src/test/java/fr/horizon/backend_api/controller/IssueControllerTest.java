@@ -54,7 +54,6 @@ class IssueControllerTest {
                 .id(1L)
                 .name("Réseau")
                 .subject("Informatique")
-                .categoryOwner("teacher-1")
                 .build();
 
         User creator = User.builder()
@@ -64,12 +63,12 @@ class IssueControllerTest {
                 .build();
 
         Issue issue = Issue.builder()
-                .idTick(99L)
-                .titre(dto.getTitre())
+                .id(99L)
+                .title(dto.getTitre())
                 .description(dto.getDescription())
-                .statut(IssueStatus.OUVERT)
-                .categorie(category)
-                .createur(creator)
+                .status(IssueStatus.OUVERT)
+                .category(category)
+                .createdBy(creator)
                 .build();
 
         when(authentication.getName()).thenReturn("alice@example.com");
@@ -80,7 +79,7 @@ class IssueControllerTest {
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(99L, response.getBody().getIdTick());
+        assertEquals(99L, response.getBody().getId());
         verify(issueService).createIssue(any(), eq(creator));
     }
 
@@ -105,7 +104,7 @@ class IssueControllerTest {
     @Test
     @DisplayName("getAllIssues devrait retourner toutes les issues")
     void getAllIssues_Success() {
-        Issue issue = Issue.builder().idTick(1L).titre("Incident réseau").build();
+        Issue issue = Issue.builder().id(1L).title("Incident réseau").build();
         when(issueService.getAllIssues()).thenReturn(List.of(issue));
 
         var response = issueController.getAllIssues();
@@ -117,43 +116,43 @@ class IssueControllerTest {
     @Test
     @DisplayName("getIssueById devrait retourner une issue")
     void getIssueById_Success() {
-        Issue issue = Issue.builder().idTick(5L).titre("Ticket critique").build();
+        Issue issue = Issue.builder().id(5L).title("Ticket critique").build();
         when(issueService.getIssueById(5L)).thenReturn(issue);
 
         var response = issueController.getIssueById(5L);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(5L, response.getBody().getIdTick());
+        assertEquals(5L, response.getBody().getId());
     }
 
     @Test
     @DisplayName("getIssuesByCategory devrait retourner les issues d'une catégorie")
     void getIssuesByCategory_Success() {
-        Issue issue = Issue.builder().idTick(7L).titre("Ticket catégorie").build();
+        Issue issue = Issue.builder().id(7L).title("Ticket catégorie").build();
         when(issueService.getIssuesByCategory(3L)).thenReturn(List.of(issue));
 
         var response = issueController.getIssuesByCategory(3L);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(7L, response.getBody().get(0).getIdTick());
+        assertEquals(7L, response.getBody().get(0).getId());
     }
 
     @Test
     @DisplayName("getIssuesByStatus devrait retourner les issues filtrées")
     void getIssuesByStatus_Success() {
-        Issue issue = Issue.builder().idTick(8L).titre("Ticket ouvert").build();
+        Issue issue = Issue.builder().id(8L).title("Ticket ouvert").build();
         when(issueService.getIssuesByStatus("OUVERT")).thenReturn(List.of(issue));
 
         var response = issueController.getIssuesByStatus("OUVERT");
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(8L, response.getBody().get(0).getIdTick());
+        assertEquals(8L, response.getBody().get(0).getId());
     }
 
     @Test
     @DisplayName("updateIssueStatus devrait mettre à jour le statut")
     void updateIssueStatus_Success() {
-        Issue updatedIssue = Issue.builder().idTick(9L).statut(IssueStatus.COMPLET).build();
+        Issue updatedIssue = Issue.builder().id(9L).status(IssueStatus.COMPLET).build();
         UpdateIssueStatusDTO dto = new UpdateIssueStatusDTO();
         dto.setStatut("COMPLET");
 
@@ -162,7 +161,7 @@ class IssueControllerTest {
         var response = issueController.updateIssueStatus(9L, dto);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(IssueStatus.COMPLET, response.getBody().getStatut());
+        assertEquals(IssueStatus.COMPLET, response.getBody().getStatus());
     }
 
     @Test

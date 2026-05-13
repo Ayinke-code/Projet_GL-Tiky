@@ -3,34 +3,53 @@ package fr.horizon.backend_api.controller;
 import java.util.List;
 
 import fr.horizon.backend_api.model.dto.UserDto;
+import fr.horizon.backend_api.model.dto.UserRequestDto;
 import fr.horizon.backend_api.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import fr.horizon.backend_api.model.User;
-import fr.horizon.backend_api.repository.UserRepository;
-
+/**
+ * Contrôleur REST de gestion des utilisateurs.
+ * <p>
+ * Expose les endpoints CRUD permettant de gérer les utilisateurs.
+ * Toute la logique métier est déléguée à {@link UserService}.
+ */
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserRepository userRepository;
     private final UserService userService;
 
+    /**
+     * Récupère l'ensemble des utilisateurs.
+     *
+     * @return liste des utilisateurs sous forme de DTO
+     */
     @GetMapping
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public List<UserDto> getAllUsers() {
+        return userService.findAll();
     }
 
-    @PostMapping("/add")
-    public User createUser(@Valid @RequestBody UserDto dto) {
+    /**
+     * Crée un nouvel utilisateur.
+     *
+     * @param dto données de création utilisateur
+     * @return utilisateur créé sous forme de DTO
+     */
+    @PostMapping
+    public UserDto createUser(@Valid @RequestBody UserRequestDto dto) {
         return userService.createUser(dto);
     }
 
+    /**
+     * Supprime un utilisateur à partir de son identifiant.
+     *
+     * @param id identifiant de l'utilisateur
+     */
     @DeleteMapping("/{id}")
     public void deleteUser(@PathVariable Long id){
-        userRepository.deleteById(id);
+        userService.deleteById(id);
     }
 }

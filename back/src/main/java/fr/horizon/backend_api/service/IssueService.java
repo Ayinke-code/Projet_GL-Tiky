@@ -30,12 +30,12 @@ public class IssueService {
                 .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
 
         Issue issue = Issue.builder()
-                .titre(dto.getTitre())
+                .title(dto.getTitre())
                 .description(dto.getDescription())
-                .categorie(category)
-                .createur(creator)
-                .statut(IssueStatus.OUVERT)
-                .estPrive(false)
+                .category(category)
+                .createdBy(creator)
+                .status(IssueStatus.OUVERT)
+                .isPrivate(false)
                 .build();
 
         return issueRepository.save(issue);
@@ -51,16 +51,16 @@ public class IssueService {
     }
 
     public List<Issue> getIssuesByCategory(Long categorieId) {
-        return issueRepository.findByCategorie_Id(categorieId);
+        return issueRepository.findByCategoryId(categorieId);
     }
 
     public List<Issue> getIssuesByCreator(Long creatorId) {
-        return issueRepository.findByCreateur_Id(creatorId);
+        return issueRepository.findByCreatedById(creatorId);
     }
 
     public List<Issue> getIssuesByStatus(String statut) {
         IssueStatus status = IssueStatus.fromValue(statut);
-        return issueRepository.findByStatut(status);
+        return issueRepository.findByStatus(status);
     }
 
     public void deleteIssue(Long id) {
@@ -73,14 +73,14 @@ public class IssueService {
     public Issue updateIssueStatus(Long id, String newStatus) {
         logger.info("updateIssueStatus called with id={}, newStatus={}", id, newStatus);
         Issue issue = getIssueById(id);
-        logger.info("Current status before update: {}", issue.getStatut());
+        logger.info("Current status before update: {}", issue.getStatus());
         
         IssueStatus status = IssueStatus.fromValue(newStatus);
         logger.info("Parsed status: {}", status);
         
-        issue.setStatut(status);
+        issue.setStatus(status);
         Issue saved = issueRepository.save(issue);
-        logger.info("Status after save: {}", saved.getStatut());
+        logger.info("Status after save: {}", saved.getStatus());
         
         return saved;
     }

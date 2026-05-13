@@ -34,13 +34,19 @@ const normalizeUser = (storedUser: string | User | null | undefined): User | nul
     ? candidate.issueRoles.filter((issueRole): issueRole is string => typeof issueRole === 'string')
     : null
 
+  const role = (typeof candidate.role === 'string' ? candidate.role : 'STUDENT') as User['role']
+  const rolesArr: string[] = Array.isArray(candidate.roles) && candidate.roles.length > 0
+    ? (candidate.roles as string[])
+    : [role]
+
   return {
     id: (candidate.id as string | number) ?? '',
     name: typeof candidate.name === 'string' ? candidate.name : '',
     email: typeof candidate.email === 'string' ? candidate.email : '',
-    role: (typeof candidate.role === 'string' ? candidate.role : 'STUDENT') as User['role'],
+    role,
+    roles: rolesArr,
     followedCategories,
-    issueRoles: normalizeIssueRoles(typeof candidate.role === 'string' ? candidate.role : 'STUDENT', issueRoles)
+    issueRoles: normalizeIssueRoles(role, issueRoles)
   }
 }
 
@@ -111,6 +117,8 @@ export const useAuth = () => {
   return {
     user,
     isAuthenticated,
+    ready: isAuthenticated,
+    roles: computed(() => user.value?.role ? [user.value.role] : []),
     isUser,
     isTeacher,
     isAdmin,

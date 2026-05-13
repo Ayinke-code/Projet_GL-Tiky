@@ -49,12 +49,12 @@ class IssueServiceTest {
         testUser.setEmail("test@test.fr");
 
         testIssue = new Issue();
-        testIssue.setIdTick(1L);
-        testIssue.setTitre("Test Issue");
+        testIssue.setId(1L);
+        testIssue.setTitle("Test Issue");
         testIssue.setDescription("Test Description");
-        testIssue.setStatut(IssueStatus.OUVERT);
-        testIssue.setCategorie(testCategory);
-        testIssue.setCreateur(testUser);
+        testIssue.setStatus(IssueStatus.OUVERT);
+        testIssue.setCategory(testCategory);
+        testIssue.setCreatedBy(testUser);
 
         issueDTO = new IssueDTO();
         issueDTO.setTitre("Test Issue");
@@ -70,8 +70,8 @@ class IssueServiceTest {
         Issue createdIssue = issueService.createIssue(issueDTO, testUser);
 
         assertNotNull(createdIssue);
-        assertEquals("Test Issue", createdIssue.getTitre());
-        assertEquals(IssueStatus.OUVERT, createdIssue.getStatut());
+        assertEquals("Test Issue", createdIssue.getTitle());
+        assertEquals(IssueStatus.OUVERT, createdIssue.getStatus());
         verify(categoryRepository).findById(1L);
         verify(issueRepository).save(any(Issue.class));
     }
@@ -91,7 +91,7 @@ class IssueServiceTest {
         Issue foundIssue = issueService.getIssueById(1L);
 
         assertNotNull(foundIssue);
-        assertEquals("Test Issue", foundIssue.getTitre());
+        assertEquals("Test Issue", foundIssue.getTitle());
         verify(issueRepository).findById(1L);
     }
 
