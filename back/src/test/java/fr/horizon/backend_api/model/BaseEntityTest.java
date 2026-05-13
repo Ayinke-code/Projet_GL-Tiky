@@ -1,7 +1,9 @@
 package fr.horizon.backend_api.model;
 
-import jakarta.persistence.*;
+import fr.horizon.backend_api.repository.CategoryRepository;
+import fr.horizon.backend_api.model.enums.CategoryStatus;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
@@ -11,26 +13,21 @@ import static org.junit.jupiter.api.Assertions.*;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 class BaseEntityTest {
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
-    @Entity
-    static class DummyEntity extends BaseEntity {
-        @Id
-        @GeneratedValue
-        private Long id;
-    }
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     @Test
     void shouldSetCreatedAtAndUpdatedAtOnPersist() {
+        Category entity = Category.builder()
+                .name("Test")
+                .subject("Test subject")
+                .status(CategoryStatus.ACTIVE)
+                .build();
 
-        DummyEntity entity = new DummyEntity();
+        Category saved = categoryRepository.saveAndFlush(entity);
 
-        entityManager.persist(entity);
-        entityManager.flush();
-
-        assertNotNull(entity.getCreatedAt());
-        assertNotNull(entity.getUpdatedAt());
-        assertEquals(entity.getCreatedAt(), entity.getUpdatedAt());
+        assertNotNull(saved.getCreatedAt());
+        assertNotNull(saved.getUpdatedAt());
+        assertEquals(saved.getCreatedAt(), saved.getUpdatedAt());
     }
 }
