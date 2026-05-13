@@ -15,7 +15,7 @@
         class="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-0 overflow-hidden animate-in fade-in zoom-in duration-200">
         <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
           <h2 class="text-lg font-bold text-gray-800">Nouvelle Catégorie</h2>
-          <button @click="isCreateModalOpen = false" class="text-gray-400 hover:text-gray-600">
+          <button @click="isCreateModalOpen = false" class="text-indigo-600 hover:text-indigo-800 transition-colors">
             <i class="fa-solid fa-xmark text-xl"></i>
           </button>
         </div>
@@ -71,10 +71,10 @@
           class="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 animate-in fade-in zoom-in duration-200 relative">
 
           <!-- Bouton Fermer Absolu -->
-          <button @click="closeModal"
-            class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors z-10">
-            <i class="fa-solid fa-xmark text-xl"></i>
-          </button>
+        <button @click="closeModal"
+            class="absolute top-4 right-4 text-red-400 hover:bg-red-50 p-2 rounded-full transition-all z-[60] bg-white shadow-sm border border-red-100 flex items-center justify-center w-5 h-5">
+            <i class="fa-solid fa-xmark text-xl"></i> x
+        </button>
 
           <!-- MODE VUE -->
           <div v-if="!isEditing">
@@ -106,7 +106,7 @@
 
             <!-- Actions -->
             <div class="flex gap-3 pt-6 border-t">
-              <template v-if="selectedCat.owner === user?.id">
+              <template v-if="String(selectedCat.owner) === String(user?.id)">
                 <button @click="startEdit"
                   class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Modifier</button>
 
@@ -133,26 +133,13 @@
 
           <!-- MODE ÉDITION -->
           <div v-else>
-            <div class="flex justify-between items-start mb-4">
-              <h3 class="text-lg font-bold">Modifier la catégorie</h3>
+            <div class="mb-6">
+              <h2 class="text-xl font-bold text-gray-900">Modifier la catégorie</h2>
+              <p class="text-sm text-gray-500">Mettez à jour les informations de la catégorie</p>
             </div>
-            <div class="space-y-4">
-              <input v-model="editForm.name" class="w-full border p-2 rounded" placeholder="Matière" />
-              <input v-model="editForm.subject" class="w-full border p-2 rounded" placeholder="Sujet" />
-              <label class="text-[10px] font-bold text-gray-400 uppercase">Propriétaire (Transférer)</label>
-              <select id="category-teacher-select" v-model="editForm.teacher"
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
-                <option v-for="teacher in teachers" :key="teacher.id" :value="String(teacher.id)">
-                  {{ teacher.name }}
-                </option>
-              </select>
-              <div class="flex gap-3 mt-6 pt-4 border-t">
-                <button @click="saveEdit"
-                  class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg">Sauvegarder</button>
-                <button @click="isEditing = false"
-                  class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg">Annuler</button>
-              </div>
-            </div>
+
+            <CategoryForm :loading="loading" :error="error" :initial-data="selectedCat" :is-edit="true"
+              @submit="handleUpdate" @cancel="closeModal" />
           </div>
 
         </div>
@@ -185,7 +172,7 @@ const {
   categories, loading, error, createCategory, updateCategory, fetchCategories,
   archiveCategory, unarchiveCategory, followCategory: apiFollow,
   unfollowCategory: apiUnfollow, getFollowedCategories, deleteCategoryPermanent
-} = useCategory(user.value?.id || 'teacher-default')
+} = useCategory(user)
 
 // State
 const apiError = ref('')
@@ -194,16 +181,15 @@ const selectedCat = ref(null)
 const isEditing = ref(false)
 const isCreateModalOpen = ref(false)
 const teachers = ref([])
-const editForm = ref({ name: '', subject: '', teacher: '' })
 
 // Computed
 const ownedAndFollowed = computed(() => {
   return categories.value.filter(cat =>
     cat.status !== 'archived' &&
-    (cat.owner === user.value?.id || followedCategories.value.includes(cat.id))
+    (String(cat.owner) === String(user.value?.id) || followedCategories.value.includes(cat.id))
   ).sort((a, b) => {
-    if (a.owner === user.value?.id && b.owner !== user.value?.id) return -1
-    if (a.owner !== user.value?.id && b.owner === user.value?.id) return 1
+    if (String(a.owner) === String(user.value?.id) && String(b.owner) !== String(user.value?.id)) return -1
+    if (String(a.owner) !== String(user.value?.id) && String(b.owner) === String(user.value?.id)) return 1
     return 0
   })
 })
@@ -211,7 +197,7 @@ const ownedAndFollowed = computed(() => {
 const otherActive = computed(() => {
   return categories.value.filter(cat =>
     cat.status !== 'archived' &&
-    cat.owner !== user.value?.id &&
+    String(cat.owner) !== String(user.value?.id) &&
     !followedCategories.value.includes(cat.id)
   )
 })
@@ -303,12 +289,20 @@ const handleDeletePermanent = async () => {
 }
 
 const startEdit = () => {
-  editForm.value = {
-    name: selectedCat.value.name,
-    subject: selectedCat.value.subject,
-    teacher: selectedCat.value.owner || 'Teacher_default'
-  }
   isEditing.value = true
+}
+
+const handleUpdate = async (formData) => {
+  try {
+    await updateCategory(selectedCat.value.id, formData)
+    await fetchCategories()
+    showSuccess("Catégorie mise à jour avec succès !")
+    isEditing.value = false
+    // Mettre à jour selectedCat avec les nouvelles données
+    selectedCat.value = categories.value.find(c => c.id === selectedCat.value.id)
+  } catch (err) {
+    // Erreur gérée par useCategory
+  }
 }
 
 const closeModal = () => {
@@ -316,16 +310,6 @@ const closeModal = () => {
   isEditing.value = false
 }
 
-const saveEdit = async () => {
-  try {
-    await updateCategory(selectedCat.value.id, editForm.value)
-    await fetchCategories()
-    showSuccess("Catégorie mise à jour avec succès !")
-    closeModal()
-  } catch (err) {
-    apiError.value = "Erreur lors de la mise à jour."
-  }
-}
 
 const showSuccess = (msg) => {
   successMessage.value = msg

@@ -1,16 +1,27 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
-export const useCategory = (teacherId = 'teacher-default') => {
+export const useCategory = (userRef) => {
   const categories = ref([])
   const loading = ref(false)
   const error = ref(null)
 
   const API_BASE = 'http://localhost:8080/api/categories'
 
+  // Computed pour obtenir l'ID actuel de l'utilisateur
+  const currentTeacherId = computed(() => {
+    if (typeof userRef === 'object' && userRef?.value?.id) {
+      return String(userRef.value.id)
+    }
+    if (typeof userRef === 'string') {
+      return userRef
+    }
+    return 'teacher-default'
+  })
+
   // Helper pour les headers
   const getHeaders = () => ({
     'Content-Type': 'application/json',
-    'X-Teacher-ID': teacherId
+    'X-Teacher-ID': currentTeacherId.value
   })
 
   // Récupérer les catégories de l'enseignant courant
@@ -172,7 +183,7 @@ export const useCategory = (teacherId = 'teacher-default') => {
         headers: getHeaders()
       })
       if (!response.ok) throw new Error('Erreur lors de l\'ajout du follower')
-      return await response.json()
+      return true
     } catch (err) {
       console.error('Add follower error', err)
       throw err
@@ -186,7 +197,7 @@ export const useCategory = (teacherId = 'teacher-default') => {
         headers: getHeaders()
       })
       if (!response.ok) throw new Error('Erreur lors de la suppression du follower')
-      return await response.json()
+      return true
     } catch (err) {
       console.error('Remove follower error', err)
       throw err
@@ -212,6 +223,7 @@ export const useCategory = (teacherId = 'teacher-default') => {
         headers: getHeaders()
       })
       if (!response.ok) throw new Error('Erreur lors de l\'approbation')
+      return true
     } catch (err) {
       console.error('Approve follower error', err)
       throw err
@@ -225,6 +237,7 @@ export const useCategory = (teacherId = 'teacher-default') => {
         headers: getHeaders()
       })
       if (!response.ok) throw new Error('Erreur lors du rejet')
+      return true
     } catch (err) {
       console.error('Reject follower error', err)
       throw err

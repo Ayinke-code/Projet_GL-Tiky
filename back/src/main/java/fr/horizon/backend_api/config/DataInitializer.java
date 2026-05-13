@@ -1,5 +1,16 @@
 package fr.horizon.backend_api.config;
 
+import fr.horizon.backend_api.model.Category;
+import fr.horizon.backend_api.model.Issue;
+import fr.horizon.backend_api.model.enums.CategoryStatus;
+import fr.horizon.backend_api.model.enums.IssueStatus;
+import fr.horizon.backend_api.repository.CategoryRepository;
+import fr.horizon.backend_api.repository.IssueRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
 import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.Category;
@@ -10,9 +21,8 @@ import fr.horizon.backend_api.repository.UserRepository;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
+
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -24,75 +34,85 @@ public class DataInitializer implements CommandLineRunner {
     private final IssueRepository issueRepository;
     private final PasswordEncoder passwordEncoder;
 
+    @Value("${app.default-password}")
+    private String defaultPassword;
+
+    @Override
+    public void run(String... args) {
+
+        Role adminRole = getOrCreateRole("ADMIN");
+        Role teacherRole = getOrCreateRole("TEACHER");
+        Role studentRole = getOrCreateRole("STUDENT");
+
+        // User teacher et admin
+        User admin = getOrCreateUser("admin@admin.fr", "Admin", Set.of(adminRole, teacherRole));
+        // User teacher
+        getOrCreateUser("teacher@teacher.fr", "Teacher", Set.of(teacherRole));
+        // User student
+        getOrCreateUser("student@student.fr", "Student", Set.of(studentRole));
+
+        // =========================
+        // CATEGORIES DEFAULT
+        // =========================
+        if (categoryRepository.count() == 0) {
+
+            createCategory("Maintenance & Infrastructure", "Maintenance", admin);
+            createCategory("Scolarité & Administration", "Scolarité", admin);
+            createCategory("Sécurité", "Sécurité", admin);
+            createCategory("Vie étudiante", "Vie Étudiante", admin);
+            createCategory("Pédagogie", "Pédagogie", admin);
+            createCategory("Discrimination & Harcèlement", "Discrimination", admin);
+            createCategory("Réseau & Informatique", "Réseau", admin);
+            createCategory("Bibliothèque & Documentation", "Bibliothèque", admin);
+        }
+
+        // =========================
+        // ISSUE TEST
+        // =========================
+        if (issueRepository.count() == 0) {
+
+            Category first = categoryRepository.findAll().get(0);
+
+            Issue issue = Issue.builder()
+                    .title("Climatisation en panne")
+                    .description("La climatisation de l'amphithéâtre A ne fonctionne plus depuis lundi")
+                    .status(IssueStatus.OUVERT)
+                    .isPrivate(false)
+                    .category(first)
+                    .createdBy(admin)
+                    .build();
+
+            issueRepository.save(issue);
+        }
+    }
+
+    // =========================
+    // HELPERS
+    // =========================
+
     private Role getOrCreateRole(String name) {
         return roleRepository.findByName(name)
                 .orElseGet(() -> roleRepository.save(new Role(name)));
     }
 
-    @Override
-    public void run(String... args) {
+    private User getOrCreateUser(String email, String name, Set<Role> roles) {
+        return userRepository.findByEmail(email)
+                .orElseGet(() -> userRepository.save(
+                        User.builder()
+                                .email(email)
+                                .name(name)
+                                .password(passwordEncoder.encode(defaultPassword))
+                                .roles(roles)
+                                .build()));
+    }
 
-        getOrCreateRole("STUDENT");
-        getOrCreateRole("TEACHER");
-        Role adminRole = getOrCreateRole("ADMIN");
-
-        User admin = null;
-        if (!userRepository.existsByEmail("admin@admin.fr")) {
-            admin = new User();
-            admin.setEmail("admin@admin.fr");
-            admin.setName("Admin");
-            admin.setPassword(passwordEncoder.encode("password"));
-            admin.setRole(adminRole);
-            admin = userRepository.save(admin);
-        } else {
-            admin = userRepository.findByEmail("admin@admin.fr").orElse(null);
-        }
-
-        // Créer les catégories si elles n'existent pas
-        if (categoryRepository.count() == 0 && admin != null) {
-            String[] categories = {
-                "Maintenance & Infrastructure",
-                "Scolarité & Administration",
-                "Sécurité",
-                "Vie étudiante",
-                "Pédagogie",
-                "Discrimination & Harcèlement",
-                "Réseau & Informatique",
-                "Bibliothèque & Documentation"
-            };
-
-            String[] subjects = {
-                "Maintenance",
-                "Scolarité",
-                "Sécurité",
-                "Vie Étudiante",
-                "Pédagogie",
-                "Discrimination",
-                "Réseau",
-                "Bibliothèque"
-            };
-
-            for (int i = 0; i < categories.length; i++) {
-                Category cat = Category.builder()
-                        .name(categories[i])
-                        .subject(subjects[i])
-                        .status("active")
-                        .categoryOwner(String.valueOf(admin.getId()))
-                        .build();
-                categoryRepository.save(cat);
-            }
-
-            // Créer une issue de test
-            Category firstCategory = categoryRepository.findAll().get(0);
-            Issue testIssue = new Issue();
-            testIssue.setTitre("Climatisation en panne");
-            testIssue.setDescription("La climatisation de l'amphithéâtre A n'a plus de climatisation depuis lundi");
-            testIssue.setStatut(IssueStatus.OUVERT);
-            testIssue.setEstPrive(false);
-            testIssue.setCategorie(firstCategory);
-            testIssue.setCreateur(admin);
-            issueRepository.save(testIssue);
-        }
-
+    private void createCategory(String name, String subject, User owner) {
+        categoryRepository.save(
+                Category.builder()
+                        .name(name)
+                        .subject(subject)
+                        .status(CategoryStatus.ACTIVE)
+                        .owner(owner)
+                        .build());
     }
 }

@@ -1,0 +1,292 @@
+image: srv-proxy.openstack.etudis.eseo.fr:1973/projetgl-cicd:latest
+
+variables:
+  # Maven configuration
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Dhttp.proxyHost=192.168.4.8 -Dhttp.proxyPort=3128 -Dhttps.proxyHost=192.168.4.8 -Dhttps.proxyPort=3128"
+  MAVEN_CLI_OPTS: "-s $CI_PROJECT_DIR/back/settings.xml --batch-mode"
+  
+  # SonarQube configuration
+  SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+  GIT_DEPTH: "0"
+  
+  # Proxy exceptions
+  no_proxy: "gitlab-etu.openstack.etudis.eseo.fr,localhost,127.0.0.1,172.24.1.1"
+
+cache:
+  policy: pull-push
+  key: "maven-sonar-cache-$CI_COMMIT_REF_SLUG"
+  paths:
+    - .m2/repository
+    - .sonar/cache
+    - back/target/
+    - front/node_modules/
+    - front/.nuxt/
+
+stages:
+  - build
+  - test
+  - deploy
+  - selenium
+  - sonar
+
+before_script:  
+  # Ensure clean slate for ChromeDriver if needed by the runner
+  - rm -f /usr/bin/chromedriver || true
+  - export http_proxy=http://192.168.4.8:3128
+  - export https_proxy=http://192.168.4.8:3128
+
+# Stage 1: Build Backend (JAR)
+build-backend:
+  stage: build
+  script:
+    - cd back
+    - mvn $MAVEN_CLI_OPTS clean package -DskipTests
+    - ls -lh target/*.jar
+  artifacts:
+    paths:
+      - back/target/*.jar
+    expire_in: 1 day
+  rules:
+    - if: $CI_COMMIT_BRANCH
+    # - when: never
+
+# Stage 2: Build Frontend (fichiers statiques)
+build-frontend-dev:
+  stage: build
+  image: node:22
+  script:
+    - export http_proxy=http://192.168.4.8:3128
+    - export https_proxy=http://192.168.4.8:3128
+
+    - npm config set proxy http://192.168.4.8:3128
+    - npm config set https-proxy http://192.168.4.8:3128
+
+    - cd front
+    - npm ci
+    - export NUXT_PUBLIC_API_BASE="$NUXT_PUBLIC_API_BASE_DEV"
+    - echo "NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE_DEV"
+    - npm run build
+    - ls -lah .output/public
+
+  artifacts:
+    paths:
+      - front/.output/public/
+    expire_in: 1 day
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev"
+    # - when: never
+
+# Stage 2: Build Frontend (fichiers statiques)
+build-frontend-prod:
+  stage: build
+  image: node:22
+  script:
+    - export http_proxy=http://192.168.4.8:3128
+    - export https_proxy=http://192.168.4.8:3128
+
+    - npm config set proxy http://192.168.4.8:3128
+    - npm config set https-proxy http://192.168.4.8:3128
+
+    - cd front
+    - npm ci
+    - export NUXT_PUBLIC_API_BASE="$NUXT_PUBLIC_API_BASE_PROD"
+    - echo "NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE_PROD"
+    - npm run build
+    - ls -lah .output/public
+
+  artifacts:
+    paths:
+      - front/.output/public/
+    expire_in: 1 day
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+    # - when: never
+
+# Stage 2: Unit Tests
+unit-test:
+  stage: test
+  script:
+    - cd back
+    - mvn $MAVEN_CLI_OPTS test
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - back/target/surefire-reports/TEST-*.xml
+    paths:
+      - back/target/surefire-reports/
+    expire_in: 1 day
+  dependencies:
+    - build-backend
+  rules:
+    - if: $CI_COMMIT_BRANCH   # toutes les branches
+    # - when: never # Pipeline dev
+
+# Stage 3: Deploy sur serveur de dev/prod
+deploy_dev:
+  stage: deploy
+  before_script:
+    # Installation des outils SSH
+    - apt-get update && apt-get install -y openssh-client rsync
+    - eval $(ssh-agent -s)
+    
+    # Créer le dossier SSH
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    
+    # Créer le fichier de clé avec la variable
+    - echo "$SSH_PRIVATE_KEY_DEV" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    
+    # Ajouter la clé à l'agent
+    - ssh-add ~/.ssh/id_rsa
+    
+    # Ajouter le serveur aux known_hosts
+    - ssh-keyscan -H $DEPLOY_SERVER_DEV >> ~/.ssh/known_hosts
+    
+  script:
+    # Vérifier connexion
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "echo '✅ SSH OK'"
+
+    # Créer structure avec dossier SSL
+    - |
+      ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV << 'ENDSSH'
+        mkdir -p ~/app/backend
+        mkdir -p ~/app/frontend
+        mkdir -p ~/app/ssl
+        mkdir -p ~/app/logs
+      ENDSSH
+
+    # Transférer les certificats SSL
+    - echo "$SSL_CERT_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/ssl/server.crt"
+    - echo "$SSL_KEY_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/ssl/server.key"
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "chmod 644 ~/app/ssl/server.crt && chmod 600 ~/app/ssl/server.key"
+
+    # Backend
+    - scp back/target/*.jar $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/backend/app.jar
+
+    # Frontend
+    - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/frontend/
+
+    # Env
+    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/.env"
+
+    # Config Apache
+    - scp apache-site-dev.conf $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/apache-site.conf
+    
+  environment:
+    name: dev
+    url: https://172.24.1.16
+    
+  dependencies:
+    - build-backend
+    - build-frontend-dev
+  
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev"
+    # - if: $CI_COMMIT_BRANCH == "main"
+    # - when: never
+    # - if: $CI_COMMIT_BRANCH   # toutes les branches
+
+deploy_prod:
+  stage: deploy
+  before_script:
+    # Installation des outils SSH
+    - apt-get update && apt-get install -y openssh-client rsync
+    - eval $(ssh-agent -s)
+    
+    # Créer le dossier SSH
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    
+    # Créer le fichier de clé avec la variable
+    - echo "$SSH_PRIVATE_KEY_PROD" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    
+    # Ajouter la clé à l'agent
+    - ssh-add ~/.ssh/id_rsa
+    
+    # Ajouter le serveur aux known_hosts
+    - ssh-keyscan -H $DEPLOY_SERVER_PROD >> ~/.ssh/known_hosts
+    
+  script:
+    # Vérifier connexion
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER_PROD "echo '✅ SSH OK'"
+
+    # Créer structure avec dossier SSL
+    - |
+      ssh $DEPLOY_USER@$DEPLOY_SERVER_PROD << 'ENDSSH'
+        mkdir -p ~/app/backend
+        mkdir -p ~/app/frontend
+        mkdir -p ~/app/ssl
+        mkdir -p ~/app/logs
+      ENDSSH
+
+    # Transférer les certificats SSL
+    - echo "$SSL_CERT_PROD" | ssh $DEPLOY_USER@$DEPLOY_SERVER_PROD "cat > ~/app/ssl/server.crt"
+    - echo "$SSL_KEY_PROD" | ssh $DEPLOY_USER@$DEPLOY_SERVER_PROD "cat > ~/app/ssl/server.key"
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER_PROD "chmod 644 ~/app/ssl/server.crt && chmod 600 ~/app/ssl/server.key"
+
+    # Backend
+    - scp back/target/*.jar $DEPLOY_USER@$DEPLOY_SERVER_PROD:~/app/backend/app.jar
+
+    # Frontend
+    - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER_PROD:~/app/frontend/
+
+    # Env
+    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_PROD "cat > ~/app/.env"
+
+    # Config Apache
+    - scp apache-site-prod.conf $DEPLOY_USER@$DEPLOY_SERVER_PROD:~/app/apache-site.conf
+    
+  environment:
+    name: prod
+    url: https://172.24.1.32
+    
+  dependencies:
+    - build-backend
+    - build-frontend-prod
+  
+  rules:
+    # - if: $CI_COMMIT_BRANCH == "dev"
+    - if: $CI_COMMIT_BRANCH == "main"
+    # - when: never
+    # - if: $CI_COMMIT_BRANCH   # toutes les branches
+
+# Stage 4: Selenium Tests
+selenium-test:
+  stage: selenium
+  script:
+    - cd back
+    # Lancer les tests Selenium
+    - mvn $MAVEN_CLI_OPTS verify -Pselenium
+  artifacts:
+    when: always
+    paths:
+      - back/target/selenium-reports/
+    expire_in: 1 day
+
+  rules:
+    # - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # - if: $CI_COMMIT_BRANCH == "main"
+    # - if: $CI_COMMIT_BRANCH == "dev"
+    # - if: $CI_COMMIT_BRANCH
+    - when: never # Pas encore de test SELENIUM
+
+# Stage 5: SonarQube Analysis
+sonar:
+  stage: sonar
+  before_script:
+    - apt-get update && apt-get install -y openssl
+    - echo -n | openssl s_client -connect 172.24.1.1:443 -showcerts | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/sonar.crt
+    - keytool -import -v -trustcacerts -alias sonar -file /tmp/sonar.crt -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
+
+  script:
+    - cd back
+    - mvn $MAVEN_CLI_OPTS verify sonar:sonar -Dsonar.token=$SONAR_TOKEN
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == 'main'
+    - if: $CI_COMMIT_BRANCH == 'dev'
+    # - if: $CI_COMMIT_BRANCH # Pipeline dev
+    # - when: never # Pipeline dev

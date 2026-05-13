@@ -1,24 +1,25 @@
 package fr.horizon.backend_api.service;
 
-import fr.horizon.backend_api.exception.CategoryAlreadyExistsException;
+import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.dto.CategoryResponseDTO;
-import fr.horizon.backend_api.model.dto.CreateCategoryDTO;
-import fr.horizon.backend_api.repository.CategoryFollowerRepository;
+import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.dto.CategoryDto;
+import fr.horizon.backend_api.model.dto.CategoryRequestDto;
+import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
+import fr.horizon.backend_api.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
+
+import java.util.List;
+import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
 class CategoryServiceTest {
@@ -27,187 +28,149 @@ class CategoryServiceTest {
     private CategoryRepository categoryRepository;
 
     @Mock
-    private CategoryFollowerRepository followerRepository;
+    private UserRepository userRepository;
 
     @InjectMocks
     private CategoryService categoryService;
 
-    private CreateCategoryDTO createDTO;
+    private User user;
     private Category category;
-    private final String teacherId = "teacher-1";
 
     @BeforeEach
     void setUp() {
-        createDTO = CreateCategoryDTO.builder()
-                .name("Maths")
-                .subject("Algèbre")
+
+        user = User.builder()
+                .id(1L)
+                .name("Lucas")
+                .email("lucas@test.com")
                 .build();
 
         category = Category.builder()
-                .id(1L)
-                .name("Maths")
-                .subject("Algèbre")
-                .status("active")
-                .categoryOwner(teacherId)
+                .id(10L)
+                .name("DEV")
+                .subject("Développement")
+                .status(CategoryStatus.ACTIVE)
+                .owner(user)
                 .build();
     }
 
+    /**
+     * Vérifie que toutes les catégories sont récupérées.
+     */
     @Test
-    @DisplayName("Devrait suivre une catégorie")
-    void followCategory_Success() {
-        when(followerRepository.existsByTeacherIdAndCategoryId(teacherId, 1L)).thenReturn(false);
-        
-        categoryService.followCategory(1L, teacherId);
-        
-        verify(followerRepository).save(any());
+    void shouldFindAllCategories() {
+
+        // GIVEN
+        when(categoryRepository.findAll())
+                .thenReturn(List.of(category));
+
+        // WHEN
+        List<CategoryDto> result = categoryService.findAll();
+
+        // THEN
+        assertThat(result).hasSize(1);
+
+        assertThat(result.get(0).getName())
+                .isEqualTo("DEV");
+
+        assertThat(result.get(0).getSubject())
+                .isEqualTo("Développement");
+
+        verify(categoryRepository).findAll();
     }
 
+    /**
+     * Vérifie qu'une catégorie est correctement créée.
+     */
     @Test
-    @DisplayName("Ne devrait pas suivre si déjà suivi")
-    void followCategory_AlreadyFollowed() {
-        when(followerRepository.existsByTeacherIdAndCategoryId(teacherId, 1L)).thenReturn(true);
-        
-        categoryService.followCategory(1L, teacherId);
-        
-        verify(followerRepository, never()).save(any());
-    }
+    void shouldCreateCategory() {
 
-    @Test
-    @DisplayName("Devrait désuivre une catégorie")
-    void unfollowCategory_Success() {
-        categoryService.unfollowCategory(1L, teacherId);
-        verify(followerRepository).deleteByTeacherIdAndCategoryId(teacherId, 1L);
-    }
-
-    @Test
-    @DisplayName("Devrait retourner les IDs des catégories suivies")
-    void getFollowedCategoryIds_Success() {
-        fr.horizon.backend_api.model.CategoryFollower follower = fr.horizon.backend_api.model.CategoryFollower.builder()
-                .categoryId(10L)
-                .build();
-        when(followerRepository.findByTeacherId(teacherId)).thenReturn(java.util.List.of(follower));
-
-        java.util.List<Long> ids = categoryService.getFollowedCategoryIds(teacherId);
-
-        assertEquals(1, ids.size());
-        assertEquals(10L, ids.get(0));
-    }
-
-    @Test
-    @DisplayName("Devrait créer une catégorie avec succès")
-    void createCategory_Success() {
-        when(categoryRepository.existsByNameIgnoreCaseAndSubjectIgnoreCase(any(), any())).thenReturn(false);
-        when(categoryRepository.save(any())).thenReturn(category);
-
-        CategoryResponseDTO result = categoryService.createCategory(createDTO, teacherId);
-
-        assertNotNull(result);
-        assertEquals("Maths", result.getName());
-        verify(categoryRepository).save(any());
-        verify(followerRepository).save(any()); // Auto-follow
-    }
-
-    @Test
-    @DisplayName("Devrait lever une exception si la catégorie existe déjà")
-    void createCategory_AlreadyExists() {
-        when(categoryRepository.existsByNameIgnoreCaseAndSubjectIgnoreCase(any(), any())).thenReturn(true);
-
-        assertThrows(CategoryAlreadyExistsException.class, () -> 
-            categoryService.createCategory(createDTO, teacherId)
-        );
-    }
-
-    @Test
-    @DisplayName("Devrait mettre à jour une catégorie")
-    void updateCategory_Success() {
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
-        when(categoryRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
-
-        CreateCategoryDTO updateDto = CreateCategoryDTO.builder()
-                .name("Maths II")
-                .subject("Calcul")
+        // GIVEN
+        CategoryRequestDto dto = CategoryRequestDto.builder()
+                .name("JAVA")
+                .subject("Backend Java")
+                .ownerId(1L)
                 .build();
 
-        CategoryResponseDTO result = categoryService.updateCategory(1L, updateDto, teacherId);
+        when(userRepository.findById(1L))
+                .thenReturn(Optional.of(user));
 
-        assertEquals("Maths II", result.getName());
-        assertEquals("Calcul", result.getSubject());
+        when(categoryRepository.save(any(Category.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // WHEN
+        CategoryDto result = categoryService.createCategory(dto);
+
+        // THEN
+        assertThat(result).isNotNull();
+
+        assertThat(result.getName())
+                .isEqualTo("JAVA");
+
+        assertThat(result.getSubject())
+                .isEqualTo("Backend Java");
+
+        verify(userRepository).findById(1L);
+        verify(categoryRepository).save(any(Category.class));
     }
 
+    /**
+     * Vérifie qu'une erreur est levée si le owner n'existe pas.
+     */
     @Test
-    @DisplayName("Devrait lever une exception si mise à jour par un non-propriétaire")
-    void updateCategory_SecurityException() {
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+    void shouldThrowExceptionWhenOwnerNotFound() {
 
-        assertThrows(SecurityException.class, () -> 
-            categoryService.updateCategory(1L, createDTO, "wrong-user")
-        );
+        // GIVEN
+        CategoryRequestDto dto = CategoryRequestDto.builder()
+                .name("JAVA")
+                .subject("Backend")
+                .ownerId(999L)
+                .build();
+
+        when(userRepository.findById(999L))
+                .thenReturn(Optional.empty());
+
+        // WHEN / THEN
+        assertThatThrownBy(() -> categoryService.createCategory(dto))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Owner not found");
+
+        verify(userRepository).findById(999L);
+        verify(categoryRepository, never()).save(any());
     }
 
+    /**
+     * Vérifie qu'une catégorie est supprimée.
+     */
     @Test
-    @DisplayName("Devrait archiver une catégorie")
-    void archiveCategory_Success() {
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
-        when(categoryRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+    void shouldDeleteCategory() {
 
-        CategoryResponseDTO result = categoryService.archiveCategory(1L, teacherId);
+        // GIVEN
+        when(categoryRepository.existsById(10L))
+                .thenReturn(true);
 
-        assertEquals("archived", result.getStatus());
+        // WHEN
+        categoryService.deleteById(10L);
+
+        // THEN
+        verify(categoryRepository).deleteById(10L);
     }
 
+    /**
+     * Vérifie qu'une erreur est levée si la catégorie n'existe pas.
+     */
     @Test
-    @DisplayName("Devrait désarchiver une catégorie")
-    void unarchiveCategory_Success() {
-        category.setStatus("archived");
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
-        when(categoryRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+    void shouldThrowExceptionWhenCategoryNotFound() {
 
-        CategoryResponseDTO result = categoryService.unarchiveCategory(1L, teacherId);
+        // GIVEN
+        when(categoryRepository.existsById(999L))
+                .thenReturn(false);
 
-        assertEquals("active", result.getStatus());
-    }
+        // WHEN / THEN
+        assertThatThrownBy(() -> categoryService.deleteById(999L))
+                .isInstanceOf(CategoryNotFoundException.class)
+                .hasMessage("Category not found with id: 999");
 
-    @Test
-    @DisplayName("Devrait supprimer une catégorie archivée")
-    void deleteCategory_Success() {
-        category.setStatus("archived");
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
-
-        assertDoesNotThrow(() -> categoryService.deleteCategory(1L, teacherId));
-        verify(categoryRepository).deleteById(1L);
-    }
-
-    @Test
-    @DisplayName("Ne devrait pas supprimer une catégorie active")
-    void deleteCategory_IllegalState() {
-        category.setStatus("active");
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
-
-        assertThrows(IllegalStateException.class, () -> 
-            categoryService.deleteCategory(1L, teacherId)
-        );
-    }
-
-    @Test
-    @DisplayName("Devrait récupérer une catégorie par ID")
-    void getCategoryById_Success() {
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
-        
-        Optional<CategoryResponseDTO> result = categoryService.getCategoryById(1L);
-        
-        assertTrue(result.isPresent());
-        assertEquals("Maths", result.get().getName());
-    }
-
-    @Test
-    @DisplayName("Devrait récupérer toutes les catégories actives pour un prof")
-    void getAllActiveCategoriesForTeacher_Success() {
-        when(categoryRepository.findByStatus("active")).thenReturn(java.util.List.of(category));
-        when(categoryRepository.findByCategoryOwner(teacherId)).thenReturn(java.util.List.of(category));
-
-        java.util.List<CategoryResponseDTO> results = categoryService.getAllActiveCategoriesForTeacher(teacherId);
-
-        assertFalse(results.isEmpty());
-        assertEquals(1, results.size()); // distinct() should handle the overlap
+        verify(categoryRepository, never()).deleteById(anyLong());
     }
 }

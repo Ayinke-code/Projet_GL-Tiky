@@ -138,5 +138,6 @@ const resetForm = () => {
     teacher: teachers.value.length > 0 ? String(teachers.value[0].id) : '',
     initialFollowers: []
   }
+  emit('cancel')
 }
 </script>

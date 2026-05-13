@@ -1,61 +1,45 @@
 package fr.horizon.backend_api.model;
 
+import fr.horizon.backend_api.model.enums.CategoryStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
+import lombok.*;
 
-/**
- * Entité représentant une catégorie de questions.
- * 
- * @author Tiky Team
- * @version 1.0
- */
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+
 @Entity
-@Table(name = "categories", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_category_name", columnNames = { "name", })
-})
-@Data
+@Getter
+@Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Category {
+@Table(name = "category")
+public class Category extends BaseEntity {
 
-    /**
-     * Identifiant unique de la catégorie.
-     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * Nom de la catégorie (unique, insensible à la casse).
-     */
     @Column(nullable = false, unique = true)
     private String name;
 
-    /**
-     * Statut de la catégorie (active, inactive, archived).
-     */
-    @Column(nullable = false)
     @Builder.Default
-    private String status = "active";
-
-    /**
-     * Identifiant de l'enseignant propriétaire de la catégorie.
-     */
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String categoryOwner;
+    private CategoryStatus status = CategoryStatus.ACTIVE;
 
+    @ManyToOne
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
+    @Column(nullable = false)
     private String subject;
 
-    /**
-     * Liste des profs ayant accès (stocké en JSON).
-     */
-    @Column(columnDefinition = "JSON")
-    private String teacherIds;
+    @Builder.Default
+    @ManyToMany
+    @JoinTable(name = "category_followers", joinColumns = @JoinColumn(name = "category_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
+    private Set<User> followers = new HashSet<>();
 
     /**
      * Date et heure de création de la catégorie.

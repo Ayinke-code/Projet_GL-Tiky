@@ -1,6 +1,8 @@
 package fr.horizon.backend_api.security;
 
-import lombok.RequiredArgsConstructor;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -13,8 +15,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
-import java.util.Collections;
+import lombok.RequiredArgsConstructor;
 
 @Configuration
 @EnableWebSecurity
@@ -22,44 +23,55 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    public final JwtAuthenticationFilter jwtAuthFilter;
+        public final JwtAuthenticationFilter jwtAuthFilter;
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        @Value("#{'${cors.allowed-origins}'.split(',')}")
+        private List<String> allowedOrigins;
 
-        http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // .requestMatchers("/categories/**").hasAuthority("TEACHER") - Autorisation que
-                        // pour les profs
-                        .requestMatchers("/categories/**").permitAll()
-                        .requestMatchers("/auth/login").permitAll()
-                        .requestMatchers("/users/teachers").permitAll()
-                        .requestMatchers("/users/debug/**").permitAll()
-                        .requestMatchers("/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers("/users/**").hasAuthority("ADMIN")
-                        .requestMatchers("/teacher/**").hasAnyAuthority("TEACHER", "ADMIN")
-                        .requestMatchers("/student/**").hasAnyAuthority("STUDENT", "TEACHER", "ADMIN")
-                        .anyRequest().authenticated())
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-        return http.build();
-    }
+                http
+                                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                                .csrf(csrf -> csrf.disable())
+                                .cors(cors -> {
+                                })
+                                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .authorizeHttpRequests(auth -> auth
+                                                // .requestMatchers("/categories/**").hasAuthority("TEACHER") -
+                                                // Autorisation que
+                                                // pour les profs
+                                                .requestMatchers("/categories/**").permitAll()
+                                                .requestMatchers("/auth/login").permitAll()
+                                                .requestMatchers("/auth/logout").authenticated()
+                                                .requestMatchers("/auth/me", "/categories/**").authenticated()
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Teacher-ID", "Origin", "Accept", "X-Requested-With"));
-        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+                                                .requestMatchers("/admin/**").hasAuthority("ADMIN")
+                                                .requestMatchers("/users/**").hasAuthority("ADMIN")
+                                                .requestMatchers("/teacher/**").hasAnyAuthority("TEACHER", "ADMIN")
+                                                .requestMatchers("/student/**")
+                                                .hasAnyAuthority("STUDENT", "TEACHER", "ADMIN")
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
+                                                .anyRequest().authenticated())
+                                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+                return http.build();
+        }
+
+        @Bean
+        public CorsConfigurationSource corsConfigurationSource() {
+
+                CorsConfiguration config = new CorsConfiguration();
+
+                config.setAllowedOriginPatterns(allowedOrigins);
+
+                config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                config.setAllowedHeaders(List.of("*"));
+                config.setAllowCredentials(true);
+
+                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+                source.registerCorsConfiguration("/**", config);
+
+                return source;
+        }
 }

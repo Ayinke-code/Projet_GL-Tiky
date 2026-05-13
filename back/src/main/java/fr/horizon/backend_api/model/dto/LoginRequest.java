@@ -1,14 +1,12 @@
 package fr.horizon.backend_api.model.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
- 
+
 @Data
-@Builder
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 public class LoginRequest {
     private String email;
     private String password;

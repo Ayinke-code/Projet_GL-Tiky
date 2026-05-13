@@ -4,14 +4,15 @@ import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
 import java.util.List;
 
 @Repository
 public interface IssueRepository extends JpaRepository<Issue, Long> {
 
-    List<Issue> findByCategorie_Id(Long categorieId);
+    List<Issue> findByCategoryId(Long categoryId);
 
-    List<Issue> findByCreateur_Id(Long createurId);
+    List<Issue> findByCreatedById(Long userId);
 
-    List<Issue> findByStatut(IssueStatus statut);
+    List<Issue> findByStatus(IssueStatus status);
 }

@@ -1,122 +1,102 @@
-import { computed } from 'vue'
-import { useCookie, useState } from '#app'
-
-const normalizeIssueRoles = (role, issueRoles) => {
-  if (Array.isArray(issueRoles) && issueRoles.length > 0) {
-    return issueRoles
-  }
-
-  if (role === 'USER') {
-    return ['PARTICIPANT']
-  }
-
-  return ['CREATOR', 'PARTICIPANT']
-}
-
-const normalizeUser = (storedUser) => {
-  if (!storedUser) {
-    return null
-  }
-
-  const rawUser = typeof storedUser === 'string' ? JSON.parse(storedUser) : storedUser
-
-  if (!rawUser) {
-    return null
-  }
-
-  return {
-    id: rawUser.id ?? null,
-    name: rawUser.name ?? '',
-    email: rawUser.email ?? '',
-    role: rawUser.role ?? 'USER',
-    followedCategories: Array.isArray(rawUser.followedCategories) ? rawUser.followedCategories : [],
-    issueRoles: normalizeIssueRoles(rawUser.role ?? 'USER', rawUser.issueRoles)
-  }
-}
-
 export const useAuth = () => {
-  const userCookie = useCookie('auth_user')
+  const api = useApi()
 
-  // État partagé pour l'utilisateur, synchronisé avec le cookie de session.
-  const user = useState('user', () => normalizeUser(userCookie.value))
+  /**
+   * État global de l'utilisateur connecté.
+   * Null si aucun utilisateur n'est authentifié.
+   */
+  const user = useState('user', () => null)
 
-  const syncSession = (nextUser) => {
-    const normalizedUser = normalizeUser(nextUser)
-    user.value = normalizedUser
-    userCookie.value = normalizedUser
+  /**
+   * Indique si l'état d'authentification a été initialisé.
+   * Devient true après l'appel à /auth/me.
+   */
+  const ready = useState('ready', () => false)
+
+  /**
+   * Authentifie un utilisateur via email et mot de passe.
+   * <p>
+   * Appelle l'API /auth/login qui crée un cookie HttpOnly.
+   * Puis récupère les informations utilisateur via /auth/me.
+   *
+   * @param email email de l'utilisateur
+   * @param password mot de passe utilisateur
+   * @return true si authentification réussie
+   * @throws Error INVALID_CREDENTIALS si les identifiants sont incorrects (401)
+   * @throws Error UNKNOWN_ERROR pour toute autre erreur API
+   */
+  const login = async (email, password) => {
+    try {
+      // Appel API pour créer la session (cookie HttpOnly)
+      await api('/auth/login', {
+        method: 'POST',
+        body: { email, password },
+      })
+
+      // Récupération des informations utilisateur après login
+      await fetchUser()
+      return true
+    } catch (e) {
+      // Réinitialisation user en cas d’erreur
+      user.value = null
+
+      // Erreur métier : identifiants invalides
+      if (e?.response?.status === 401) {
+        throw new Error('INVALID_CREDENTIALS')
+      }
+
+      // Autres erreurs
+      throw new Error('UNKNOWN_ERROR')
+    }
+
   }
 
-  const isAuthenticated = computed(() => !!user.value)
-  const isUser = computed(() => user.value?.role === 'USER')
-  const isTeacher = computed(() => user.value?.role === 'TEACHER')
-  const isAdmin = computed(() => user.value?.role === 'ADMIN')
-  const isIssueCreator = computed(() => {
-    return user.value?.issueRoles?.includes('CREATOR') || isTeacher.value || isAdmin.value
-  })
-  const isIssueFollower = computed(() => user.value?.issueRoles?.includes('FOLLOWER'))
-  const isParticipant = computed(() => user.value?.issueRoles?.includes('PARTICIPANT') || isAuthenticated.value)
+  /**
+   * Récupère l'utilisateur courant à partir du cookie de session.
+   * <p>
+   * Utilise l'endpoint /auth/me pour restaurer l'état utilisateur.
+   * Met à jour l'état global `user` et `ready`.
+   *
+   * @throws erreur API si le token est invalide ou expiré
+   */
+  const fetchUser = async () => {
+    try {
+      const data = await api('/auth/me')
 
-  const canAccessCategories = computed(() => isAuthenticated.value)
-  const canAccessIssues = computed(() => isAuthenticated.value)
-  const canCreateIssue = computed(() => isAuthenticated.value)
-
-  const followCategory = (id) => {
-    if (user.value && !user.value.followedCategories.includes(id)) {
-      user.value.followedCategories.push(id)
-      userCookie.value = user.value
+      user.value = data
+      ready.value = true
+    } catch (e) {
+      // Si token invalide ou expiré
+      user.value = null
+      // Marque la fin de l’initialisation (succès ou échec)
+      ready.value = true
+      throw e
     }
   }
 
-  const unfollowCategory = (id) => {
-    if (user.value) {
-      user.value.followedCategories = user.value.followedCategories.filter(cid => cid !== id)
-      userCookie.value = user.value
+  /**
+* Déconnecte l'utilisateur courant.
+* <p>
+* Supprime le cookie de session côté serveur
+* puis réinitialise l'état utilisateur côté client.
+* <p>
+* Redirige ensuite vers la page de connexion.
+*
+* @throws erreur API si la déconnexion échoue
+*/
+  const logout = async () => {
+    try {
+      // Suppression de la session serveur
+      await api('/auth/logout', { method: 'POST' })
+      // Réinitialisation utilisateur local
+      user.value = null
+
+      // Redirection vers login
+      await navigateTo('/login')
+    } catch (e) {
+      throw e
     }
   }
 
-  const setFollowedCategories = (ids) => {
-    if (user.value) {
-      user.value.followedCategories = ids
-      userCookie.value = user.value
-    }
-  }
-
-  const addIssueRole = (issueRole) => {
-    if (!user.value) {
-      return
-    }
-
-    if (!user.value.issueRoles.includes(issueRole)) {
-      user.value.issueRoles.push(issueRole)
-      userCookie.value = user.value
-    }
-  }
-
-  const logout = () => {
-    user.value = null
-    userCookie.value = null
-    navigateTo('/login')
-  }
-
-  return {
-    user,
-    isAuthenticated,
-    isUser,
-    isTeacher,
-    isAdmin,
-    isIssueCreator,
-    isIssueFollower,
-    isParticipant,
-    canAccessCategories,
-    canAccessIssues,
-    canCreateIssue,
-    followedCategories: computed(() => user.value?.followedCategories || []),
-    issueRoles: computed(() => user.value?.issueRoles || []),
-    followCategory,
-    unfollowCategory,
-    setFollowedCategories,
-    syncSession,
-    addIssueRole,
-    logout
-  }
+  return { user, ready, login, fetchUser, logout }
 }

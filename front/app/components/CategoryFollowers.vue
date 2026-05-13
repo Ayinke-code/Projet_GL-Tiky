@@ -1,7 +1,7 @@
 <template>
   <div class="mt-6">
     <h3 class="text-lg font-semibold mb-4">Followers</h3>
-    
+
     <!-- Add follower section - only for owner -->
     <div v-if="isOwner" class="mb-4">
       <div class="flex gap-2">
@@ -14,10 +14,11 @@
         <Button @click="addFollower" :disabled="!selectedTeacherId" label="Add" />
       </div>
     </div>
-    
+
     <!-- Followers list -->
     <div v-if="followers.length > 0" class="space-y-2 mb-6">
-      <div v-for="follower in followers" :key="follower.id" class="flex justify-between items-center p-2 bg-gray-100 rounded">
+      <div v-for="follower in followers" :key="follower.id"
+        class="flex justify-between items-center p-2 bg-gray-100 rounded">
         <span class="text-sm">{{ follower.name }} ({{ follower.email }})</span>
         <Button v-if="isOwner" @click="removeFollower(follower.id)" color="error" size="sm" label="Retirer" />
       </div>
@@ -30,15 +31,18 @@
         <i class="fa-solid fa-clock mr-2"></i> Demandes en attente
       </h3>
       <div class="space-y-3">
-        <div v-for="req in pendingRequests" :key="req.id" class="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-100">
+        <div v-for="req in pendingRequests" :key="req.id"
+          class="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-100">
           <div class="flex flex-col">
             <span class="text-xs font-bold text-amber-800">ID Professeur: {{ req.teacherId }}</span>
           </div>
           <div class="flex gap-2">
-            <button @click="handleApprove(req.teacherId)" class="p-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors" title="Accepter">
+            <button @click="handleApprove(req.teacherId)"
+              class="p-1.5 bg-green-600 text-white rounded hover:bg-green-700 transition-colors" title="Accepter">
               <i class="fa-solid fa-check"></i>
             </button>
-            <button @click="handleReject(req.teacherId)" class="p-1.5 bg-red-600 text-white rounded hover:bg-red-700 transition-colors" title="Refuser">
+            <button @click="handleReject(req.teacherId)"
+              class="p-1.5 bg-red-600 text-white rounded hover:bg-red-700 transition-colors" title="Refuser">
               <i class="fa-solid fa-xmark"></i>
             </button>
           </div>
@@ -62,10 +66,10 @@ const props = defineProps({
 })
 
 const { user } = useAuth()
-const { 
-  fetchFollowers, 
-  addFollower: apiAddFollower, 
-  removeFollower: apiRemoveFollower, 
+const {
+  fetchFollowers,
+  addFollower: apiAddFollower,
+  removeFollower: apiRemoveFollower,
   fetchAvailableTeachers,
   approveFollower: apiApprove,
   rejectFollower: apiReject,

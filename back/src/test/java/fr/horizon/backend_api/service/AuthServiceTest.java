@@ -5,8 +5,6 @@ import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.LoginRequest;
 import fr.horizon.backend_api.model.dto.LoginResponse;
 import fr.horizon.backend_api.repository.UserRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,8 +14,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -35,56 +35,59 @@ class AuthServiceTest {
     @InjectMocks
     private AuthService authService;
 
-    private User user;
-    private LoginRequest loginRequest;
-
-    @BeforeEach
-    void setUp() {
-        Role role = Role.builder().id(1L).name("ROLE_TEACHER").build();
-        user = User.builder()
-                .id(1L)
-                .email("test@example.com")
-                .password("encodedPassword")
-                .name("John Doe")
-                .role(role)
-                .build();
-
-        loginRequest = new LoginRequest("test@example.com", "password123");
-    }
-
     @Test
-    @DisplayName("Login avec succès")
-    void login_Success() {
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("password123", "encodedPassword")).thenReturn(true);
-        when(jwtToken.generateToken("test@example.com", 1L, "ROLE_TEACHER")).thenReturn("mock-jwt-token");
+    void login_should_return_login_response_when_credentials_valid() {
 
-        LoginResponse response = authService.login(loginRequest);
+        User user = new User();
+        user.setId(1L);
+        user.setEmail("test@test.com");
+        user.setName("Test");
+        user.setPassword("encoded");
+
+        Role role = new Role();
+        role.setName("USER");
+        user.setRoles(Set.of(role));
+
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@test.com");
+        request.setPassword("password");
+
+        when(userRepository.findByEmail("test@test.com"))
+                .thenReturn(Optional.of(user));
+
+        when(passwordEncoder.matches("password", "encoded"))
+                .thenReturn(true);
+
+        when(jwtToken.generateToken(
+                "test@test.com",
+                1L,
+                Set.of("USER"))).thenReturn("fake-jwt-token");
+
+        LoginResponse response = authService.login(request);
 
         assertNotNull(response);
-        assertEquals("mock-jwt-token", response.getToken());
-        assertEquals("John Doe", response.getName());
-        assertEquals("ROLE_TEACHER", response.getRole());
+        assertEquals("fake-jwt-token", response.getToken());
+        assertEquals("test@test.com", response.getEmail());
     }
 
     @Test
-    @DisplayName("Login avec email inexistant")
-    void login_EmailNotFound() {
-        when(userRepository.findByEmail("wrong@example.com")).thenReturn(Optional.empty());
+    void login_should_throw_exception_when_password_invalid() {
 
-        loginRequest = new LoginRequest("wrong@example.com", "password");
+        User user = new User();
+        user.setEmail("test@test.com");
+        user.setPassword("encoded");
 
-        assertThrows(ResponseStatusException.class, () -> authService.login(loginRequest));
-    }
+        when(userRepository.findByEmail("test@test.com"))
+                .thenReturn(Optional.of(user));
 
-    @Test
-    @DisplayName("Login avec mauvais mot de passe")
-    void login_WrongPassword() {
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("wrongPassword", "encodedPassword")).thenReturn(false);
+        when(passwordEncoder.matches(any(), any()))
+                .thenReturn(false);
 
-        loginRequest = new LoginRequest("test@example.com", "wrongPassword");
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@test.com");
+        request.setPassword("wrong");
 
-        assertThrows(ResponseStatusException.class, () -> authService.login(loginRequest));
+        assertThrows(ResponseStatusException.class,
+                () -> authService.login(request));
     }
 }

@@ -4,6 +4,7 @@ import fr.horizon.backend_api.service.JwtToken;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,33 +25,49 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private JwtToken jwtToken;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain) throws ServletException, IOException {
 
-        String path = request.getServletPath();
-
-        if (path.startsWith("/auth/")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+        String token = null;
 
         String authHeader = request.getHeader("Authorization");
-
-        System.out.println("REQUEST: " + request.getServletPath());
-        System.out.println("AUTH HEADER: " + authHeader);
-
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            Claims claims = jwtToken.parseToken(token); // récupère claims
-            String role = claims.get("role", String.class);
+            token = authHeader.substring(7);
+        }
 
-            List<GrantedAuthority> authorities = List.of(new SimpleGrantedAuthority(role));
+        if (token == null && request.getCookies() != null) {
+            for (Cookie cookie : request.getCookies()) {
+                if ("token".equals(cookie.getName())) {
+                    token = cookie.getValue();
+                }
+            }
+        }
 
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(claims.getSubject(), null, authorities);
+        if (token != null) {
+            try {
+                Claims claims = jwtToken.parseToken(token);
 
-            SecurityContextHolder.getContext().setAuthentication(auth);
+                List<String> roles = claims.get("roles", List.class);
+
+                if (roles == null) {
+                    roles = List.of();
+                }
+
+                List<GrantedAuthority> authorities = roles.stream()
+                        .map(SimpleGrantedAuthority::new)
+                        .map(g -> (GrantedAuthority) g)
+                        .toList();
+
+                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                        claims.getSubject(),
+                        null,
+                        authorities);
+                SecurityContextHolder.getContext().setAuthentication(auth);
+            } catch (Exception e) {
+                SecurityContextHolder.clearContext();
+            }
         }
 
         filterChain.doFilter(request, response);

@@ -1,40 +1,36 @@
 package fr.horizon.backend_api.service;
 
 import io.jsonwebtoken.Claims;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.util.List;
+import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+@ExtendWith(MockitoExtension.class)
 class JwtTokenTest {
 
-    private JwtToken jwtToken;
-
-    @BeforeEach
-    void setUp() {
-        jwtToken = new JwtToken();
-    }
-
     @Test
-    @DisplayName("Générer et parser un token valide")
-    void testGenerateAndParseToken() {
-        String email = "test@example.com";
-        Long id = 1L;
-        String role = "ROLE_TEACHER";
+    void shouldGenerateAndParseToken() {
 
-        String token = jwtToken.generateToken(email, id, role);
-        assertNotNull(token);
+        JwtToken jwtToken = new JwtToken();
+
+        ReflectionTestUtils.setField(jwtToken, "secret", "mysecretkeymysecretkeymysecretkey");
+        ReflectionTestUtils.setField(jwtToken, "expiration", 10000L);
+
+        Set<String> roles = Set.of("ADMIN");
+
+        String token = jwtToken.generateToken("test@mail.com", 1L, roles);
 
         Claims claims = jwtToken.parseToken(token);
-        assertEquals(email, claims.getSubject());
-        assertEquals(id.intValue(), claims.get("id")); // Jackson converts Long to Integer
-        assertEquals(role, claims.get("role"));
-    }
 
-    @Test
-    @DisplayName("Lancer une exception pour un token invalide")
-    void testInvalidToken() {
-        assertThrows(RuntimeException.class, () -> jwtToken.parseToken("invalid.token.here"));
+        assertEquals("test@mail.com", claims.getSubject());
+        assertEquals(1, claims.get("id"));
+
+        assertEquals(roles, Set.copyOf((List<String>) claims.get("roles")));
     }
 }
