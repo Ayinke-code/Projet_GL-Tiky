@@ -1,6 +1,7 @@
 package fr.horizon.backend_api.repository;
 
 import fr.horizon.backend_api.model.CategoryFollower;
+import fr.horizon.backend_api.model.CategoryFollowerId;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -8,7 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface CategoryFollowerRepository extends JpaRepository<CategoryFollower, Long> {
+public interface CategoryFollowerRepository extends JpaRepository<CategoryFollower, CategoryFollowerId> {
     List<CategoryFollower> findByTeacherId(String teacherId);
     Optional<CategoryFollower> findByTeacherIdAndCategoryId(String teacherId, Long categoryId);
     void deleteByTeacherIdAndCategoryId(String teacherId, Long categoryId);

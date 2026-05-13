@@ -1,6 +1,10 @@
 package fr.horizon.backend_api.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
+import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,6 +12,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "category_followers")
+@IdClass(CategoryFollowerId.class)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -15,12 +20,10 @@ import lombok.NoArgsConstructor;
 public class CategoryFollower {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(nullable = false)
+    @Column(name = "user_id", nullable = false)
     private String teacherId;
 
-    @Column(nullable = false)
+    @Id
+    @Column(name = "category_id", nullable = false)
     private Long categoryId;
 }

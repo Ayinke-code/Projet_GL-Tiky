@@ -1,19 +1,29 @@
 import { ref } from 'vue'
 import type { Ref } from 'vue'
+import { useCookie } from '#app'
 import type { Category } from '~/types'
 
 export const useCategory = (teacherId: string = 'teacher-default') => {
   const categories: Ref<Category[]> = ref([])
   const loading: Ref<boolean> = ref(false)
   const error: Ref<string | null> = ref(null)
+  const token = useCookie<string | null>('auth_token')
 
   const API_BASE = 'http://localhost:8080/api/categories'
 
   // Helper pour les headers
-  const getHeaders = () => ({
-    'Content-Type': 'application/json',
-    'X-Teacher-ID': teacherId
-  })
+  const getHeaders = () => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Teacher-ID': teacherId
+    }
+
+    if (token.value) {
+      headers.Authorization = `Bearer ${token.value}`
+    }
+
+    return headers
+  }
 
   // Récupérer les catégories de l'enseignant courant
   const fetchCategories = async (): Promise<void> => {

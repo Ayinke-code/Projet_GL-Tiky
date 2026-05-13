@@ -191,6 +191,8 @@ const {
 
 const { user, canAccessCategories, followedCategories, followCategory, unfollowCategory, setFollowedCategories } = useAuth()
  
+const router = useRouter()
+
 const ownedAndFollowed = computed(() => {
   return categories.value.filter(cat => 
     cat.status !== 'archived' && 
@@ -220,6 +222,7 @@ onMounted(async () => {
     router.push('/login')
     return
   }
+
   await fetchCategories()
   const followedIds = await getFollowedCategories()
   setFollowedCategories(followedIds)
@@ -277,11 +280,7 @@ const isEditing = ref(false)
 const isCreateModalOpen = ref(false)
 const editForm = ref({ name: '', subject: '', teacher: 'Teacher_default' })
  
-const router = useRouter()
  
-onMounted(async () => {
-  await fetchCategories()
-})
 
 const handleCreate = async (data) => {
   try {
