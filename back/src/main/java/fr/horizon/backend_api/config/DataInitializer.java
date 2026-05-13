@@ -2,25 +2,19 @@ package fr.horizon.backend_api.config;
 
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Issue;
+import fr.horizon.backend_api.model.Role;
+import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
+import fr.horizon.backend_api.repository.RoleRepository;
+import fr.horizon.backend_api.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-
-import fr.horizon.backend_api.model.Role;
-import fr.horizon.backend_api.model.User;
-import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.Issue;
-import fr.horizon.backend_api.model.enums.IssueStatus;
-import fr.horizon.backend_api.repository.RoleRepository;
-import fr.horizon.backend_api.repository.UserRepository;
-import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.IssueRepository;
-import lombok.RequiredArgsConstructor;
 
 import java.util.Set;
 
@@ -44,18 +38,11 @@ public class DataInitializer implements CommandLineRunner {
         Role teacherRole = getOrCreateRole("TEACHER");
         Role studentRole = getOrCreateRole("STUDENT");
 
-        // User teacher et admin
         User admin = getOrCreateUser("admin@admin.fr", "Admin", Set.of(adminRole, teacherRole));
-        // User teacher
         getOrCreateUser("teacher@teacher.fr", "Teacher", Set.of(teacherRole));
-        // User student
         getOrCreateUser("student@student.fr", "Student", Set.of(studentRole));
 
-        // =========================
-        // CATEGORIES DEFAULT
-        // =========================
         if (categoryRepository.count() == 0) {
-
             createCategory("Maintenance & Infrastructure", "Maintenance", admin);
             createCategory("Scolarité & Administration", "Scolarité", admin);
             createCategory("Sécurité", "Sécurité", admin);
@@ -66,17 +53,13 @@ public class DataInitializer implements CommandLineRunner {
             createCategory("Bibliothèque & Documentation", "Bibliothèque", admin);
         }
 
-        // =========================
-        // ISSUE TEST
-        // =========================
         if (issueRepository.count() == 0) {
-
             Category first = categoryRepository.findAll().get(0);
 
             Issue issue = Issue.builder()
                     .title("Climatisation en panne")
                     .description("La climatisation de l'amphithéâtre A ne fonctionne plus depuis lundi")
-                    .status(IssueStatus.OUVERT)
+                    .status(IssueStatus.OPEN)
                     .isPrivate(false)
                     .category(first)
                     .createdBy(admin)
@@ -85,10 +68,6 @@ public class DataInitializer implements CommandLineRunner {
             issueRepository.save(issue);
         }
     }
-
-    // =========================
-    // HELPERS
-    // =========================
 
     private Role getOrCreateRole(String name) {
         return roleRepository.findByName(name)

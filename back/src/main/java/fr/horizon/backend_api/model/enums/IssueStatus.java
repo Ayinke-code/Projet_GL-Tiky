@@ -1,19 +1,19 @@
 package fr.horizon.backend_api.model.enums;
 
 public enum IssueStatus {
-    OUVERT,
-    COMPLET,
-    INCOMPLET,
-    TERMINE;
+    OPEN,
+    COMPLETED,
+    INCOMPLETE,
+    FINISHED;
 
     public static IssueStatus fromValue(String value) {
         if (value == null) {
-            return OUVERT;
+            return OPEN;
         }
         try {
             return IssueStatus.valueOf(value.toUpperCase());
         } catch (IllegalArgumentException e) {
-            return OUVERT; // Default value
+            return OPEN; // Default value
         }
     }
 }

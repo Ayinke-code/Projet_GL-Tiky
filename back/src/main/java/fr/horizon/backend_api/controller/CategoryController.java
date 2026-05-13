@@ -2,7 +2,7 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.CategoryDto;
-import fr.horizon.backend_api.model.dto.CategoryResponseDto;
+import fr.horizon.backend_api.model.dto.CategoryRequestDto;
 import fr.horizon.backend_api.exception.CategoryAlreadyExistsException;
 import fr.horizon.backend_api.service.CategoryService;
 import jakarta.validation.Valid;
@@ -19,8 +19,6 @@ import java.util.Map;
 
 /**
  * Gestion complète des catégories.
- * Fusionne la sécurité avancée et les fonctionnalités de suivi
- * (Following/Approval).
  */
 @RestController
 @RequestMapping("/api/categories")
@@ -30,10 +28,6 @@ public class CategoryController {
 
     private final CategoryService categoryService;
 
-    // =========================
-    // LECTURE / RECHERCHE
-    // =========================
-
     @PreAuthorize("isAuthenticated()")
     @GetMapping
     public ResponseEntity<List<CategoryDto>> getAllCategories() {
@@ -42,13 +36,13 @@ public class CategoryController {
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/active")
-    public ResponseEntity<List<CategoryResponseDto>> getAllActiveCategories() {
+    public ResponseEntity<List<CategoryDto>> getAllActiveCategories() {
         return ResponseEntity.ok(categoryService.getAllActiveCategories());
     }
 
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
-    public ResponseEntity<CategoryResponseDto> getCategoryById(@PathVariable Long id) {
+    public ResponseEntity<CategoryDto> getCategoryById(@PathVariable Long id) {
         return categoryService.getCategoryById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -56,27 +50,23 @@ public class CategoryController {
 
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     @GetMapping("/teacher")
-    public ResponseEntity<List<CategoryResponseDto>> getCategoriesByTeacher(
+    public ResponseEntity<List<CategoryDto>> getCategoriesByTeacher(
             @RequestHeader(value = "X-Teacher-ID") String teacherId) {
         return ResponseEntity.ok(categoryService.getAllActiveCategoriesForTeacher(teacherId));
     }
 
-    // =========================
-    // CRÉATION / MODIFICATION
-    // =========================
-
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     @PostMapping
-    public ResponseEntity<CategoryResponseDto> createCategory(
+    public ResponseEntity<CategoryDto> createCategory(
             @Valid @RequestBody CategoryRequestDto dto,
             @RequestHeader(value = "X-Teacher-ID") String teacherId) {
-        CategoryResponseDto created = categoryService.createCategory(dto, teacherId);
+        CategoryDto created = categoryService.createCategory(dto, teacherId);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     @PutMapping("/{id}")
-    public ResponseEntity<CategoryResponseDto> updateCategory(
+    public ResponseEntity<CategoryDto> updateCategory(
             @PathVariable Long id,
             @Valid @RequestBody CategoryRequestDto dto,
             @RequestHeader(value = "X-Teacher-ID") String requesterId) {
@@ -92,21 +82,13 @@ public class CategoryController {
         return ResponseEntity.noContent().build();
     }
 
-    // =========================
-    // ARCHIVAGE
-    // =========================
-
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     @PatchMapping("/{id}/archive")
-    public ResponseEntity<CategoryResponseDto> archiveCategory(
+    public ResponseEntity<CategoryDto> archiveCategory(
             @PathVariable Long id,
             @RequestHeader(value = "X-Teacher-ID") String requesterId) {
         return ResponseEntity.ok(categoryService.archiveCategory(id, requesterId));
     }
-
-    // =========================
-    // SYSTÈME DE FOLLOWERS (ENSEIGNANTS)
-    // =========================
 
     @PreAuthorize("hasAuthority('TEACHER')")
     @PostMapping("/{id}/follow")
@@ -132,10 +114,6 @@ public class CategoryController {
     public ResponseEntity<List<User>> getAvailableTeachers(@PathVariable Long id) {
         return ResponseEntity.ok(categoryService.getAvailableTeachers(id));
     }
-
-    // =========================
-    // GESTION DES ERREURS
-    // =========================
 
     @ExceptionHandler(CategoryAlreadyExistsException.class)
     public ResponseEntity<Map<String, String>> handleCategoryAlreadyExists(CategoryAlreadyExistsException e) {

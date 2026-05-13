@@ -18,7 +18,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * dont l'ID n'est pas présent dans la liste des IDs des followers de la catégorie.
      */
     @Query("SELECT u FROM User u " +
-           "WHERE u.role.name = 'TEACHER' " +
+           "JOIN u.roles r " +
+           "WHERE r.name = 'TEACHER' " +
            "AND CAST(u.id AS string) NOT IN (" +
            "  SELECT cf.teacherId FROM CategoryFollower cf " +
            "  WHERE cf.categoryId = :categoryId" +

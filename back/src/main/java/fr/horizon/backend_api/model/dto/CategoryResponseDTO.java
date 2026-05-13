@@ -18,7 +18,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CategoryResponseDTO {
+public class CategoryResponseDto {
 
     /**
      * Identifiant unique de la catégorie.
@@ -52,5 +52,5 @@ public class CategoryResponseDTO {
 
     private String subject;
 
-    private Set<fr.horizon.backend_api.model.User> followers; 
+    private Set<fr.horizon.backend_api.model.User> followers;
 }

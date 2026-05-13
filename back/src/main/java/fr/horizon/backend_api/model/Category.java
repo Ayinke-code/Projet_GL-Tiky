@@ -8,12 +8,14 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 @Entity
-@Getter
-@Setter
+@Data
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 @Table(name = "category")
 public class Category extends BaseEntity {
 
@@ -24,6 +26,9 @@ public class Category extends BaseEntity {
     @Column(nullable = false, unique = true)
     private String name;
 
+    @Column(nullable = false)
+    private String subject;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -33,43 +38,14 @@ public class Category extends BaseEntity {
     @JoinColumn(name = "owner_id")
     private User owner;
 
-    @Column(nullable = false)
-    private String subject;
-
     @Builder.Default
     @ManyToMany
     @JoinTable(name = "category_followers", joinColumns = @JoinColumn(name = "category_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
     private Set<User> followers = new HashSet<>();
 
-    /**
-     * Date et heure de création de la catégorie.
-     */
-    @Column(nullable = false)
-    @Temporal(TemporalType.TIMESTAMP)
-    @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 
-    /**
-     * Date et heure de la dernière modification.
-     */
-    @Column
-    @Temporal(TemporalType.TIMESTAMP)
+    @UpdateTimestamp
     private LocalDateTime updatedAt;
-
-    /**
-     * Préchargement des données avant la persistance.
-     */
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    /**
-     * Mise à jour de la date de modification.
-     */
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }

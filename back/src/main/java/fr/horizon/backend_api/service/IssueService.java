@@ -26,16 +26,16 @@ public class IssueService {
     public Issue createIssue(IssueDTO dto, User creator) {
         validateIssueInput(dto);
 
-        Category category = categoryRepository.findById(dto.getCategorieId())
-                .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
+        Category category = categoryRepository.findById(dto.getCategoryId())
+                .orElseThrow(() -> new IllegalArgumentException("Category not found"));
 
         Issue issue = Issue.builder()
-                .titre(dto.getTitre())
+                .title(dto.getTitle())
                 .description(dto.getDescription())
-                .categorie(category)
-                .createur(creator)
-                .statut(IssueStatus.OUVERT)
-                .estPrive(false)
+                .category(category)
+                .createdBy(creator)
+                .status(IssueStatus.OPEN)
+                .isPrivate(false)
                 .build();
 
         return issueRepository.save(issue);
@@ -43,29 +43,29 @@ public class IssueService {
 
     public Issue getIssueById(Long id) {
         return issueRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Issue non trouvée"));
+                .orElseThrow(() -> new IllegalArgumentException("Issue not found"));
     }
 
     public List<Issue> getAllIssues() {
         return issueRepository.findAll();
     }
 
-    public List<Issue> getIssuesByCategory(Long categorieId) {
-        return issueRepository.findByCategorie_Id(categorieId);
+    public List<Issue> getIssuesByCategory(Long categoryId) {
+        return issueRepository.findByCategoryId(categoryId);
     }
 
     public List<Issue> getIssuesByCreator(Long creatorId) {
-        return issueRepository.findByCreateur_Id(creatorId);
+        return issueRepository.findByCreatedById(creatorId);
     }
 
-    public List<Issue> getIssuesByStatus(String statut) {
-        IssueStatus status = IssueStatus.fromValue(statut);
-        return issueRepository.findByStatut(status);
+    public List<Issue> getIssuesByStatus(String statusStr) {
+        IssueStatus status = IssueStatus.fromValue(statusStr);
+        return issueRepository.findByStatus(status);
     }
 
     public void deleteIssue(Long id) {
         if (!issueRepository.existsById(id)) {
-            throw new IllegalArgumentException("Issue non trouvée");
+            throw new IllegalArgumentException("Issue not found");
         }
         issueRepository.deleteById(id);
     }
@@ -73,27 +73,27 @@ public class IssueService {
     public Issue updateIssueStatus(Long id, String newStatus) {
         logger.info("updateIssueStatus called with id={}, newStatus={}", id, newStatus);
         Issue issue = getIssueById(id);
-        logger.info("Current status before update: {}", issue.getStatut());
+        logger.info("Current status before update: {}", issue.getStatus());
         
         IssueStatus status = IssueStatus.fromValue(newStatus);
         logger.info("Parsed status: {}", status);
         
-        issue.setStatut(status);
+        issue.setStatus(status);
         Issue saved = issueRepository.save(issue);
-        logger.info("Status after save: {}", saved.getStatut());
+        logger.info("Status after save: {}", saved.getStatus());
         
         return saved;
     }
 
     private void validateIssueInput(IssueDTO dto) {
-        if (dto.getTitre() == null || dto.getTitre().isBlank()) {
-            throw new IllegalArgumentException("Le titre est obligatoire");
+        if (dto.getTitle() == null || dto.getTitle().isBlank()) {
+            throw new IllegalArgumentException("Title is mandatory");
         }
         if (dto.getDescription() == null || dto.getDescription().isBlank()) {
-            throw new IllegalArgumentException("La description est obligatoire");
+            throw new IllegalArgumentException("Description is mandatory");
         }
-        if (dto.getCategorieId() == null) {
-            throw new IllegalArgumentException("La catégorie est obligatoire");
+        if (dto.getCategoryId() == null) {
+            throw new IllegalArgumentException("Category is mandatory");
         }
     }
 }

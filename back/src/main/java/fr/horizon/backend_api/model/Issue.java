@@ -1,8 +1,8 @@
 package fr.horizon.backend_api.model;
 
+import fr.horizon.backend_api.model.enums.IssueStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import fr.horizon.backend_api.model.enums.IssueStatus;
 
 @Entity
 @Getter
@@ -20,22 +20,20 @@ public class Issue extends BaseEntity {
     @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 1000)
     private String description;
 
-    @Enumerated(EnumType.STRING)
     @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private IssueStatus status = IssueStatus.OUVERT;
+    private IssueStatus status = IssueStatus.OPEN;
 
     @Builder.Default
     @Column(nullable = false)
     private boolean isPrivate = false;
 
     private String rejectType;
-
     private String rejectReason;
-
     private String rejectComment;
 
     @ManyToOne
@@ -45,5 +43,4 @@ public class Issue extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User createdBy;
-
 }

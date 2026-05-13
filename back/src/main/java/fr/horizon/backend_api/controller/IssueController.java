@@ -23,12 +23,9 @@ public class IssueController {
 
     @PostMapping
     public ResponseEntity<Issue> createIssue(@RequestBody IssueDTO dto, Authentication auth) {
-        // Récupérer l'email depuis le token JWT
         String email = auth.getName();
-
-        // Chercher l'utilisateur en base de données
         User creator = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         Issue issue = issueService.createIssue(dto, creator);
         return ResponseEntity.status(HttpStatus.CREATED).body(issue);
@@ -44,9 +41,9 @@ public class IssueController {
         return ResponseEntity.ok(issueService.getIssueById(id));
     }
 
-    @GetMapping("/category/{categorieId}")
-    public ResponseEntity<List<Issue>> getIssuesByCategory(@PathVariable Long categorieId) {
-        return ResponseEntity.ok(issueService.getIssuesByCategory(categorieId));
+    @GetMapping("/category/{categoryId}")
+    public ResponseEntity<List<Issue>> getIssuesByCategory(@PathVariable Long categoryId) {
+        return ResponseEntity.ok(issueService.getIssuesByCategory(categoryId));
     }
 
     @GetMapping("/creator/{creatorId}")
@@ -54,9 +51,9 @@ public class IssueController {
         return ResponseEntity.ok(issueService.getIssuesByCreator(creatorId));
     }
 
-    @GetMapping("/status/{statut}")
-    public ResponseEntity<List<Issue>> getIssuesByStatus(@PathVariable String statut) {
-        return ResponseEntity.ok(issueService.getIssuesByStatus(statut));
+    @GetMapping("/status/{status}")
+    public ResponseEntity<List<Issue>> getIssuesByStatus(@PathVariable String status) {
+        return ResponseEntity.ok(issueService.getIssuesByStatus(status));
     }
 
     @DeleteMapping("/{id}")
@@ -67,7 +64,7 @@ public class IssueController {
 
     @PutMapping("/{id}/status")
     public ResponseEntity<Issue> updateIssueStatus(@PathVariable Long id, @RequestBody UpdateIssueStatusDTO dto) {
-        Issue updatedIssue = issueService.updateIssueStatus(id, dto.getStatut());
+        Issue updatedIssue = issueService.updateIssueStatus(id, dto.getStatus());
         return ResponseEntity.ok(updatedIssue);
     }
 }
