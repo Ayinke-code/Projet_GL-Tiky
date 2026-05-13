@@ -123,7 +123,6 @@ const toggleVisibility = async () => {
             v-model="newMessage"
             :sending="sending"
             @send="handleSend"
-            @keydown.ctrl.enter="handleSend"
           />
 
         </div>
