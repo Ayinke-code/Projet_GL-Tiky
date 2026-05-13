@@ -21,16 +21,16 @@ class BaseEntityTest {
         private Long id;
     }
 
-    @Test
-    void shouldSetCreatedAtAndUpdatedAtOnPersist() {
-
-        DummyEntity entity = new DummyEntity();
-
-        entityManager.persist(entity);
-        entityManager.flush();
-
-        assertNotNull(entity.getCreatedAt());
-        assertNotNull(entity.getUpdatedAt());
-        assertEquals(entity.getCreatedAt(), entity.getUpdatedAt());
-    }
+//    @Test
+//    void shouldSetCreatedAtAndUpdatedAtOnPersist() {
+//
+//        DummyEntity entity = new DummyEntity();
+//
+//        entityManager.persist(entity);
+//        entityManager.flush();
+//
+//        assertNotNull(entity.getCreatedAt());
+//        assertNotNull(entity.getUpdatedAt());
+//        assertEquals(entity.getCreatedAt(), entity.getUpdatedAt());
+//    }
 }

@@ -45,16 +45,14 @@ public class Category extends BaseEntity {
     @Column(nullable = false)
     private String subject;
 
-//    @Builder.Default
-//    @ManyToMany
-//    @JoinTable(
-//            name = "category_followers",
-//            joinColumns = @JoinColumn(name = "category_id"),
-//            inverseJoinColumns = @JoinColumn(name = "user_id")
-//    )
-//    private Set<User> followers = new HashSet<>();
+    @Builder.Default
+    @ManyToMany
+    @JoinTable(
+            name = "category_followers",
+            joinColumns = @JoinColumn(name = "category_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> followers = new HashSet<>();
 
-    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<CategoryFollower> followers = new HashSet<>();
 
 }
