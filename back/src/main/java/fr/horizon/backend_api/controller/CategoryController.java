@@ -1,10 +1,11 @@
 package fr.horizon.backend_api.controller;
 
-import fr.horizon.backend_api.model.User;
-import fr.horizon.backend_api.model.dto.CategoryResponseDto;
-import fr.horizon.backend_api.model.dto.CreateCategoryDTO;
+import fr.horizon.backend_api.model.dto.CategoryDto;
 import fr.horizon.backend_api.exception.CategoryAlreadyExistsException;
+import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.service.CategoryService;
+import fr.horizon.backend_api.model.dto.CategoryResponseDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -57,23 +58,16 @@ public class CategoryController {
 
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     @PostMapping
-    public ResponseEntity<CategoryResponseDto> createCategory(
-            @Valid @RequestBody CreateCategoryDTO dto,
-            @RequestHeader(value = "X-Teacher-ID") String teacherId) {
-        CategoryResponseDto created = categoryService.createCategory(dto, teacherId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    public CategoryDto createCategory(@RequestBody CategoryCreateDto dto) {
+        return categoryService.createCategory(dto);
     }
 
+    /**
+     * Supprime une catégorie à partir de son identifiant.
+     *
+     * @param id identifiant de la catégorie
+     */
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
-    @PutMapping("/{id}")
-    public ResponseEntity<CategoryResponseDto> updateCategory(
-            @PathVariable Long id,
-            @Valid @RequestBody CreateCategoryDTO dto,
-            @RequestHeader(value = "X-Teacher-ID") String requesterId) {
-        return ResponseEntity.ok(categoryService.updateCategory(id, dto, requesterId));
-    }
-
-    @PreAuthorize("hasAuthority('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategory(
             @PathVariable Long id,

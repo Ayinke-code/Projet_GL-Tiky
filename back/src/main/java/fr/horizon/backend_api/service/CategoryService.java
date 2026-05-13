@@ -3,17 +3,22 @@ package fr.horizon.backend_api.service;
 import fr.horizon.backend_api.exception.CategoryAlreadyExistsException;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.Category;
+import fr.horizon.backend_api.model.CategoryRequest;
 import fr.horizon.backend_api.model.CategoryFollower;
 import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.dto.CategoryDto;
+import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.model.dto.CategoryResponseDto;
 import fr.horizon.backend_api.model.dto.CategoryRequestDto;
 import fr.horizon.backend_api.model.dto.CreateCategoryDTO;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.repository.CategoryFollowerRepository;
 import fr.horizon.backend_api.repository.CategoryRepository;
+import fr.horizon.backend_api.repository.CategoryRequestRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
@@ -27,12 +32,19 @@ import java.util.stream.Stream;
  * Service fusionné gérant les catégories, les followers et la logique métier.
  */
 @Service
+/**
+ * @param categoryRepository
+ * @param followerRepository
+ * @param userRepository
+ * @param categoryRequestRepository
+ */
 @RequiredArgsConstructor
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryFollowerRepository followerRepository;
     private final UserRepository userRepository;
+    private final CategoryRequestRepository categoryRequestRepository;
 
     /**
      * Récupère toutes les catégories (Premier code).
@@ -66,9 +78,10 @@ public class CategoryService {
     /**
      * Crée une catégorie à partir de CategoryRequestDto (Premier code).
      */
+
     @Transactional
     public CategoryResponseDto createCategory(CategoryRequestDto dto) {
-        User owner = userRepository.findById(dto.getOwnerId())
+        User owner = userRepository.findById(dto.getId())
                 .orElseThrow(() -> new RuntimeException("Owner not found"));
 
         Category category = Category.builder()
@@ -86,11 +99,16 @@ public class CategoryService {
      * Supprime une catégorie par ID sans vérification de propriétaire (Premier
      * code).
      */
+    @Transactional
     public void deleteById(Long id) {
-        if (!categoryRepository.existsById(id)) {
-            throw new CategoryNotFoundException(id);
-        }
-        categoryRepository.deleteById(id);
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new CategoryNotFoundException(id));
+
+        List<CategoryRequest> requests = categoryRequestRepository.findAllByCategory(category);
+
+        categoryRequestRepository.deleteAll(requests);
+
+        categoryRepository.delete(category);
     }
 
     @Transactional
