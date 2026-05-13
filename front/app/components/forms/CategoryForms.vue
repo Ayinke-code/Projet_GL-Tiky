@@ -67,4 +67,11 @@ const submitForm = () => {
   })
   resetForm()
 }
+
+const resetForm = () => {
+  formData.value = {
+    name: '',
+    subject: ''
+  }
+}
 </script>

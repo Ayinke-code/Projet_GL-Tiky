@@ -3,6 +3,7 @@ package fr.horizon.backend_api.service;
 import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.RequestManagerDTO;
 import fr.horizon.backend_api.model.dto.IssueDTO;
+import fr.horizon.backend_api.model.dto.IssueResponseDTO;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.repository.RequestManagerRepository;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -56,6 +58,12 @@ public class IssueService {
 
     public List<Issue> getAllIssues() {
         return issueRepository.findAll();
+    }
+
+    public List<IssueResponseDTO> getAllIssuesAsDTO() {
+        return issueRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
     }
 
     public List<Issue> getIssuesByCategory(Long categorieId) {
@@ -196,6 +204,34 @@ public class IssueService {
                 .creationDate(requestManager.getCreatedAt())
                 .processingDate(requestManager.getProcessingDate())
                 .issueTitle(requestManager.getIssue().getTitle())
+                .build();
+    }
+
+    private IssueResponseDTO convertToDTO(Issue issue) {
+        return IssueResponseDTO.builder()
+                .idTick(issue.getId())
+                .titre(issue.getTitle())
+                .description(issue.getDescription())
+                .statut(issue.getStatus() != null ? issue.getStatus().toString() : "OUVERT")
+                .estPrive(issue.isPrivate())
+                .dateCreation(issue.getCreatedAt())
+                .dateModification(issue.getUpdatedAt())
+                .category(issue.getCategory() != null ? IssueResponseDTO.CategoryNameDTO.builder()
+                        .id(issue.getCategory().getId())
+                        .name(issue.getCategory().getName())
+                        .nom(issue.getCategory().getName())
+                        .subject(issue.getCategory().getSubject())
+                        .build() : null)
+                .createdBy(issue.getCreatedBy() != null ? IssueResponseDTO.UserNameDTO.builder()
+                        .id(issue.getCreatedBy().getId())
+                        .name(issue.getCreatedBy().getName())
+                        .email(issue.getCreatedBy().getEmail())
+                        .build() : null)
+                .manager(issue.getManager() != null ? IssueResponseDTO.UserNameDTO.builder()
+                        .id(issue.getManager().getId())
+                        .name(issue.getManager().getName())
+                        .email(issue.getManager().getEmail())
+                        .build() : null)
                 .build();
     }
 

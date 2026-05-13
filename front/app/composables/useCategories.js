@@ -23,7 +23,7 @@ export const useCategories = () => {
    * @throws erreur API si le chargement échoue
    */
   const fetchCategories = async () => {
-    const data = await api('/categories')
+    const data = await api.getCategories()
     categories.value = data
     return data
   }
@@ -52,14 +52,11 @@ export const useCategories = () => {
     const values = {
       name: payload.name,
       subject: payload.subject,
-      ownerId: user.value.id
+      teacher: user.value.email || user.value.name
     }
 
     try {
-      const created = await api('/categories', {
-        method: 'POST',
-        body: values
-      })
+      const created = await api.createCategory(values)
 
       // refresh local state
       await fetchCategories()
@@ -77,9 +74,7 @@ export const useCategories = () => {
    * @param id identifiant de la catégorie
    */
   const deleteCategory = async (id) => {
-    await api(`/categories/${id}`, {
-      method: 'DELETE'
-    })
+    await api.deleteCategory(id)
 
     categories.value = categories.value.filter(c => c.id !== id)
   }

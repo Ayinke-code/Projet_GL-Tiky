@@ -34,6 +34,8 @@ public class AuthController {
     private final UserService userService;
     @Value("${jwt.expiration}")
     private long expiration;
+    @Value("${app.cookie.secure:false}")
+    private boolean cookieSecure;
 
     /**
      * Authentifie un utilisateur et génère un cookie contenant le JWT.
@@ -52,7 +54,7 @@ public class AuthController {
         // Stock le token dans un Cookie en HTTPOnly
         Cookie cookie = new Cookie("token", loginResponse.getToken());
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
+        cookie.setSecure(cookieSecure);
         cookie.setPath("/");
         cookie.setMaxAge((int) (expiration / 1000));
 
@@ -85,7 +87,7 @@ public class AuthController {
 
         Cookie cookie = new Cookie("token", null);
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
+        cookie.setSecure(cookieSecure);
         cookie.setPath("/");
         cookie.setMaxAge(0); // supprime le cookie
 

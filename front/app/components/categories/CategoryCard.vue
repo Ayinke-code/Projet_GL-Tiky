@@ -29,7 +29,7 @@
 
       <div v-if="category.status !== 'ARCHIVED'" class="flex gap-2">
 
-        <template v-if="category.owner === user?.id">
+        <template v-if="category.owner === user?.id || category.owner === user?.email || category.ownerName === user?.name">
           <div class="text-[10px] bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-bold border border-amber-200">
             <i class="fa-solid fa-crown mr-1"></i> PROPRIÉTAIRE
           </div>

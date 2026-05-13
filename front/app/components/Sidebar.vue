@@ -48,8 +48,16 @@
     <!-- Footer Sidebar : Fixé en bas -->
     <div class="p-4 border-t border-slate-800 bg-slate-950">
       <button
+        v-if="!user"
+        @click="goToLogin"
+        class="w-full flex items-center justify-center px-4 py-2 bg-slate-800 hover:bg-blue-900/30 text-slate-400 hover:text-blue-400 rounded-lg transition-all duration-200 text-sm font-medium cursor-pointer"
+      >
+        Se connecter
+      </button>
+      <button
+        v-else
         @click="logout"
-        class="w-full flex items-center justify-center px-4 py-2 bg-slate-800 hover:bg-red-900/30 text-slate-400 hover:text-red-400 rounded-lg transition-all duration-200 text-sm font-medium"
+        class="w-full flex items-center justify-center px-4 py-2 bg-slate-800 hover:bg-red-900/30 text-slate-400 hover:text-red-400 rounded-lg transition-all duration-200 text-sm font-medium cursor-pointer"
       >
         <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> Déconnexion
       </button>
@@ -58,11 +66,12 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
 const route = useRoute()
 const { user, isAuthenticated, isIssueCreator, isIssueFollower, isParticipant, canAccessCategories, canAccessIssues, canCreateIssue, logout } = useAuth()
 
 const isActive = (path) => route.path === path
+
+const goToLogin = () => navigateTo('/login')
 
 </script>
 

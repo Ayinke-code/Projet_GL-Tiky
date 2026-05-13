@@ -1,3 +1,5 @@
+import { computed } from 'vue'
+
 export const useAuth = () => {
     const api = useApi()
 
@@ -12,6 +14,105 @@ export const useAuth = () => {
      * Devient true après l'appel à /auth/me.
      */
     const ready = useState('ready', () => false)
+
+    /**
+     * Rôles métier temporaires utilisés pour les badges de la sidebar.
+     * <p>
+     * Permet par exemple d'afficher qu'un utilisateur a créé une issue
+     * après la soumission du formulaire.
+     */
+    const issueRoles = useState('issueRoles', () => [])
+
+    const normalizeRoles = (data) => {
+        const rawRoles = data?.roles
+
+        if (Array.isArray(rawRoles)) {
+            return rawRoles.filter(Boolean).map(role => String(role).toUpperCase())
+        }
+
+        if (rawRoles instanceof Set) {
+            return Array.from(rawRoles).filter(Boolean).map(role => String(role).toUpperCase())
+        }
+
+        if (rawRoles && typeof rawRoles === 'object') {
+            return Object.values(rawRoles).filter(Boolean).map(role => String(role).toUpperCase())
+        }
+
+        if (data?.role) {
+            return [String(data.role).toUpperCase()]
+        }
+
+        return []
+    }
+
+    const normalizeUser = (data) => {
+        if (!data) {
+            return null
+        }
+
+        const roles = normalizeRoles(data)
+        const primaryRole = String(data.role || roles[0] || 'USER').toUpperCase()
+
+        return {
+            ...data,
+            role: primaryRole,
+            roles: roles.length > 0 ? roles : [primaryRole],
+        }
+    }
+
+    const setSession = (data, { resetIssueRoles = false } = {}) => {
+        user.value = normalizeUser(data)
+        ready.value = true
+
+        if (resetIssueRoles) {
+            issueRoles.value = []
+        }
+    }
+
+    const currentRoles = computed(() => normalizeRoles(user.value))
+
+    const hasRole = (...expectedRoles) =>
+        expectedRoles.some(role => currentRoles.value.includes(String(role).toUpperCase()))
+
+    const isAuthenticated = computed(() => !!user.value)
+
+    const isIssueCreator = computed(() =>
+        issueRoles.value.includes('CREATOR') || hasRole('ADMIN', 'TEACHER')
+    )
+
+    const isIssueFollower = computed(() =>
+        issueRoles.value.includes('FOLLOWER') || hasRole('STUDENT')
+    )
+
+    const isParticipant = computed(() =>
+        issueRoles.value.includes('PARTICIPANT') || isAuthenticated.value
+    )
+
+    const canAccessCategories = computed(() => isAuthenticated.value)
+    const canAccessIssues = computed(() => isAuthenticated.value)
+    const canCreateIssue = computed(() => isAuthenticated.value)
+
+    const syncSession = (data) => {
+        setSession(data, { resetIssueRoles: true })
+    }
+
+    const addIssueRole = (role) => {
+        const normalizedRole = String(role || '').toUpperCase()
+
+        if (!normalizedRole) {
+            return
+        }
+
+        if (!issueRoles.value.includes(normalizedRole)) {
+            issueRoles.value = [...issueRoles.value, normalizedRole]
+        }
+    }
+
+    const clearSession = () => {
+        user.value = null
+        issueRoles.value = []
+        ready.value = true
+    }
 
     /**
      * Authentifie un utilisateur via email et mot de passe.
@@ -38,7 +139,7 @@ export const useAuth = () => {
             return true
         } catch (e) {
             // Réinitialisation user en cas d’erreur
-            user.value = null
+            clearSession()
 
             // Erreur métier : identifiants invalides
             if (e?.response?.status === 401) {
@@ -64,13 +165,10 @@ export const useAuth = () => {
         try {
             const data = await api('/auth/me')
             console.log("data", data)
-            user.value = data
-            ready.value = true
+            setSession(data, { resetIssueRoles: true })
         } catch (e) {
             // Si token invalide ou expiré
-            user.value = null
-            // Marque la fin de l’initialisation (succès ou échec)
-            ready.value = true
+            clearSession()
             throw e
         }
     }
@@ -90,7 +188,7 @@ export const useAuth = () => {
             // Suppression de la session serveur
             await api('/auth/logout', { method: 'POST' })
             // Réinitialisation utilisateur local
-            user.value = null
+            clearSession()
 
             // Redirection vers login
             await navigateTo('/login')
@@ -99,5 +197,20 @@ export const useAuth = () => {
         }
     }
 
-    return { user, ready, login, fetchUser, logout }
+    return {
+        user,
+        ready,
+        isAuthenticated,
+        isIssueCreator,
+        isIssueFollower,
+        isParticipant,
+        canAccessCategories,
+        canAccessIssues,
+        canCreateIssue,
+        login,
+        fetchUser,
+        logout,
+        syncSession,
+        addIssueRole,
+    }
 }

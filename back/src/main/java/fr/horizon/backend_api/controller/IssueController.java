@@ -4,6 +4,7 @@ import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.RequestManagerDTO;
 import fr.horizon.backend_api.model.dto.IssueDTO;
+import fr.horizon.backend_api.model.dto.IssueResponseDTO;
 import fr.horizon.backend_api.model.dto.UpdateIssueStatusDTO;
 import fr.horizon.backend_api.service.IssueService;
 import fr.horizon.backend_api.repository.UserRepository;
@@ -23,7 +24,7 @@ public class IssueController {
     private final UserRepository userRepository;
 
     @PostMapping
-    public ResponseEntity<Issue> createIssue(@RequestBody IssueDTO dto, Authentication auth) {
+    public ResponseEntity<IssueResponseDTO> createIssue(@RequestBody IssueDTO dto, Authentication auth) {
         // Récupérer l'email depuis le token JWT
         String email = auth.getName();
 
@@ -32,12 +33,37 @@ public class IssueController {
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
         Issue issue = issueService.createIssue(dto, creator);
-        return ResponseEntity.status(HttpStatus.CREATED).body(issue);
+        IssueResponseDTO response = IssueResponseDTO.builder()
+                .idTick(issue.getId())
+                .titre(issue.getTitle())
+                .description(issue.getDescription())
+                .statut(issue.getStatus() != null ? issue.getStatus().toString() : "OUVERT")
+                .estPrive(issue.isPrivate())
+                .dateCreation(issue.getCreatedAt())
+                .dateModification(issue.getUpdatedAt())
+                .category(issue.getCategory() != null ? IssueResponseDTO.CategoryNameDTO.builder()
+                        .id(issue.getCategory().getId())
+                        .name(issue.getCategory().getName())
+                        .nom(issue.getCategory().getName())
+                        .subject(issue.getCategory().getSubject())
+                        .build() : null)
+                .createdBy(issue.getCreatedBy() != null ? IssueResponseDTO.UserNameDTO.builder()
+                        .id(issue.getCreatedBy().getId())
+                        .name(issue.getCreatedBy().getName())
+                        .email(issue.getCreatedBy().getEmail())
+                        .build() : null)
+                .manager(issue.getManager() != null ? IssueResponseDTO.UserNameDTO.builder()
+                        .id(issue.getManager().getId())
+                        .name(issue.getManager().getName())
+                        .email(issue.getManager().getEmail())
+                        .build() : null)
+                .build();
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<Issue>> getAllIssues() {
-        return ResponseEntity.ok(issueService.getAllIssues());
+    public ResponseEntity<List<IssueResponseDTO>> getAllIssues() {
+        return ResponseEntity.ok(issueService.getAllIssuesAsDTO());
     }
 
     @GetMapping("/{id}")

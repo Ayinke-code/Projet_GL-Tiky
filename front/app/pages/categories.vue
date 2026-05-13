@@ -14,7 +14,7 @@
         <Modal v-model:open="isCreateModalOpen" title="Création de catégorie">
 
             <!-- Affichage erreur API -->
-            <Alert v-if="error" color="error" title="Erreur" description="La catégorie renseigné existe déja !">
+            <Alert v-if="error" color="error" title="Erreur" description="La catégorie renseignée existe déjà !">
                 {{ error }}
             </Alert>
 

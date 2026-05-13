@@ -65,17 +65,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-// On importe useAuth pour accéder à la méthode login centralisée
-import { useAuth } from '~/composables/useAuth'
 
 definePageMeta({
   layout: 'blank'
 })
 
 const router = useRouter()
-// Utilisez uniquement 'login' du composable.
-// 'syncSession' n'existe pas dans votre useAuth.js et n'est pas nécessaire ici.
-const { login } = useAuth()
+const { login, user } = useAuth()
 
 const form = ref({
   email: 'admin@admin.fr',
@@ -90,23 +86,15 @@ const handleLogin = async () => {
   error.value = null
 
   try {
-    // 1. Appelez la méthode login du composable.
-    // Elle s'occupe de l'appel API ET de mettre à jour l'utilisateur (fetchUser).
     await login(form.value.email, form.value.password)
 
-    console.log('Connexion réussie !')
-
-    // 2. Redirection simple vers l'accueil ou une page spécifique
-    // Note : Si vous avez besoin du rôle pour la redirection,
-    // récupérez-le via la variable 'user' du composable.
-    await navigateTo('/')
-
+    // Redirige vers l'espace le plus cohérent avec le rôle métier
+    await router.push((user.value as any)?.role === 'STUDENT' ? '/issues' : '/categories')
   } catch (err: any) {
     console.error('Login error:', err)
-    // Gestion des erreurs basée sur les erreurs renvoyées par useAuth.js
-    error.value = err.message === 'INVALID_CREDENTIALS'
+    error.value = err?.message === 'INVALID_CREDENTIALS'
       ? 'Email ou mot de passe incorrect'
-      : 'Une erreur est survenue lors de la connexion'
+      : 'Impossible de se connecter pour le moment'
   } finally {
     loading.value = false
   }

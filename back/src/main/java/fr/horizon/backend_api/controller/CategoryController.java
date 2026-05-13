@@ -4,212 +4,195 @@
 //import fr.horizon.backend_api.model.dto.CreateCategoryDTO;
 //import fr.horizon.backend_api.exception.CategoryAlreadyExistsException;
 //import fr.horizon.backend_api.service.CategoryService;
-//import lombok.RequiredArgsConstructor;
-//import org.springframework.http.HttpStatus;
-//import org.springframework.http.ResponseEntity;
-//import org.springframework.validation.annotation.Validated;
-//import org.springframework.web.bind.annotation.*;
-//
-//import jakarta.validation.Valid;
-//import java.util.HashMap;
-//import java.util.List;
-//import java.util.Map;
-//
-///**
-// * Gestion des catégories.
-// * Fournit les endpoints pour créer, récupérer, mettre à jour et supprimer les
-// * catégories.
-// *
-// * @author Tiky Team
-// * @version 1.0
-// */
-//@RestController
-//@RequestMapping("/categories")
-//@RequiredArgsConstructor
-//@Validated
-//@CrossOrigin(origins = "*", maxAge = 3600)
-//public class CategoryController {
-//
-//    /**
-//     * Service pour les opérations métier sur les catégories.
-//     */
-//    private final CategoryService categoryService;
-//
-//    /**
-//     * Récupère l'ensemble des catégories.
-//     *
-//     * @return liste des catégories sous forme de DTO
-//     */
-//    @PreAuthorize("isAuthenticated()")
-//    @GetMapping
-//    public List<CategoryDto> getAllCategories() {
-//        return categoryService.findAll();
-//    }
-//
-//    /**
-//     * Crée une nouvelle catégorie.
-//     *
-//     * @param dto données de création de la catégorie
-//     * @return catégorie créée sous forme de DTO
-//     *
-//     * Endpoint: POST /api/categories
-//     *
-//     * @param dto       Les données de création de la catégorie
-//     * @param teacherId L'identifiant de l'enseignant (en header ou paramètre)
-//     * @return La catégorie créée avec le code HTTP 201
-//     * @throws CategoryAlreadyExistsException Si une catégorie avec le même nom
-//     *                                        existe déjà
-//     */
-//    @PreAuthorize("hasAnyAuthority('ADMIN','TEACHER')")
-//    @PostMapping
-//    public CategoryDto createCategory(@RequestBody CategoryRequestDto dto) {
-//        return categoryService.createCategory(dto);
-//    public ResponseEntity<CategoryResponseDTO> createCategory(
-//            @Valid @RequestBody CreateCategoryDTO dto,
-//            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String teacherId) {
-//
-//        CategoryResponseDTO createdCategory = categoryService.createCategory(dto, teacherId);
-//        return ResponseEntity.status(HttpStatus.CREATED).body(createdCategory);
-//    }
-//
-//    /**
-//     * Récupère toutes les catégories d'un enseignant.
-//     *
-//     * Endpoint: GET /api/categories/teacher
-//     *
-//     * @param teacherId L'identifiant de l'enseignant
-//     * @return Liste des catégories de l'enseignant
-//     */
-//    @GetMapping("/teacher")
-//    public ResponseEntity<List<CategoryResponseDTO>> getCategoriesByTeacher(
-//            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String teacherId) {
-//        List<CategoryResponseDTO> categories = categoryService.getAllActiveCategoriesForTeacher(teacherId);
-//        return ResponseEntity.ok(categories);
-//    }
-//
-//    /**
-//     * Récupère toutes les catégories actives d'un enseignant.
-//     *
-//     * Endpoint: GET /api/categories/teacher/active
-//     *
-//     * @param teacherId L'identifiant de l'enseignant
-//     * @return Liste des catégories actives
-//     */
-//    @GetMapping("/teacher/active")
-//    public ResponseEntity<List<CategoryResponseDTO>> getActiveCategoriesByTeacher(
-//            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String teacherId) {
-//        List<CategoryResponseDTO> categories = categoryService.getActiveCategoriesByTeacher(teacherId);
-//        return ResponseEntity.ok(categories);
-//    }
-//
-//    /**
-//     * Supprime une catégorie à partir de son identifiant.
-//     *
-//     * @param id identifiant de la catégorie
-//     * Récupère toutes les catégories actives du système.
-//     *
-//     * Endpoint: GET /api/categories/active
-//     *
-//     * @return Liste de toutes les catégories actives
-//     */
-//    @GetMapping("/active")
-//    public ResponseEntity<List<CategoryResponseDTO>> getAllActiveCategories() {
-//        List<CategoryResponseDTO> categories = categoryService.getAllActiveCategories();
-//        return ResponseEntity.ok(categories);
-//    }
-//
-//    /**
-//     * Récupère une catégorie par son identifiant.
-//     *
-//     * Endpoint: GET /api/categories/{id}
-//     *
-//     * @param id L'identifiant de la catégorie
-//     * @return La catégorie trouvée ou une réponse 404
-//     */
-//    @GetMapping("/{id}")
-//    public ResponseEntity<CategoryResponseDTO> getCategoryById(@PathVariable Long id) {
-//        return categoryService.getCategoryById(id)
-//                .map(ResponseEntity::ok)
-//                .orElse(ResponseEntity.notFound().build());
-//    }
-//
-//    /**
-//     * Récupère une catégorie par son nom.
-//     *
-//     * Endpoint: GET /api/categories/search?name={name}
-//     *
-//     * @param name Le nom de la catégorie
-//     * @return La catégorie trouvée ou une réponse 404
-//     */
-//    @GetMapping("/search")
-//    public ResponseEntity<CategoryResponseDTO> getCategoryByName(@RequestParam String name) {
-//        return categoryService.getCategoryByName(name)
-//                .map(ResponseEntity::ok)
-//                .orElse(ResponseEntity.notFound().build());
-//    }
-//
-//    /**
-//     * Met à jour une catégorie existante.
-//     *
-//     * Endpoint: PUT /api/categories/{id}
-//     *
-//     * @param id  L'identifiant de la catégorie
-//     * @param dto Les nouvelles données
-//     * @return La catégorie mise à jour
-//     */
-//    @PutMapping("/{id}")
-//    public ResponseEntity<CategoryResponseDTO> updateCategory(
-//            @PathVariable Long id,
-//            @Valid @RequestBody CreateCategoryDTO dto,
-//            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String requesterId) {
-//
-//        CategoryResponseDTO updatedCategory = categoryService.updateCategory(id, dto, requesterId);
-//        return ResponseEntity.ok(updatedCategory);
-//    }
-//
-//    @PatchMapping("/{id}/archive")
-//    public ResponseEntity<CategoryResponseDTO> archiveCategory(
-//            @PathVariable Long id,
-//            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String requesterId) {
-//        return ResponseEntity.ok(categoryService.archiveCategory(id, requesterId));
-//    }
-//
-//    @PatchMapping("/{id}/unarchive")
-//    public ResponseEntity<CategoryResponseDTO> unarchiveCategory(
-//            @PathVariable Long id,
-//            @RequestHeader(value = "X-Teacher-ID", defaultValue = "teacher-default") String requesterId) {
-//        return ResponseEntity.ok(categoryService.unarchiveCategory(id, requesterId));
-//    }
-//
-//    /**
-//     * Supprime une catégorie.
-//     */
-//    @PreAuthorize("hasAuthority('ADMIN')")
-//    @DeleteMapping("/{id}")
-//    public void deleteCategory(@PathVariable Long id) {
-//        categoryService.deleteById(id);
-//    }
-//
-//    @ExceptionHandler(IllegalStateException.class)
-//    public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException e) {
-//        Map<String, String> error = new HashMap<>();
-//        error.put("error", "ILLEGAL_STATE");
-//        error.put("message", e.getMessage());
-//        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-//    }
-//
-//    /**
-//     * Gestionnaire global pour les exceptions d'argument invalide.
-//     *
-//     * @param e L'exception levée
-//     * @return Une réponse d'erreur avec le code HTTP 400
-//     */
-//    @ExceptionHandler(IllegalArgumentException.class)
-//    public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException e) {
-//        Map<String, String> error = new HashMap<>();
-//        error.put("error", "INVALID_ARGUMENT");
-//        error.put("message", e.getMessage());
-//        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-//    }
-//
-//}
+package fr.horizon.backend_api.controller;
+
+import fr.horizon.backend_api.model.dto.CategoryResponseDTO;
+import fr.horizon.backend_api.model.dto.CreateCategoryDTO;
+import fr.horizon.backend_api.service.CategoryService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/categories")
+@RequiredArgsConstructor
+@Validated
+@CrossOrigin(origins = "*", maxAge = 3600)
+public class CategoryController {
+
+	private final CategoryService categoryService;
+
+	@GetMapping
+	public ResponseEntity<List<CategoryResponseDTO>> getCategories(Authentication authentication) {
+		String teacherId = authentication != null ? authentication.getName() : null;
+		if (teacherId == null || teacherId.isBlank()) {
+			return ResponseEntity.ok(categoryService.getAllActiveCategories());
+		}
+
+		return ResponseEntity.ok(categoryService.getAllActiveCategoriesForTeacher(teacherId));
+	}
+
+	@PostMapping
+	public ResponseEntity<CategoryResponseDTO> createCategory(
+			@Valid @RequestBody CreateCategoryDTO dto,
+			Authentication authentication) {
+
+		String teacherId = authentication != null ? authentication.getName() : null;
+		if (teacherId == null || teacherId.isBlank()) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+
+		CategoryResponseDTO createdCategory = categoryService.createCategory(dto, teacherId);
+		return ResponseEntity.status(HttpStatus.CREATED).body(createdCategory);
+	}
+
+	@GetMapping("/teacher")
+	public ResponseEntity<List<CategoryResponseDTO>> getCategoriesByTeacher(
+			Authentication authentication) {
+		String teacherEmail = authentication != null ? authentication.getName() : null;
+		if (teacherEmail == null || teacherEmail.isBlank()) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		List<CategoryResponseDTO> categories = categoryService.getAllActiveCategoriesForTeacher(teacherEmail);
+		return ResponseEntity.ok(categories);
+	}
+
+	@GetMapping("/teacher/active")
+	public ResponseEntity<List<CategoryResponseDTO>> getActiveCategoriesByTeacher(
+			Authentication authentication) {
+		String teacherEmail = authentication != null ? authentication.getName() : null;
+		if (teacherEmail == null || teacherEmail.isBlank()) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		List<CategoryResponseDTO> categories = categoryService.getActiveCategoriesByTeacher(teacherEmail);
+		return ResponseEntity.ok(categories);
+	}
+
+	@GetMapping("/active")
+	public ResponseEntity<List<CategoryResponseDTO>> getAllActiveCategories() {
+		List<CategoryResponseDTO> categories = categoryService.getAllActiveCategories();
+		return ResponseEntity.ok(categories);
+	}
+
+	@GetMapping("/{id}")
+	public ResponseEntity<CategoryResponseDTO> getCategoryById(@PathVariable Long id) {
+		return categoryService.getCategoryById(id)
+				.map(ResponseEntity::ok)
+				.orElse(ResponseEntity.notFound().build());
+	}
+
+	@GetMapping("/search")
+	public ResponseEntity<CategoryResponseDTO> getCategoryByName(@RequestParam String name) {
+		return categoryService.getCategoryByName(name)
+				.map(ResponseEntity::ok)
+				.orElse(ResponseEntity.notFound().build());
+	}
+
+	@PutMapping("/{id}")
+	public ResponseEntity<CategoryResponseDTO> updateCategory(
+			@PathVariable Long id,
+			@Valid @RequestBody CreateCategoryDTO dto,
+			Authentication authentication) {
+
+		String requesterEmail = authentication != null ? authentication.getName() : null;
+		if (requesterEmail == null || requesterEmail.isBlank()) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+
+		CategoryResponseDTO updatedCategory = categoryService.updateCategory(id, dto, requesterEmail);
+		return ResponseEntity.ok(updatedCategory);
+	}
+
+	@PatchMapping("/{id}/archive")
+	public ResponseEntity<CategoryResponseDTO> archiveCategory(
+			@PathVariable Long id,
+			Authentication authentication) {
+		String requesterEmail = authentication != null ? authentication.getName() : null;
+		if (requesterEmail == null || requesterEmail.isBlank()) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		return ResponseEntity.ok(categoryService.archiveCategory(id, requesterEmail));
+	}
+
+	@PatchMapping("/{id}/unarchive")
+	public ResponseEntity<CategoryResponseDTO> unarchiveCategory(
+			@PathVariable Long id,
+			Authentication authentication) {
+		String requesterEmail = authentication != null ? authentication.getName() : null;
+		if (requesterEmail == null || requesterEmail.isBlank()) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		return ResponseEntity.ok(categoryService.unarchiveCategory(id, requesterEmail));
+	}
+
+	@DeleteMapping("/{id}")
+	public ResponseEntity<Void> deleteCategory(
+			@PathVariable Long id,
+			Authentication authentication) {
+		String requesterEmail = authentication != null ? authentication.getName() : null;
+		if (requesterEmail == null || requesterEmail.isBlank()) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		categoryService.deleteCategory(id, requesterEmail);
+		return ResponseEntity.noContent().build();
+	}
+
+	@PostMapping("/{id}/follow")
+	public ResponseEntity<Void> followCategory(
+			@PathVariable Long id,
+			Authentication authentication) {
+		String teacherEmail = authentication != null ? authentication.getName() : null;
+		if (teacherEmail == null || teacherEmail.isBlank()) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		categoryService.followCategory(id, teacherEmail);
+		return ResponseEntity.ok().build();
+	}
+
+	@DeleteMapping("/{id}/follow")
+	public ResponseEntity<Void> unfollowCategory(
+			@PathVariable Long id,
+			Authentication authentication) {
+		String teacherEmail = authentication != null ? authentication.getName() : null;
+		if (teacherEmail == null || teacherEmail.isBlank()) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		categoryService.unfollowCategory(id, teacherEmail);
+		return ResponseEntity.ok().build();
+	}
+
+	@GetMapping("/followed")
+	public ResponseEntity<List<Long>> getFollowedCategoryIds(
+			Authentication authentication) {
+		String teacherEmail = authentication != null ? authentication.getName() : null;
+		if (teacherEmail == null || teacherEmail.isBlank()) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
+		return ResponseEntity.ok(categoryService.getFollowedCategoryIds(teacherEmail));
+	}
+
+	@ExceptionHandler(IllegalStateException.class)
+	public ResponseEntity<Map<String, String>> handleIllegalState(IllegalStateException e) {
+		Map<String, String> error = new HashMap<>();
+		error.put("error", "ILLEGAL_STATE");
+		error.put("message", e.getMessage());
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+	}
+
+	@ExceptionHandler(IllegalArgumentException.class)
+	public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException e) {
+		Map<String, String> error = new HashMap<>();
+		error.put("error", "INVALID_ARGUMENT");
+		error.put("message", e.getMessage());
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+	}
+
+}
