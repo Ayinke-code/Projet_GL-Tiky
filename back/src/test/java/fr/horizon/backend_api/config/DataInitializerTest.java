@@ -58,7 +58,6 @@ class DataInitializerTest {
         when(categoryRepository.findAll()).thenReturn(List.of(mockCategory));
         when(categoryRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
-        when(issueRepository.findAll()).thenReturn(List.of());
         when(issueRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         dataInitializer.run();
