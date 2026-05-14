@@ -35,7 +35,7 @@ public class IssueService {
                 .category(category)
                 .createdBy(creator)
                 .status(IssueStatus.OUVERT)
-                .estPrive(false)
+                .isPrivate(false)
                 .build();
 
         return issueRepository.save(issue);
@@ -58,8 +58,8 @@ public class IssueService {
         return issueRepository.findByCreatedById(creatorId);
     }
 
-    public List<Issue> getIssuesByStatus(String status) {
-        IssueStatus status = IssueStatus.fromValue(status);
+    public List<Issue> getIssuesByStatus(String statut) {
+        IssueStatus status = IssueStatus.fromValue(statut);
         return issueRepository.findByStatus(status);
     }
 
