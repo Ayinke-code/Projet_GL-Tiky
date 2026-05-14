@@ -1,20 +1,15 @@
 package fr.horizon.backend_api.config;
 
-import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.Issue;
+import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.model.enums.IssueStatus;
-import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.IssueRepository;
+import fr.horizon.backend_api.model.enums.RequestManagerStatus;
+import fr.horizon.backend_api.repository.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-import fr.horizon.backend_api.model.Role;
-import fr.horizon.backend_api.model.User;
-import fr.horizon.backend_api.repository.RoleRepository;
-import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Set;
@@ -26,6 +21,7 @@ public class DataInitializer implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final RequestManagerRepository requestManagerRepository;
     private final IssueRepository issueRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -64,11 +60,13 @@ public class DataInitializer implements CommandLineRunner {
         // =========================
         // ISSUE TEST
         // =========================
-        if (issueRepository.count() == 0) {
+        Issue testIssue;
 
+        if (issueRepository.count() == 0) {
+            // Si aucune issue n'existe, on en crée une
             Category first = categoryRepository.findAll().get(0);
 
-            Issue issue = Issue.builder()
+            testIssue = Issue.builder()
                     .title("Climatisation en panne")
                     .description("La climatisation de l'amphithéâtre A ne fonctionne plus depuis lundi")
                     .status(IssueStatus.OUVERT)
@@ -77,7 +75,21 @@ public class DataInitializer implements CommandLineRunner {
                     .createdBy(admin)
                     .build();
 
-            issueRepository.save(issue);
+            testIssue = issueRepository.save(testIssue); // On récupère l'issue sauvegardée (avec son ID)
+        } else {
+            // Si elles existent déjà, on en récupère une pour le test du RequestManager
+            testIssue = issueRepository.findAll().get(0);
+        }
+
+        // 3. Initialisation du RequestManager
+        if (requestManagerRepository.count() == 0) {
+            RequestManager request = RequestManager.builder()
+                    .issue(testIssue) // On utilise l'issue créée ou récupérée juste au-dessus
+                    .categoryOwner(admin)
+                    .status(RequestManagerStatus.PENDING)
+                    .build();
+
+            requestManagerRepository.save(request);
         }
     }
 

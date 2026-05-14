@@ -15,5 +15,8 @@ public interface IssueRepository extends JpaRepository<Issue, Long> {
     List<Issue> findByCreatedById(Long userId);
 
     List<Issue> findByStatus(IssueStatus status);
+
+    List<Issue> findByStatusAndCreatedBy_Id(IssueStatus status, Long createdById);
+
 }
 

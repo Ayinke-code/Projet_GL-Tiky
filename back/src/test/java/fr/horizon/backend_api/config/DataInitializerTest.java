@@ -1,10 +1,8 @@
 package fr.horizon.backend_api.config;
 
 import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.IssueRepository;
-import fr.horizon.backend_api.repository.RoleRepository;
-import fr.horizon.backend_api.repository.UserRepository;
+import fr.horizon.backend_api.model.RequestManager;
+import fr.horizon.backend_api.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +26,9 @@ class DataInitializerTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private RequestManagerRepository requestManagerRepository;
 
     @Mock
     private CategoryRepository categoryRepository;
@@ -71,6 +72,9 @@ class DataInitializerTest {
                 .thenReturn("encoded-password");
 
         when(categoryRepository.count())
+                .thenReturn(0L);
+
+        when(requestManagerRepository.count())
                 .thenReturn(0L);
 
         when(issueRepository.count())
