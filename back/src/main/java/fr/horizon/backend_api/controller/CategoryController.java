@@ -1,7 +1,7 @@
 package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.CategoryDto;
-import fr.horizon.backend_api.model.dto.CategoryRequestDto;
+import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -46,7 +46,7 @@ public class CategoryController {
      */
     @PreAuthorize("hasAnyAuthority('ADMIN','TEACHER')")
     @PostMapping
-    public CategoryDto createCategory(@RequestBody CategoryRequestDto dto) {
+    public CategoryDto createCategory(@RequestBody CategoryCreateDto dto) {
         return categoryService.createCategory(dto);
     }
 
@@ -55,7 +55,7 @@ public class CategoryController {
      *
      * @param id identifiant de la catégorie
      */
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     @DeleteMapping("/{id}")
     public void deleteCategory(@PathVariable Long id) {
         categoryService.deleteById(id);

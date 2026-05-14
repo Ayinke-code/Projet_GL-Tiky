@@ -76,17 +76,20 @@ class DataInitializerTest {
         when(issueRepository.count())
                 .thenReturn(0L);
 
+        Category category = Category.builder()
+                .id(1L)
+                .name("DEV")
+                .build();
+
         when(categoryRepository.findAll())
-                .thenReturn(List.of(Category.builder().build()));
+                .thenReturn(List.of(category));
 
         // WHEN
         dataInitializer.run();
 
         // THEN
         verify(roleRepository, times(3)).save(any());
-
         verify(userRepository, times(3)).save(any());
-
         verify(categoryRepository, times(8)).save(any());
 
         verify(issueRepository).save(any());
