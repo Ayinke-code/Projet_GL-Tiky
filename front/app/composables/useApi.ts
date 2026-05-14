@@ -12,11 +12,11 @@ export const useApi = () => {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json'
     }
-    
+
     if (token.value) {
       headers['Authorization'] = `Bearer ${token.value}`
     }
-    
+
     return headers
   }
 

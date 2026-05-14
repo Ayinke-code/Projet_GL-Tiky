@@ -3,81 +3,52 @@
     <UCard class="max-w-2xl">
       <template #header>
         <div class="flex items-center gap-2">
-          <UButton 
-            to="/issues" 
-            variant="ghost" 
-            icon="i-lucide-arrow-left"
-            size="sm"
-          />
+          <UButton to="/issues" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
           <h1 class="text-2xl font-bold">Créer un ticket</h1>
         </div>
       </template>
-      
+
       <form @submit.prevent="handleCreateIssue" class="space-y-4">
         <!-- Titre -->
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">Titre *</label>
-          <input 
-            v-model="form.titre"
-            type="text"
-            placeholder="Entrez le titre du ticket"
+          <input v-model="form.titre" type="text" placeholder="Entrez le titre du ticket"
             class="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-            required
-          />
+            required />
         </div>
-        
+
         <!-- Description -->
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">Description *</label>
-          <UTextarea 
-            v-model="form.description"
-            placeholder="Décrivez le ticket en détail..."
-            :rows="6"
-            class="w-full"
-            required
-          />
+          <UTextarea v-model="form.description" placeholder="Décrivez le ticket en détail..." :rows="6" class="w-full"
+            required />
         </div>
-        
+
         <!-- Catégorie -->
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">Catégorie *</label>
-          <select 
-            v-model="form.categorieId"
+          <select v-model="form.categorieId"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-            required
-          >
+            required>
             <option disabled value="">Sélectionnez une catégorie</option>
             <option v-for="cat in categories" :key="cat.id" :value="cat.id">
               {{ cat.name }}
             </option>
           </select>
         </div>
-        
+
         <!-- Erreur -->
-        <UAlert 
-          v-if="error" 
-          color="error"
-          class="mt-4"
-          @close="error = null"
-        >
+        <UAlert v-if="error" color="error" class="mt-4" @close="error = null">
           <template #title>Erreur</template>
           {{ error }}
         </UAlert>
-        
+
         <!-- Boutons -->
         <div class="flex gap-2 justify-end pt-4 border-t">
-          <UButton 
-            to="/issues"
-            variant="outline"
-            icon="i-lucide-x"
-          >
+          <UButton to="/issues" variant="outline" icon="i-lucide-x">
             Annuler
           </UButton>
-          <UButton 
-            type="submit"
-            icon="i-lucide-check"
-            :loading="submitting"
-          >
+          <UButton type="submit" icon="i-lucide-check" :loading="submitting">
             Créer
           </UButton>
         </div>
@@ -110,20 +81,20 @@ const handleCreateIssue = async () => {
     error.value = 'Le titre est obligatoire'
     return
   }
-  
+
   if (!form.description.trim()) {
     error.value = 'La description est obligatoire'
     return
   }
-  
+
   if (!form.categorieId) {
     error.value = 'Veuillez sélectionner une catégorie'
     return
   }
-  
+
   submitting.value = true
   error.value = null
-  
+
   try {
     await createIssue({
       titre: form.titre,
@@ -132,7 +103,7 @@ const handleCreateIssue = async () => {
     })
 
     addIssueRole('CREATOR')
-    
+
     await router.push('/issues')
   } catch (err: any) {
     console.error('Create error:', err)

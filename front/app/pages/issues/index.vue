@@ -6,107 +6,86 @@
         <UButton to="/issues/create" icon="i-lucide-plus" size="lg">
           Créer une issue
         </UButton>
-        </div>
-      
+      </div>
+
       <div v-if="loading" class="text-center py-8">
         <USkeleton class="h-20 w-full mb-4" />
         <USkeleton class="h-20 w-full mb-4" />
         <USkeleton class="h-20 w-full" />
       </div>
-      
+
       <div v-else-if="issues.length === 0" class="text-center py-12">
         <p class="text-gray-500 text-lg">Aucune issue pour le moment</p>
         <UButton to="/issues/create" variant="outline" class="mt-4">
           Créer la première issue
         </UButton>
       </div>
-      
+
       <div v-else class="grid gap-4 overflow-visible">
-      <UCard 
-        v-for="issue in issues" 
-        :key="issue.idTick" 
-        class="hover:shadow-lg transition cursor-pointer overflow-visible"
-        @click="() => {}"
-      >
-        <template #header>
-          <div class="flex justify-between items-start gap-4">
-            <div class="flex-1">
-              <h3 class="font-bold text-lg text-gray-900">{{ issue.titre }}</h3>
-              <p class="text-sm text-gray-600 mt-1 line-clamp-2">{{ issue.description }}</p>
+        <UCard v-for="issue in issues" :key="issue.idTick"
+          class="hover:shadow-lg transition cursor-pointer overflow-visible" @click="() => { }">
+          <template #header>
+            <div class="flex justify-between items-start gap-4">
+              <div class="flex-1">
+                <h3 class="font-bold text-lg text-gray-900">{{ issue.titre }}</h3>
+                <p class="text-sm text-gray-600 mt-1 line-clamp-2">{{ issue.description }}</p>
+              </div>
+              <div class="text-sm text-gray-500 whitespace-nowrap">
+                {{ formatDate(issue.dateCreation) }}
+              </div>
             </div>
-            <div class="text-sm text-gray-500 whitespace-nowrap">
-              {{ formatDate(issue.dateCreation) }}
-            </div>
-          </div>
-        </template>
-        
-        <div class="flex gap-2 flex-wrap mb-4">
-          <UBadge variant="soft" color="info">
-            {{ issue.categorie?.name || issue.categorie?.nom || 'Sans catégorie' }}
-          </UBadge>
-          
-          <div class="relative group">
-            <button 
-              :class="getStatusBadgeClass(issue.statut)"
-              class="px-3 py-1 rounded-full font-medium text-sm transition cursor-pointer hover:shadow-md"
-              :disabled="updatingStatusId === issue.idTick"
-            >
-              <span v-if="updatingStatusId !== issue.idTick">
-                {{ getStatusLabel(issue.statut) }}
-              </span>
-              <span v-else class="flex items-center gap-2">
-                <UIcon name="i-lucide-loader" class="animate-spin" />
-              </span>
-            </button>
-            
-            <!-- Dropdown menu -->
-            <div class="absolute hidden group-hover:block bg-white border border-gray-300 rounded-lg shadow-2xl z-50 min-w-max left-0 top-8 max-h-56 overflow-y-auto">
-              <button 
-                v-for="status in ['OUVERT', 'COMPLET', 'INCOMPLET', 'TERMINE']"
-                :key="status"
-                @click.stop="handleStatusChange(issue.idTick, status)"
-                :class="[
-                  'w-full text-left px-4 py-2 hover:bg-gray-100 transition text-sm font-medium whitespace-nowrap',
-                  issue.statut === status ? 'bg-gray-50 border-l-4 border-indigo-500' : ''
-                ]"
-                :disabled="updatingStatusId === issue.idTick"
-              >
-                <span :class="getStatusBadgeClass(status)">{{ getStatusLabel(status) }}</span>
+          </template>
+
+          <div class="flex gap-2 flex-wrap mb-4">
+            <UBadge variant="soft" color="info">
+              {{ issue.categorie?.name || issue.categorie?.nom || 'Sans catégorie' }}
+            </UBadge>
+
+            <div class="relative group">
+              <button :class="getStatusBadgeClass(issue.statut)"
+                class="px-3 py-1 rounded-full font-medium text-sm transition cursor-pointer hover:shadow-md"
+                :disabled="updatingStatusId === issue.idTick">
+                <span v-if="updatingStatusId !== issue.idTick">
+                  {{ getStatusLabel(issue.statut) }}
+                </span>
+                <span v-else class="flex items-center gap-2">
+                  <UIcon name="i-lucide-loader" class="animate-spin" />
+                </span>
               </button>
+
+              <!-- Dropdown menu -->
+              <div
+                class="absolute hidden group-hover:block bg-white border border-gray-300 rounded-lg shadow-2xl z-50 min-w-max left-0 top-8 max-h-56 overflow-y-auto">
+                <button v-for="status in ['OUVERT', 'COMPLET', 'INCOMPLET', 'TERMINE']" :key="status"
+                  @click.stop="handleStatusChange(issue.idTick, status)" :class="[
+                    'w-full text-left px-4 py-2 hover:bg-gray-100 transition text-sm font-medium whitespace-nowrap',
+                    issue.statut === status ? 'bg-gray-50 border-l-4 border-indigo-500' : ''
+                  ]" :disabled="updatingStatusId === issue.idTick">
+                  <span :class="getStatusBadgeClass(status)">{{ getStatusLabel(status) }}</span>
+                </button>
+              </div>
             </div>
+
+            <UBadge v-if="issue.estPrive" color="warning" variant="soft">
+              🔒 Privé
+            </UBadge>
           </div>
-          
-          <UBadge v-if="issue.estPrive" color="warning" variant="soft">
-            🔒 Privé
-          </UBadge>
-        </div>
-        
-        <template #footer>
-          <div class="flex gap-2 justify-end">
-            <UButton 
-              @click.stop="handleDelete(issue.idTick)"
-              variant="ghost"
-              size="sm"
-              color="error"
-              icon="i-lucide-trash-2"
-              :loading="deletingId === issue.idTick"
-            >
-              Supprimer
-            </UButton>
-          </div>
-        </template>
-      </UCard>
-    </div>
-    
-    <UAlert 
-      v-if="error" 
-      color="error" 
-      class="mt-4"
-      @close="error = null"
-    >
-      <template #title>Erreur</template>
-      {{ error }}
-    </UAlert>
+
+          <template #footer>
+            <div class="flex gap-2 justify-end">
+              <UButton @click.stop="handleDelete(issue.idTick)" variant="ghost" size="sm" color="error"
+                icon="i-lucide-trash-2" :loading="deletingId === issue.idTick">
+                Supprimer
+              </UButton>
+            </div>
+          </template>
+        </UCard>
+      </div>
+
+      <UAlert v-if="error" color="error" class="mt-4" @close="error = null">
+        <template #title>Erreur</template>
+        {{ error }}
+      </UAlert>
     </div>
   </ClientOnly>
 </template>
@@ -182,7 +161,7 @@ const handleDelete = async (id: number) => {
   if (!confirm('Êtes-vous sûr de vouloir supprimer cette issue?')) {
     return
   }
-  
+
   deletingId.value = id
   try {
     await deleteIssue(id)

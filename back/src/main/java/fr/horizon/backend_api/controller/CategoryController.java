@@ -1,6 +1,7 @@
 package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.CategoryDto;
+import fr.horizon.backend_api.model.dto.CategoryRequestDto;
 import fr.horizon.backend_api.exception.CategoryAlreadyExistsException;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.CategoryCreateDto;
@@ -58,7 +59,7 @@ public class CategoryController {
 
     @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     @PostMapping
-    public CategoryDto createCategory(@RequestBody CategoryCreateDto dto) {
+    public CategoryDto createCategory(@RequestBody CategoryRequestDto dto) {
         return categoryService.createCategory(dto);
     }
 
