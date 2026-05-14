@@ -39,14 +39,16 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers("/auth/login").permitAll()
+                        .requestMatchers("/ws/issue/**").permitAll()
+                        .requestMatchers("/ws/issue").permitAll()
                         .requestMatchers("/auth/logout").authenticated()
                         .requestMatchers("/auth/me", "/categories/**").authenticated()
 
-                        .requestMatchers("/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers("/users/**").hasAuthority("ADMIN")
+                        .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers("/users/**").hasAuthority("ROLE_ADMIN")
 
-                        .requestMatchers("/teacher/**").hasAnyAuthority("TEACHER", "ADMIN")
-                        .requestMatchers("/student/**").hasAnyAuthority("STUDENT", "TEACHER", "ADMIN")
+                        .requestMatchers("/teacher/**").hasAnyAuthority("ROLE_TEACHER", "ROLE_ADMIN")
+                        .requestMatchers("/student/**").hasAnyAuthority("ROLE_STUDENT", "ROLE_TEACHER", "ROLE_ADMIN")
 
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

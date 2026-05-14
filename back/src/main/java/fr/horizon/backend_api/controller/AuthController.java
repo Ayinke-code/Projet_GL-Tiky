@@ -70,10 +70,22 @@ public class AuthController {
      * @return DTO de l'utilisateur courant
      */
     @GetMapping("/me")
-    public ResponseEntity<UserDto> me(Authentication authentication) {
+    public ResponseEntity<UserDto> me(Authentication authentication, jakarta.servlet.http.HttpServletRequest request) {
         String email = authentication.getName();
         User user = userService.findByEmail(email);
-        return ResponseEntity.ok(userService.toDto(user));
+        UserDto dto = userService.toDto(user);
+
+        // Expose le token pour le WebSocket (déjà présent dans le cookie HttpOnly)
+        if (request.getCookies() != null) {
+            for (jakarta.servlet.http.Cookie c : request.getCookies()) {
+                if ("token".equals(c.getName())) {
+                    dto.setWsToken(c.getValue());
+                    break;
+                }
+            }
+        }
+
+        return ResponseEntity.ok(dto);
     }
 
     /**
