@@ -1,9 +1,9 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.model.*;
-import fr.horizon.backend_api.model.dto.RequestManagerDTO;
-import fr.horizon.backend_api.model.dto.IssueDTO;
-import fr.horizon.backend_api.model.dto.IssueResponseDTO;
+import fr.horizon.backend_api.model.dto.RequestManagerDto;
+import fr.horizon.backend_api.model.dto.IssueDto;
+import fr.horizon.backend_api.model.dto.IssueResponseDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.repository.RequestManagerRepository;
@@ -33,14 +33,14 @@ public class IssueService {
     private final RequestManagerRepository requestManagerRepository;
     private static final Logger logger = LoggerFactory.getLogger(IssueService.class);
 
-    public Issue createIssue(IssueDTO dto, User creator) {
+    public Issue createIssue(IssueDto dto, User creator) {
         validateIssueInput(dto);
 
-        Category category = categoryRepository.findById(dto.getCategorieId())
+        Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
 
         Issue issue = Issue.builder()
-                .title(dto.getTitre())
+                .title(dto.getTitle())
                 .description(dto.getDescription())
                 .category(category)
                 .createdBy(creator)
@@ -60,14 +60,14 @@ public class IssueService {
         return issueRepository.findAll();
     }
 
-    public List<IssueResponseDTO> getAllIssuesAsDTO() {
+    public List<IssueResponseDto> getAllIssuesAsDto() {
         return issueRepository.findAll().stream()
-                .map(this::convertToDTO)
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
-    public List<Issue> getIssuesByCategory(Long categorieId) {
-        return issueRepository.findByCategoryId(categorieId);
+    public List<Issue> getIssuesByCategory(Long categoryId) {
+        return issueRepository.findByCategoryId(categoryId);
     }
 
     public List<Issue> getIssuesByCreator(Long creatorId) {
@@ -101,14 +101,14 @@ public class IssueService {
         return saved;
     }
 
-    private void validateIssueInput(IssueDTO dto) {
-        if (dto.getTitre() == null || dto.getTitre().isBlank()) {
+    private void validateIssueInput(IssueDto dto) {
+        if (dto.getTitle() == null || dto.getTitle().isBlank()) {
             throw new IllegalArgumentException("Le titre est obligatoire");
         }
         if (dto.getDescription() == null || dto.getDescription().isBlank()) {
             throw new IllegalArgumentException("La description est obligatoire");
         }
-        if (dto.getCategorieId() == null) {
+        if (dto.getCategoryId() == null) {
             throw new IllegalArgumentException("La catégorie est obligatoire");
         }
     }
@@ -116,10 +116,10 @@ public class IssueService {
      * envoyer une demande d'assignation d'un ticket à un teacher
      * @param userId Id de l'enseignant visé par la demande.
      * @param issueId Id du ticket visé par la demande.
-     * @return le DTO d'une demande d'assignation
+     * @return le Dto d'une demande d'assignation
      */
     @Transactional
-    public RequestManagerDTO assignManagerToIssue(Long issueId, Long userId) {
+    public RequestManagerDto assignManagerToIssue(Long issueId, Long userId) {
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket non trouvé"));
 
@@ -145,9 +145,9 @@ public class IssueService {
      * gère l'envoie d'une demande d'assignation d'un ticket à un teacher
      * @param issue Ticket visé par la demande.
      * @param targetedUser Teacher visé par la demande.
-     * @return le DTO d'une demande d'assignation
+     * @return le Dto d'une demande d'assignation
      */
-    private RequestManagerDTO sendManagerRequest(Issue issue, User targetedUser) {
+    private RequestManagerDto sendManagerRequest(Issue issue, User targetedUser) {
         RequestManagerStatus initialStatus = RequestManagerStatus.PENDING;
 
         // Correction : Comparaison par ID
@@ -165,7 +165,7 @@ public class IssueService {
 
         RequestManager savedDemande = requestManagerRepository.save(requestManager);
 
-        return RequestManagerDTO.builder()
+        return RequestManagerDto.builder()
                 .target(targetedUser.getName())
                 .status(initialStatus.toString())
                 .creationDate(LocalDateTime.now())
@@ -178,10 +178,10 @@ public class IssueService {
      * @param userId Id de l'enseignant qui répond à la demande.
      * @param demandeManagerId Id de la demande d'assignation du ticket.
      * @param response Réponse de l'enseignant.
-     * @return le DTO d'une demande d'assignation
+     * @return le Dto d'une demande d'assignation
      */
     @Transactional
-    public RequestManagerDTO respondManagerRequest(boolean response, Long demandeManagerId, Long userId) {
+    public RequestManagerDto respondManagerRequest(boolean response, Long demandeManagerId, Long userId) {
         RequestManager requestManager = requestManagerRepository.findById(demandeManagerId)
                 .orElseThrow(() -> new IllegalArgumentException("Demande non trouvée"));
 
@@ -198,7 +198,7 @@ public class IssueService {
             requestManager.setStatus(RequestManagerStatus.DENIED);
         }
 
-        return RequestManagerDTO.builder()
+        return RequestManagerDto.builder()
                 .target(requestManager.getTargetTeacher().getName())
                 .status(requestManager.getStatus().toString())
                 .creationDate(requestManager.getCreatedAt())
@@ -207,8 +207,8 @@ public class IssueService {
                 .build();
     }
 
-    private IssueResponseDTO convertToDTO(Issue issue) {
-        return IssueResponseDTO.builder()
+    private IssueResponseDto convertToDto(Issue issue) {
+        return IssueResponseDto.builder()
                 .idTick(issue.getId())
                 .titre(issue.getTitle())
                 .description(issue.getDescription())
@@ -216,20 +216,20 @@ public class IssueService {
                 .estPrive(issue.isPrivate())
                 .dateCreation(issue.getCreatedAt())
                 .dateModification(issue.getUpdatedAt())
-                .category(issue.getCategory() != null ? IssueResponseDTO.CategoryNameDTO.builder()
+                .category(issue.getCategory() != null ? IssueResponseDto.CategoryNameDto.builder()
                         .id(issue.getCategory().getId())
                         .name(issue.getCategory().getName())
                         .nom(issue.getCategory().getName())
                         .subject(issue.getCategory().getSubject())
                         .build() : null)
-                .createdBy(issue.getCreatedBy() != null ? IssueResponseDTO.UserNameDTO.builder()
+                .createdBy(issue.getCreatedBy() != null ? IssueResponseDto.UserNameDto.builder()
                         .id(issue.getCreatedBy().getId())
                         .name(issue.getCreatedBy().getName())
                         .email(issue.getCreatedBy().getEmail())
                         .role(issue.getCreatedBy().getDisplayRole())
                         .roles(issue.getCreatedBy().getRoleNames())
                         .build() : null)
-                .manager(issue.getManager() != null ? IssueResponseDTO.UserNameDTO.builder()
+                .manager(issue.getManager() != null ? IssueResponseDto.UserNameDto.builder()
                         .id(issue.getManager().getId())
                         .name(issue.getManager().getName())
                         .email(issue.getManager().getEmail())

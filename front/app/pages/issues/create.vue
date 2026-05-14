@@ -46,7 +46,7 @@
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">Catégorie *</label>
           <select
-            v-model="form.categorieId"
+            v-model="form.categoryId"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
             required
           >
@@ -106,7 +106,7 @@ const categories = ref<any[]>([])
 const form = reactive({
   titre: '',
   description: '',
-  categorieId: null
+  categoryId: null
 })
 
 const handleCreateIssue = async () => {
@@ -125,7 +125,7 @@ const handleCreateIssue = async () => {
     return
   }
 
-  if (!form.categorieId) {
+  if (!form.categoryId) {
     error.value = 'Veuillez sélectionner une catégorie'
     return
   }
@@ -137,7 +137,7 @@ const handleCreateIssue = async () => {
     await createIssue({
       titre: form.titre,
       description: form.description,
-      categorieId: form.categorieId
+      categoryId: form.categoryId
     })
 
     addIssueRole('CREATOR')

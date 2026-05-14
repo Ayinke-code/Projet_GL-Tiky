@@ -92,7 +92,7 @@ public class CategoryRequestService {
     }
 
     /**
-     * Convertit entité → DTO.
+     * Convertit entité → Dto.
      */
     private CategoryRequestDto toDto(CategoryRequest request) {
         return CategoryRequestDto.builder()

@@ -1,6 +1,6 @@
 package fr.horizon.backend_api.controller;
 
-import fr.horizon.backend_api.model.dto.CategoryResponseDTO;
+import fr.horizon.backend_api.model.dto.CategoryResponseDto;
 import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.service.CategoryService;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @GetMapping
-    public ResponseEntity<List<CategoryResponseDTO>> getCategories(Authentication authentication) {
+    public ResponseEntity<List<CategoryResponseDto>> getCategories(Authentication authentication) {
         String teacherId = authentication != null ? authentication.getName() : null;
         if (teacherId == null || teacherId.isBlank()) {
             return ResponseEntity.ok(categoryService.getAllActiveCategories());
@@ -35,7 +35,7 @@ public class CategoryController {
     }
 
     @PostMapping
-    public ResponseEntity<CategoryResponseDTO> createCategory(
+    public ResponseEntity<CategoryResponseDto> createCategory(
             @Valid @RequestBody CategoryCreateDto dto,
             Authentication authentication) {
 
@@ -44,54 +44,54 @@ public class CategoryController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        CategoryResponseDTO createdCategory = categoryService.createCategory(dto, teacherId);
+        CategoryResponseDto createdCategory = categoryService.createCategory(dto, teacherId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdCategory);
     }
 
     @GetMapping("/teacher")
-    public ResponseEntity<List<CategoryResponseDTO>> getCategoriesByTeacher(
+    public ResponseEntity<List<CategoryResponseDto>> getCategoriesByTeacher(
             Authentication authentication) {
         String teacherEmail = authentication != null ? authentication.getName() : null;
         if (teacherEmail == null || teacherEmail.isBlank()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        List<CategoryResponseDTO> categories = categoryService.getAllActiveCategoriesForTeacher(teacherEmail);
+        List<CategoryResponseDto> categories = categoryService.getAllActiveCategoriesForTeacher(teacherEmail);
         return ResponseEntity.ok(categories);
     }
 
     @GetMapping("/teacher/active")
-    public ResponseEntity<List<CategoryResponseDTO>> getActiveCategoriesByTeacher(
+    public ResponseEntity<List<CategoryResponseDto>> getActiveCategoriesByTeacher(
             Authentication authentication) {
         String teacherEmail = authentication != null ? authentication.getName() : null;
         if (teacherEmail == null || teacherEmail.isBlank()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
-        List<CategoryResponseDTO> categories = categoryService.getActiveCategoriesByTeacher(teacherEmail);
+        List<CategoryResponseDto> categories = categoryService.getActiveCategoriesByTeacher(teacherEmail);
         return ResponseEntity.ok(categories);
     }
 
     @GetMapping("/active")
-    public ResponseEntity<List<CategoryResponseDTO>> getAllActiveCategories() {
-        List<CategoryResponseDTO> categories = categoryService.getAllActiveCategories();
+    public ResponseEntity<List<CategoryResponseDto>> getAllActiveCategories() {
+        List<CategoryResponseDto> categories = categoryService.getAllActiveCategories();
         return ResponseEntity.ok(categories);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CategoryResponseDTO> getCategoryById(@PathVariable Long id) {
+    public ResponseEntity<CategoryResponseDto> getCategoryById(@PathVariable Long id) {
         return categoryService.getCategoryById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/search")
-    public ResponseEntity<CategoryResponseDTO> getCategoryByName(@RequestParam String name) {
+    public ResponseEntity<CategoryResponseDto> getCategoryByName(@RequestParam String name) {
         return categoryService.getCategoryByName(name)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CategoryResponseDTO> updateCategory(
+    public ResponseEntity<CategoryResponseDto> updateCategory(
             @PathVariable Long id,
             @Valid @RequestBody CategoryCreateDto dto,
             Authentication authentication) {
@@ -101,12 +101,12 @@ public class CategoryController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        CategoryResponseDTO updatedCategory = categoryService.updateCategory(id, dto, requesterEmail);
+        CategoryResponseDto updatedCategory = categoryService.updateCategory(id, dto, requesterEmail);
         return ResponseEntity.ok(updatedCategory);
     }
 
     @PatchMapping("/{id}/archive")
-    public ResponseEntity<CategoryResponseDTO> archiveCategory(
+    public ResponseEntity<CategoryResponseDto> archiveCategory(
             @PathVariable Long id,
             Authentication authentication) {
         String requesterEmail = authentication != null ? authentication.getName() : null;
@@ -117,7 +117,7 @@ public class CategoryController {
     }
 
     @PatchMapping("/{id}/unarchive")
-    public ResponseEntity<CategoryResponseDTO> unarchiveCategory(
+    public ResponseEntity<CategoryResponseDto> unarchiveCategory(
             @PathVariable Long id,
             Authentication authentication) {
         String requesterEmail = authentication != null ? authentication.getName() : null;

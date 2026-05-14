@@ -25,7 +25,7 @@ public class UserController {
     /**
      * Récupère l'ensemble des utilisateurs.
      *
-     * @return liste des utilisateurs sous forme de DTO
+     * @return liste des utilisateurs sous forme de Dto
      */
     @GetMapping
     public List<UserDto> getAllUsers() {
@@ -36,7 +36,7 @@ public class UserController {
      * Crée un nouvel utilisateur.
      *
      * @param dto données de création utilisateur
-     * @return utilisateur créé sous forme de DTO
+     * @return utilisateur créé sous forme de Dto
      */
     @PostMapping
     public UserDto createUser(@Valid @RequestBody UserRequestDto dto) {

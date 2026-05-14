@@ -7,6 +7,12 @@ import lombok.*;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Entité représentant une catégorie de questions.
+ *
+ * @author Tiky Team
+ * @version 1.0
+ */
 @Entity
 @Getter
 @Setter
@@ -32,16 +38,23 @@ public class Category extends BaseEntity {
     @JoinColumn(name = "owner_id")
     private User owner;
 
+    @ManyToOne
+    @JoinColumn(name = "id_util")
+    private User categoryOwner;
+
     @Column(nullable = false)
     private String subject;
 
-    @Builder.Default
-    @ManyToMany
-    @JoinTable(
-            name = "category_followers",
-            joinColumns = @JoinColumn(name = "category_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    private Set<User> followers = new HashSet<>();
+//    @Builder.Default
+//    @ManyToMany
+//    @JoinTable(
+//            name = "category_followers",
+//            joinColumns = @JoinColumn(name = "category_id"),
+//            inverseJoinColumns = @JoinColumn(name = "user_id")
+//    )
+//    private Set<User> followers = new HashSet<>();
+
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<CategoryFollower> followers = new HashSet<>();
 
 }

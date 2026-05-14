@@ -3,10 +3,10 @@ package fr.horizon.backend_api.controller;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.Role;
-import fr.horizon.backend_api.model.dto.RequestManagerDTO;
-import fr.horizon.backend_api.model.dto.IssueDTO;
-import fr.horizon.backend_api.model.dto.IssueResponseDTO;
-import fr.horizon.backend_api.model.dto.UpdateIssueStatusDTO;
+import fr.horizon.backend_api.model.dto.RequestManagerDto;
+import fr.horizon.backend_api.model.dto.IssueDto;
+import fr.horizon.backend_api.model.dto.IssueResponseDto;
+import fr.horizon.backend_api.model.dto.UpdateIssueStatusDto;
 import fr.horizon.backend_api.service.IssueService;
 import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,7 @@ public class IssueController {
     private final UserRepository userRepository;
 
     @PostMapping
-    public ResponseEntity<IssueResponseDTO> createIssue(@RequestBody IssueDTO dto, Authentication auth) {
+    public ResponseEntity<IssueResponseDto> createIssue(@RequestBody IssueDto dto, Authentication auth) {
         // Récupérer l'email depuis le token JWT
         String email = auth.getName();
 
@@ -38,7 +38,7 @@ public class IssueController {
         }
 
         Issue issue = issueService.createIssue(dto, creator);
-        IssueResponseDTO response = IssueResponseDTO.builder()
+        IssueResponseDto response = IssueResponseDto.builder()
                 .idTick(issue.getId())
                 .titre(issue.getTitle())
                 .description(issue.getDescription())
@@ -46,20 +46,20 @@ public class IssueController {
                 .estPrive(issue.isPrivate())
                 .dateCreation(issue.getCreatedAt())
                 .dateModification(issue.getUpdatedAt())
-                .category(issue.getCategory() != null ? IssueResponseDTO.CategoryNameDTO.builder()
+                .category(issue.getCategory() != null ? IssueResponseDto.CategoryNameDto.builder()
                         .id(issue.getCategory().getId())
                         .name(issue.getCategory().getName())
                         .nom(issue.getCategory().getName())
                         .subject(issue.getCategory().getSubject())
                         .build() : null)
-                .createdBy(issue.getCreatedBy() != null ? IssueResponseDTO.UserNameDTO.builder()
+                .createdBy(issue.getCreatedBy() != null ? IssueResponseDto.UserNameDto.builder()
                         .id(issue.getCreatedBy().getId())
                         .name(issue.getCreatedBy().getName())
                         .email(issue.getCreatedBy().getEmail())
                         .role(issue.getCreatedBy().getDisplayRole())
                         .roles(issue.getCreatedBy().getRoleNames())
                         .build() : null)
-                .manager(issue.getManager() != null ? IssueResponseDTO.UserNameDTO.builder()
+                .manager(issue.getManager() != null ? IssueResponseDto.UserNameDto.builder()
                         .id(issue.getManager().getId())
                         .name(issue.getManager().getName())
                         .email(issue.getManager().getEmail())
@@ -71,8 +71,8 @@ public class IssueController {
     }
 
     @GetMapping
-    public ResponseEntity<List<IssueResponseDTO>> getAllIssues() {
-        return ResponseEntity.ok(issueService.getAllIssuesAsDTO());
+    public ResponseEntity<List<IssueResponseDto>> getAllIssues() {
+        return ResponseEntity.ok(issueService.getAllIssuesAsDto());
     }
 
     @GetMapping("/{id}")
@@ -80,9 +80,9 @@ public class IssueController {
         return ResponseEntity.ok(issueService.getIssueById(id));
     }
 
-    @GetMapping("/category/{categorieId}")
-    public ResponseEntity<List<Issue>> getIssuesByCategory(@PathVariable Long categorieId) {
-        return ResponseEntity.ok(issueService.getIssuesByCategory(categorieId));
+    @GetMapping("/category/{categoryId}")
+    public ResponseEntity<List<Issue>> getIssuesByCategory(@PathVariable Long categoryId) {
+        return ResponseEntity.ok(issueService.getIssuesByCategory(categoryId));
     }
 
     @GetMapping("/creator/{creatorId}")
@@ -107,11 +107,11 @@ public class IssueController {
      * URL : POST /demandes-manager/issue/12/target-user/5
      */
     @PostMapping("demandes-manager/issue/{issueId}/target-user/{userId}")
-    public ResponseEntity<RequestManagerDTO> createRequest(
+    public ResponseEntity<RequestManagerDto> createRequest(
             @PathVariable Long issueId,
             @PathVariable Long userId) {
 
-        RequestManagerDTO dto = issueService.assignManagerToIssue(issueId, userId);
+        RequestManagerDto dto = issueService.assignManagerToIssue(issueId, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 
@@ -120,13 +120,13 @@ public class IssueController {
      * URL : PUT /demandes-manager/42/respond?accept=true&userId=5
      */
     @PutMapping("demandes-manager/{demandeId}/respond")
-    public ResponseEntity<RequestManagerDTO> respondToRequest(
+    public ResponseEntity<RequestManagerDto> respondToRequest(
             @PathVariable Long demandeId,
             @RequestParam boolean accept,
             // on devrait plutard remplacer par le jeton d'authentification
             @RequestParam Long userId) {
 
-        RequestManagerDTO dto = issueService.respondManagerRequest(accept, demandeId, userId);
+        RequestManagerDto dto = issueService.respondManagerRequest(accept, demandeId, userId);
         return ResponseEntity.ok(dto);
     }
 
@@ -136,8 +136,8 @@ public class IssueController {
 
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<Issue> updateIssueStatus(@PathVariable Long id, @RequestBody UpdateIssueStatusDTO dto) {
-        Issue updatedIssue = issueService.updateIssueStatus(id, dto.getStatut());
+    public ResponseEntity<Issue> updateIssueStatus(@PathVariable Long id, @RequestBody UpdateIssueStatusDto dto) {
+        Issue updatedIssue = issueService.updateIssueStatus(id, dto.getStatus());
         return ResponseEntity.ok(updatedIssue);
     }
 }

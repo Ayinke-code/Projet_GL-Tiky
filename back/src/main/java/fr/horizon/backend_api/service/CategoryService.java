@@ -4,7 +4,7 @@ import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.CategoryFollower;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.CategoryCreateDto;
-import fr.horizon.backend_api.model.dto.CategoryResponseDTO;
+import fr.horizon.backend_api.model.dto.CategoryResponseDto;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.repository.CategoryFollowerRepository;
 import fr.horizon.backend_api.repository.CategoryRepository;
@@ -64,7 +64,7 @@ public class CategoryService {
     }
 
     @Transactional
-    public CategoryResponseDTO createCategory(CategoryCreateDto dto, String teacherEmail) {
+    public CategoryResponseDto createCategory(CategoryCreateDto dto, String teacherEmail) {
         if (dto.getName() == null || dto.getName().trim().isEmpty() || dto.getSubject() == null || dto.getSubject().trim().isEmpty()) {
             throw new IllegalArgumentException("Le nom et le sujet de la catégorie sont requis");
         }
@@ -87,11 +87,11 @@ public class CategoryService {
 
         followCategory(saved.getId(), teacherEmail);
 
-        return convertToDTO(saved);
+        return convertToDto(saved);
     }
 
     @Transactional
-    public CategoryResponseDTO updateCategory(Long id, CategoryCreateDto dto, String requesterEmail) {
+    public CategoryResponseDto updateCategory(Long id, CategoryCreateDto dto, String requesterEmail) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée avec l'id : " + id));
 
@@ -106,10 +106,10 @@ public class CategoryService {
         category.setSubject(dto.getSubject().trim());
 
         Category saved = categoryRepository.save(category);
-        return convertToDTO(saved);
+        return convertToDto(saved);
     }
 
-    public List<CategoryResponseDTO> getAllActiveCategoriesForTeacher(String teacherEmail) {
+    public List<CategoryResponseDto> getAllActiveCategoriesForTeacher(String teacherEmail) {
         User teacher = userRepository.findByEmail(teacherEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé: " + teacherEmail));
 
@@ -118,44 +118,44 @@ public class CategoryService {
 
         return java.util.stream.Stream.concat(allActive.stream(), ownedByMe.stream())
                 .distinct()
-                .map(this::convertToDTO)
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
-    public List<CategoryResponseDTO> getCategoriesByTeacher(String teacherEmail) {
+    public List<CategoryResponseDto> getCategoriesByTeacher(String teacherEmail) {
         User teacher = userRepository.findByEmail(teacherEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé: " + teacherEmail));
 
         return categoryRepository.findByCategoryOwner(teacher).stream()
-                .map(this::convertToDTO)
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
-    public List<CategoryResponseDTO> getActiveCategoriesByTeacher(String teacherEmail) {
+    public List<CategoryResponseDto> getActiveCategoriesByTeacher(String teacherEmail) {
         User teacher = userRepository.findByEmail(teacherEmail)
                 .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé: " + teacherEmail));
 
         return categoryRepository.findByStatusAndCategoryOwner(CategoryStatus.ACTIVE, teacher).stream()
-                .map(this::convertToDTO)
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
-    public List<CategoryResponseDTO> getAllActiveCategories() {
+    public List<CategoryResponseDto> getAllActiveCategories() {
         return categoryRepository.findByStatus(CategoryStatus.ACTIVE).stream()
-                .map(this::convertToDTO)
+                .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
 
-    public Optional<CategoryResponseDTO> getCategoryById(Long id) {
-        return categoryRepository.findById(id).map(this::convertToDTO);
+    public Optional<CategoryResponseDto> getCategoryById(Long id) {
+        return categoryRepository.findById(id).map(this::convertToDto);
     }
 
-    public Optional<CategoryResponseDTO> getCategoryByName(String name) {
-        return categoryRepository.findByNameIgnoreCase(name).map(this::convertToDTO);
+    public Optional<CategoryResponseDto> getCategoryByName(String name) {
+        return categoryRepository.findByNameIgnoreCase(name).map(this::convertToDto);
     }
 
     @Transactional
-    public CategoryResponseDTO archiveCategory(Long id, String requesterEmail) {
+    public CategoryResponseDto archiveCategory(Long id, String requesterEmail) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
 
@@ -167,11 +167,11 @@ public class CategoryService {
         }
 
         category.setStatus(CategoryStatus.INACTIVE);
-        return convertToDTO(categoryRepository.save(category));
+        return convertToDto(categoryRepository.save(category));
     }
 
     @Transactional
-    public CategoryResponseDTO unarchiveCategory(Long id, String requesterEmail) {
+    public CategoryResponseDto unarchiveCategory(Long id, String requesterEmail) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
 
@@ -183,7 +183,7 @@ public class CategoryService {
         }
 
         category.setStatus(CategoryStatus.ACTIVE);
-        return convertToDTO(categoryRepository.save(category));
+        return convertToDto(categoryRepository.save(category));
     }
 
     @Transactional
@@ -205,8 +205,8 @@ public class CategoryService {
         categoryRepository.deleteById(id);
     }
 
-    private CategoryResponseDTO convertToDTO(Category category) {
-        return CategoryResponseDTO.builder()
+    private CategoryResponseDto convertToDto(Category category) {
+        return CategoryResponseDto.builder()
                 .id(category.getId())
                 .name(category.getName())
                 .subject(category.getSubject())

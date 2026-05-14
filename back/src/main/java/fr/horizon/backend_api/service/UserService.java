@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  * Service de gestion des utilisateurs.
  * <p>
  * Fournit les opérations métier liées aux utilisateurs :
- * création, récupération, suppression et conversion en DTO.
+ * création, récupération, suppression et conversion en Dto.
  * <p>
  * Encapsule la logique de persistance et les règles de base
  * (unicité email, encodage du mot de passe, gestion des rôles).
@@ -38,7 +38,7 @@ public class UserService {
      * Crée et persiste un nouvel utilisateur.
      *
      * @param dto données de création utilisateur
-     * @return utilisateur créé sous forme de DTO
+     * @return utilisateur créé sous forme de Dto
      * @throws RuntimeException si l'email est déjà utilisé
      */
     public UserDto createUser(UserRequestDto dto) {
@@ -74,7 +74,7 @@ public class UserService {
     /**
      * Retourne la liste de tous les utilisateurs.
      *
-     * @return liste de DTO utilisateurs
+     * @return liste de Dto utilisateurs
      */
     public List<UserDto> findAll() {
         return userRepository.findAll()
@@ -105,10 +105,10 @@ public class UserService {
     }
 
     /**
-     * Convertit une entité User en DTO.
+     * Convertit une entité User en Dto.
      *
      * @param user entité utilisateur
-     * @return DTO utilisateur
+     * @return Dto utilisateur
      */
     public UserDto toDto(User user) {
         return UserDto.builder()

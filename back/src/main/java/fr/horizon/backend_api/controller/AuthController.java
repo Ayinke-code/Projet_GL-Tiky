@@ -67,7 +67,7 @@ public class AuthController {
      * Retourne les informations de l'utilisateur actuellement authentifié.
      *
      * @param authentication contexte de sécurité Spring contenant l'utilisateur connecté
-     * @return DTO de l'utilisateur courant
+     * @return Dto de l'utilisateur courant
      */
     @GetMapping("/me")
     public ResponseEntity<UserDto> me(Authentication authentication, jakarta.servlet.http.HttpServletRequest request) {

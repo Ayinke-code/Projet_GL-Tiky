@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class IssueResponseDTO {
+public class IssueResponseDto {
     @JsonProperty("id")
     private Long idTick;
 
@@ -27,20 +27,20 @@ public class IssueResponseDTO {
     private LocalDateTime dateModification;
 
     @JsonProperty("categorie")
-    private CategoryNameDTO category;
+    private CategoryNameDto category;
 
     @JsonProperty("auteur")
-    private UserNameDTO createdBy;
+    private UserNameDto createdBy;
 
     @JsonProperty("professeur")
-    private UserNameDTO manager;
+    private UserNameDto manager;
 
     @Getter
     @Setter
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class CategoryNameDTO {
+    public static class CategoryNameDto {
         private Long id;
         private String name;
         private String nom;
@@ -52,7 +52,7 @@ public class IssueResponseDTO {
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class UserNameDTO {
+    public static class UserNameDto {
         private Long id;
         private String name;
         private String email;
