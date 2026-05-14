@@ -3,11 +3,12 @@ package fr.horizon.backend_api.service;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.CategoryFollower;
 import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.model.dto.CategoryResponseDTO;
-import fr.horizon.backend_api.model.dto.CreateCategoryDTO;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.repository.CategoryFollowerRepository;
 import fr.horizon.backend_api.repository.CategoryRepository;
+import fr.horizon.backend_api.repository.CategoryRequestRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final CategoryFollowerRepository followerRepository;
     private final UserRepository userRepository;
+    private final CategoryRequestRepository categoryRequestRepository;
 
     @Transactional
     public void followCategory(Long categoryId, String teacherEmail) {
@@ -62,7 +64,7 @@ public class CategoryService {
     }
 
     @Transactional
-    public CategoryResponseDTO createCategory(CreateCategoryDTO dto, String teacherEmail) {
+    public CategoryResponseDTO createCategory(CategoryCreateDto dto, String teacherEmail) {
         if (dto.getName() == null || dto.getName().trim().isEmpty() || dto.getSubject() == null || dto.getSubject().trim().isEmpty()) {
             throw new IllegalArgumentException("Le nom et le sujet de la catégorie sont requis");
         }
@@ -83,14 +85,13 @@ public class CategoryService {
 
         Category saved = categoryRepository.save(category);
 
-        // Auto-follow
         followCategory(saved.getId(), teacherEmail);
 
         return convertToDTO(saved);
     }
 
     @Transactional
-    public CategoryResponseDTO updateCategory(Long id, CreateCategoryDTO dto, String requesterEmail) {
+    public CategoryResponseDTO updateCategory(Long id, CategoryCreateDto dto, String requesterEmail) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée avec l'id : " + id));
 
@@ -103,12 +104,6 @@ public class CategoryService {
 
         category.setName(dto.getName().trim());
         category.setSubject(dto.getSubject().trim());
-
-        if (dto.getTeacher() != null && !dto.getTeacher().isEmpty()) {
-            User newOwner = userRepository.findByEmail(dto.getTeacher())
-                    .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé: " + dto.getTeacher()));
-            category.setCategoryOwner(newOwner);
-        }
 
         Category saved = categoryRepository.save(category);
         return convertToDTO(saved);
