@@ -46,4 +46,8 @@ public class Issue extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User createdBy;
 
+    @ManyToOne
+    @JoinColumn(name = "id_util_1")
+    private User manager;
+
 }
