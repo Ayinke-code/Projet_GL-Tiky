@@ -47,7 +47,7 @@ class IssueFollowerServiceTest {
         user.setId(1L);
 
         issue = new Issue();
-        issue.setIdTick(1L);
+        issue.setId(1L);
     }
 
     /** Vérifie qu'un utilisateur peut suivre une issue avec succès */
