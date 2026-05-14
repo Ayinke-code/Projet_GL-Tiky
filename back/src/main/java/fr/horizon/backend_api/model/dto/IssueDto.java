@@ -20,6 +20,8 @@ public class IssueDto {
     // Catégorie
     private Long categoryId;
     private String categoryName;
+    private Long categoryOwnerId;
+    private String categoryOwnerName;
     // Createur
     private Long createdId;
     private String createdName;

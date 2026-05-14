@@ -43,6 +43,10 @@ class IssueServiceTest {
     @Test
     void createIssue_should_save_issue_when_valid() {
 
+        User categoryOwner = new User();
+        categoryOwner.setId(99L);
+        categoryOwner.setName("Teacher");
+
         IssueCreateDto dto = new IssueCreateDto();
         dto.setTitle("Bug");
         dto.setDescription("Bug description");
@@ -56,6 +60,7 @@ class IssueServiceTest {
         Category category = new Category();
         category.setId(1L);
         category.setName("Software");
+        category.setOwner(categoryOwner);
 
         when(userRepository.findByEmail("john@test.com"))
                 .thenReturn(Optional.of(owner));
@@ -113,6 +118,10 @@ class IssueServiceTest {
     @Test
     void findAll_should_return_list_of_dto() {
 
+        User categoryOwner = new User();
+        categoryOwner.setId(99L);
+        categoryOwner.setName("Teacher");
+
         User user = new User();
         user.setId(1L);
         user.setName("John");
@@ -120,6 +129,7 @@ class IssueServiceTest {
         Category category = new Category();
         category.setId(1L);
         category.setName("Software");
+        category.setOwner(categoryOwner);
 
         Issue issue = Issue.builder()
                 .id(1L)
@@ -167,6 +177,10 @@ class IssueServiceTest {
     @Test
     void toDto_should_map_issue_correctly() {
 
+        User categoryOwner = new User();
+        categoryOwner.setId(99L);
+        categoryOwner.setName("Teacher");
+
         User user = new User();
         user.setId(1L);
         user.setName("John");
@@ -174,6 +188,7 @@ class IssueServiceTest {
         Category category = new Category();
         category.setId(1L);
         category.setName("Software");
+        category.setOwner(categoryOwner);
 
         Issue issue = Issue.builder()
                 .id(1L)
@@ -198,10 +213,15 @@ class IssueServiceTest {
     @Test
     void findById_should_return_issue() {
 
+        User categoryOwner = new User();
+        categoryOwner.setId(99L);
+        categoryOwner.setName("Teacher");
+
         Category category = Category.builder()
                 .id(10L)
                 .name("DEV")
                 .build();
+        category.setOwner(categoryOwner);
 
         User user = User.builder()
                 .id(5L)

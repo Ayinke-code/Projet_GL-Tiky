@@ -120,8 +120,12 @@ public class IssueService {
                 .rejectType(issue.getRejectType())
                 .rejectReason(issue.getRejectReason())
                 .rejectComment(issue.getRejectComment())
+                // Category
                 .categoryId(issue.getCategory().getId())
                 .categoryName(issue.getCategory().getName())
+                .categoryOwnerId(issue.getCategory().getOwner().getId())
+                .categoryOwnerName(issue.getCategory().getOwner().getName())
+                // CreatedBy
                 .createdId(issue.getCreatedBy().getId())
                 .createdName(issue.getCreatedBy().getName())
                 .createdAt(issue.getCreatedAt())
