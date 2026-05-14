@@ -43,6 +43,11 @@ public class ConversationController {
             userMap.put("id", msg.getUser().getId());
             userMap.put("name", msg.getUser().getName());
             userMap.put("email", msg.getUser().getEmail());
+            userMap.put("role", msg.getUser().getRoles().stream()
+                    .map(Role::getName)
+                    .map(name -> name.startsWith("ROLE_") ? name.substring(5) : name)
+                    .findFirst()
+                    .orElse("USER"));
 
             Map<String, Object> msgMap = new HashMap<>();
             msgMap.put("id", msg.getId());
@@ -94,6 +99,11 @@ public class ConversationController {
         userMap.put("id", message.getUser().getId());
         userMap.put("name", message.getUser().getName());
         userMap.put("email", message.getUser().getEmail());
+        userMap.put("role", message.getUser().getRoles().stream()
+                .map(Role::getName)
+                .map(name -> name.startsWith("ROLE_") ? name.substring(5) : name)
+                .findFirst()
+                .orElse("USER"));
 
         Map<String, Object> messageMap = new HashMap<>();
         messageMap.put("id", message.getId());

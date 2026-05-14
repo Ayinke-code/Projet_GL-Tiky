@@ -56,5 +56,6 @@ public class IssueResponseDTO {
         private Long id;
         private String name;
         private String email;
+        private String role;
     }
 }

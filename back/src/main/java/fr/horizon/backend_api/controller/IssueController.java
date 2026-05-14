@@ -2,6 +2,7 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.dto.RequestManagerDTO;
 import fr.horizon.backend_api.model.dto.IssueDTO;
 import fr.horizon.backend_api.model.dto.IssueResponseDTO;
@@ -51,11 +52,21 @@ public class IssueController {
                         .id(issue.getCreatedBy().getId())
                         .name(issue.getCreatedBy().getName())
                         .email(issue.getCreatedBy().getEmail())
+                        .role(issue.getCreatedBy().getRoles().stream()
+                                .map(Role::getName)
+                                .map(name -> name.startsWith("ROLE_") ? name.substring(5) : name)
+                                .findFirst()
+                                .orElse("USER"))
                         .build() : null)
                 .manager(issue.getManager() != null ? IssueResponseDTO.UserNameDTO.builder()
                         .id(issue.getManager().getId())
                         .name(issue.getManager().getName())
                         .email(issue.getManager().getEmail())
+                        .role(issue.getManager().getRoles().stream()
+                                .map(Role::getName)
+                                .map(name -> name.startsWith("ROLE_") ? name.substring(5) : name)
+                                .findFirst()
+                                .orElse("USER"))
                         .build() : null)
                 .build();
         return ResponseEntity.status(HttpStatus.CREATED).body(response);

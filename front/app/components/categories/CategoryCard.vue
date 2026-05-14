@@ -1,16 +1,17 @@
 <template>
   <div
-    class="bg-white border-l-4 rounded-lg shadow-sm p-5 hover:shadow-lg transition-all cursor-pointer group border-gray-200 relative overflow-hidden"
-    :class="[borderClass, category.status === 'ARCHIVED' ? 'grayscale opacity-60' : '']"
-    @click="$emit('click')"
-  >
+    class="bg-white border-l-4 rounded-lg shadow-sm p-5 hover:shadow-lg transition-all group border-gray-200 relative overflow-hidden"
+    :class="[
+      borderClass,
+      category.status === 'ARCHIVED' ? 'grayscale opacity-60' : '',
+      (ready && !user?.roles?.includes('TEACHER')) ? '' : 'cursor-pointer'
+    ]" @click="$emit('click')">
 
     <!-- Archive overlay -->
-    <div
-      v-if="category.status === 'ARCHIVED'"
-      class="absolute inset-0 bg-white/10 flex items-center justify-center z-10 pointer-events-none"
-    >
-      <span class="text-red-600 text-5xl font-black rotate-[-20deg] opacity-40 border-8 border-red-600 p-4 rounded-xl tracking-widest">
+    <div v-if="category.status === 'ARCHIVED'"
+      class="absolute inset-0 bg-white/10 flex items-center justify-center z-10 pointer-events-none">
+      <span
+        class="text-red-600 text-5xl font-black rotate-[-20deg] opacity-40 border-8 border-red-600 p-4 rounded-xl tracking-widest">
         ARCHIVE
       </span>
     </div>
@@ -37,20 +38,14 @@
 
         <template v-else>
 
-          <button
-            v-if="isFollowed"
-            @click.stop="confirmUnfollow"
-            class="text-[10px] bg-emerald-600 text-white px-3 py-1 rounded-full font-bold hover:bg-red-600 transition-colors"
-          >
+          <button v-if="isFollowed" @click.stop="confirmUnfollow"
+            class="text-[10px] bg-emerald-600 text-white px-3 py-1 rounded-full font-bold hover:bg-red-600 transition-colors">
             <i class="fa-solid fa-check mr-1"></i>
             Suivi
           </button>
 
-          <button
-            v-else
-            @click.stop="$emit('follow')"
-            class="text-[10px] bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-bold hover:bg-indigo-600 hover:text-white"
-          >
+          <button v-else @click.stop="$emit('follow')"
+            class="text-[10px] bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-bold hover:bg-indigo-600 hover:text-white">
             <i class="fa-solid fa-plus mr-1"></i>
             Suivre
           </button>
@@ -94,7 +89,7 @@ import { useAuth } from '~/composables/useAuth'
 /**
  * Récupération de l'utilisateur connecté.
  */
-const { user } = useAuth()
+const { user, ready } = useAuth()
 
 /**
  * Events émis par la carte catégorie.

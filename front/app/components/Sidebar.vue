@@ -2,20 +2,14 @@
   <aside class="w-64 bg-slate-900 text-white flex flex-col h-screen border-r border-slate-800">
     <!-- Logo -->
     <div class="h-16 flex items-center px-6 border-b border-slate-800 font-bold text-xl tracking-wider">
-      <span class="text-indigo-400 font-extrabold text-2xl mr-2 tracking-tighter">
-        tk.
-      </span> Tiky
+      <span class="text-indigo-400 font-extrabold text-2xl mr-2 tracking-tighter">tk.</span> Tiky
     </div>
 
     <!-- Navigation Scrollable -->
     <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
       <div v-if="isAuthenticated" class="mb-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
-        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-          Mon espace
-        </p>
-        <p class="text-sm font-semibold text-white">
-          {{ user?.name || 'Utilisateur' }}
-        </p>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Mon espace</p>
+        <p class="text-sm font-semibold text-white">{{ user?.name || 'Utilisateur' }}</p>
         <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wide">
           <span class="rounded-full bg-slate-800 px-2.5 py-1 text-slate-300">{{ user?.role || 'USER' }}</span>
           <span v-if="isIssueCreator" class="rounded-full bg-emerald-500/20 px-2.5 py-1 text-emerald-300">Issue Creator</span>
@@ -47,6 +41,8 @@
         <i class="fa-solid fa-folder w-6"></i>
         <span class="font-medium">Mes catégories</span>
       </NuxtLink>
+
+
     </nav>
 
     <!-- Footer Sidebar : Fixé en bas -->
@@ -76,6 +72,7 @@ const { user, isAuthenticated, isIssueCreator, isIssueFollower, isParticipant, c
 const isActive = (path) => route.path === path
 
 const goToLogin = () => navigateTo('/login')
+
 </script>
 
 <style scoped>
