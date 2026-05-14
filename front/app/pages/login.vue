@@ -6,9 +6,7 @@
         <div class="text-4xl font-bold text-indigo-600 mb-2">
           <span>tk.</span> Tiky
         </div>
-        <p class="text-gray-600">
-          Connectez-vous à votre compte
-        </p>
+        <p class="text-gray-600">Connectez-vous à votre compte</p>
       </div>
 
       <!-- Form -->
@@ -54,9 +52,7 @@
 
       <!-- Test Users -->
       <div class="mt-8 pt-8 border-t border-gray-200">
-        <p class="text-xs text-gray-500 text-center mb-3">
-          Admin de test:
-        </p>
+        <p class="text-xs text-gray-500 text-center mb-3">Admin de test:</p>
         <div class="space-y-2 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg">
           <p><strong>Email:</strong> admin@admin.fr</p>
           <p><strong>Mot de passe:</strong> password</p>

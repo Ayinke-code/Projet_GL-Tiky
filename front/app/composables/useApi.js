@@ -18,6 +18,21 @@ export const useApi = () => {
   const normalizeIssue = (issue) => {
     const category = issue?.category || issue?.categorie || {}
 
+    // Le backend renvoie déjà le rôle filtré par priorité (ADMIN > TEACHER > STUDENT)
+    // On s'assure que si ADMIN est présent dans les rôles, il est prioritaire
+    const rawAuteurRoles = Array.isArray(issue?.roles) ? issue.roles : (issue?.createdBy?.roles || issue?.auteur?.roles || [issue?.auteur?.role || issue?.createdBy?.role || 'STUDENT'])
+    const rawProfesseurRoles = Array.isArray(issue?.manager?.roles) ? issue.manager.roles : (issue?.professeur?.roles || issue?.manager?.roles || (issue?.professeur || issue?.manager ? [issue?.professeur?.role || issue?.manager?.role || 'TEACHER'] : []))
+
+    const getPriorityRole = (roles) => {
+      const upperRoles = roles.map(r => String(r).toUpperCase())
+      if (upperRoles.includes('ADMIN') || upperRoles.includes('ROLE_ADMIN')) return 'ADMIN'
+      if (upperRoles.includes('TEACHER') || upperRoles.includes('ROLE_TEACHER')) return 'TEACHER'
+      return 'STUDENT'
+    }
+
+    const auteurRole = getPriorityRole(rawAuteurRoles)
+    const professeurRole = (issue?.professeur || issue?.manager) ? getPriorityRole(rawProfesseurRoles) : null
+
     return {
       ...issue,
       idTick: issue?.idTick ?? issue?.id,
@@ -31,8 +46,12 @@ export const useApi = () => {
       dateCreation: issue?.dateCreation ?? issue?.createdAt ?? null,
       estPrive: issue?.estPrive ?? issue?.isPrivate ?? false,
       visibilite: issue?.visibilite ?? (issue?.isPrivate ? 'Privé' : 'Public'),
-      auteur: issue?.auteur ?? issue?.createdBy?.name ?? issue?.createdBy?.email ?? '',
-      professeur: issue?.professeur ?? issue?.manager?.name ?? issue?.manager?.email ?? '',
+      auteur: (issue?.auteur?.name || issue?.auteur) ?? issue?.createdBy?.name ?? issue?.createdBy?.email ?? '',
+      auteurRole: auteurRole,
+      auteurRoles: [auteurRole],
+      professeur: (issue?.professeur?.name || issue?.professeur) ?? issue?.manager?.name ?? issue?.manager?.email ?? '',
+      professeurRole: professeurRole,
+      professeurRoles: professeurRole ? [professeurRole] : [],
       abonnes: issue?.abonnes ?? []
     }
   }
@@ -83,19 +102,34 @@ export const useApi = () => {
     return normalizeIssue(updated)
   }
 
+  const getPriorityRole = (roles) => {
+    if (!roles) return 'STUDENT'
+    const upperRoles = roles.map(r => String(r).toUpperCase())
+    if (upperRoles.includes('ADMIN') || upperRoles.includes('ROLE_ADMIN')) return 'ADMIN'
+    if (upperRoles.includes('TEACHER') || upperRoles.includes('ROLE_TEACHER')) return 'TEACHER'
+    return 'STUDENT'
+  }
+
+  const normalizeMessage = (msg) => {
+    const rawRoles = Array.isArray(msg.user?.roles) ? msg.user.roles : [msg.user?.role || 'STUDENT']
+    const role = getPriorityRole(rawRoles)
+    return {
+      id: msg.id,
+      auteur: msg.user?.name || msg.user?.email || 'Anonyme',
+      role: role,
+      roles: [role],
+      date: msg.createdAt,
+      contenu: msg.content ?? msg.contenu
+    }
+  }
+
   const getIssueMessages = async (issueId) => {
     try {
       const response = await request(`/conversations/issue/${issueId}`)
       if (!response?.conversation?.messages) {
         return []
       }
-      return response.conversation.messages.map(msg => ({
-        id: msg.id,
-        auteur: msg.user?.name || msg.user?.email || 'Anonyme',
-        role: 'user',
-        date: msg.createdAt,
-        contenu: msg.content
-      }))
+      return response.conversation.messages.map(normalizeMessage)
     } catch (error) {
       console.error('Error fetching messages:', error)
       return []
@@ -109,11 +143,12 @@ export const useApi = () => {
         throw new Error('Conversation not found')
       }
       const conversationId = response.conversation.id
-      await request(`/conversations/${conversationId}/messages`, {
+      const message = await request(`/conversations/${conversationId}/messages`, {
         method: 'POST',
         body: { content, issueId }
       })
-      return true
+
+      return normalizeMessage(message)
     } catch (error) {
       console.error('Error sending message:', error)
       throw error
@@ -133,6 +168,8 @@ export const useApi = () => {
     getIssueMessages,
     sendIssueMessage,
     normalizeCategory,
-    normalizeIssue
+    normalizeIssue,
+    normalizeMessage,
+    getPriorityRole
   })
 }

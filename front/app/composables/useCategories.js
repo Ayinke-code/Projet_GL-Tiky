@@ -1,17 +1,17 @@
 export const useCategories = () => {
   const api = useApi()
 
-  /**
+    /**
    * État global des catégories.
    */
   const categories = useState('categories', () => [])
 
-  /**
+    /**
    * Utilisateur actuellement connecté.
    */
   const { user } = useAuth()
 
-  /**
+    /**
    * État global des erreurs liées aux catégories.
    */
   const error = ref(null)
@@ -41,6 +41,7 @@ export const useCategories = () => {
    * @throws met à jour `error` si erreur API
    */
   const createCategory = async (payload) => {
+
     error.value = null
 
     if (!user?.value?.id) {
