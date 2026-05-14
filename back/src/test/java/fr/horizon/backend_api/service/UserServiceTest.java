@@ -4,6 +4,8 @@ import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.UserDto;
 import fr.horizon.backend_api.model.dto.UserRequestDto;
+import fr.horizon.backend_api.model.enums.IssueStatus;
+import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -35,6 +37,9 @@ class UserServiceTest {
 
     @InjectMocks
     private UserService userService;
+
+    @Mock
+    private IssueRepository issueRepository;
 
     @Test
     void createUser_should_save_user_when_valid() {
@@ -137,11 +142,34 @@ class UserServiceTest {
                 .roles(Set.of(role))
                 .build();
 
+        when(issueRepository.existsByCreatedByIdAndStatus(1L, IssueStatus.OUVERT))
+                .thenReturn(true);
+
         UserDto dto = userService.toDto(user);
 
         assertEquals(1L, dto.getId());
         assertEquals("John", dto.getName());
         assertEquals("john@test.com", dto.getEmail());
         assertEquals(Set.of("USER"), dto.getRoles());
+        assertTrue(dto.isContributor());
+    }
+
+    @Test
+    void toDto_should_return_false_when_no_open_issues() {
+
+        Role role = new Role();
+        role.setName("USER");
+
+        User user = User.builder()
+                .id(1L)
+                .roles(Set.of(role))
+                .build();
+
+        when(issueRepository.existsByCreatedByIdAndStatus(1L, IssueStatus.OUVERT))
+                .thenReturn(false);
+
+        UserDto dto = userService.toDto(user);
+
+        assertFalse(dto.isContributor());
     }
 }
