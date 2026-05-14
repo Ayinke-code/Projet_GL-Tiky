@@ -34,7 +34,7 @@ public class IssueService {
                 .description(dto.getDescription())
                 .category(category)
                 .createdBy(creator)
-                .statut(IssueStatus.OUVERT)
+                .status(IssueStatus.OUVERT)
                 .estPrive(false)
                 .build();
 
@@ -58,8 +58,8 @@ public class IssueService {
         return issueRepository.findByCreatedById(creatorId);
     }
 
-    public List<Issue> getIssuesByStatus(String statut) {
-        IssueStatus status = IssueStatus.fromValue(statut);
+    public List<Issue> getIssuesByStatus(String status) {
+        IssueStatus status = IssueStatus.fromValue(status);
         return issueRepository.findByStatus(status);
     }
 
@@ -73,14 +73,14 @@ public class IssueService {
     public Issue updateIssueStatus(Long id, String newStatus) {
         logger.info("updateIssueStatus called with id={}, newStatus={}", id, newStatus);
         Issue issue = getIssueById(id);
-        logger.info("Current status before update: {}", issue.getStatut());
+        logger.info("Current status before update: {}", issue.getStatus());
         
         IssueStatus status = IssueStatus.fromValue(newStatus);
         logger.info("Parsed status: {}", status);
         
-        issue.setStatut(status);
+        issue.setStatus(status);
         Issue saved = issueRepository.save(issue);
-        logger.info("Status after save: {}", saved.getStatut());
+        logger.info("Status after save: {}", saved.getStatus());
         
         return saved;
     }
