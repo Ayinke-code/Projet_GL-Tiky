@@ -9,6 +9,7 @@ import fr.horizon.backend_api.model.dto.UserDto;
 import fr.horizon.backend_api.model.dto.UserRequestDto;
 import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -122,5 +123,16 @@ public class UserService {
                                 .collect(Collectors.toSet())
                 )
                 .build();
+    }
+
+    public List<UserDto> getAllTeachers() {
+        Role teacherRole = roleRepository.findByName("TEACHER")
+                .orElseThrow(() -> new EntityNotFoundException("Rôle TEACHER non trouvé en base"));
+
+        List<User> teachers = userRepository.getAllByRoles(Set.of(teacherRole));
+
+        return teachers.stream()
+                .map(this::toDto)
+                .toList();
     }
 }
