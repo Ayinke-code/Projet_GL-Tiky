@@ -46,4 +46,14 @@ public class Issue extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User createdBy;
 
+    @ManyToOne
+    @JoinColumn(name = "id_util_1")
+    private User manager;
+
+    @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.Set<Conversation> conversations = new java.util.HashSet<>();
+
+    @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.Set<Document> documents = new java.util.HashSet<>();
+
 }

@@ -1,11 +1,11 @@
 package fr.horizon.backend_api.config;
 
-import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.Issue;
+import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
+import fr.horizon.backend_api.model.enums.ConversationRole;
 import fr.horizon.backend_api.model.enums.IssueStatus;
-import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.IssueRepository;
+import fr.horizon.backend_api.repository.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.Set;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
@@ -27,6 +28,9 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final IssueRepository issueRepository;
+    private final ConversationRepository conversationRepository;
+    private final ConversationUserRepository conversationUserRepository;
+    private final MessageRepository messageRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${app.default-password}")
@@ -78,6 +82,62 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
 
             issueRepository.save(issue);
+        }
+
+        // =========================
+        // CONVERSATION TEST
+        // =========================
+        if (conversationRepository.count() == 0 && issueRepository.count() > 0) {
+            Issue testIssue = issueRepository.findAll().get(0);
+            User teacher = userRepository.findByEmail("teacher@teacher.fr").orElse(null);
+
+            if (teacher != null) {
+                // Create conversation
+                Conversation conversation = Conversation.builder()
+                        .issue(testIssue)
+                        .build();
+                conversation = conversationRepository.save(conversation);
+
+                // Add users to conversation
+                ConversationUser initiator = ConversationUser.builder()
+                        .conversation(conversation)
+                        .user(admin)
+                        .role(ConversationRole.INITIATOR)
+                        .build();
+                conversationUserRepository.save(initiator);
+
+                ConversationUser responder = ConversationUser.builder()
+                        .conversation(conversation)
+                        .user(teacher)
+                        .role(ConversationRole.RESPONDER)
+                        .build();
+                conversationUserRepository.save(responder);
+
+                // Add test messages
+                Message message1 = Message.builder()
+                        .content("Le problème a été signalé lundi matin, la climatisation ne fonctionne plus depuis.")
+                        .user(admin)
+                        .conversation(conversation)
+                        .issue(testIssue)
+                        .build();
+                messageRepository.save(message1);
+
+                Message message2 = Message.builder()
+                        .content("Nous avons confié la réparation à l'équipe de maintenance. Ils interviennent demain à 10h.")
+                        .user(teacher)
+                        .conversation(conversation)
+                        .issue(testIssue)
+                        .build();
+                messageRepository.save(message2);
+
+                Message message3 = Message.builder()
+                        .content("Merci pour votre réactivité! Nous informerons les étudiants du planning.")
+                        .user(admin)
+                        .conversation(conversation)
+                        .issue(testIssue)
+                        .build();
+                messageRepository.save(message3);
+            }
         }
     }
 

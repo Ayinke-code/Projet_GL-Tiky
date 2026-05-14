@@ -1,17 +1,17 @@
 export const useCategories = () => {
   const api = useApi()
 
-    /**
+  /**
    * État global des catégories.
    */
   const categories = useState('categories', () => [])
 
-    /**
+  /**
    * Utilisateur actuellement connecté.
    */
   const { user } = useAuth()
 
-    /**
+  /**
    * État global des erreurs liées aux catégories.
    */
   const error = ref(null)
@@ -23,7 +23,7 @@ export const useCategories = () => {
    * @throws erreur API si le chargement échoue
    */
   const fetchCategories = async () => {
-    const data = await api('/categories')
+    const data = await api.getCategories()
     categories.value = data
     return data
   }
@@ -41,7 +41,6 @@ export const useCategories = () => {
    * @throws met à jour `error` si erreur API
    */
   const createCategory = async (payload) => {
-
     error.value = null
 
     if (!user?.value?.id) {
@@ -52,14 +51,11 @@ export const useCategories = () => {
     const values = {
       name: payload.name,
       subject: payload.subject,
-      ownerId: user.value.id
+      teacher: user.value.email || user.value.name
     }
 
     try {
-      const created = await api('/categories', {
-        method: 'POST',
-        body: values
-      })
+      const created = await api.createCategory(values)
 
       // refresh local state
       await fetchCategories()
@@ -77,9 +73,7 @@ export const useCategories = () => {
    * @param id identifiant de la catégorie
    */
   const deleteCategory = async (id) => {
-    await api(`/categories/${id}`, {
-      method: 'DELETE'
-    })
+    await api.deleteCategory(id)
 
     categories.value = categories.value.filter(c => c.id !== id)
   }

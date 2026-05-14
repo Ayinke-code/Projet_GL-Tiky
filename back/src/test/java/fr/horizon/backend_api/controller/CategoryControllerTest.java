@@ -1,12 +1,14 @@
 package fr.horizon.backend_api.controller;
 
-import fr.horizon.backend_api.model.dto.CategoryDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.horizon.backend_api.model.dto.CategoryResponseDTO;
+import fr.horizon.backend_api.model.dto.CreateCategoryDTO;
 import fr.horizon.backend_api.service.CategoryService;
-import fr.horizon.backend_api.service.JwtToken;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -14,14 +16,13 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(CategoryController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@SpringBootTest
+@AutoConfigureMockMvc(addFilters = false) // Disable security for easier API testing
 class CategoryControllerTest {
 
     @Autowired
@@ -30,61 +31,151 @@ class CategoryControllerTest {
     @MockitoBean
     private CategoryService categoryService;
 
-    @MockitoBean
-    private JwtToken jwtToken;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Test
-    void shouldGetAllCategories() throws Exception {
-
-        CategoryDto dto = CategoryDto.builder()
+    @DisplayName("GET /categories/active devrait retourner la liste des catégories actives")
+    void getAllActiveCategories_Success() throws Exception {
+        CategoryResponseDTO cat = CategoryResponseDTO.builder()
                 .id(1L)
-                .name("DEV")
-                .subject("Backend Java")
+                .name("Maths")
+                .subject("Algèbre")
+                .status("active")
                 .build();
 
-        when(categoryService.findAll()).thenReturn(List.of(dto));
+        when(categoryService.getAllActiveCategories()).thenReturn(List.of(cat));
 
-        mockMvc.perform(get("/categories"))
+        mockMvc.perform(get("/categories/active"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name").value("DEV"))
-                .andExpect(jsonPath("$[0].subject").value("Backend Java"));
-
-        verify(categoryService).findAll();
+                .andExpect(jsonPath("$[0].name").value("Maths"))
+                .andExpect(jsonPath("$[0].subject").value("Algèbre"));
     }
 
     @Test
-    void shouldCreateCategory() throws Exception {
-
-        CategoryDto response = CategoryDto.builder()
-                .id(1L)
-                .name("DEV")
-                .subject("Backend Java")
+    @DisplayName("POST /categories devrait créer une catégorie (Parcours complet Mock)")
+    void createCategory_FullFlow_Success() throws Exception {
+        CreateCategoryDTO dto = CreateCategoryDTO.builder()
+                .name("Physique")
+                .subject("Optique")
                 .build();
 
-        when(categoryService.createCategory(any())).thenReturn(response);
+        CategoryResponseDTO response = CategoryResponseDTO.builder()
+                .id(2L)
+                .name("Physique")
+                .subject("Optique")
+                .status("active")
+                .owner("teacher-1")
+                .build();
+
+        when(categoryService.createCategory(any(CreateCategoryDTO.class), any(String.class))).thenReturn(response);
 
         mockMvc.perform(post("/categories")
+                        .header("X-Teacher-ID", "teacher-1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                    {
-                                      "name": "DEV",
-                                      "subject": "Backend Java",
-                                      "ownerId": 1
-                                    }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.name").value("DEV"));
-
-        verify(categoryService).createCategory(any());
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(2))
+                .andExpect(jsonPath("$.name").value("Physique"))
+                .andExpect(jsonPath("$.subject").value("Optique"))
+                .andExpect(jsonPath("$.status").value("active"));
     }
 
     @Test
-    void shouldDeleteCategory() throws Exception {
+    @DisplayName("GET /categories/{id} devrait retourner la catégorie si elle existe")
+    void getCategoryById_Success() throws Exception {
+        CategoryResponseDTO response = CategoryResponseDTO.builder()
+                .id(1L)
+                .name("Maths")
+                .build();
 
-        mockMvc.perform(delete("/categories/1"))
+        when(categoryService.getCategoryById(1L)).thenReturn(java.util.Optional.of(response));
+
+        mockMvc.perform(get("/categories/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Maths"));
+    }
+
+    @Test
+    @DisplayName("GET /categories/{id} devrait retourner 404 si elle n'existe pas")
+    void getCategoryById_NotFound() throws Exception {
+        when(categoryService.getCategoryById(99L)).thenReturn(java.util.Optional.empty());
+
+        mockMvc.perform(get("/categories/99"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("PUT /categories/{id} devrait mettre à jour la catégorie")
+    void updateCategory_Success() throws Exception {
+        CreateCategoryDTO dto = CreateCategoryDTO.builder()
+                .name("Maths Updated")
+                .subject("Analyse")
+                .build();
+
+        CategoryResponseDTO response = CategoryResponseDTO.builder()
+                .id(1L)
+                .name("Maths Updated")
+                .build();
+
+        when(categoryService.updateCategory(eq(1L), any(), any())).thenReturn(response);
+
+        mockMvc.perform(put("/categories/1")
+                        .header("X-Teacher-ID", "teacher-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Maths Updated"));
+    }
+
+    @Test
+    @DisplayName("PATCH /categories/{id}/archive devrait archiver la catégorie")
+    void archiveCategory_Success() throws Exception {
+        CategoryResponseDTO response = CategoryResponseDTO.builder()
+                .id(1L)
+                .status("archived")
+                .build();
+
+        when(categoryService.archiveCategory(eq(1L), any())).thenReturn(response);
+
+        mockMvc.perform(patch("/categories/1/archive")
+                        .header("X-Teacher-ID", "teacher-1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("archived"));
+    }
+
+    @Test
+    @DisplayName("DELETE /categories/{id} devrait supprimer la catégorie")
+    void deleteCategory_Success() throws Exception {
+        mockMvc.perform(delete("/categories/1")
+                        .header("X-Teacher-ID", "teacher-1"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("POST /categories/{id}/follow devrait suivre la catégorie")
+    void followCategory_Success() throws Exception {
+        mockMvc.perform(post("/categories/1/follow")
+                        .header("X-Teacher-ID", "teacher-1"))
                 .andExpect(status().isOk());
+    }
 
-        verify(categoryService).deleteById(1L);
+    @Test
+    @DisplayName("POST /categories avec nom en doublon devrait retourner 409")
+    void createCategory_Conflict() throws Exception {
+        CreateCategoryDTO dto = CreateCategoryDTO.builder()
+                .name("Duplicate")
+                .subject("Subject")
+                .build();
+
+        when(categoryService.createCategory(any(), any()))
+                .thenThrow(new fr.horizon.backend_api.exception.CategoryAlreadyExistsException("Already exists"));
+
+        mockMvc.perform(post("/categories")
+                        .header("X-Teacher-ID", "teacher-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("CATEGORY_ALREADY_EXISTS"));
     }
 }

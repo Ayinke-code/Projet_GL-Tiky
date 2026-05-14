@@ -31,4 +31,9 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     List<Category> findByOwnerId(Long ownerId);
 
+    // Support methods for categoryOwner (used by backup-inspired controllers)
+    List<Category> findByCategoryOwner(fr.horizon.backend_api.model.User categoryOwner);
+    List<Category> findByCategoryOwnerId(Long categoryOwnerId);
+    List<Category> findByStatusAndCategoryOwner(CategoryStatus status, fr.horizon.backend_api.model.User categoryOwner);
+
 }

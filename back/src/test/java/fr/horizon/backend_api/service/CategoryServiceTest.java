@@ -2,13 +2,11 @@ package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.CategoryRequest;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.CategoryDto;
-import fr.horizon.backend_api.model.dto.CategoryCreateDto;
+import fr.horizon.backend_api.model.dto.CategoryRequestDto;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.CategoryRequestRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,9 +29,6 @@ class CategoryServiceTest {
 
     @Mock
     private UserRepository userRepository;
-
-    @Mock
-    private CategoryRequestRepository categoryRequestRepository;
 
     @InjectMocks
     private CategoryService categoryService;
@@ -91,7 +86,7 @@ class CategoryServiceTest {
     void shouldCreateCategory() {
 
         // GIVEN
-        CategoryCreateDto dto = CategoryCreateDto.builder()
+        CategoryRequestDto dto = CategoryRequestDto.builder()
                 .name("JAVA")
                 .subject("Backend Java")
                 .ownerId(1L)
@@ -126,7 +121,7 @@ class CategoryServiceTest {
     void shouldThrowExceptionWhenOwnerNotFound() {
 
         // GIVEN
-        CategoryCreateDto dto = CategoryCreateDto.builder()
+        CategoryRequestDto dto = CategoryRequestDto.builder()
                 .name("JAVA")
                 .subject("Backend")
                 .ownerId(999L)
@@ -151,23 +146,14 @@ class CategoryServiceTest {
     void shouldDeleteCategory() {
 
         // GIVEN
-        List<CategoryRequest> requests = List.of(
-                CategoryRequest.builder().id(1L).build(),
-                CategoryRequest.builder().id(2L).build()
-        );
-
-        when(categoryRepository.findById(10L))
-                .thenReturn(Optional.of(category));
-
-        when(categoryRequestRepository.findAllByCategory(category))
-                .thenReturn(requests);
+        when(categoryRepository.existsById(10L))
+                .thenReturn(true);
 
         // WHEN
         categoryService.deleteById(10L);
 
         // THEN
-        verify(categoryRequestRepository).deleteAll(requests);
-        verify(categoryRepository).delete(category);
+        verify(categoryRepository).deleteById(10L);
     }
 
     /**
@@ -177,15 +163,14 @@ class CategoryServiceTest {
     void shouldThrowExceptionWhenCategoryNotFound() {
 
         // GIVEN
-        when(categoryRepository.findById(999L))
-                .thenReturn(Optional.empty());
+        when(categoryRepository.existsById(999L))
+                .thenReturn(false);
 
         // WHEN / THEN
         assertThatThrownBy(() -> categoryService.deleteById(999L))
                 .isInstanceOf(CategoryNotFoundException.class)
                 .hasMessage("Category not found with id: 999");
 
-        verify(categoryRequestRepository, never()).deleteAll(any());
-        verify(categoryRepository, never()).delete(any());
+        verify(categoryRepository, never()).deleteById(anyLong());
     }
 }
