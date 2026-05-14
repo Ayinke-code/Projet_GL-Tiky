@@ -25,7 +25,7 @@
         Activités
       </p>
 
-      <NuxtLink to="/issues"
+      <NuxtLink v-if="ready && user?.id" to="/issues" 
         class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
         :class="isActive('/issues') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <i class="fa-solid fa-circle-exclamation w-6"></i>
