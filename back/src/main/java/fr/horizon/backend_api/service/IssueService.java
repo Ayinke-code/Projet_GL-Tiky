@@ -30,10 +30,10 @@ public class IssueService {
                 .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
 
         Issue issue = Issue.builder()
-                .titre(dto.getTitre())
+                .title(dto.getTitre())
                 .description(dto.getDescription())
-                .categorie(category)
-                .createur(creator)
+                .category(category)
+                .createdBy(creator)
                 .statut(IssueStatus.OUVERT)
                 .estPrive(false)
                 .build();
@@ -51,16 +51,16 @@ public class IssueService {
     }
 
     public List<Issue> getIssuesByCategory(Long categorieId) {
-        return issueRepository.findByCategorie_IdCat(categorieId);
+        return issueRepository.findByCategoryId(categorieId);
     }
 
     public List<Issue> getIssuesByCreator(Long creatorId) {
-        return issueRepository.findByCreateur_Id(creatorId);
+        return issueRepository.findByCreatedById(creatorId);
     }
 
     public List<Issue> getIssuesByStatus(String statut) {
         IssueStatus status = IssueStatus.fromValue(statut);
-        return issueRepository.findByStatut(status);
+        return issueRepository.findByStatus(status);
     }
 
     public void deleteIssue(Long id) {
