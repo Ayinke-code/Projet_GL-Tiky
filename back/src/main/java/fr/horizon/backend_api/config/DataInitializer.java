@@ -3,7 +3,6 @@ package fr.horizon.backend_api.config;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
-import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,7 +43,7 @@ public class DataInitializer implements CommandLineRunner {
         // User teacher
         getOrCreateUser("teacher@teacher.fr", "Teacher", Set.of(teacherRole));
         // User student
-        getOrCreateUser("student@student.fr", "Student", Set.of(studentRole));
+        User student = getOrCreateUser("student@student.fr", "Student", Set.of(studentRole));
 
         // =========================
         // CATEGORIES DEFAULT
@@ -65,19 +64,8 @@ public class DataInitializer implements CommandLineRunner {
         // ISSUE TEST
         // =========================
         if (issueRepository.count() == 0) {
-
             Category first = categoryRepository.findAll().get(0);
-
-            Issue issue = Issue.builder()
-                    .title("Climatisation en panne")
-                    .description("La climatisation de l'amphithéâtre A ne fonctionne plus depuis lundi")
-                    .status(IssueStatus.OUVERT)
-                    .isPrivate(false)
-                    .category(first)
-                    .createdBy(admin)
-                    .build();
-
-            issueRepository.save(issue);
+            createIssue("Climatisation en panne", "La climatisation de l'amphithéâtre A ne fonctionne plus depuis lundi", student, first);
         }
     }
 
@@ -109,6 +97,17 @@ public class DataInitializer implements CommandLineRunner {
                         .subject(subject)
                         .status(CategoryStatus.ACTIVE)
                         .owner(owner)
+                        .build()
+        );
+    }
+
+    private void createIssue(String title, String description, User createdBy, Category category) {
+        issueRepository.save(
+                Issue.builder()
+                        .title(title)
+                        .description(description)
+                        .createdBy(createdBy)
+                        .category(category)
                         .build()
         );
     }

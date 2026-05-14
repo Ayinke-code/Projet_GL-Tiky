@@ -3,12 +3,14 @@ package fr.horizon.backend_api.service;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.CategoryRequest;
+import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.CategoryDto;
 import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.CategoryRequestRepository;
+import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +36,9 @@ class CategoryServiceTest {
 
     @Mock
     private CategoryRequestRepository categoryRequestRepository;
+
+    @Mock
+    private IssueRepository issueRepository;
 
     @InjectMocks
     private CategoryService categoryService;
@@ -156,16 +161,25 @@ class CategoryServiceTest {
                 CategoryRequest.builder().id(2L).build()
         );
 
+        List<Issue> issues = List.of(
+                Issue.builder().id(1L).build(),
+                Issue.builder().id(2L).build()
+        );
+
         when(categoryRepository.findById(10L))
                 .thenReturn(Optional.of(category));
 
         when(categoryRequestRepository.findAllByCategory(category))
                 .thenReturn(requests);
 
+        when(issueRepository.findByCategoryId(10L))
+                .thenReturn(issues);
+
         // WHEN
         categoryService.deleteById(10L);
 
         // THEN
+        verify(issueRepository).deleteAll(issues);
         verify(categoryRequestRepository).deleteAll(requests);
         verify(categoryRepository).delete(category);
     }

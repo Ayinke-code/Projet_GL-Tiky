@@ -61,7 +61,7 @@ const handleLogin = async (values) => {
   // Envoie de la requête de login
   try {
     await login(values?.email, values?.password)
-    await navigateTo('/')
+    await navigateTo('/issues')
   } catch (e) {
     // error.value = "Email ou mot de passe incorrect"
     showError('Email ou mot de passe incorrect.')

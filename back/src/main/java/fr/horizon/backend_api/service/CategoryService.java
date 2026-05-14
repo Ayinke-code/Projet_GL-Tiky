@@ -3,12 +3,14 @@ package fr.horizon.backend_api.service;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.CategoryRequest;
+import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.CategoryDto;
 import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.CategoryRequestRepository;
+import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final CategoryRequestRepository categoryRequestRepository;
+    private final IssueRepository issueRepository;
 
     /**
      * Récupère toutes les catégories.
@@ -63,7 +66,9 @@ public class CategoryService {
                 .orElseThrow(() -> new CategoryNotFoundException(id));
 
         List<CategoryRequest> requests = categoryRequestRepository.findAllByCategory(category);
+        List<Issue> issues = issueRepository.findByCategoryId(category.getId());
 
+        issueRepository.deleteAll(issues);
         categoryRequestRepository.deleteAll(requests);
 
         categoryRepository.delete(category);

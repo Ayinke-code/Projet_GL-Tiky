@@ -33,8 +33,10 @@ function onSubmit(event) {
             </UFormField>
         </UForm>
 
-        <UButton @click="form?.submit()" color="secondary" variant="soft" class="cursor-pointer">
-            Submit
-        </UButton>
+        <div class="flex justify-center">
+            <UButton @click="form?.submit()" color="secondary" variant="soft" class="cursor-pointer">
+                Envoyer
+            </UButton>
+        </div>
     </div>
 </template>
