@@ -107,4 +107,23 @@ class IssueControllerTest {
 
         verify(issueService).deleteById(1L);
     }
+
+    @Test
+    void shouldGetIssueById() throws Exception {
+
+        IssueDto dto = IssueDto.builder()
+                .id(1L)
+                .title("Bug")
+                .description("desc")
+                .build();
+
+        when(issueService.findById(1L)).thenReturn(dto);
+
+        mockMvc.perform(get("/issues/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.title").value("Bug"));
+
+        verify(issueService).findById(1L);
+    }
 }

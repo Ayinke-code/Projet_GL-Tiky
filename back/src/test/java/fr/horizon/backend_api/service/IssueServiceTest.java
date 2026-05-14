@@ -194,4 +194,47 @@ class IssueServiceTest {
         assertEquals(1L, dto.getCreatedId());
         assertEquals("John", dto.getCreatedName());
     }
+
+    @Test
+    void findById_should_return_issue() {
+
+        Category category = Category.builder()
+                .id(10L)
+                .name("DEV")
+                .build();
+
+        User user = User.builder()
+                .id(5L)
+                .name("John")
+                .build();
+
+        Issue issue = Issue.builder()
+                .id(1L)
+                .title("Bug")
+                .description("desc")
+                .category(category)
+                .createdBy(user)
+                .build();
+
+        when(issueRepository.findById(1L))
+                .thenReturn(Optional.of(issue));
+
+        IssueDto result = issueService.findById(1L);
+
+        assertNotNull(result);
+        assertEquals(1L, result.getId());
+        assertEquals("Bug", result.getTitle());
+        assertEquals(10L, result.getCategoryId());
+        assertEquals("DEV", result.getCategoryName());
+    }
+
+    @Test
+    void findById_should_throw_when_not_found() {
+
+        when(issueRepository.findById(1L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IssueNotFoundException.class,
+                () -> issueService.findById(1L));
+    }
 }

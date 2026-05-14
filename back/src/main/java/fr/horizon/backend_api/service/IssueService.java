@@ -46,6 +46,18 @@ public class IssueService {
     }
 
     /**
+     * Retourne l'issue correspondant à l'id.
+     *
+     * @param id id de l'issue à trouver
+     * @return DTO de l'issue
+     */
+    public IssueDto findById(Long id) {
+        return issueRepository.findById(id)
+                .map(this::toDto)
+                .orElseThrow(() -> new IssueNotFoundException(id));
+    }
+
+    /**
      * Crée une nouvelle issue.
      * <p>
      * L'issue est associée à un utilisateur (owner) via son email
@@ -112,6 +124,8 @@ public class IssueService {
                 .categoryName(issue.getCategory().getName())
                 .createdId(issue.getCreatedBy().getId())
                 .createdName(issue.getCreatedBy().getName())
+                .createdAt(issue.getCreatedAt())
+                .updatedAt(issue.getUpdatedAt())
                 .build();
     }
 }

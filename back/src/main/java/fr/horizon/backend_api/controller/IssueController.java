@@ -39,6 +39,17 @@ public class IssueController {
     }
 
     /**
+     * Récupère l'issue correspondant à l'id.
+     *
+     * @return l'issue sous forme de DTO
+     */
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/{id}")
+    public IssueDto getIssueById(@PathVariable Long id) {
+        return issueService.findById(id);
+    }
+
+    /**
      * Crée une nouvelle issue.
      * <p>
      * L'utilisateur est récupéré depuis le contexte Spring Security

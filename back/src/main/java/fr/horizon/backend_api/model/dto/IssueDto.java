@@ -1,10 +1,10 @@
 package fr.horizon.backend_api.model.dto;
 
-import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import lombok.Builder;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -23,4 +23,6 @@ public class IssueDto {
     // Createur
     private Long createdId;
     private String createdName;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
