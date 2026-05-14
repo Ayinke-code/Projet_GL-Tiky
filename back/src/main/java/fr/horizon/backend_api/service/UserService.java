@@ -7,6 +7,8 @@ import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.UserDto;
 import fr.horizon.backend_api.model.dto.UserRequestDto;
+import fr.horizon.backend_api.model.enums.IssueStatus;
+import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final IssueRepository issueRepository;
 
     /**
      * Crée et persiste un nouvel utilisateur.
@@ -111,6 +114,12 @@ public class UserService {
      * @return DTO utilisateur
      */
     public UserDto toDto(User user) {
+        boolean hasOpenIssues =
+                issueRepository.existsByCreatedByIdAndStatus(
+                        user.getId(),
+                        IssueStatus.OUVERT
+                );
+
         return UserDto.builder()
                 .id(user.getId())
                 .name(user.getName())
@@ -121,6 +130,7 @@ public class UserService {
                                 .map(Role::getName)
                                 .collect(Collectors.toSet())
                 )
+                .isContributor(hasOpenIssues)
                 .build();
     }
 }
