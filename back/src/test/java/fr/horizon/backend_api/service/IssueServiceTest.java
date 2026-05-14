@@ -246,6 +246,8 @@ class IssueServiceTest {
         assertEquals("Bug", result.getTitle());
         assertEquals(10L, result.getCategoryId());
         assertEquals("DEV", result.getCategoryName());
+        assertEquals(99L, result.getCategoryOwnerId());
+        assertEquals("Teacher", result.getCategoryOwnerName());
     }
 
     @Test
@@ -256,5 +258,60 @@ class IssueServiceTest {
 
         assertThrows(IssueNotFoundException.class,
                 () -> issueService.findById(1L));
+    }
+
+    @Test
+    void updateStatus_should_update_issue_status() {
+
+        Issue issue = new Issue();
+        issue.setId(1L);
+        issue.setStatus(IssueStatus.OUVERT);
+
+        when(issueRepository.findById(1L))
+                .thenReturn(Optional.of(issue));
+
+        issueService.updateStatus("TERMINE", 1L);
+
+        assertEquals(IssueStatus.TERMINE, issue.getStatus());
+        verify(issueRepository).save(issue);
+    }
+
+    @Test
+    void updateStatus_should_throw_when_invalid_status() {
+
+        assertThrows(IllegalArgumentException.class,
+                () -> issueService.updateStatus("INVALID", 1L));
+    }
+
+    @Test
+    void updatePrivacy_should_toggle_privacy() {
+
+        Issue issue = new Issue();
+        issue.setId(1L);
+        issue.setPrivate(false);
+
+        when(issueRepository.findById(1L))
+                .thenReturn(Optional.of(issue));
+
+        issueService.updatePrivacy(1L);
+
+        assertTrue(issue.isPrivate());
+        verify(issueRepository).save(issue);
+    }
+
+    @Test
+    void updatePrivacy_should_toggle_from_true_to_false() {
+
+        Issue issue = new Issue();
+        issue.setId(1L);
+        issue.setPrivate(true);
+
+        when(issueRepository.findById(1L))
+                .thenReturn(Optional.of(issue));
+
+        issueService.updatePrivacy(1L);
+
+        assertFalse(issue.isPrivate());
+        verify(issueRepository).save(issue);
     }
 }

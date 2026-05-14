@@ -67,6 +67,29 @@ public class IssueController {
     }
 
     /**
+     * Met à jour le statut d'une issue.
+     *
+     * @param id identifiant de l'issue
+     * @param status nouveau statut sous forme de chaîne (ex: OUVERT, TERMINE)
+     */
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/{id}/update-status")
+    public void updateStatus(@PathVariable Long id, @RequestBody String status) {
+        issueService.updateStatus(status, id);
+    }
+
+    /**
+     * Inverse la visibilité privée d'une issue.
+     *
+     * @param id identifiant de l'issue
+     */
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/{id}/update-private")
+    public void updatePrivacy(@PathVariable Long id) {
+        issueService.updatePrivacy(id);
+    }
+
+    /**
      * Supprime une issue par son identifiant.
      *
      * @param id identifiant de l'issue

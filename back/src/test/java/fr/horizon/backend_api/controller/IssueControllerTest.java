@@ -126,4 +126,24 @@ class IssueControllerTest {
 
         verify(issueService).findById(1L);
     }
+
+    @Test
+    void shouldUpdateIssueStatus() throws Exception {
+
+        mockMvc.perform(post("/issues/1/update-status")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("TERMINE"))
+                .andExpect(status().isOk());
+
+        verify(issueService).updateStatus("TERMINE", 1L);
+    }
+
+    @Test
+    void shouldToggleIssuePrivacy() throws Exception {
+
+        mockMvc.perform(post("/issues/1/update-private"))
+                .andExpect(status().isOk());
+
+        verify(issueService).updatePrivacy(1L);
+    }
 }

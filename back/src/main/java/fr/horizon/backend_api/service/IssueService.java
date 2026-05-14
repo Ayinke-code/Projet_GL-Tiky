@@ -7,6 +7,7 @@ import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.dto.IssueDto;
+import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.UserRepository;
@@ -88,6 +89,51 @@ public class IssueService {
         issueRepository.save(issue);
 
         return toDto(issue);
+    }
+
+    /**
+     * Met à jour le statut d'une issue.
+     * <p>
+     * Convertit la chaîne reçue en valeur de l'enum {@link IssueStatus}.
+     * Si la valeur est invalide, une exception est levée.
+     *
+     * @param status nouveau statut sous forme de chaîne
+     * @param id identifiant de l'issue
+     * @throws IllegalArgumentException si le statut est invalide
+     * @throws IssueNotFoundException si l'issue n'existe pas
+     */
+    public void updateStatus(String status, Long id) {
+        IssueStatus issueStatus;
+
+        try {
+            issueStatus = IssueStatus.valueOf(status.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid status");
+        }
+
+        Issue issue = issueRepository.findById(id)
+                .orElseThrow(() -> new IssueNotFoundException(id));
+
+        issue.setStatus(issueStatus);
+
+        issueRepository.save(issue);
+    }
+
+    /**
+     * Inverse la visibilité privée d'une issue.
+     * <p>
+     * Passe une issue de privé à public ou inversement.
+     *
+     * @param id identifiant de l'issue
+     * @throws IssueNotFoundException si l'issue n'existe pas
+     */
+    public void updatePrivacy(Long id){
+        Issue issue = issueRepository.findById(id)
+                .orElseThrow(() -> new IssueNotFoundException(id));
+
+        issue.setPrivate(!issue.isPrivate());
+
+        issueRepository.save(issue);
     }
 
     /**
