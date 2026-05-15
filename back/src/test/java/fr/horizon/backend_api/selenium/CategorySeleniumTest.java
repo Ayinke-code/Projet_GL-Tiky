@@ -21,7 +21,7 @@ public class CategorySeleniumTest {
 
     private WebDriver driver;
     private WebDriverWait wait;
-    private final String baseUrl = "http://localhost:3000/categorie";
+    private final String baseUrl = "http://localhost:3000/categories";
 
     private Process frontend;
 
@@ -29,9 +29,11 @@ public class CategorySeleniumTest {
     void setup() throws Exception {
         frontend = new ProcessBuilder("npm", "start")
                 .directory(new File("../front"))
+                .redirectErrorStream(true)
+                .inheritIO()
                 .start();
 
-        Thread.sleep(20000);
+        waitForFrontend();
 
         WebDriverManager.chromedriver()
                 .browserVersion("144")
@@ -50,6 +52,32 @@ public class CategorySeleniumTest {
     void tearDown() {
         if (driver != null) driver.quit();
         if (frontend != null) frontend.destroy();
+    }
+
+    private void waitForFrontend() throws InterruptedException {
+        int maxRetries = 30;
+
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                java.net.HttpURLConnection connection =
+                        (java.net.HttpURLConnection) new java.net.URL("http://localhost:3000/categories").openConnection();
+
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(1000);
+                connection.connect();
+
+                int code = connection.getResponseCode();
+
+                if (code >= 200 && code < 400) {
+                    return;
+                }
+
+            } catch (Exception ignored) {}
+
+            Thread.sleep(1000);
+        }
+
+        throw new RuntimeException("Frontend non disponible après timeout");
     }
 
     @Test
