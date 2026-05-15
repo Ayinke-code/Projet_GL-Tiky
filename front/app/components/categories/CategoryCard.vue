@@ -44,7 +44,8 @@
             Suivi
           </button>
 
-          <button v-else @click.stop="$emit('follow')"
+          <!-- TODO: Remettre pour le Sprint 2 -->
+          <button v-else-if="false" @click.stop="$emit('follow')"
             class="text-[10px] bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-bold hover:bg-indigo-600 hover:text-white">
             <i class="fa-solid fa-plus mr-1"></i>
             Suivre
