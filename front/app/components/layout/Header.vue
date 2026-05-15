@@ -12,7 +12,7 @@
     
     <div class="flex items-center space-x-4">
       <div class="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
-        LB
+        {{ userInitial }}
       </div>
     </div>
   </header>
@@ -20,4 +20,9 @@
 
 <script setup>
 defineEmits(['toggle-sidebar'])
+const { user, ready } = useAuth()
+const userInitial = computed(() => {
+  if (ready && user?.value?.name) return user.value.name.charAt(0).toUpperCase()
+  else return '?'
+})
 </script>

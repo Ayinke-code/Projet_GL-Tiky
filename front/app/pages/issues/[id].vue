@@ -160,7 +160,7 @@ const toggleVisibility = async () => {
                     <!--  -->
                     <button v-if="issue.status !== 'TERMINE'" @click="isResolveModalOpen = true"
                         :disabled="issue.status === 'résolu'"
-                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-105">
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-transform duration-200 hover:scale-105">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -171,7 +171,7 @@ const toggleVisibility = async () => {
                     <!-- Privé/Public : TODO: Quand on aura les 'Issue Manager', on pourra bloquer ce bouton pour les autres -->
                     <!--  -->
                     <button @click="isVisibilityModalOpen = true"
-                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors transition-transform duration-200 hover:scale-105"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors transition-transform duration-200 hover:scale-105 cursor-pointer"
                         :class="issue.private
                             ? 'border-blue-300 text-blue-600 bg-white hover:bg-blue-50'
                             : 'border-red-300 text-red-600 bg-white hover:bg-red-50'">
@@ -192,7 +192,7 @@ const toggleVisibility = async () => {
 
                 <!-- ===== COLONNE GAUCHE : CONVERSATION ===== -->
                 <div class="lg:col-span-2 space-y-4">
-
+                    <template v-if="false">
                     <!-- Messages -->
                     <div class="space-y-3">
                         <div v-for="msg in messages" :key="msg.id"
@@ -293,7 +293,7 @@ const toggleVisibility = async () => {
                             </button>
                         </div>
                     </div>
-
+                    </template>
                 </div>
 
                 <!-- ===== COLONNE DROITE : SIDEBAR ===== -->
@@ -310,12 +310,12 @@ const toggleVisibility = async () => {
                                 <span class="font-medium text-gray-900">{{ issue.createdName || 'Inconnu' }}</span>
                             </div>
                             <!-- TODO -->
-                            <div class="flex justify-between items-center">
+                            <div v-if="false" class="flex justify-between items-center">
                                 <span class="text-gray-500">Enseignant en charge</span>
                                 <span class="font-semibold text-gray-900">{{ issue.professeur || 'Non défini' }}</span>
                             </div>
                             <!-- TODO -->
-                            <div class="flex justify-between items-center">
+                            <div v-if="false" class="flex justify-between items-center">
                                 <span class="text-gray-500">Abonnés</span>
                                 <span class="font-medium text-gray-900">{{ issue.abonnes || 0 }}</span>
                             </div>
@@ -323,7 +323,7 @@ const toggleVisibility = async () => {
                     </div>
 
                     <!-- Carte RDV -->
-                    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div v-if="false" class="bg-white rounded-xl border border-gray-200 overflow-hidden">
                         <div class="px-5 py-3 border-b border-gray-100">
                             <div class="flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-500" fill="none"

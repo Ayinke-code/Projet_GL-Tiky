@@ -38,7 +38,7 @@
 
         <button
           type="submit"
-          class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-all"
+          class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-all cursor-pointer"
         >
           <i class="fa-solid fa-plus mr-2"></i>
           Créer la catégorie
