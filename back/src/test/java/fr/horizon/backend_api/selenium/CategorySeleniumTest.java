@@ -24,11 +24,15 @@ public class CategorySeleniumTest {
 
     @BeforeAll
     void setup() {
-        WebDriverManager.chromedriver().setup();
+        WebDriverManager.chromedriver()
+                .browserVersion("144")
+                .setup();
+
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
+
         driver = new ChromeDriver(options);
         wait = new WebDriverWait(driver, Duration.ofSeconds(10));
     }
