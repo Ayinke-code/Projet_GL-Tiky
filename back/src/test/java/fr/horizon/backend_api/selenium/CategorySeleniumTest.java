@@ -11,6 +11,7 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
+import java.io.File;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -22,8 +23,16 @@ public class CategorySeleniumTest {
     private WebDriverWait wait;
     private final String baseUrl = "http://localhost:3000/categorie";
 
+    private Process frontend;
+
     @BeforeAll
-    void setup() {
+    void setup() throws Exception {
+        frontend = new ProcessBuilder("npm", "start")
+                .directory(new File("../front"))
+                .start();
+
+        Thread.sleep(20000);
+
         WebDriverManager.chromedriver()
                 .browserVersion("144")
                 .setup();
@@ -39,9 +48,8 @@ public class CategorySeleniumTest {
 
     @AfterAll
     void tearDown() {
-        if (driver != null) {
-            driver.quit();
-        }
+        if (driver != null) driver.quit();
+        if (frontend != null) frontend.destroy();
     }
 
     @Test
