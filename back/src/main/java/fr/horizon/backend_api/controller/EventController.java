@@ -25,6 +25,16 @@ import java.util.List;
 public class EventController {
     private final EventService eventService;
 
+    @Autowired
+    private EventRepository repository;
+
+    // Récupérer tous les événements (ou filtrer par mois idéalement)
+    @GetMapping
+    public List<Event> getAllEvents() {
+        return repository.findAll();
+    }
+
+    // Ajouter un événement
     /**
      * Crée un nouvel événement académique.
      * <p>
@@ -40,6 +50,8 @@ public class EventController {
         String email = authentication.getName();
         EventResponseDto response = eventService.create(request, email);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    public Event createEvent(@RequestBody Event event) {
+        return repository.save(event);
     }
 
     /**
@@ -52,6 +64,6 @@ public class EventController {
     public ResponseEntity<List<EventResponseDto>> listByType(@PathVariable CategoryType type) {
         List<EventResponseDto> events = eventService.listByType(type);
         return ResponseEntity.ok(events);
-    }
+
 }
 
