@@ -24,6 +24,16 @@ import java.util.Set;
 public class EventController {
     private final EventService eventService;
 
+    @Autowired
+    private EventRepository repository;
+
+    // Récupérer tous les événements (ou filtrer par mois idéalement)
+    @GetMapping
+    public List<Event> getAllEvents() {
+        return repository.findAll();
+    }
+
+    // Ajouter un événement
     /**
      * Crée un nouvel événement académique.
      * <p>
@@ -34,10 +44,27 @@ public class EventController {
      * @param authentication contexte d’authentification Spring Security
      * @return événement créé sous forme de DTO avec statut HTTP 201
      */
-    @PostMapping("/school")
-    public ResponseEntity<EventResponseDto> create(@RequestBody EventRequestDto request, Authentication authentication) {
+// 1. Endpoint pour la création d'un événement standard
+    @PostMapping
+    public ResponseEntity<EventResponseDto> create(
+            @RequestBody EventRequestDto request,
+            Authentication authentication) {
+
         String email = authentication.getName();
         EventResponseDto response = eventService.create(request, email);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    // 2. Endpoint spécifique pour la création d'un événement lié à une école
+    @PostMapping("/school")
+    public ResponseEntity<EventResponseDto> createSchoolEvent(
+            @RequestBody EventRequestDto request,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+        // Si la logique de création pour "school" diffère, vous pouvez appeler
+        // une méthode dédiée dans votre service, par exemple : eventService.createSchoolEvent(...)
+        EventResponseDto response = eventService.createSchoolEvent(request, email);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

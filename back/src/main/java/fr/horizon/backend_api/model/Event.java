@@ -28,7 +28,13 @@ public class Event extends BaseEntity {
     private String name;
 
     @Column(columnDefinition = "TEXT")
+    private Long id_evt;
+    private String title;
+    private LocalDate start_date;
+    private LocalDate end_date;
     private String description;
+    private String statut;
+    private String color; // Pour le style du calendrier
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category_type", nullable = true, columnDefinition = "varchar(50)")
