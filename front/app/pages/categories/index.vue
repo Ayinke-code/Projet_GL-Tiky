@@ -44,7 +44,7 @@
         </div>
 
         <!-- LISTE DES DEMANDES DES ETUDIANTS -->
-        <div v-if="categoryRequests.length > 0">
+        <div v-if="categoryRequests.length > 0 && categoryRequests.some(r => r.status === 'PENDING')">
             <Separator class="my-8" />
 
             <!-- Header page -->

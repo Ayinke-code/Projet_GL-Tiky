@@ -48,7 +48,7 @@
                     <UButton to="/issues" variant="outline" icon="i-lucide-x">
                         Annuler
                     </UButton>
-                    <UButton type="submit" icon="i-lucide-check" :loading="submitting">
+                    <UButton type="submit" icon="i-lucide-check" :loading="submitting" class="cursor-pointer">
                         Créer
                     </UButton>
                 </div>
