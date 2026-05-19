@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import fr.horizon.backend_api.model.enums.EventType;
+
 /**
  * Gestion des catégories.
  * Fournit les endpoints pour créer, récupérer, mettre à jour et supprimer les
@@ -98,5 +100,17 @@ public class CategoryController {
     @DeleteMapping("/{id}")
     public void deleteCategory(@PathVariable Long id) {
         categoryService.deleteById(id);
+    }
+
+    /**
+     * Récupère les catégories par type d'événement.
+     *
+     * @param type type d'événement
+     * @return liste des catégories correspondant à ce type d'événement
+     */
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/type/{type}")
+    public List<CategoryDto> getCategoriesByType(@PathVariable EventType type) {
+        return categoryService.findByEventType(type);
     }
 }
