@@ -45,9 +45,6 @@ class UserServiceTest {
     private UserService userService;
 
     @Mock
-    private IssueRepository issueRepository;
-
-    @Mock
     private JwtToken jwtToken;
 
     @BeforeEach
