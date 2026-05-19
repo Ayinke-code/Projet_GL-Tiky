@@ -3,6 +3,7 @@ package fr.horizon.backend_api.config;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
+import fr.horizon.backend_api.model.enums.EventType;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,15 +50,34 @@ public class DataInitializer implements CommandLineRunner {
         // CATEGORIES DEFAULT
         // =========================
         if (categoryRepository.count() == 0) {
+            // Issues Categories
 
-            createCategory("Maintenance & Infrastructure", "Maintenance", admin);
-            createCategory("Scolarité & Administration", "Scolarité", admin);
-            createCategory("Sécurité", "Sécurité", admin);
-            createCategory("Vie étudiante", "Vie Étudiante", admin);
-            createCategory("Pédagogie", "Pédagogie", admin);
-            createCategory("Discrimination & Harcèlement", "Discrimination", admin);
-            createCategory("Réseau & Informatique", "Réseau", admin);
-            createCategory("Bibliothèque & Documentation", "Bibliothèque", admin);
+            createCategory("Maintenance & Infrastructure", "Maintenance",null, admin);
+            createCategory("Scolarité & Administration", "Scolarité",null, admin);
+            createCategory("Sécurité", "Sécurité",null, admin);
+            createCategory("Vie étudiante", "Vie Étudiante",null, admin);
+            createCategory("Pédagogie", "Pédagogie", null,admin);
+            createCategory("Discrimination & Harcèlement", "Discrimination",null, admin);
+            createCategory("Réseau & Informatique", "Réseau", null,admin);
+            createCategory("Bibliothèque & Documentation", "Bibliothèque", null,admin);
+
+            // Audit Categories
+            createCategory("Test", "Audit Test", EventType.AUDIT, admin);
+            createCategory("Base de données", "Audit BD", EventType.AUDIT, admin);
+            createCategory("UI/UX", "Audit Interface", EventType.AUDIT, admin);
+            createCategory("CI/CD", "Audit Pipeline", EventType.AUDIT, admin);
+            createCategory("Qualité Code", "Audit Qualité", EventType.AUDIT, admin);
+            createCategory("Modélisation et conception", "Audit Modélisation", EventType.AUDIT, admin);
+
+            // Defense Categories
+            createCategory("Soutenance stage technique", "Stage Technique", EventType.DEFENSE, admin);
+            createCategory("Stage de fin d'étude", "Fin d'étude", EventType.DEFENSE, admin);
+            createCategory("PFE", "Projet Fin Études", EventType.DEFENSE, admin);
+            createCategory("Projet starter", "Starter", EventType.DEFENSE, admin);
+            createCategory("PGL", "Génie Logiciel", EventType.DEFENSE, admin);
+            createCategory("Sprint 1", "Sprint 1", EventType.DEFENSE, admin);
+            createCategory("Sprint 2", "Sprint 2", EventType.DEFENSE, admin);
+            createCategory("Sprint 3", "Sprint 3", EventType.DEFENSE, admin);
         }
 
         // =========================
@@ -90,11 +110,12 @@ public class DataInitializer implements CommandLineRunner {
                 ));
     }
 
-    private void createCategory(String name, String subject, User owner) {
+    private void createCategory(String name, String subject, EventType eventType, User owner) {
         categoryRepository.save(
                 Category.builder()
                         .name(name)
                         .subject(subject)
+                        .eventType(eventType)
                         .status(CategoryStatus.ACTIVE)
                         .owner(owner)
                         .build()
