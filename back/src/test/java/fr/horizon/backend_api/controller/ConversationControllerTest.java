@@ -1,14 +1,7 @@
 package fr.horizon.backend_api.controller;
 
-import fr.horizon.backend_api.model.Conversation;
-import fr.horizon.backend_api.model.ConversationUser;
-import fr.horizon.backend_api.model.Issue;
-import fr.horizon.backend_api.model.Message;
-import fr.horizon.backend_api.model.User;
-import fr.horizon.backend_api.model.enums.ConversationRole;
-import fr.horizon.backend_api.repository.UserRepository;
-import fr.horizon.backend_api.service.JwtToken;
 import fr.horizon.backend_api.service.ConversationService;
+import fr.horizon.backend_api.service.JwtToken;
 import fr.horizon.backend_api.websocket.IssueWebSocketHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,12 +12,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -45,49 +35,54 @@ class ConversationControllerTest {
     private ConversationService conversationService;
 
     @MockitoBean
-    private UserRepository userRepository;
+    private JwtToken jwtToken;
 
     @MockitoBean
     private IssueWebSocketHandler issueWebSocketHandler;
 
-    @MockitoBean
-    private JwtToken jwtToken;
-
     @Test
     void shouldReturnEmptyConversationWhenNotFound() throws Exception {
-        when(conversationService.getConversationByIssueId(12L)).thenReturn(Optional.empty());
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("conversation", null);
+        when(conversationService.getConversationByIssuePayload(12L)).thenReturn(payload);
 
         mockMvc.perform(get("/conversations/issue/12"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.conversation").value(nullValue()));
 
-        verify(conversationService).getConversationByIssueId(12L);
+        verify(conversationService).getConversationByIssuePayload(12L);
     }
 
     @Test
     void shouldReturnConversationWithMessagesAndUsers() throws Exception {
-        Conversation conversation = Conversation.builder().id(3L).build();
+        Map<String, Object> user = new HashMap<>();
+        user.put("id", 2L);
+        user.put("name", "Alice");
+        user.put("email", "alice@test.com");
+        user.put("role", "STUDENT");
+        user.put("roles", java.util.List.of("STUDENT"));
 
-        Message message = Message.builder()
-                .id(9L)
-                .content("Bonjour")
-                .build();
-        User messageUser = new User();
-        messageUser.setId(2L);
-        messageUser.setName("Alice");
-        messageUser.setEmail("alice@test.com");
-        messageUser.setRoles(Set.of());
-        message.setUser(messageUser);
+        Map<String, Object> message = new HashMap<>();
+        message.put("id", 9L);
+        message.put("content", "Bonjour");
+        message.put("user", user);
 
-        ConversationUser conversationUser = ConversationUser.builder()
-                .role(ConversationRole.INITIATOR)
-                .user(messageUser)
-                .conversation(conversation)
-                .build();
+        Map<String, Object> conversation = new HashMap<>();
+        conversation.put("id", 3L);
+        conversation.put("messages", java.util.List.of(message));
+        conversation.put("users", java.util.List.of(Map.of(
+                "id", 2L,
+                "name", "Alice",
+                "email", "alice@test.com",
+                "role", "STUDENT",
+                "roles", java.util.List.of("STUDENT"),
+                "conversationRole", "INITIATOR"
+        )));
 
-        when(conversationService.getConversationByIssueId(12L)).thenReturn(Optional.of(conversation));
-        when(conversationService.getMessagesForConversation(3L)).thenReturn(List.of(message));
-        when(conversationService.getUsersInConversation(3L)).thenReturn(List.of(conversationUser));
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("conversation", conversation);
+
+        when(conversationService.getConversationByIssuePayload(12L)).thenReturn(payload);
 
         mockMvc.perform(get("/conversations/issue/12"))
                 .andExpect(status().isOk())
@@ -97,33 +92,28 @@ class ConversationControllerTest {
                 .andExpect(jsonPath("$.conversation.messages[0].user.email").value("alice@test.com"))
                 .andExpect(jsonPath("$.conversation.users[0].conversationRole").value("INITIATOR"));
 
-        verify(conversationService).getMessagesForConversation(3L);
-        verify(conversationService).getUsersInConversation(3L);
+        verify(conversationService).getConversationByIssuePayload(12L);
     }
 
     @Test
     void shouldAddMessageAndBroadcastToWebSocket() throws Exception {
-        Conversation conversation = Conversation.builder().id(44L).build();
-        Issue issue = new Issue();
-        issue.setId(77L);
-        User user = new User();
-        user.setId(5L);
-        user.setName("Bob");
-        user.setEmail("bob@test.com");
-
-        Message message = Message.builder()
-                .id(101L)
-                .content("Salut")
-                .conversation(conversation)
-                .issue(issue)
-                .user(user)
-                .build();
-
         Authentication authentication = mock(Authentication.class);
         when(authentication.getName()).thenReturn("bob@test.com");
-        when(userRepository.findByEmail("bob@test.com")).thenReturn(Optional.of(user));
-        when(conversationService.addMessageToConversation(eq(44L), eq("Salut"), eq(user), eq(77L)))
-                .thenReturn(message);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", 101L);
+        response.put("content", "Salut");
+        response.put("createdAt", null);
+        response.put("user", Map.of(
+                "id", 5L,
+                "name", "Bob",
+                "email", "bob@test.com",
+                "role", "STUDENT",
+                "roles", java.util.List.of("STUDENT")
+        ));
+
+        when(conversationService.addMessage(44L, Map.of("content", "Salut", "issueId", "77"), "bob@test.com"))
+                .thenReturn(new ConversationService.MessageDispatchResult(response, "{\"type\":\"new_message\"}", 77L));
 
         mockMvc.perform(post("/conversations/44/messages")
                         .principal(authentication)
@@ -139,8 +129,8 @@ class ConversationControllerTest {
                 .andExpect(jsonPath("$.content").value("Salut"))
                 .andExpect(jsonPath("$.user.email").value("bob@test.com"));
 
-        verify(conversationService).addMessageToConversation(44L, "Salut", user, 77L);
-        verify(issueWebSocketHandler).broadcastToIssue(eq(77L), any(String.class));
+        verify(conversationService).addMessage(44L, Map.of("content", "Salut", "issueId", "77"), "bob@test.com");
+        verify(issueWebSocketHandler).broadcastToIssue(77L, "{\"type\":\"new_message\"}");
     }
 }
 
