@@ -15,4 +15,6 @@ public class UserDto {
     private Set<String> roles;
     // Renseigne sur l'utilisateur a créé une issue qui est 'OUVERT'
     private boolean isContributor;
+    // Token pour WebSocket
+    private String wsToken;
 }
