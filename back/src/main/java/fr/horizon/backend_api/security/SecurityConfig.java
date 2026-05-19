@@ -48,6 +48,8 @@ public class SecurityConfig {
                         .requestMatchers("/teacher/**").hasAnyAuthority("TEACHER", "ADMIN")
                         .requestMatchers("/student/**").hasAnyAuthority("STUDENT", "TEACHER", "ADMIN")
 
+                        .requestMatchers("/api/events/**").permitAll()
+
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
