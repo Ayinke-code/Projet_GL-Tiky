@@ -153,7 +153,12 @@ const handleSend = async () => {
     sending.value = true
     try {
         const sentMessage = await api.sendIssueMessage(issueId, newMessage.value)
-        messages.value.push(sentMessage)
+        // Avoid duplicates: the server broadcasts the new message via WebSocket,
+        // which may arrive before or after the HTTP response. Only push the
+        // message locally if we don't already have it (compare by id).
+        if (!messages.value.find((m: any) => m.id === sentMessage.id)) {
+            messages.value.push(sentMessage)
+        }
         newMessage.value = ''
     } catch (err) {
         error.value = err.message || 'Erreur lors de l\'envoi du message'
