@@ -20,66 +20,8 @@
             </UButton>
         </div>
 
-        <div v-else class="grid gap-4 overflow-visible">
-            <UCard v-for="issue in issues" :key="issue.id"
-                class="hover:shadow-lg transition cursor-pointer overflow-visible"
-                @click="navigateTo(`/issues/${issue.id}`)">
-                <template #header>
-                    <div class="flex justify-between items-start gap-4">
-                        <div class="flex-1">
-                            <h3 class="font-bold text-lg">{{ issue.title }}</h3>
-                            <p class="text-sm text-gray-600 mt-1 line-clamp-2">{{ issue.description }}</p>
-                        </div>
-                        <div class="text-sm text-gray-500 whitespace-nowrap">
-                            {{ formatDateTime(issue.createdAt) }}
-                        </div>
-                    </div>
-                </template>
-
-                <div class="flex gap-2 flex-wrap mb-4">
-                    <UBadge variant="soft" color="info">
-                        {{ issue.categoryName || 'Sans catégorie' }}
-                    </UBadge>
-
-                    <div class="relative group">
-                        <button :class="getStatusBadgeClass(issue.status)"
-                            class="px-3 py-1 rounded-full font-medium text-sm transition cursor-pointer hover:shadow-md"
-                            :disabled="updatingStatusId === issue.id">
-                            <span v-if="updatingStatusId !== issue.id">
-                                {{ getStatusLabel(issue.status) }}
-                            </span>
-                            <span v-else class="flex items-center gap-2">
-                                <UIcon name="i-lucide-loader" class="animate-spin" />
-                            </span>
-                        </button>
-
-                        <!-- Dropdown menu : TODO: A corriger si besoin -->
-                        <!-- <div
-                            class="absolute hidden group-hover:block bg-white border border-gray-300 rounded-lg shadow-2xl z-50 min-w-max left-0 top-8 max-h-56 overflow-y-auto">
-                            <button v-for="status in ['OUVERT', 'COMPLET', 'INCOMPLET', 'TERMINE']" :key="status"
-                                @click.stop="handleStatusChange(issue.id, status)" :class="[
-                                    'w-full text-left px-4 py-2 hover:bg-gray-100 transition text-sm font-medium whitespace-nowrap',
-                                    issue.status === status ? 'bg-gray-50 border-l-4 border-indigo-500' : ''
-                                ]" :disabled="updatingStatusId === issue.id">
-                                <span :class="getStatusBadgeClass(status)">{{ getStatusLabel(status) }}</span>
-                            </button>
-                        </div> -->
-                    </div>
-
-                    <UBadge v-if="issue.private" color="warning" variant="soft">
-                        🔒 Privé
-                    </UBadge>
-                </div>
-
-                <template #footer>
-                    <div class="flex gap-2 justify-end">
-                        <UButton @click.stop="deleteValidation(issue)" variant="ghost" size="sm" color="error"
-                            icon="i-lucide-trash-2" class="cursor-pointer">
-                            Supprimer
-                        </UButton>
-                    </div>
-                </template>
-            </UCard>
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 overflow-visible">
+            <IssuesCard v-for="issue in issues" :key="issue.id" :issue="issue" @delete="deleteValidation" />
         </div>
 
         <UAlert v-if="error" color="error" class="mt-4" @close="error = null">
@@ -100,7 +42,7 @@
  * - suppression avec modal de confirmation
  */
 
-import { formatDateTime } from '#imports'
+import IssuesCard from '~/components/issues/IssuesCard.vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 
 const { ready, user } = useAuth()
@@ -121,32 +63,6 @@ const deletingIssue = ref(null)
  * ouverture modal suppression
  */
 const isDeleteValidateModalOpen = ref(false)
-
-/**
- * Labels statuts
- */
-const getStatusLabel = (status) => {
-    const labels = {
-        'OUVERT': 'Ouvert',
-        'COMPLET': 'Complet',
-        'INCOMPLET': 'Incomplet',
-        'TERMINE': 'Terminé'
-    }
-    return labels[status] || status
-}
-
-/**
- * UI status colors
- */
-const getStatusBadgeClass = (status) => {
-    const classes = {
-        'OUVERT': 'bg-yellow-100 text-yellow-800 border border-yellow-300',
-        'COMPLET': 'bg-green-100 text-green-800 border border-green-300',
-        'INCOMPLET': 'bg-orange-100 text-orange-800 border border-orange-300',
-        'TERMINE': 'bg-blue-100 text-blue-800 border border-blue-300'
-    }
-    return classes[status] || 'bg-gray-100 text-gray-800'
-}
 
 // TODO: Refaire le popover pour changé de status
 // const handleStatusChange = async (id, newStatus) => {
