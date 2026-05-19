@@ -40,7 +40,11 @@ public class Category extends BaseEntity {
     @JoinTable(
             name = "category_followers",
             joinColumns = @JoinColumn(name = "category_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
+            inverseJoinColumns = @JoinColumn(name = "user_id"),
+            // Empêche un user d'être associé à une même catégorie plusieurs fois
+            uniqueConstraints = {
+                @UniqueConstraint(columnNames = {"category_id", "user_id"})
+            }
     )
     private Set<User> followers = new HashSet<>();
 
