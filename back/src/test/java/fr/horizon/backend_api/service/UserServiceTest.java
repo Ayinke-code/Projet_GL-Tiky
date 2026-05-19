@@ -1,5 +1,6 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.exception.InvalidUserRolesException;
 import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.UserDto;
@@ -21,6 +22,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -162,5 +164,80 @@ class UserServiceTest {
         UserDto dto = userService.toDto(user);
 
         assertFalse(dto.isContributor());
+    }
+
+    @Test
+    void findAll_should_return_users() {
+
+        Role role = new Role();
+        role.setName("USER");
+
+        User user = User.builder()
+                .id(1L)
+                .name("John")
+                .email("john@test.com")
+                .roles(Set.of(role))
+                .build();
+
+        when(userRepository.findAll()).thenReturn(List.of(user));
+        when(issueRepository.existsByCreatedByIdAndStatus(1L, IssueStatus.OUVERT))
+                .thenReturn(false);
+
+        List<UserDto> result = userService.findAll();
+
+        assertEquals(1, result.size());
+        assertEquals("John", result.get(0).getName());
+    }
+
+    @Test
+    void findAllByRoles_should_return_users() {
+
+        Role role = new Role();
+        role.setName("TEACHER");
+
+        User user = User.builder()
+                .id(1L)
+                .name("John")
+                .roles(Set.of(role))
+                .build();
+
+        when(roleRepository.findByNameIn(List.of("TEACHER")))
+                .thenReturn(List.of(role));
+
+        when(userRepository.findDistinctByRoles_NameIn(List.of("TEACHER")))
+                .thenReturn(List.of(user));
+
+        List<?> result = userService.findAllByRoles(List.of("TEACHER"));
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void findAllByRoles_should_throw_when_role_invalid() {
+
+        when(roleRepository.findByNameIn(List.of("FAKE")))
+                .thenReturn(List.of());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> userService.findAllByRoles(List.of("FAKE")));
+    }
+
+    @Test
+    void deleteById_should_call_repository() {
+
+        userService.deleteById(1L);
+
+        verify(userRepository).deleteById(1L);
+    }
+
+    @Test
+    void createUser_should_throw_when_roles_empty() {
+
+        UserRequestDto dto = new UserRequestDto();
+        dto.setEmail("john@test.com");
+        dto.setRoleIds(Set.of());
+
+        assertThrows(InvalidUserRolesException.class,
+                () -> userService.createUser(dto));
     }
 }
