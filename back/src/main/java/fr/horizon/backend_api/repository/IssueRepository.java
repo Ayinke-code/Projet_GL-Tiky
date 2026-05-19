@@ -17,5 +17,8 @@ public interface IssueRepository extends JpaRepository<Issue, Long> {
     List<Issue> findByStatus(IssueStatus status);
 
     boolean existsByCreatedByIdAndStatus(Long userId, IssueStatus status);
+
+    List<Issue> findByStatusAndCreatedBy_Id(IssueStatus status, Long createdById);
+
 }
 

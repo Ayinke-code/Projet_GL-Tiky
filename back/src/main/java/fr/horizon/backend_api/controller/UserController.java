@@ -60,7 +60,17 @@ public class UserController {
      * @return la liste des utilisateurs avec le role de professeur
      */
     @GetMapping("/teachers")
-    public ResponseEntity<List<UserDto>> getAllTeachers() {
+    public ResponseEntity<List<UserDto>> getAllTeacherWithDetail() {
         return ResponseEntity.ok(userService.getAllTeachers());
+    }
+
+    /**
+     * Retourne la liste des teachers
+     *
+     * @return la liste des teachers en marquant qui est follower d'une catégorie avec le role de professeur
+     */
+    @GetMapping("/teachers/{categoryId}")
+    public ResponseEntity<List<UserDto>> getAllTeacherWithCategoryDetail(@PathVariable Long categoryId) {
+        return ResponseEntity.ok(userService.getAllTeachersWithCategoryDetail(categoryId));
     }
 }

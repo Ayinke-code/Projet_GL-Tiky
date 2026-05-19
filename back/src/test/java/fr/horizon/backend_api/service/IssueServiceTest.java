@@ -24,9 +24,8 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class IssueServiceTest {
@@ -45,6 +44,9 @@ class IssueServiceTest {
 
     @InjectMocks
     private IssueService issueService;
+
+    private String commentaire;
+    private String raison;
 
     @Test
     void createIssue_should_save_issue_when_valid() {
@@ -448,6 +450,65 @@ class IssueServiceTest {
         testIssue.setCreatedBy(testUser);
 
         return testIssue;
+    }
+
+    @Test
+    void markIssueAsIncomplete_Success() {
+        // Précondtion
+        Long issueId = 1L;
+        Issue issue = new Issue();
+        issue.setId(issueId);
+        issue.setStatus(IssueStatus.OUVERT);
+
+        RequestManager requestManager = new RequestManager();
+        requestManager.setStatus(RequestManagerStatus.PENDING);
+
+        when(issueRepository.findById(issueId)).thenReturn(Optional.of(issue));
+        when(requestManagerRepository.findByIssue_Id(issueId)).thenReturn(Optional.of(requestManager));
+
+        // Action
+        issueService.markIssueAsIncomplete(issueId, commentaire, raison);
+
+        // Assertion
+        assertEquals(IssueStatus.INCOMPLET, issue.getStatus());
+        assertEquals(RequestManagerStatus.DENIED, requestManager.getStatus());
+
+        verify(issueRepository).save(issue);
+        verify(requestManagerRepository).save(requestManager);
+    }
+
+    @Test
+    void markIssueAsIncomplete_Already_Close() {
+        // Arrange
+        Long issueId = 1L;
+        Issue issue = new Issue();
+        issue.setId(issueId);
+        issue.setStatus(IssueStatus.TERMINE); // Déjà résolue
+
+        when(issueRepository.findById(issueId)).thenReturn(Optional.of(issue));
+
+        // Action et Assertion
+        assertThrows(IllegalStateException.class, () -> {
+            issueService.markIssueAsIncomplete(issueId, commentaire, raison);
+        });
+
+        // On vérifie qu'aucun save n'a été appelé
+        verify(issueRepository, never()).save(any());
+        verify(requestManagerRepository, never()).save(any());
+    }
+
+    @Test
+    void markIssueAsIncomplete_IssueNotFound() {
+        // Précondition
+        Long issueId = 1L;
+        when(issueRepository.findById(issueId)).thenReturn(Optional.empty());
+
+        // Action et Assertion
+        assertThrows(EntityNotFoundException.class, () -> {
+            issueService.markIssueAsIncomplete(issueId, commentaire, raison);
+        });
+
+        verify(requestManagerRepository, never()).findByIssue_Id(anyLong());
     }
 
 

@@ -1,7 +1,7 @@
 <template>
   <UCard class="bg-primary-50/30">
     <template #header>
-      <h2 class="text-lg font-semibold text-primary-700">Mes assignations reçues</h2>
+      <h2 class="text-lg font-semibold text-primary-700">Mes affections reçues</h2>
     </template>
 
     <div v-if="tasks.length > 0" class="space-y-3">
@@ -33,7 +33,7 @@
       </div>
     </div>
     <div v-else class="text-center py-8 text-gray-400">
-      Aucune assignation en attente de réponse.
+      Aucune affectation en attente de réponse.
     </div>
   </UCard>
 </template>

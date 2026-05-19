@@ -33,9 +33,9 @@ public class Issue extends BaseEntity {
     private boolean isPrivate = false;
 
     private String rejectType;
-
+    @Column
     private String rejectReason;
-
+    @Column
     private String rejectComment;
 
     @ManyToOne

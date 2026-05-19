@@ -11,12 +11,13 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RequestManagerDto {
-    Long id;
-    String issueTitle;
-    LocalDateTime creationDate;
-    LocalDateTime processingDate;
-    String status;
-    String target;
-    String creator;
+    private Long id;
+    private Long issueId;
+    private String issueTitle;
+    private LocalDateTime creationDate;
+    private LocalDateTime processingDate;
+    private String status;
+    private String target;
+    private String creator;
 
 }

@@ -10,7 +10,8 @@
 
       <div v-if="alerts.length > 0" class="space-y-4">
         <div v-for="req in alerts" :key="req.id" class="flex items-center justify-between p-4 border rounded-xl bg-gray-50/50">
-          <div class="flex flex-col">
+          <!-- Infos -->
+          <div class="flex flex-col w-1/3">
             <span class="font-bold text-gray-900">{{ req.issueTitle }}</span>
             <div class="mt-1 flex flex-col space-y-0.5">
               <span class="text-xs font-semibold text-primary-600 uppercase tracking-wide">
@@ -22,27 +23,59 @@
             </div>
           </div>
 
-          <div class="flex items-center gap-3">
+          <!-- Bouton voir : centré dans la card -->
+          <div class="flex justify-center w-1/3">
+            <UButton
+              label="Voir le détail"
+              icon="i-heroicons-eye"
+              color="neutral"
+              variant="outline"
+              size="lg"
+              @click="openDetail(req)"
+            />
+          </div>
+
+          <!-- Actions : droite -->
+          <div class="flex items-center justify-end gap-3 w-1/3">
             <USelectMenu
               v-model="selectedTeachers[req.id]"
               :items="formattedTeachers"
               placeholder="Assigner à..."
-              value-attribute="value"
-              option-attribute="label"
-              class="w-56"
-            />
-            <UButton
-              label="Assigner"
-              icon="i-heroicons-paper-airplane"
-              :disabled="!selectedTeachers[req.id] || loadingIds.has(req.id)"
-              :loading="loadingIds.has(req.id)"
-              @click="openConfirm(req)"
-            />
+              value-key="value"
+              label-key="label"
+              class="w-56">
+              <template #option="{ option }">
+                <div class="flex items-center gap-2">
+                  <UIcon v-if="option.isFollower" name="i-heroicons-star" class="text-primary-500 w-4 h-4" />
+                  <span :class="{'font-medium': option.isFollower, 'text-gray-600': !option.isFollower}">
+                    {{ option.label }}
+                  </span>
+                </div>
+              </template>
+            </USelectMenu>
+
+            <div class="flex flex-col gap-1.5">
+              <UButton
+                label="Assigner"
+                icon="i-heroicons-paper-airplane"
+                :disabled="!selectedTeachers[req.id] || loadingIds.has(req.id)"
+                :loading="loadingIds.has(req.id)"
+                @click="openConfirm(req)"
+              />
+              <UButton
+                label="Incomplet"
+                icon="i-heroicons-x-mark"
+                class="bg-red-600 hover:bg-red-700 text-white border-0"
+                :disabled="loadingIncompleteIds.has(req.id)"
+                :loading="loadingIncompleteIds.has(req.id)"
+                @click="openIncompleteConfirm(req)"
+              />
+            </div>
           </div>
         </div>
       </div>
       <div v-else class="text-center py-8 text-gray-400 italic bg-gray-50/30 rounded-lg border border-dashed">
-        Aucune demande d'assignation à compléter.
+        Aucune demande d'affectation à compléter.
       </div>
     </UCard>
 
@@ -50,30 +83,107 @@
       <template #header>
         <h3 class="text-lg font-semibold">Historique des demandes</h3>
       </template>
-      <UTable :data="history ?? []" :columns="columns">
+      <UTable v-if="history && history.length > 0" :data="history" :columns="columns">
         <template #status-cell="{ row }">
           <UBadge :color="getStatusColor(row.original.status)" variant="subtle" size="sm">
             {{ translateStatus(row.original.status) }}
           </UBadge>
         </template>
       </UTable>
+      <div v-else class="text-center py-8 text-gray-400 italic bg-gray-50/30 rounded-lg border border-dashed">
+        Aucune affectation effectuée.
+      </div>
     </UCard>
-    <UModal v-model="isConfirmOpen" title="Confirmer l'assignation">
+
+    <!-- Modale : Confirmer l'assignation -->
+    <UModal v-model:open="isConfirmOpen" title="Confirmer l'assignation">
       <template #body>
         <p class="text-gray-600">
           Voulez-vous vraiment assigner
           <strong class="text-gray-900">{{ getSelectedTeacherName }}</strong>
           pour traiter l'issue :
         </p>
-        <div class="mt-2 p-3 bg-gray-50 rounded border border-gray-100 italic">
+        <div class="mt-2 p-3 bg-gray-50 rounded border border-gray-100 italic text-sm text-gray-700">
           "{{ activeReq?.issueTitle }}"
         </div>
       </template>
-
       <template #footer>
         <div class="flex justify-end gap-3">
           <UButton color="neutral" variant="ghost" label="Annuler" @click="isConfirmOpen = false"/>
           <UButton color="primary" label="Confirmer l'envoi" @click="confirmAssignation"/>
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Modale : Confirmer le marquage incomplet -->
+    <UModal v-model:open="isIncompleteConfirmOpen" title="Marquer comme incomplet">
+      <template #body>
+        <div class="space-y-4">
+          <p class="text-gray-600">
+            Voulez-vous vraiment marquer l'issue suivante comme incomplète ? Cette action refusera la demande associée.
+          </p>
+          <div class="p-3 bg-gray-50 rounded border border-gray-100 italic text-sm text-gray-700">
+            "{{ incompleteReq?.issueTitle }}"
+          </div>
+
+          <div class="space-y-4 mt-4">
+            <UFormField label="Raison" required>
+              <UInput v-model="incompleteReason" placeholder="Ex: Informations manquantes, Sujet trop vaste..." class="w-full" />
+            </UFormField>
+
+            <UFormField label="Commentaire détaillé" required>
+              <UTextarea v-model="incompleteComment" placeholder="Précisez ce qui manque ou pose problème..." :rows="3" class="w-full" />
+            </UFormField>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <UButton color="neutral" variant="ghost" label="Annuler" @click="isIncompleteConfirmOpen = false"/>
+          <UButton
+            class="bg-red-600 hover:bg-red-700 text-white border-0"
+            label="Confirmer le refus"
+            :disabled="!incompleteReason || !incompleteComment"
+            @click="confirmMarkIncomplete"
+          />
+        </div>
+      </template>
+    </UModal>
+
+    <!-- Modale : Détail de l'issue -->
+    <UModal v-model:open="isDetailOpen" title="Détail de l'issue">
+      <template #body>
+        <div v-if="loadingDetail" class="flex justify-center py-8">
+          <UIcon name="i-heroicons-arrow-path" class="animate-spin text-gray-400 text-2xl"/>
+        </div>
+        <div v-else-if="issueDetail" class="space-y-4">
+          <div class="space-y-1">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Titre</p>
+            <p class="text-gray-900 font-medium">{{ issueDetail.title }}</p>
+          </div>
+          <div class="border-t border-gray-100"/>
+          <div class="space-y-1">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Créé par</p>
+            <p class="text-gray-700 text-sm">{{ issueDetail.createdName }}</p>
+          </div>
+          <div class="border-t border-gray-100"/>
+          <div class="space-y-1">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Catégorie</p>
+            <UBadge color="primary" variant="soft">{{ issueDetail.categoryName }}</UBadge>
+          </div>
+          <div class="border-t border-gray-100"/>
+          <div class="space-y-1">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Description</p>
+            <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{{ issueDetail.description }}</p>
+          </div>
+        </div>
+        <div v-else class="text-center py-8 text-gray-400 italic">
+          Impossible de charger les détails de l'issue.
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end">
+          <UButton color="neutral" variant="ghost" label="Fermer" @click="isDetailOpen = false"/>
         </div>
       </template>
     </UModal>
@@ -83,26 +193,36 @@
 <script setup>
 const props = defineProps(['userId'])
 
-// 1. On ajoute getHistory à la déstructuration du composable
-const { getOwnerAlerts, getHistory, getTeachersList, assignTeacher } = useAssignation()
+const { getOwnerAlerts, getHistory, getTeachersList, assignTeacher, markIssueAsIncomplete, getIssueDtoById } = useAssignation()
 
 const alerts = ref([])
 const history = ref([])
 const teachers = ref([])
 const selectedTeachers = ref({})
+
 const loadingIds = ref(new Set())
+const loadingIncompleteIds = ref(new Set())
 
 const isConfirmOpen = ref(false)
 const activeReq = ref(null)
 
+const isIncompleteConfirmOpen = ref(false)
+const incompleteReq = ref(null)
+const incompleteReason = ref('')
+const incompleteComment = ref('')
+
+const isDetailOpen = ref(false)
+const issueDetail = ref(null)
+const loadingDetail = ref(false)
+
 const columns = [
-  { accessorKey: 'issueTitle', header: 'Titre de l\'Issue' },
+  { accessorKey: 'issueTitle', header: "Titre de l'Issue" },
   { accessorKey: 'creator', header: 'Créé par' },
   { accessorKey: 'target', header: 'Assigné à' },
   {
     accessorKey: 'status',
     header: 'Statut',
-    cell: ({ row }) => row.original.status  // sera intercepté par le slot
+    cell: ({ row }) => row.original.status
   },
   {
     accessorKey: 'processingDate',
@@ -113,27 +233,63 @@ const columns = [
 
 const loadData = async () => {
   try {
-    const [alertsData, historyData, teachersData] = await Promise.all([
-      getOwnerAlerts(props.userId),
-      getHistory(props.userId), // Nouvel appel API
-      getTeachersList()
+    const alertsData = await getOwnerAlerts(props.userId)
+    alerts.value = Array.isArray(alertsData) ? alertsData : []
+
+    let currentCategoryId = null
+
+    if (alerts.value.length > 0) {
+      const firstIssueId = alerts.value[0].issueId
+      const issueDto = await getIssueDtoById(firstIssueId)
+      if (issueDto && issueDto.categoryId) {
+        currentCategoryId = issueDto.categoryId
+      }
+    }
+
+    const [historyData, teachersData] = await Promise.all([
+      getHistory(props.userId),
+      currentCategoryId ? getTeachersList(currentCategoryId) : Promise.resolve([])
     ])
 
-    alerts.value = Array.isArray(alertsData) ? alertsData : []
     history.value = Array.isArray(historyData) ? historyData : []
     teachers.value = Array.isArray(teachersData) ? teachersData : []
+    console.log(teachers.value)
 
   } catch (err) {
     console.error("Erreur lors du chargement des données :", err)
   }
 }
 
-
 const formattedTeachers = computed(() => {
-  return teachers.value.map(t => ({
-    label: t.id === props.userId ? `${t.name} (Moi)` : t.name,
-    value: t.id
-  }))
+  const followers = teachers.value
+    .filter(t => t.follower)
+    .map(t => ({
+      label: t.id === props.userId ? `${t.name} (Moi)` : t.name,
+      value: t.id,
+      isFollower: true
+    }))
+
+  const others = teachers.value
+    .filter(t => !t.follower)
+    .map(t => ({
+      label: t.id === props.userId ? `${t.name} (Moi)` : t.name,
+      value: t.id,
+      isFollower: false
+    }))
+
+  const options = []
+
+  if (followers.length > 0) {
+    options.push({ label: '— Abonnés à la catégorie', value: '__header_followers__', disabled: true })
+    options.push(...followers)
+  }
+
+  if (others.length > 0) {
+    options.push({ label: '— Autres professeurs', value: '__header_others__', disabled: true })
+    options.push(...others)
+  }
+
+  return options
 })
 
 const getSelectedTeacherName = computed(() => {
@@ -154,19 +310,56 @@ const confirmAssignation = async () => {
   const req = activeReq.value
   const selection = selectedTeachers.value[req.id]
   const teacherId = typeof selection === 'object' ? selection.value : selection
-
   if (!teacherId) return
 
   isConfirmOpen.value = false
-  loadingIds.value.add(req.id)
-
+  loadingIds.value = new Set(loadingIds.value).add(req.id)
   try {
-    await assignTeacher(req.id, teacherId)
+    // L'API attend l'ID de l'issue, donc on passe req.issueId
+    await assignTeacher(req.issueId, teacherId)
     await loadData()
   } catch (e) {
     console.error("Erreur d'assignation :", e)
   } finally {
-    loadingIds.value.delete(req.id)
+    const next = new Set(loadingIds.value)
+    next.delete(req.id)
+    loadingIds.value = next
+  }
+}
+
+const openIncompleteConfirm = (req) => {
+  incompleteReq.value = req
+  incompleteReason.value = ''
+  incompleteComment.value = ''
+  isIncompleteConfirmOpen.value = true
+}
+
+const confirmMarkIncomplete = async () => {
+  const req = incompleteReq.value
+  isIncompleteConfirmOpen.value = false
+  loadingIncompleteIds.value = new Set(loadingIncompleteIds.value).add(req.id)
+  try {
+    await markIssueAsIncomplete(req.issueId, incompleteComment.value, incompleteReason.value)
+    await loadData()
+  } catch (e) {
+    console.error("Erreur lors du marquage incomplet :", e)
+  } finally {
+    const next = new Set(loadingIncompleteIds.value)
+    next.delete(req.id)
+    loadingIncompleteIds.value = next
+  }
+}
+
+const openDetail = async (req) => {
+  issueDetail.value = null
+  loadingDetail.value = true
+  isDetailOpen.value = true
+  try {
+    issueDetail.value = await getIssueDtoById(req.issueId)
+  } catch (e) {
+    console.error("Erreur lors du chargement de l'issue :", e)
+  } finally {
+    loadingDetail.value = false
   }
 }
 
@@ -177,21 +370,13 @@ const getStatusColor = (s) => {
 }
 
 const translateStatus = (s) => {
-  const map = {
-    'PENDING': 'En attente',
-    'ACCEPTED': 'Accepté',
-    'DENIED': 'Refusé'
-  }
+  const map = { PENDING: 'En attente', ACCEPTED: 'Accepté', DENIED: 'Refusé' }
   return map[s] || s
 }
 
 const formatDate = (d) => {
   if (!d) return 'N/A'
-  return new Date(d).toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  })
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 onMounted(loadData)

@@ -15,6 +15,12 @@ public interface RequestManagerRepository extends JpaRepository<RequestManager, 
     boolean existsByIssueAndStatusAndTargetTeacherIsNotNull(Issue issue, RequestManagerStatus status);
     List<RequestManager> findByTargetTeacher_Id(Long targetTeacherId);
     Optional<RequestManager> findFirstByIssueOrderByCreatedAtDesc(Issue issue);
-    List<RequestManager> findByCategoryOwner_IdAndTargetTeacherIsNull(long id);
+    List<RequestManager> findByCategoryOwner_IdAndTargetTeacherIsNullAndStatus(long id , RequestManagerStatus requestManagerStatus);
     List<RequestManager> findByCategoryOwner_IdAndTargetTeacherIsNotNullOrderByCreatedAtDesc(Long userId);
+    List<RequestManager> findByCategoryOwner_IdAndTargetTeacherIsNullAndStatusOrderByCreatedAtDesc(
+            Long userId,
+            RequestManagerStatus status
+    );
+
+
 }

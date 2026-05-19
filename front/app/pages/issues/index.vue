@@ -19,6 +19,17 @@
         <section><AssignationTeacher :userId="user.id" /></section>
       </div>
 
+      <div
+        v-if="user"
+        v-show="afficherSectionIncomplete"
+        class="bg-white p-6 mb-8 rounded-2xl shadow-sm border border-gray-100"
+      >
+        <IncompleteIssuesList
+          :userId="user.id"
+          @has-issues="afficherSectionIncomplete = $event"
+        />
+      </div>
+
       <div v-if="loading" class="text-center py-8">
           <USkeleton class="h-20 w-full mb-4" />
           <USkeleton class="h-20 w-full mb-4" />
@@ -116,6 +127,7 @@ import { formatDateTime } from '#imports'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import AssignationManager from '~/components/layout/AssignationManager.vue'
 import AssignationTeacher from '~/components/layout/AssignationTeacher.vue'
+import IncompleteIssuesList from '~/components/layout/IncompleteIssuesList.vue'
 
 const { ready, user } = useAuth()
 const { issues, fetchIssues, deleteIssue, error } = useIssues()
@@ -231,5 +243,7 @@ onMounted(async () => {
 const isTeacher = computed(() => {
   return user.value?.roles?.includes('TEACHER') || user.value?.roles?.includes('ADMIN') || false
 })
+
+const afficherSectionIncomplete = ref(false)
 
 </script>

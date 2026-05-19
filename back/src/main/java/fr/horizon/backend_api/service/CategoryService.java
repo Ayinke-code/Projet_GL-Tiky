@@ -1,22 +1,21 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
-import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.CategoryRequest;
-import fr.horizon.backend_api.model.Issue;
-import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.CategoryDto;
 import fr.horizon.backend_api.model.dto.CategoryCreateDto;
+import fr.horizon.backend_api.model.dto.UserDto;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
-import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.CategoryRequestRepository;
-import fr.horizon.backend_api.repository.IssueRepository;
-import fr.horizon.backend_api.repository.UserRepository;
+import fr.horizon.backend_api.model.enums.IssueStatus;
+import fr.horizon.backend_api.repository.*;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +25,7 @@ public class CategoryService {
     private final UserRepository userRepository;
     private final CategoryRequestRepository categoryRequestRepository;
     private final IssueRepository issueRepository;
+    private final RoleRepository roleRepository;
 
     /**
      * Récupère toutes les catégories.

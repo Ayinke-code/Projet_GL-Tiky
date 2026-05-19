@@ -3,11 +3,13 @@ package fr.horizon.backend_api.service;
 import fr.horizon.backend_api.exception.EmailAlreadyUsedException;
 import fr.horizon.backend_api.exception.InvalidUserRolesException;
 import fr.horizon.backend_api.exception.RoleNotFoundException;
+import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.UserDto;
 import fr.horizon.backend_api.model.dto.UserRequestDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
+import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.UserRepository;
@@ -37,6 +39,7 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final IssueRepository issueRepository;
+    private final CategoryRepository categoryRepository;
 
     /**
      * Crée et persiste un nouvel utilisateur.
@@ -148,6 +151,30 @@ public class UserService {
 
         return teachers.stream()
                 .map(this::toDto)
+                .toList();
+    }
+
+    public List<UserDto> getAllTeachersWithCategoryDetail(Long categoryId){
+        Role teacherRole = roleRepository.findByName("TEACHER")
+                .orElseThrow(() -> new EntityNotFoundException("Rôle TEACHER non trouvé en base"));
+
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new EntityNotFoundException("Catégorie introuvable"));
+
+        List<User> teachers = userRepository.getAllByRoles(Set.of(teacherRole));
+
+        // Récupère tous les followers de la catégorie
+        Set<User> categoryFollowers = category.getFollowers();
+
+        return teachers.stream()
+                .map(teacher -> {
+                    UserDto dto = this.toDto(teacher);
+
+                    // Vérifie si ce professeur est dans le Set des followers et met à jour le booléen
+                    dto.setFollower(categoryFollowers.contains(teacher));
+
+                    return dto;
+                })
                 .toList();
     }
 }
