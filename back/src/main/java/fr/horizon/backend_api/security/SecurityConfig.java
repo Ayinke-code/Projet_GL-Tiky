@@ -43,7 +43,7 @@ public class SecurityConfig {
                         .requestMatchers("/auth/me", "/categories/**").authenticated()
 
                         .requestMatchers("/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers("/users/**").hasAuthority("ADMIN")
+                        .requestMatchers("/users/**").hasAnyAuthority("TEACHER","ADMIN")
 
                         .requestMatchers("/teacher/**").hasAnyAuthority("TEACHER", "ADMIN")
                         .requestMatchers("/student/**").hasAnyAuthority("STUDENT", "TEACHER", "ADMIN")

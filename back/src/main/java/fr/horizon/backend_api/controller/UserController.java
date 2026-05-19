@@ -7,6 +7,7 @@ import fr.horizon.backend_api.model.dto.UserRequestDto;
 import fr.horizon.backend_api.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -51,5 +52,15 @@ public class UserController {
     @DeleteMapping("/{id}")
     public void deleteUser(@PathVariable Long id){
         userService.deleteById(id);
+    }
+
+    /**
+     * Retourne la liste des teachers
+     *
+     * @return la liste des utilisateurs avec le role de professeur
+     */
+    @GetMapping("/teachers")
+    public ResponseEntity<List<UserDto>> getAllTeachers() {
+        return ResponseEntity.ok(userService.getAllTeachers());
     }
 }

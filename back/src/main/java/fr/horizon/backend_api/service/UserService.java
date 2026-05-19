@@ -11,6 +11,7 @@ import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -132,5 +133,21 @@ public class UserService {
                 )
                 .isContributor(hasOpenIssues)
                 .build();
+    }
+
+    /**
+     * Retorune la liste des teachers pour faire une affectation
+     *
+     * @return la liste des teachers
+     */
+    public List<UserDto> getAllTeachers() {
+        Role teacherRole = roleRepository.findByName("TEACHER")
+                .orElseThrow(() -> new EntityNotFoundException("Rôle TEACHER non trouvé en base"));
+
+        List<User> teachers = userRepository.getAllByRoles(Set.of(teacherRole));
+
+        return teachers.stream()
+                .map(this::toDto)
+                .toList();
     }
 }

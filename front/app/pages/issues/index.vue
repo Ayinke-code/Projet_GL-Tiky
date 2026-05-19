@@ -7,53 +7,65 @@
             </UButton>
         </div>
 
-        <div v-if="loading" class="text-center py-8">
-            <USkeleton class="h-20 w-full mb-4" />
-            <USkeleton class="h-20 w-full mb-4" />
-            <USkeleton class="h-20 w-full" />
+      <!--Rebrique des affectations -->
+      <div v-if="isTeacher" class="py-12">
+        <section><AssignationManager :userId="user.id" /></section>
+
+        <div class="relative py-8">
+          <div class="absolute inset-0 flex items-center"><span class="w-full border-t border-gray-200"></span></div>
+          <div class="relative flex justify-center"><span class="bg-white px-2 text-sm text-gray-400"></span></div>
         </div>
 
-        <div v-else-if="issues.length === 0" class="text-center py-12">
-            <p class="text-gray-500 text-lg">Aucune issue pour le moment</p>
-            <UButton to="/issues/create" variant="outline" class="mt-4">
-                Créer la première issue
-            </UButton>
-        </div>
+        <section><AssignationTeacher :userId="user.id" /></section>
+      </div>
 
-        <div v-else class="grid gap-4 overflow-visible">
-            <UCard v-for="issue in issues" :key="issue.id"
-                class="hover:shadow-lg transition cursor-pointer overflow-visible"
-                @click="navigateTo(`/issues/${issue.id}`)">
-                <template #header>
-                    <div class="flex justify-between items-start gap-4">
-                        <div class="flex-1">
-                            <h3 class="font-bold text-lg">{{ issue.title }}</h3>
-                            <p class="text-sm text-gray-600 mt-1 line-clamp-2">{{ issue.description }}</p>
-                        </div>
-                        <div class="text-sm text-gray-500 whitespace-nowrap">
-                            {{ formatDateTime(issue.createdAt) }}
-                        </div>
-                    </div>
-                </template>
+      <div v-if="loading" class="text-center py-8">
+          <USkeleton class="h-20 w-full mb-4" />
+          <USkeleton class="h-20 w-full mb-4" />
+          <USkeleton class="h-20 w-full" />
+      </div>
 
-                <div class="flex gap-2 flex-wrap mb-4">
-                    <UBadge variant="soft" color="info">
-                        {{ issue.categoryName || 'Sans catégorie' }}
-                    </UBadge>
+      <div v-else-if="issues.length === 0" class="text-center py-12">
+          <p class="text-gray-500 text-lg">Aucune issue pour le moment</p>
+          <UButton to="/issues/create" variant="outline" class="mt-4">
+              Créer la première issue
+          </UButton>
+      </div>
 
-                    <div class="relative group">
-                        <button :class="getStatusBadgeClass(issue.status)"
-                            class="px-3 py-1 rounded-full font-medium text-sm transition cursor-pointer hover:shadow-md"
-                            :disabled="updatingStatusId === issue.id">
-                            <span v-if="updatingStatusId !== issue.id">
-                                {{ getStatusLabel(issue.status) }}
-                            </span>
-                            <span v-else class="flex items-center gap-2">
-                                <UIcon name="i-lucide-loader" class="animate-spin" />
-                            </span>
-                        </button>
+      <div v-else class="grid gap-4 overflow-visible">
+          <UCard v-for="issue in issues" :key="issue.id"
+              class="hover:shadow-lg transition cursor-pointer overflow-visible"
+              @click="navigateTo(`/issues/${issue.id}`)">
+              <template #header>
+                  <div class="flex justify-between items-start gap-4">
+                      <div class="flex-1">
+                          <h3 class="font-bold text-lg">{{ issue.title }}</h3>
+                          <p class="text-sm text-gray-600 mt-1 line-clamp-2">{{ issue.description }}</p>
+                      </div>
+                      <div class="text-sm text-gray-500 whitespace-nowrap">
+                          {{ formatDateTime(issue.createdAt) }}
+                      </div>
+                  </div>
+              </template>
 
-                        <!-- Dropdown menu : TODO: A corriger si besoin -->
+              <div class="flex gap-2 flex-wrap mb-4">
+                  <UBadge variant="soft" color="info">
+                      {{ issue.categoryName || 'Sans catégorie' }}
+                  </UBadge>
+
+                  <div class="relative group">
+                      <button :class="getStatusBadgeClass(issue.status)"
+                          class="px-3 py-1 rounded-full font-medium text-sm transition cursor-pointer hover:shadow-md"
+                          :disabled="updatingStatusId === issue.id">
+                          <span v-if="updatingStatusId !== issue.id">
+                              {{ getStatusLabel(issue.status) }}
+                          </span>
+                          <span v-else class="flex items-center gap-2">
+                              <UIcon name="i-lucide-loader" class="animate-spin" />
+                          </span>
+                      </button>
+
+                      <!-- Dropdown menu : TODO: A corriger si besoin -->
                         <!-- <div
                             class="absolute hidden group-hover:block bg-white border border-gray-300 rounded-lg shadow-2xl z-50 min-w-max left-0 top-8 max-h-56 overflow-y-auto">
                             <button v-for="status in ['OUVERT', 'COMPLET', 'INCOMPLET', 'TERMINE']" :key="status"
@@ -102,6 +114,8 @@
 
 import { formatDateTime } from '#imports'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
+import AssignationManager from '~/components/layout/AssignationManager.vue'
+import AssignationTeacher from '~/components/layout/AssignationTeacher.vue'
 
 const { ready, user } = useAuth()
 const { issues, fetchIssues, deleteIssue, error } = useIssues()
@@ -213,4 +227,9 @@ onMounted(async () => {
         loading.value = false
     }
 })
+
+const isTeacher = computed(() => {
+  return user.value?.roles?.includes('TEACHER') || user.value?.roles?.includes('ADMIN') || false
+})
+
 </script>
