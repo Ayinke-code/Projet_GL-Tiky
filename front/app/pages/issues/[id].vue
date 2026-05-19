@@ -282,6 +282,7 @@ const handleSend = async () => {
                             :role="msg.role"
                             :date="msg.date"
                             :contenu="msg.contenu"
+                            :is-mine="msg.userId === user?.id"
                         />
 
                         <!-- État vide -->

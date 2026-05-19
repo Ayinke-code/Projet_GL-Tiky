@@ -18,6 +18,7 @@ export const useApi = () => {
     const role = getPriorityRole(rawRoles)
     return {
       id: msg.id,
+      userId: msg.user?.id ?? null,
       auteur: msg.user?.name || msg.user?.email || 'Anonyme',
       role: role,
       roles: [role],
