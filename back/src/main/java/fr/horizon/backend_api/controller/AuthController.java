@@ -50,15 +50,14 @@ public class AuthController {
         LoginResponse loginResponse = authService.login(loginRequest);
 
         // Stock le token dans un Cookie en HTTPOnly
-        Cookie cookie = new Cookie("token", loginResponse.getToken());
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge((int) (expiration / 1000));
 
-        response.addCookie(cookie);
+        response.addHeader("Set-Cookie",
+                "token=" + loginResponse.getToken() +
+                        "; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=" + (expiration / 1000));
 
         return ResponseEntity.ok().build();
+
+
     }
 
     /**
@@ -83,13 +82,8 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletResponse response) {
 
-        Cookie cookie = new Cookie("token", null);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(0); // supprime le cookie
-
-        response.addCookie(cookie);
+        response.addHeader("Set-Cookie",
+                "token=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0");
 
         return ResponseEntity.ok().build();
     }
