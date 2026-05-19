@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.HashMap;
 
+import org.json.JSONArray;
+
 @RestController
 @RequestMapping("/conversations")
 @RequiredArgsConstructor
@@ -126,7 +128,9 @@ public class ConversationController {
             userJson.put("id", user.getId());
             userJson.put("name", user.getName());
             userJson.put("email", user.getEmail());
-            userJson.put("roles", user.getRoleNames());
+            JSONArray roles = new JSONArray();
+            user.getRoleNames().forEach(roles::put);
+            userJson.put("roles", roles);
             msgJson.put("user", userJson);
 
             wsResponse.put("message", msgJson);

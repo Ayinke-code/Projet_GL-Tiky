@@ -8,6 +8,7 @@ import fr.horizon.backend_api.service.JwtToken;
 import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
+import org.json.JSONArray;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -103,7 +104,9 @@ public class IssueWebSocketHandler extends TextWebSocketHandler {
         userMap.put("name", user.getName());
         userMap.put("email", user.getEmail());
         userMap.put("role", user.getDisplayRole());
-        userMap.put("roles", user.getRoleNames());
+        JSONArray roles = new JSONArray();
+        user.getRoleNames().forEach(roles::put);
+        userMap.put("roles", roles);
 
         JSONObject msgMap = new JSONObject();
         msgMap.put("id", message.getId());
