@@ -1,10 +1,20 @@
 <template>
+  <!--
+    Carte de catégorie avec styles dynamiques :
+    - Si l'utilisateur peut accéder à la catégorie :
+        → fond bleu clair + curseur pointer
+    - Sinon :
+        → fond blanc (lecture seule)
+    - Interaction : déclenche un événement "click" vers le parent
+  -->
   <div
-    class="bg-white border-l-4 rounded-lg shadow-sm p-5 hover:shadow-lg transition-all group border-gray-200 relative overflow-hidden"
+    class="border-l-4 rounded-lg shadow-sm p-5 hover:shadow-lg transition-all group border-gray-200 relative overflow-hidden"
     :class="[
       borderClass,
-      category.status === 'ARCHIVED' ? 'grayscale opacity-60' : '',
-      (ready && !user?.roles?.includes('TEACHER')) ? '' : 'cursor-pointer'
+      category.status === 'ARCHIVED'
+        ? 'grayscale opacity-60'
+        : '',
+      canAccessCategory ? 'cursor-pointer bg-blue-50' : 'bg-white'
     ]" @click="$emit('click')">
 
     <!-- Archive overlay -->
@@ -60,7 +70,15 @@
 
       <div class="flex items-center">
         <i class="fa-solid fa-user-tie mr-2 text-indigo-400"></i>
-        <span>
+
+        <!-- Si l'utilisateur est propriétaire de la catégorie -->
+        <span v-if="user?.name === category.ownerName">
+          <span class="px-2 py-0.5 text-xs font-semibold bg-indigo-100 text-indigo-700 rounded-full">
+            Propriétaire
+          </span>
+        </span>
+
+        <span v-else>
           Responsable : {{ category.ownerName || 'Non assigné' }}
         </span>
       </div>
@@ -109,6 +127,25 @@ const emit = defineEmits(['click', 'follow', 'unfollow'])
 const props = defineProps({
   category: Object,
   isFollowed: Boolean
+})
+
+/**
+ * Vérifie si l'utilisateur peut accéder à la catégorie.
+ * Autorisé uniquement si :
+ * - l'utilisateur est chargé
+ * - l'utilisateur a le rôle TEACHER
+ * - l'utilisateur est le propriétaire de la catégorie
+ */
+const canAccessCategory = computed(() => {
+  if (!ready || !user?.value) return false
+
+  const isTeacher =
+    user.value.roles?.includes('TEACHER')
+
+  const isOwner =
+    user.value.name === props.category.ownerName
+
+  return isTeacher && isOwner
 })
 
 /**
