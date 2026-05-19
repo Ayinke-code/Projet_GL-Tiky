@@ -21,6 +21,15 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+/**
+ * Service métier des conversations.
+ * <p>
+ * Centralise la récupération des conversations, la gestion des participants
+ * et la création des messages associés à une issue.
+ * <p>
+ * Le service prépare également les structures de données destinées
+ * à la réponse REST et au broadcast WebSocket, afin de garder le contrôleur fin.
+ */
 public class ConversationService {
 
     private final ConversationRepository conversationRepository;
@@ -29,13 +38,28 @@ public class ConversationService {
     private final IssueRepository issueRepository;
     private final UserRepository userRepository;
 
+    /**
+     * Résultat de l'envoi d'un message : payload REST, payload WebSocket et issue ciblée.
+     */
     public record MessageDispatchResult(Map<String, Object> message, String broadcastPayload, Long issueId) {
     }
 
+    /**
+     * Récupère la conversation liée à une issue.
+     *
+     * @param issueId identifiant de l'issue
+     * @return conversation si elle existe, vide sinon
+     */
     public Optional<Conversation> getConversationByIssueId(Long issueId) {
         return conversationRepository.findByIssueId(issueId);
     }
 
+    /**
+     * Crée une conversation pour une issue donnée.
+     *
+     * @param issue issue concernée
+     * @return conversation créée
+     */
     public Conversation createConversationForIssue(Issue issue) {
         Conversation conversation = Conversation.builder()
                 .issue(issue)
@@ -43,6 +67,13 @@ public class ConversationService {
         return conversationRepository.save(conversation);
     }
 
+    /**
+     * Ajoute un utilisateur à une conversation avec un rôle métier donné.
+     *
+     * @param conversation conversation cible
+     * @param user utilisateur à associer
+     * @param role rôle à attribuer dans la conversation
+     */
     public void addUserToConversation(Conversation conversation, User user, String role) {
         ConversationUser conversationUser = ConversationUser.builder()
                 .conversation(conversation)
@@ -52,6 +83,15 @@ public class ConversationService {
         conversationUserRepository.save(conversationUser);
     }
 
+    /**
+     * Persiste un message dans une conversation liée à une issue.
+     *
+     * @param conversationId identifiant de la conversation
+     * @param content contenu du message
+     * @param user auteur du message
+     * @param issueId identifiant de l'issue liée
+     * @return message enregistré
+     */
     public Message addMessageToConversation(Long conversationId, String content, User user, Long issueId) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
@@ -70,8 +110,14 @@ public class ConversationService {
     }
 
     /**
-     * Enregistre un message à partir de la requête HTTP, puis renvoie les données nécessaires
-     * à la réponse REST et au broadcast websocket.
+     * Enregistre un message à partir des données de requête HTTP.
+     * <p>
+     * La méthode prépare ensuite le payload REST et le payload de broadcast WebSocket.
+     *
+     * @param conversationId identifiant de la conversation
+     * @param payload données reçues depuis le front
+     * @param email email de l'utilisateur authentifié
+     * @return résultat contenant le message sérialisé et le payload de diffusion
      */
     public MessageDispatchResult addMessage(Long conversationId, Map<String, String> payload, String email) {
         User user = userRepository.findByEmail(email)
@@ -90,6 +136,9 @@ public class ConversationService {
 
     /**
      * Construit la réponse complète d'une conversation associée à une issue.
+     *
+     * @param issueId identifiant de l'issue
+     * @return map contenant la clé {@code conversation}
      */
     public Map<String, Object> getConversationByIssuePayload(Long issueId) {
         Map<String, Object> response = new HashMap<>();
@@ -104,12 +153,24 @@ public class ConversationService {
         return response;
     }
 
+    /**
+     * Récupère les messages d'une conversation, triés par date croissante.
+     *
+     * @param conversationId identifiant de la conversation
+     * @return liste des messages
+     */
     public List<Message> getMessagesForConversation(Long conversationId) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
         return messageRepository.findByConversationOrderByCreatedAtAsc(conversation);
     }
 
+    /**
+     * Récupère les utilisateurs associés à une conversation.
+     *
+     * @param conversationId identifiant de la conversation
+     * @return liste des participants
+     */
     public List<ConversationUser> getUsersInConversation(Long conversationId) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
