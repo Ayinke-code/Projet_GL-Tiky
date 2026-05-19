@@ -9,7 +9,7 @@
 const route = useRoute()
 const { ready, user, wsToken } = useAuth()
 const { getIssueById, updateIssueStatus, updateIssuePrivacy } = useIssues()
-const api = useApi()
+const { getIssueMessages, sendIssueMessage, normalizeMessage } = useConversations()
 
 // ID de l'issue depuis l'URL
 const issueId = Number(route.params.id)
@@ -46,7 +46,7 @@ const connectWebSocket = () => {
     try {
       const data = JSON.parse(event.data)
       if (data.type === 'new_message' && data.message) {
-        const normalized = api.normalizeMessage(data.message)
+        const normalized = normalizeMessage(data.message)
         if (!messages.value.find((m: any) => m.id === normalized.id)) {
           messages.value.push(normalized)
         }
@@ -74,7 +74,7 @@ onMounted(async () => {
 
     try {
         issue.value = await getIssueById(issueId)
-        messages.value = await api.getIssueMessages(issueId)
+        messages.value = await getIssueMessages(issueId)
         connectWebSocket()
     } catch (err) {
         error.value = err.message || 'Erreur de chargement'
@@ -152,7 +152,7 @@ const handleSend = async () => {
 
     sending.value = true
     try {
-        const sentMessage = await api.sendIssueMessage(issueId, newMessage.value)
+        const sentMessage = await sendIssueMessage(issueId, newMessage.value)
         // Avoid duplicates: the server broadcasts the new message via WebSocket,
         // which may arrive before or after the HTTP response. Only push the
         // message locally if we don't already have it (compare by id).
