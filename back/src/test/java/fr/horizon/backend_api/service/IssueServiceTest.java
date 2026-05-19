@@ -464,7 +464,7 @@ class IssueServiceTest {
         requestManager.setStatus(RequestManagerStatus.PENDING);
 
         when(issueRepository.findById(issueId)).thenReturn(Optional.of(issue));
-        when(requestManagerRepository.findByIssue_Id(issueId)).thenReturn(Optional.of(requestManager));
+        when(requestManagerRepository.findFirstByIssueOrderByCreatedAtDesc(issue)).thenReturn(Optional.of(requestManager));
 
         // Action
         issueService.markIssueAsIncomplete(issueId, commentaire, raison);
@@ -501,6 +501,9 @@ class IssueServiceTest {
     void markIssueAsIncomplete_IssueNotFound() {
         // Précondition
         Long issueId = 1L;
+        Issue issue = new Issue();
+        issue.setId(issueId);
+        issue.setStatus(IssueStatus.OUVERT);
         when(issueRepository.findById(issueId)).thenReturn(Optional.empty());
 
         // Action et Assertion
@@ -508,7 +511,7 @@ class IssueServiceTest {
             issueService.markIssueAsIncomplete(issueId, commentaire, raison);
         });
 
-        verify(requestManagerRepository, never()).findByIssue_Id(anyLong());
+        verify(requestManagerRepository, never()).findFirstByIssueOrderByCreatedAtDesc(issue);
     }
 
 
