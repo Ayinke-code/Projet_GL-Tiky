@@ -8,6 +8,7 @@
       class="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-600"
       placeholder="Écrivez votre message..."
       @keydown.ctrl.enter.prevent="emitSend"
+      style="overflow-wrap: anywhere; word-break: break-word;"
     />
     <div class="mt-1 text-right text-xs text-gray-400">
       {{ value.length }}/4000
