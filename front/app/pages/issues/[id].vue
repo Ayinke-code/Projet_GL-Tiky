@@ -1,53 +1,78 @@
 <script setup lang="ts">
 /**
- * Page détail d'une issue
+ * Page détail d'une issue (typeScript)
  * - charge une issue par ID
  * - permet mise à jour status + visibilité
  * - gère les messages et conversations
  */
+
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const route = useRoute()
 const { ready, user, wsToken } = useAuth()
 const { getIssueById, updateIssueStatus, updateIssuePrivacy } = useIssues()
 const { getIssueMessages, sendIssueMessage, normalizeMessage, initializeConversation } = useConversations()
 
-// ID de l'issue depuis l'URL
-const issueId = Number(route.params.id)
+// Types locaux
+interface Issue {
+  id: number
+  title?: string
+  status?: string
+  private?: boolean
+  categoryId?: number
+  categoryName?: string
+  createdName?: string
+  professeur?: string
+  abonnes?: number
+}
 
-// state local
-const issue = ref(null)
-const loading = ref(true)
-const error = ref(null)
-const messages = ref([])
-const newMessage = ref('')
-const sending = ref(false)
+interface ConversationMessage {
+  id: number
+  userId?: number
+  auteur: string
+  role: string
+  roles: string[]
+  date?: string | null
+  contenu?: string
+}
+
+// ID de l'issue depuis l'URL
+const issueId = Number(route.params.id) as number
+
+// state local typé
+const issue = ref<Issue | null>(null)
+const loading = ref<boolean>(true)
+const error = ref<string | null>(null)
+const messages = ref<ConversationMessage[]>([])
+const newMessage = ref<string>('')
+const sending = ref<boolean>(false)
 const socket = ref<WebSocket | null>(null)
 
 /**
  * Connecte au WebSocket pour les mises à jour en temps réel
  */
-const connectWebSocket = () => {
+const connectWebSocket = (): void => {
   if (process.server) return
   if (socket.value) socket.value.close()
 
-  const config = useRuntimeConfig()
+  const config = useRuntimeConfig() as any
 
   const token = wsToken.value || localStorage.getItem('wsToken')
   if (!token) return
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const apiBase = config.public.apiBase
+  const apiBase: string = config.public.apiBase
   const host = apiBase.startsWith('/') ? window.location.host + apiBase : new URL(apiBase).host + new URL(apiBase).pathname
   const wsUrl = `${protocol}//${host}/ws/issue?token=${token}&issueId=${issueId}`
 
   socket.value = new WebSocket(wsUrl)
 
-  socket.value.onmessage = (event) => {
+  socket.value.onmessage = (event: MessageEvent) => {
     try {
-      const data = JSON.parse(event.data)
+      const data = JSON.parse(event.data) as any
       if (data.type === 'new_message' && data.message) {
         const normalized = normalizeMessage(data.message)
-        if (!messages.value.find((m: any) => m.id === normalized.id)) {
+        if (!messages.value.find((m: ConversationMessage) => m.id === normalized.id)) {
           messages.value.push(normalized)
         }
       }
@@ -66,106 +91,106 @@ const connectWebSocket = () => {
  * Chargement initial de l'issue et des messages
  */
 onMounted(async () => {
-    // redirection si non connecté
-    if (ready && !user?.value?.id) {
-        await navigateTo('/login')
-        return
-    }
+  // redirection si non connecté
+  if (ready && !user?.value?.id) {
+    await navigateTo('/login')
+    return
+  }
 
-    try {
-        issue.value = await getIssueById(issueId)
-        await initializeConversation(issueId)
-        messages.value = await getIssueMessages(issueId)
-        connectWebSocket()
-    } catch (err) {
-        error.value = err.message || 'Erreur de chargement'
-    } finally {
-        loading.value = false
-    }
+  try {
+    issue.value = await getIssueById(issueId)
+    await initializeConversation(issueId)
+    messages.value = await getIssueMessages(issueId)
+    connectWebSocket()
+  } catch (err: any) {
+    error.value = err?.message || 'Erreur de chargement'
+  } finally {
+    loading.value = false
+  }
 })
 
 /**
  * Nettoie la connexion WebSocket à la fermeture
  */
 onUnmounted(() => {
-    socket.value?.close()
+  socket.value?.close()
 })
 
 /**
  * Marquer l'issue comme terminée
  */
-const handleMarkResolved = async () => {
-    try {
-        await updateIssueStatus(issueId, 'TERMINE')
+const handleMarkResolved = async (): Promise<void> => {
+  try {
+    await updateIssueStatus(issueId, 'TERMINE')
 
-        // mise à jour locale optimiste
-        if (issue.value) {
-            issue.value.status = 'TERMINE'
-        }
-    } catch (err) {
-        console.error(err)
+    // mise à jour locale optimiste
+    if (issue.value) {
+      issue.value.status = 'TERMINE'
     }
+  } catch (err) {
+    console.error(err)
+  }
 }
 
 /**
  * Couleurs des statuts (aligné backend)
  */
-const statutColor = (statut) => {
-    const map = {
-        'En cours': 'bg-blue-100 text-blue-700',
-        'résolu': 'bg-green-100 text-green-700',
-        'Ouvert': 'bg-yellow-100 text-yellow-700',
-        'Fermé': 'bg-gray-100 text-gray-600',
-    }
-    return map[statut] || 'bg-gray-100 text-gray-600'
+const statutColor = (statut?: string): string => {
+  const map: Record<string, string> = {
+    'En cours': 'bg-blue-100 text-blue-700',
+    'résolu': 'bg-green-100 text-green-700',
+    'Ouvert': 'bg-yellow-100 text-yellow-700',
+    'Fermé': 'bg-gray-100 text-gray-600',
+  }
+  return (statut && map[statut]) || 'bg-gray-100 text-gray-600'
 }
 
 /**
  * Modals UI
  */
-const isResolveModalOpen = ref(false)
-const isVisibilityModalOpen = ref(false)
+const isResolveModalOpen = ref<boolean>(false)
+const isVisibilityModalOpen = ref<boolean>(false)
 
 /**
  * Toggle visibilité (public / privé)
  */
-const toggleVisibility = async () => {
-    try {
-        await updateIssuePrivacy(issueId)
+const toggleVisibility = async (): Promise<void> => {
+  try {
+    await updateIssuePrivacy(issueId)
 
-        if (issue.value) {
-            issue.value.private = !issue.value.private
-        }
-    } catch (err) {
-        console.error(err)
+    if (issue.value) {
+      issue.value.private = !issue.value.private
     }
+  } catch (err) {
+    console.error(err)
+  }
 }
 
 /**
  * Envoie un nouveau message
  */
-const handleSend = async () => {
-    if (!newMessage.value.trim()) return
-    if (newMessage.value.length > 4000) {
-        error.value = 'Le message ne doit pas dépasser 4000 caractères'
-        return
-    }
+const handleSend = async (): Promise<void> => {
+  if (!newMessage.value.trim()) return
+  if (newMessage.value.length > 4000) {
+    error.value = 'Le message ne doit pas dépasser 4000 caractères'
+    return
+  }
 
-    sending.value = true
-    try {
-        const sentMessage = await sendIssueMessage(issueId, newMessage.value)
-        // Avoid duplicates: the server broadcasts the new message via WebSocket,
-        // which may arrive before or after the HTTP response. Only push the
-        // message locally if we don't already have it (compare by id).
-        if (!messages.value.find((m: any) => m.id === sentMessage.id)) {
-            messages.value.push(sentMessage)
-        }
-        newMessage.value = ''
-    } catch (err) {
-        error.value = err.message || 'Erreur lors de l\'envoi du message'
-    } finally {
-        sending.value = false
+  sending.value = true
+  try {
+    const sentMessage = await sendIssueMessage(issueId, newMessage.value)
+    // Avoid duplicates: the server broadcasts the new message via WebSocket,
+    // which may arrive before or after the HTTP response. Only push the
+    // message locally if we don't already have it (compare by id).
+    if (!messages.value.find((m: ConversationMessage) => m.id === sentMessage.id)) {
+      messages.value.push(sentMessage)
     }
+    newMessage.value = ''
+  } catch (err: any) {
+    error.value = err?.message || 'Erreur lors de l\'envoi du message'
+  } finally {
+    sending.value = false
+  }
 }
 </script>
 
