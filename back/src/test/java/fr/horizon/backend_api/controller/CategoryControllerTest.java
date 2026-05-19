@@ -1,5 +1,6 @@
 package fr.horizon.backend_api.controller;
 
+import fr.horizon.backend_api.model.dto.CategoryDetailsDto;
 import fr.horizon.backend_api.model.dto.CategoryDto;
 import fr.horizon.backend_api.service.CategoryService;
 import fr.horizon.backend_api.service.JwtToken;
@@ -87,4 +88,42 @@ class CategoryControllerTest {
 
         verify(categoryService).deleteById(1L);
     }
+
+    @Test
+    void shouldGetCategoryById() throws Exception {
+
+        CategoryDetailsDto dto = CategoryDetailsDto.builder().build();
+
+        when(categoryService.findById(1L)).thenReturn(dto);
+
+        mockMvc.perform(get("/categories/1"))
+                .andExpect(status().isOk());
+
+        verify(categoryService).findById(1L);
+    }
+
+    @Test
+    void shouldAddFollower() throws Exception {
+
+        CategoryDetailsDto dto = CategoryDetailsDto.builder().build();
+
+        when(categoryService.findById(1L)).thenReturn(dto);
+
+        mockMvc.perform(post("/categories/followers/10/1"))
+                .andExpect(status().isOk());
+
+        verify(categoryService).addFollower(1L, 10L);
+        verify(categoryService).findById(1L);
+    }
+
+    @Test
+    void shouldDeleteFollower() throws Exception {
+
+        mockMvc.perform(delete("/categories/followers/10/1"))
+                .andExpect(status().isOk());
+
+        verify(categoryService).deleteFollowerById(1L, 10L);
+    }
+
+
 }
