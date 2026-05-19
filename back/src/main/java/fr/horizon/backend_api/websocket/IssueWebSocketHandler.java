@@ -103,7 +103,7 @@ public class IssueWebSocketHandler extends TextWebSocketHandler {
         userMap.put("id", user.getId());
         userMap.put("name", user.getName());
         userMap.put("email", user.getEmail());
-        userMap.put("role", user.getDisplayRole());
+        userMap.put("displayRole", user.getDisplayRole());
         JSONArray roles = new JSONArray();
         user.getRoleNames().forEach(roles::put);
         userMap.put("roles", roles);

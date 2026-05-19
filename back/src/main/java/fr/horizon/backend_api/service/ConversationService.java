@@ -245,7 +245,7 @@ public class ConversationService {
         userMap.put("id", user.getId());
         userMap.put("name", user.getName());
         userMap.put("email", user.getEmail());
-        userMap.put("role", user.getDisplayRole());
+        userMap.put("displayRole", user.getDisplayRole());
         userMap.put("roles", user.getRoleNames());
         return userMap;
     }
@@ -264,6 +264,7 @@ public class ConversationService {
         userJson.put("id", message.getUser().getId());
         userJson.put("name", message.getUser().getName());
         userJson.put("email", message.getUser().getEmail());
+        userJson.put("displayRole", message.getUser().getDisplayRole());
         org.json.JSONArray roles = new org.json.JSONArray();
         message.getUser().getRoleNames().forEach(roles::put);
         userJson.put("roles", roles);
