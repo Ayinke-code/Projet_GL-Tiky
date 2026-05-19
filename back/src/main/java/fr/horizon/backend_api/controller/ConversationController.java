@@ -36,6 +36,20 @@ public class ConversationController {
     }
 
     /**
+     * Crée ou récupère une conversation pour une issue (idempotent).
+     * <p>
+     * Si la conversation n'existe pas, elle est créée.
+     * Si elle existe déjà, elle est retournée.
+     *
+     * @param issueId identifiant de l'issue
+     * @return réponse HTTP contenant la conversation sérialisée
+     */
+    @PostMapping("/issue/{issueId}/initialize")
+    public ResponseEntity<?> initializeConversationForIssue(@PathVariable Long issueId) {
+        return ResponseEntity.ok(conversationService.getOrCreateConversationForIssue(issueId));
+    }
+
+    /**
      * Ajoute un message à une conversation.
      *
      * @param conversationId identifiant de la conversation

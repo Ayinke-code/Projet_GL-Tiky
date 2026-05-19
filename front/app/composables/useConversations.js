@@ -55,16 +55,35 @@ export const useConversations = () => {
   }
 
   /**
+   * Initialise une conversation pour une issue (crée si nécessaire).
+   */
+  const initializeConversation = async (issueId) => {
+    try {
+      const response = await api(`/conversations/issue/${issueId}/initialize`, {
+        method: 'POST'
+      })
+
+      if (!response?.conversation?.id) {
+        throw new Error('Failed to initialize conversation')
+      }
+
+      return response.conversation
+    } catch (e) {
+      console.error('Error initializing conversation:', e)
+      error.value = e?.data?.message || e?.message || 'UNKNOWN_ERROR'
+      throw e
+    }
+  }
+
+  /**
    * Envoie un message sur une issue.
    */
   const sendIssueMessage = async (issueId, content) => {
     try {
-      const response = await api(`/conversations/issue/${issueId}`)
-      if (!response?.conversation?.id) {
-        throw new Error('Conversation not found')
-      }
+      // Initialiser/créer la conversation si elle n'existe pas
+      const conversation = await initializeConversation(issueId)
 
-      const conversationId = response.conversation.id
+      const conversationId = conversation.id
       const message = await api(`/conversations/${conversationId}/messages`, {
         method: 'POST',
         body: { content, issueId }
@@ -82,6 +101,7 @@ export const useConversations = () => {
     request: api,
     getIssueMessages,
     sendIssueMessage,
+    initializeConversation,
     normalizeMessage,
     getPriorityRole,
     error

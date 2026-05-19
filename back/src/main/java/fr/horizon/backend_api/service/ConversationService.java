@@ -68,6 +68,37 @@ public class ConversationService {
     }
 
     /**
+     * Récupère ou crée une conversation pour une issue (idempotent).
+     * <p>
+     * Si la conversation n'existe pas, elle est créée.
+     * Si elle existe déjà, elle est retournée.
+     *
+     * @param issueId identifiant de l'issue
+     * @return map contenant la clé {@code conversation} avec la conversation sérialisée
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public Map<String, Object> getOrCreateConversationForIssue(Long issueId) {
+        Optional<Conversation> existing = getConversationByIssueId(issueId);
+
+        if (existing.isPresent()) {
+            // Conversation existe déjà
+            Map<String, Object> response = new HashMap<>();
+            response.put("conversation", toConversationMap(existing.get()));
+            return response;
+        }
+
+        // Créer une nouvelle conversation
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new RuntimeException("Issue not found"));
+
+        Conversation conversation = createConversationForIssue(issue);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("conversation", toConversationMap(conversation));
+        return response;
+    }
+
+    /**
      * Ajoute un utilisateur à une conversation avec un rôle métier donné.
      *
      * @param conversation conversation cible
