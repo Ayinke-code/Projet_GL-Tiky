@@ -1,7 +1,7 @@
 export const useApi = () => {
   const config = useRuntimeConfig()
 
-  const request = $fetch.create({
+  return $fetch.create({
     baseURL: config.public.apiBase,
     credentials: 'include',
 
@@ -10,7 +10,4 @@ export const useApi = () => {
     }
   })
 
-  return Object.assign(request, {
-    request,
-  })
 }
