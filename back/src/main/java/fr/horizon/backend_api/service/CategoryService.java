@@ -1,5 +1,6 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.model.enums.EventType;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.*;
@@ -144,6 +145,16 @@ public class CategoryService {
     }
 
     /**
+     * Récupère les catégories par type d'événement.
+     */
+    public List<CategoryDto> findByEventType(EventType eventType) {
+        return categoryRepository.findByEventType(eventType)
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    /**
      * Convertit l'entité Category → DTO.
      */
     private CategoryDto toDto(Category category) {
@@ -185,6 +196,7 @@ public class CategoryService {
                                 .map(this::toUserRefDto)
                                 .toList()
                 )
+                .eventType(category.getEventType())
                 .build();
     }
 }
