@@ -60,7 +60,7 @@
 <script setup>
 const route = useRoute()
 const { user, ready, logout } = useAuth()
-const isActive = (path) => route.path === path
+const isActive = (path) => route.path.startsWith(path)
 
 // Redirection vers la page de connexion
 const goToLogin = () => navigateTo('/login')

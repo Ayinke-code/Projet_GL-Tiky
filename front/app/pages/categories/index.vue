@@ -175,10 +175,16 @@ onMounted(async () => {
  * @param {Object} cat - catégorie sélectionnée
  */
 const handleClick = (cat) => {
-  if (ready && !user?.value?.roles?.includes('TEACHER')) return
+  if (!ready || !user?.value) return
 
-  selectedCat.value = cat
-  isDetailOpen.value = true
+  const isTeacher = user.value.roles?.includes('TEACHER')
+  const isOwner = user.value.name === cat.ownerName
+
+  if (!isOwner) return
+
+  if (isTeacher && cat?.id) {
+    navigateTo(`/categories/${cat.id}`)
+  }
 }
 
 /**
