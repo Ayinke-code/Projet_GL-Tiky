@@ -6,6 +6,7 @@ import fr.horizon.backend_api.exception.RoleNotFoundException;
 import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.UserDto;
+import fr.horizon.backend_api.model.dto.UserRefDto;
 import fr.horizon.backend_api.model.dto.UserRequestDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.repository.IssueRepository;
@@ -15,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -88,6 +91,30 @@ public class UserService {
     }
 
     /**
+     * Récupère les utilisateurs ayant au moins un des rôles fournis.
+     *
+     * @param roles liste de noms de rôles (ex: TEACHER, STUDENT)
+     * @return liste de UserRefDto
+     * @throws IllegalArgumentException si un rôle est invalide
+     */
+    public List<UserRefDto> findAllByRoles(List<String> roles) {
+
+        Set<String> uniqueRoles = new HashSet<>(roles);
+
+        // Vérifie que tous les rôles existent
+        List<Role> existingRoles = roleRepository.findByNameIn(new ArrayList<>(uniqueRoles));
+
+        if (existingRoles.size() != roles.size()) {
+            throw new IllegalArgumentException("Un ou plusieurs rôles sont invalides");
+        }
+
+        return userRepository.findDistinctByRoles_NameIn(roles)
+                .stream()
+                .map(this::toUserRefDto)
+                .toList();
+    }
+
+    /**
      * Recherche un utilisateur par email.
      *
      * @param email email de l'utilisateur
@@ -142,6 +169,25 @@ public class UserService {
                 )
                 .isContributor(hasOpenIssues)
                 .wsToken(wsToken)
+                .build();
+    }
+
+    /**
+     * Convertit une entité User en UserRefDto.
+     *
+     * @param user entité utilisateur
+     * @return DTO simplifié de l'utilisateur
+     */
+    public UserRefDto toUserRefDto(User user) {
+        return UserRefDto.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .roles(
+                        user.getRoles()
+                                .stream()
+                                .map(Role::getName)
+                                .collect(Collectors.toSet())
+                )
                 .build();
     }
 }

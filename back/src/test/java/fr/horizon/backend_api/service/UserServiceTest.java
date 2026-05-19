@@ -21,9 +21,9 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anySet;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,6 +37,9 @@ class UserServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private IssueRepository issueRepository;
 
     @InjectMocks
     private UserService userService;
@@ -65,14 +68,9 @@ class UserServiceTest {
         role.setId(1L);
         role.setName("USER");
 
-        when(userRepository.existsByEmail("john@test.com"))
-                .thenReturn(false);
-
-        when(roleRepository.findAllById(Set.of(1L)))
-                .thenReturn(List.of(role));
-
-        when(passwordEncoder.encode("pass"))
-                .thenReturn("encodedPass");
+        when(userRepository.existsByEmail("john@test.com")).thenReturn(false);
+        when(roleRepository.findAllById(Set.of(1L))).thenReturn(List.of(role));
+        when(passwordEncoder.encode("pass")).thenReturn("encodedPass");
 
         when(userRepository.save(any(User.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -93,8 +91,7 @@ class UserServiceTest {
         dto.setEmail("john@test.com");
         dto.setRoleIds(Set.of(1L));
 
-        when(userRepository.existsByEmail("john@test.com"))
-                .thenReturn(true);
+        when(userRepository.existsByEmail("john@test.com")).thenReturn(true);
 
         assertThrows(RuntimeException.class,
                 () -> userService.createUser(dto));
@@ -107,11 +104,8 @@ class UserServiceTest {
         dto.setEmail("john@test.com");
         dto.setRoleIds(Set.of(1L));
 
-        when(userRepository.existsByEmail("john@test.com"))
-                .thenReturn(false);
-
-        when(roleRepository.findAllById(Set.of(1L)))
-                .thenReturn(List.of()); // aucun rôle trouvé
+        when(userRepository.existsByEmail("john@test.com")).thenReturn(false);
+        when(roleRepository.findAllById(Set.of(1L))).thenReturn(List.of());
 
         assertThrows(RuntimeException.class,
                 () -> userService.createUser(dto));
@@ -142,7 +136,7 @@ class UserServiceTest {
     }
 
     @Test
-    void toDto_should_map_user_correctly() {
+    void toDto_should_return_contributor_true_when_open_issues_exist() {
 
         Role role = new Role();
         role.setName("USER");
@@ -168,7 +162,7 @@ class UserServiceTest {
     }
 
     @Test
-    void toDto_should_return_false_when_no_open_issues() {
+    void toDto_should_return_contributor_false_when_no_open_issues() {
 
         Role role = new Role();
         role.setName("USER");

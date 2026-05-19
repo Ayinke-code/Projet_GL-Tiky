@@ -3,6 +3,7 @@ package fr.horizon.backend_api.controller;
 import java.util.List;
 
 import fr.horizon.backend_api.model.dto.UserDto;
+import fr.horizon.backend_api.model.dto.UserRefDto;
 import fr.horizon.backend_api.model.dto.UserRequestDto;
 import fr.horizon.backend_api.service.UserService;
 import jakarta.validation.Valid;
@@ -30,6 +31,14 @@ public class UserController {
     @GetMapping
     public List<UserDto> getAllUsers() {
         return userService.findAll();
+    }
+
+    /**
+     * Récupère les utilisateurs filtrés par rôles.
+     */
+    @PostMapping("/byRoles")
+    public List<UserRefDto> getAllUsersByRole(@RequestBody List<String> roles) {
+        return userService.findAllByRoles(roles);
     }
 
     /**
