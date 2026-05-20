@@ -2,6 +2,7 @@ package fr.horizon.backend_api.security;
 
 import java.util.List;
 
+import fr.horizon.backend_api.model.enums.RoleEnum;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,15 +39,21 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
-                        .requestMatchers("/auth/login").permitAll()
-                        .requestMatchers("/auth/logout").authenticated()
-                        .requestMatchers("/auth/me", "/categories/**").authenticated()
+                        .requestMatchers("/admin/**")
+                        .hasAuthority(RoleEnum.ADMIN.value())
 
-                        .requestMatchers("/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers("/users/**").hasAnyAuthority("TEACHER","ADMIN")
+                        .requestMatchers("/users/**")
+                        .hasAnyAuthority(RoleEnum.ADMIN.value(), RoleEnum.TEACHER.value())
 
-                        .requestMatchers("/teacher/**").hasAnyAuthority("TEACHER", "ADMIN")
-                        .requestMatchers("/student/**").hasAnyAuthority("STUDENT", "TEACHER", "ADMIN")
+                        .requestMatchers("/teacher/**")
+                        .hasAnyAuthority(RoleEnum.TEACHER.value(), RoleEnum.ADMIN.value())
+
+                        .requestMatchers("/student/**")
+                        .hasAnyAuthority(
+                                RoleEnum.STUDENT.value(),
+                                RoleEnum.TEACHER.value(),
+                                RoleEnum.ADMIN.value()
+                        )
 
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

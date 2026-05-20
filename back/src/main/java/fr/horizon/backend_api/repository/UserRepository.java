@@ -12,5 +12,6 @@ import java.util.Set;
 public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmail(String email);
     Optional<User> findByEmail(String email);
+    List<User> findDistinctByRoles_NameIn(List<String> roleNames);
     List<User> getAllByRoles(Set<Role> roles);
 }

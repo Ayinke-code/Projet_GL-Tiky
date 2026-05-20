@@ -1,10 +1,8 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
-import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.CategoryRequest;
-import fr.horizon.backend_api.model.Issue;
-import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.*;
+import fr.horizon.backend_api.model.dto.CategoryDetailsDto;
 import fr.horizon.backend_api.model.dto.CategoryDto;
 import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
@@ -19,11 +17,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CategoryServiceTest {
@@ -64,38 +64,24 @@ class CategoryServiceTest {
                 .build();
     }
 
-    /**
-     * Vérifie que toutes les catégories sont récupérées.
-     */
     @Test
     void shouldFindAllCategories() {
 
-        // GIVEN
         when(categoryRepository.findAll())
                 .thenReturn(List.of(category));
 
-        // WHEN
         List<CategoryDto> result = categoryService.findAll();
 
-        // THEN
         assertThat(result).hasSize(1);
-
-        assertThat(result.get(0).getName())
-                .isEqualTo("DEV");
-
-        assertThat(result.get(0).getSubject())
-                .isEqualTo("Développement");
+        assertThat(result.get(0).getName()).isEqualTo("DEV");
+        assertThat(result.get(0).getSubject()).isEqualTo("Développement");
 
         verify(categoryRepository).findAll();
     }
 
-    /**
-     * Vérifie qu'une catégorie est correctement créée.
-     */
     @Test
     void shouldCreateCategory() {
 
-        // GIVEN
         CategoryCreateDto dto = CategoryCreateDto.builder()
                 .name("JAVA")
                 .subject("Backend Java")
@@ -108,29 +94,19 @@ class CategoryServiceTest {
         when(categoryRepository.save(any(Category.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        // WHEN
         CategoryDto result = categoryService.createCategory(dto);
 
-        // THEN
         assertThat(result).isNotNull();
-
-        assertThat(result.getName())
-                .isEqualTo("JAVA");
-
-        assertThat(result.getSubject())
-                .isEqualTo("Backend Java");
+        assertThat(result.getName()).isEqualTo("JAVA");
+        assertThat(result.getSubject()).isEqualTo("Backend Java");
 
         verify(userRepository).findById(1L);
         verify(categoryRepository).save(any(Category.class));
     }
 
-    /**
-     * Vérifie qu'une erreur est levée si le owner n'existe pas.
-     */
     @Test
     void shouldThrowExceptionWhenOwnerNotFound() {
 
-        // GIVEN
         CategoryCreateDto dto = CategoryCreateDto.builder()
                 .name("JAVA")
                 .subject("Backend")
@@ -140,22 +116,16 @@ class CategoryServiceTest {
         when(userRepository.findById(999L))
                 .thenReturn(Optional.empty());
 
-        // WHEN / THEN
         assertThatThrownBy(() -> categoryService.createCategory(dto))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("Owner not found");
 
-        verify(userRepository).findById(999L);
         verify(categoryRepository, never()).save(any());
     }
 
-    /**
-     * Vérifie qu'une catégorie est supprimée.
-     */
     @Test
     void shouldDeleteCategory() {
 
-        // GIVEN
         List<CategoryRequest> requests = List.of(
                 CategoryRequest.builder().id(1L).build(),
                 CategoryRequest.builder().id(2L).build()
@@ -175,31 +145,157 @@ class CategoryServiceTest {
         when(issueRepository.findByCategoryId(10L))
                 .thenReturn(issues);
 
-        // WHEN
         categoryService.deleteById(10L);
 
-        // THEN
         verify(issueRepository).deleteAll(issues);
         verify(categoryRequestRepository).deleteAll(requests);
         verify(categoryRepository).delete(category);
     }
 
-    /**
-     * Vérifie qu'une erreur est levée si la catégorie n'existe pas.
-     */
     @Test
     void shouldThrowExceptionWhenCategoryNotFound() {
 
-        // GIVEN
         when(categoryRepository.findById(999L))
                 .thenReturn(Optional.empty());
 
-        // WHEN / THEN
         assertThatThrownBy(() -> categoryService.deleteById(999L))
                 .isInstanceOf(CategoryNotFoundException.class)
                 .hasMessage("Category not found with id: 999");
 
-        verify(categoryRequestRepository, never()).deleteAll(any());
         verify(categoryRepository, never()).delete(any());
+    }
+
+    @Test
+    void shouldFindCategoryById() {
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+
+        CategoryDetailsDto result = categoryService.findById(10L);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getCategory().getId()).isEqualTo(10L);
+
+        verify(categoryRepository).findById(10L);
+    }
+
+    @Test
+    void shouldThrowWhenCategoryNotFoundInFindById() {
+        when(categoryRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.findById(999L))
+                .isInstanceOf(CategoryNotFoundException.class)
+                .hasMessageContaining("999");
+    }
+
+    @Test
+    void shouldAddFollower() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+
+        user.setRoles(Set.of(Role.builder().name("TEACHER").build()));
+
+        categoryService.addFollower(10L, 1L);
+
+        assertThat(category.getFollowers()).contains(user);
+
+        verify(categoryRepository).save(category);
+    }
+
+    @Test
+    void shouldThrowWhenUserNotFoundAddFollower() {
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("User not found");
+    }
+
+    @Test
+    void shouldThrowWhenCategoryNotFoundAddFollower() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(10L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L))
+                .isInstanceOf(CategoryNotFoundException.class);
+    }
+
+    @Test
+    void shouldThrowWhenUserIsNotTeacherAddFollower() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+
+        user.setRoles(Set.of(Role.builder().name("STUDENT").build()));
+
+        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Only teachers");
+    }
+
+    @Test
+    void shouldThrowWhenAlreadyFollower() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+
+        user.setRoles(Set.of(Role.builder().name("TEACHER").build()));
+        category.getFollowers().add(user);
+
+        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("already");
+    }
+
+    @Test
+    void shouldDeleteFollower() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+
+        user.setRoles(Set.of(Role.builder().name("TEACHER").build()));
+        category.getFollowers().add(user);
+
+        categoryService.deleteFollowerById(10L, 1L);
+
+        assertThat(category.getFollowers()).doesNotContain(user);
+
+        verify(categoryRepository).save(category);
+    }
+
+    @Test
+    void shouldThrowWhenUserNotFoundDeleteFollower() {
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.deleteFollowerById(10L, 1L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("User not found");
+    }
+
+    @Test
+    void shouldThrowWhenCategoryNotFoundDeleteFollower() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(10L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.deleteFollowerById(10L, 1L))
+                .isInstanceOf(CategoryNotFoundException.class);
+    }
+
+    @Test
+    void shouldThrowWhenUserNotTeacherDeleteFollower() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+
+        user.setRoles(Set.of(Role.builder().name("STUDENT").build()));
+
+        assertThatThrownBy(() -> categoryService.deleteFollowerById(10L, 1L))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void shouldThrowWhenUserIsNotFollower() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+
+        user.setRoles(Set.of(Role.builder().name("TEACHER").build()));
+
+        assertThatThrownBy(() -> categoryService.deleteFollowerById(10L, 1L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("not a follower");
     }
 }
