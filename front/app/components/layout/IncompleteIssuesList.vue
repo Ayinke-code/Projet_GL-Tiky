@@ -120,7 +120,7 @@
 </template>
 
 <script setup>
-const emit = defineEmits(['has-issues'])
+const emit = defineEmits(['has-issues', 'issue-updated'])
 
 const props = defineProps({
   userId: {
@@ -141,6 +141,7 @@ const loading = ref(true)
 const isModalOpen = ref(false)
 const editingIssue = ref(null)
 const submitting = ref(false)
+
 
 const formData = ref({
   title: '',
@@ -204,6 +205,8 @@ const submitCorrections = async () => {
 
     closeEditModal()
     await fetchIssues()
+
+    emit('issue-updated')
   } catch (error) {
     console.error("Erreur lors de la mise à jour de l'issue :", error)
   } finally {

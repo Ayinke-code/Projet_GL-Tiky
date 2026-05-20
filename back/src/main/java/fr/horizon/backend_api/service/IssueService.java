@@ -307,6 +307,7 @@ public class IssueService {
         if (response) {
             requestManager.setStatus(RequestManagerStatus.ACCEPTED);
             requestManager.getIssue().setManager(requestManager.getTargetTeacher());
+            requestManager.getIssue().setStatus(IssueStatus.COMPLET);
         } else {
             requestManager.setStatus(RequestManagerStatus.DENIED);
             createRequestManager(requestManager.getIssue());

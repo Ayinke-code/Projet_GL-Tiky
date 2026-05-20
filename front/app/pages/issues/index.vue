@@ -9,14 +9,14 @@
 
       <!--Rebrique des affectations -->
       <div v-if="isTeacher" class="py-12">
-        <section><AssignationManager :userId="user.id" /></section>
+        <section><AssignationManager :userId="user.id" @issue-updated="fetchIssues"/></section>
 
         <div class="relative py-8">
           <div class="absolute inset-0 flex items-center"><span class="w-full border-t border-gray-200"></span></div>
           <div class="relative flex justify-center"><span class="bg-white px-2 text-sm text-gray-400"></span></div>
         </div>
 
-        <section><AssignationTeacher :userId="user.id" /></section>
+        <section><AssignationTeacher :userId="user.id" @issue-updated="fetchIssues"/></section>
       </div>
 
       <div
@@ -27,6 +27,7 @@
         <IncompleteIssuesList
           :userId="user.id"
           @has-issues="afficherSectionIncomplete = $event"
+          @issue-updated="fetchIssues"
         />
       </div>
 

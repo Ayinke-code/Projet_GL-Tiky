@@ -215,6 +215,9 @@ const isDetailOpen = ref(false)
 const issueDetail = ref(null)
 const loadingDetail = ref(false)
 
+// changement de l'état dynamiquement
+const emit = defineEmits(['issue-updated'])
+
 const columns = [
   { accessorKey: 'issueTitle', header: "Titre de l'Issue" },
   { accessorKey: 'creator', header: 'Créé par' },
@@ -341,6 +344,7 @@ const confirmMarkIncomplete = async () => {
   try {
     await markIssueAsIncomplete(req.issueId, incompleteComment.value, incompleteReason.value)
     await loadData()
+    emit('issue-updated')
   } catch (e) {
     console.error("Erreur lors du marquage incomplet :", e)
   } finally {
