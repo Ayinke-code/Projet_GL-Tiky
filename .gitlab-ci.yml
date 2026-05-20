@@ -41,14 +41,15 @@ build-backend:
   script:
     - cd back
     - mvn $MAVEN_CLI_OPTS clean package -DskipTests
-    - ls -lh target/*.jar
+    - ls -lh target/*.war
   artifacts:
     paths:
-      - back/target/*.jar
+      - back/target/*.war
     expire_in: 1 day
   rules:
     - if: $CI_COMMIT_BRANCH
     # - when: never
+    - if: $CI_COMMIT_BRANCH
 
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend-dev:
@@ -73,8 +74,9 @@ build-frontend-dev:
       - front/.output/public/
     expire_in: 1 day
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev"
+    # - if: $CI_COMMIT_BRANCH == "dev"
     # - when: never
+    - if: $CI_COMMIT_BRANCH
 
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend-prod:
@@ -119,8 +121,8 @@ unit-test:
   dependencies:
     - build-backend
   rules:
-    - if: $CI_COMMIT_BRANCH   # toutes les branches
-    # - when: never # Pipeline dev
+    # - if: $CI_COMMIT_BRANCH   # toutes les branches
+    - when: never # Pipeline dev
 
 # Stage 3: Deploy sur serveur de dev/prod
 deploy_dev:
