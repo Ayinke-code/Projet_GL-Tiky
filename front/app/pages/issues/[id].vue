@@ -1,6 +1,6 @@
-<script setup lang="ts">
+<script setup lang="js">
 /**
- * Page détail d'une issue (typeScript)
+ * Page détail d'une issue
  * - charge une issue par ID
  * - permet mise à jour status + visibilité
  * - gère les messages et conversations
@@ -13,66 +13,43 @@ const { ready, user, wsToken } = useAuth()
 const { getIssueById, updateIssueStatus, updateIssuePrivacy } = useIssues()
 const { getIssueMessages, sendIssueMessage, normalizeMessage, initializeConversation } = useConversations()
 
-// Types locaux
-interface Issue {
-  id: number
-  title?: string
-  status?: string
-  private?: boolean
-  categoryId?: number
-  categoryName?: string
-  createdName?: string
-  professeur?: string
-  abonnes?: number
-}
-
-interface ConversationMessage {
-  id: number
-  userId?: number
-  auteur: string
-  role: string
-  roles: string[]
-  date?: string | null
-  contenu?: string
-}
-
 // ID de l'issue depuis l'URL
-const issueId = Number(route.params.id) as number
+const issueId = Number(route.params.id)
 
-// state local typé
-const issue = ref<Issue | null>(null)
-const loading = ref<boolean>(true)
-const error = ref<string | null>(null)
-const messages = ref<ConversationMessage[]>([])
-const newMessage = ref<string>('')
-const sending = ref<boolean>(false)
-const socket = ref<WebSocket | null>(null)
+// state local
+const issue = ref(null)
+const loading = ref(true)
+const error = ref(null)
+const messages = ref([])
+const newMessage = ref('')
+const sending = ref(false)
+const socket = ref(null)
 
 /**
  * Connecte au WebSocket pour les mises à jour en temps réel
  */
-const connectWebSocket = (): void => {
+const connectWebSocket = () => {
   if (process.server) return
   if (socket.value) socket.value.close()
 
-  const config = useRuntimeConfig() as any
+  const config = useRuntimeConfig()
 
   const token = wsToken.value || localStorage.getItem('wsToken')
   if (!token) return
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const apiBase: string = config.public.apiBase
+  const apiBase = config.public.apiBase
   const host = apiBase.startsWith('/') ? window.location.host + apiBase : new URL(apiBase).host + new URL(apiBase).pathname
   const wsUrl = `${protocol}//${host}/ws/issue?token=${token}&issueId=${issueId}`
 
   socket.value = new WebSocket(wsUrl)
 
-  socket.value.onmessage = (event: MessageEvent) => {
+  socket.value.onmessage = (event) => {
     try {
-      const data = JSON.parse(event.data) as any
+      const data = JSON.parse(event.data)
       if (data.type === 'new_message' && data.message) {
         const normalized = normalizeMessage(data.message)
-        if (!messages.value.find((m: ConversationMessage) => m.id === normalized.id)) {
+        if (!messages.value.find((m) => m.id === normalized.id)) {
           messages.value.push(normalized)
         }
       }
@@ -102,7 +79,7 @@ onMounted(async () => {
     await initializeConversation(issueId)
     messages.value = await getIssueMessages(issueId)
     connectWebSocket()
-  } catch (err: any) {
+  } catch (err) {
     error.value = err?.message || 'Erreur de chargement'
   } finally {
     loading.value = false
@@ -119,7 +96,7 @@ onUnmounted(() => {
 /**
  * Marquer l'issue comme terminée
  */
-const handleMarkResolved = async (): Promise<void> => {
+const handleMarkResolved = async () => {
   try {
     await updateIssueStatus(issueId, 'TERMINE')
 
@@ -135,26 +112,26 @@ const handleMarkResolved = async (): Promise<void> => {
 /**
  * Couleurs des statuts (aligné backend)
  */
-const statutColor = (statut?: string): string => {
-  const map: Record<string, string> = {
+const statutColor = (statut) => {
+  const map = {
     'En cours': 'bg-blue-100 text-blue-700',
     'résolu': 'bg-green-100 text-green-700',
     'Ouvert': 'bg-yellow-100 text-yellow-700',
     'Fermé': 'bg-gray-100 text-gray-600',
   }
-  return (statut && map[statut]) || 'bg-gray-100 text-gray-600'
+  return map[statut] || 'bg-gray-100 text-gray-600'
 }
 
 /**
  * Modals UI
  */
-const isResolveModalOpen = ref<boolean>(false)
-const isVisibilityModalOpen = ref<boolean>(false)
+const isResolveModalOpen = ref(false)
+const isVisibilityModalOpen = ref(false)
 
 /**
  * Toggle visibilité (public / privé)
  */
-const toggleVisibility = async (): Promise<void> => {
+const toggleVisibility = async () => {
   try {
     await updateIssuePrivacy(issueId)
 
@@ -169,7 +146,7 @@ const toggleVisibility = async (): Promise<void> => {
 /**
  * Envoie un nouveau message
  */
-const handleSend = async (): Promise<void> => {
+const handleSend = async () => {
   if (!newMessage.value.trim()) return
   if (newMessage.value.length > 4000) {
     error.value = 'Le message ne doit pas dépasser 4000 caractères'
@@ -182,11 +159,11 @@ const handleSend = async (): Promise<void> => {
     // Avoid duplicates: the server broadcasts the new message via WebSocket,
     // which may arrive before or after the HTTP response. Only push the
     // message locally if we don't already have it (compare by id).
-    if (!messages.value.find((m: ConversationMessage) => m.id === sentMessage.id)) {
+    if (!messages.value.find((m) => m.id === sentMessage.id)) {
       messages.value.push(sentMessage)
     }
     newMessage.value = ''
-  } catch (err: any) {
+  } catch (err) {
     error.value = err?.message || 'Erreur lors de l\'envoi du message'
   } finally {
     sending.value = false
