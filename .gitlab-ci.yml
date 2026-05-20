@@ -257,9 +257,19 @@ deploy_prod:
 selenium-test:
   stage: selenium
   script:
-    - cd back
+    # Build des containers et attend qu'ils soit build
+    - docker compose down -v --remove-orphans || true
+    - docker compose up -d --build
+    - docker ps
+    - until curl -f http://localhost:3000; do sleep 5; done
+    - until curl -f http://localhost:8080; do sleep 5; done
+
     # Lancer les tests Selenium
-    - mvn $MAVEN_CLI_OPTS verify -Pselenium
+    - cd back
+    - mvn failsafe:integration-test failsafe:verify
+
+  after_script:
+    - docker compose down -v
   artifacts:
     when: always
     paths:
@@ -270,8 +280,8 @@ selenium-test:
     # - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     # - if: $CI_COMMIT_BRANCH == "main"
     # - if: $CI_COMMIT_BRANCH == "dev"
-    # - if: $CI_COMMIT_BRANCH
-    - when: never # Pas encore de test SELENIUM
+    - if: $CI_COMMIT_BRANCH
+    # - when: never # Pas encore de test SELENIUM
 
 # Stage 5: SonarQube Analysis
 sonar-dev:

@@ -40,6 +40,9 @@ public class BackendApiApplication {
 		// Default user
 		System.setProperty("DEFAULT_PASSWORD", dotenv.get("DEFAULT_PASSWORD"));
 
+		// Front url
+		System.setProperty("FRONT_URL", dotenv.get("FRONT_URL"));
+
 		SpringApplication.run(BackendApiApplication.class, args);
 	}
 

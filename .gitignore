@@ -29,3 +29,8 @@ front/dist/
 .idea/
 .vscode/
 .DS_Store
+
+# =========================
+# Selenium
+# =========================
+selenium-jupiter-*.html
