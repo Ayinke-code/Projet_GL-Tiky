@@ -146,42 +146,59 @@ deploy_dev:
     - ssh-keyscan -H $DEPLOY_SERVER_DEV >> ~/.ssh/known_hosts
     
   script:
-    # test connexion
+    # Test connexion
     - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "echo OK"
-
-    # création dossiers
+    
+    # Création dossiers
     - |
       ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV << 'ENDSSH'
-        mkdir -p ~/app/backend
-        mkdir -p ~/app/frontend
-        mkdir -p ~/app/ssl
-        mkdir -p ~/app/logs
+      mkdir -p ~/app/backend
+      mkdir -p ~/app/frontend
+      mkdir -p ~/app/ssl
+      mkdir -p ~/app/logs
       ENDSSH
 
     # SSL
     - echo "$SSL_CERT_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/ssl/server.crt"
     - echo "$SSL_KEY_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/ssl/server.key"
     - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "chmod 644 ~/app/ssl/server.crt && chmod 600 ~/app/ssl/server.key"
-
+    
     # Backend jar
     - scp back/target/*.jar $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/backend/app.jar
-
-    # Frontend (copie vers dossier web Apache/Nginx)
+    
+    # Frontend
     - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER_DEV:/tmp/frontend/
+    
+    # Déploiement serveur - TOUT EN UN HEREDOC
+    - |
+      ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV << 'ENDSSH'
+      set -e
 
-    # Déploiement serveur (sudo côté remote)
-    # - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "set -e;"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "sudo rsync -avz --delete /tmp/frontend/ /var/www/html/"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "if pgrep -f app.jar > /dev/null 2>&1; then pkill -f app.jar; echo 'Backend stopped'; else echo 'No backend running'; fi"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "mkdir -p ~/app/logs"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "which java && java -version"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "ls -lh ~/app/backend/app.jar"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "nohup java -jar ~/app/backend/app.jar > ~/app/logs/app.log 2>&1 < /dev/null & disown"
+      echo "=== Deploying frontend ==="
+      sudo rsync -avz --delete /tmp/frontend/ /var/www/html/
 
-    # env file
+      echo "=== Stopping backend ==="
+      PID=$(pgrep -f app.jar || echo "")
+      if [ -n "$PID" ]; then
+        kill $PID 2>/dev/null || true
+        sleep 2
+        echo "Backend stopped (was PID: $PID)"
+      else
+        echo "No backend running"
+      fi
+
+      echo "=== Starting backend ==="
+      mkdir -p ~/app/logs
+      nohup java -jar ~/app/backend/app.jar > ~/app/logs/app.log 2>&1 &
+      sleep 1
+      NEW_PID=$(pgrep -f app.jar || echo "unknown")
+      echo "Backend started (PID: $NEW_PID)"
+      ENDSSH
+
+    # Env file
     - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/backend/.env"
-
-    # apache config
+    
+    # Apache config
     - scp apache-site-dev.conf $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/apache-site.conf
 
   environment:
