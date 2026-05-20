@@ -1,0 +1,8 @@
+package fr.horizon.backend_api.exception;
+
+public class ConversationNotFoundException extends RuntimeException {
+    public ConversationNotFoundException(Long id) {
+        super("Conversation not found with id: " + id);
+    }
+}
+
