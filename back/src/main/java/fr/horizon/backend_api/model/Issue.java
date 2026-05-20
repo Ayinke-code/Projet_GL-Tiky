@@ -3,6 +3,8 @@ package fr.horizon.backend_api.model;
 import jakarta.persistence.*;
 import lombok.*;
 import fr.horizon.backend_api.model.enums.IssueStatus;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -46,4 +48,11 @@ public class Issue extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User createdBy;
 
+    @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<Conversation> conversations = new HashSet<>();
+
+    @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<Message> messages = new HashSet<>();
 }

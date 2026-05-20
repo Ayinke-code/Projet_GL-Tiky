@@ -37,6 +37,9 @@ class IssueServiceTest {
     @Mock
     private CategoryRepository categoryRepository;
 
+    @Mock
+    private ConversationService conversationService;
+
     @InjectMocks
     private IssueService issueService;
 

@@ -10,6 +10,7 @@ import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.InjectMocks;
@@ -25,6 +26,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -43,6 +46,14 @@ class UserServiceTest {
 
     @InjectMocks
     private UserService userService;
+
+    @Mock
+    private JwtToken jwtToken;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(jwtToken.generateToken(any(), any(), anySet())).thenReturn("ws-token");
+    }
 
     @Test
     void createUser_should_save_user_when_valid() {
@@ -70,6 +81,7 @@ class UserServiceTest {
         assertEquals("john@test.com", result.getEmail());
         assertEquals("John", result.getName());
         assertEquals(Set.of("USER"), result.getRoles());
+        assertEquals("ws-token", result.getWsToken());
     }
 
     @Test
@@ -146,6 +158,7 @@ class UserServiceTest {
         assertEquals("john@test.com", dto.getEmail());
         assertEquals(Set.of("USER"), dto.getRoles());
         assertTrue(dto.isContributor());
+        assertEquals("ws-token", dto.getWsToken());
     }
 
     @Test
@@ -165,6 +178,7 @@ class UserServiceTest {
         UserDto dto = userService.toDto(user);
 
         assertFalse(dto.isContributor());
+        assertEquals("ws-token", dto.getWsToken());
     }
 
     @Test

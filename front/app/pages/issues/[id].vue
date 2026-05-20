@@ -3,11 +3,15 @@
  * Page détail d'une issue
  * - charge une issue par ID
  * - permet mise à jour status + visibilité
+ * - gère les messages et conversations
  */
 
+import { ref, onMounted, onUnmounted } from 'vue'
+
 const route = useRoute()
-const { ready, user } = useAuth()
+const { ready, user, wsToken } = useAuth()
 const { getIssueById, updateIssueStatus, updateIssuePrivacy } = useIssues()
+const { getIssueMessages, sendIssueMessage, normalizeMessage, initializeConversation } = useConversations()
 
 // ID de l'issue depuis l'URL
 const issueId = Number(route.params.id)
@@ -16,53 +20,106 @@ const issueId = Number(route.params.id)
 const issue = ref(null)
 const loading = ref(true)
 const error = ref(null)
+const messages = ref([])
+const newMessage = ref('')
+const sending = ref(false)
+const socket = ref(null)
 
 /**
- * Chargement initial de l'issue
+ * Connecte au WebSocket pour les mises à jour en temps réel
+ */
+const connectWebSocket = () => {
+  if (process.server) return
+  if (socket.value) socket.value.close()
+
+  const config = useRuntimeConfig()
+
+  const token = wsToken.value || localStorage.getItem('wsToken')
+  if (!token) return
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const apiBase = config.public.apiBase
+  const host = apiBase.startsWith('/') ? window.location.host + apiBase : new URL(apiBase).host + new URL(apiBase).pathname
+  const wsUrl = `${protocol}//${host}/ws/issue?token=${token}&issueId=${issueId}`
+
+  socket.value = new WebSocket(wsUrl)
+
+  socket.value.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      if (data.type === 'new_message' && data.message) {
+        const normalized = normalizeMessage(data.message)
+        if (!messages.value.find((m) => m.id === normalized.id)) {
+          messages.value.push(normalized)
+        }
+      }
+    } catch (e) {
+      console.error('Erreur WebSocket:', e)
+    }
+  }
+
+  socket.value.onerror = () => {
+    console.error('Erreur WebSocket')
+    socket.value?.close()
+  }
+}
+
+/**
+ * Chargement initial de l'issue et des messages
  */
 onMounted(async () => {
-    // redirection si non connecté
-    if (ready && !user?.value?.id) {
-        await navigateTo('/login')
-        return
-    }
+  // redirection si non connecté
+  if (ready && !user?.value?.id) {
+    await navigateTo('/login')
+    return
+  }
 
-    try {
-        issue.value = await getIssueById(issueId)
-    } catch (err) {
-        error.value = err.message || 'Erreur de chargement'
-    } finally {
-        loading.value = false
-    }
+  try {
+    issue.value = await getIssueById(issueId)
+    await initializeConversation(issueId)
+    messages.value = await getIssueMessages(issueId)
+    connectWebSocket()
+  } catch (err) {
+    error.value = err?.message || 'Erreur de chargement'
+  } finally {
+    loading.value = false
+  }
+})
+
+/**
+ * Nettoie la connexion WebSocket à la fermeture
+ */
+onUnmounted(() => {
+  socket.value?.close()
 })
 
 /**
  * Marquer l'issue comme terminée
  */
 const handleMarkResolved = async () => {
-    try {
-        await updateIssueStatus(issueId, 'TERMINE')
+  try {
+    await updateIssueStatus(issueId, 'TERMINE')
 
-        // mise à jour locale optimiste
-        if (issue.value) {
-            issue.value.status = 'TERMINE'
-        }
-    } catch (err) {
-        console.error(err)
+    // mise à jour locale optimiste
+    if (issue.value) {
+      issue.value.status = 'TERMINE'
     }
+  } catch (err) {
+    console.error(err)
+  }
 }
 
 /**
  * Couleurs des statuts (aligné backend)
  */
 const statutColor = (statut) => {
-    const map = {
-        'En cours': 'bg-blue-100 text-blue-700',
-        'résolu': 'bg-green-100 text-green-700',
-        'Ouvert': 'bg-yellow-100 text-yellow-700',
-        'Fermé': 'bg-gray-100 text-gray-600',
-    }
-    return map[statut] || 'bg-gray-100 text-gray-600'
+  const map = {
+    'En cours': 'bg-blue-100 text-blue-700',
+    'résolu': 'bg-green-100 text-green-700',
+    'Ouvert': 'bg-yellow-100 text-yellow-700',
+    'Fermé': 'bg-gray-100 text-gray-600',
+  }
+  return map[statut] || 'bg-gray-100 text-gray-600'
 }
 
 /**
@@ -75,15 +132,42 @@ const isVisibilityModalOpen = ref(false)
  * Toggle visibilité (public / privé)
  */
 const toggleVisibility = async () => {
-    try {
-        await updateIssuePrivacy(issueId)
+  try {
+    await updateIssuePrivacy(issueId)
 
-        if (issue.value) {
-            issue.value.private = !issue.value.private
-        }
-    } catch (err) {
-        console.error(err)
+    if (issue.value) {
+      issue.value.private = !issue.value.private
     }
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+/**
+ * Envoie un nouveau message
+ */
+const handleSend = async () => {
+  if (!newMessage.value.trim()) return
+  if (newMessage.value.length > 4000) {
+    error.value = 'Le message ne doit pas dépasser 4000 caractères'
+    return
+  }
+
+  sending.value = true
+  try {
+    const sentMessage = await sendIssueMessage(issueId, newMessage.value)
+    // Avoid duplicates: the server broadcasts the new message via WebSocket,
+    // which may arrive before or after the HTTP response. Only push the
+    // message locally if we don't already have it (compare by id).
+    if (!messages.value.find((m) => m.id === sentMessage.id)) {
+      messages.value.push(sentMessage)
+    }
+    newMessage.value = ''
+  } catch (err) {
+    error.value = err?.message || 'Erreur lors de l\'envoi du message'
+  } finally {
+    sending.value = false
+  }
 }
 </script>
 
@@ -192,108 +276,28 @@ const toggleVisibility = async () => {
 
                 <!-- ===== COLONNE GAUCHE : CONVERSATION ===== -->
                 <div class="lg:col-span-2 space-y-4">
-                    <template v-if="false">
                     <!-- Messages -->
                     <div class="space-y-3">
-                        <div v-for="msg in messages" :key="msg.id"
-                            class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                            <!-- Header message -->
-                            <div class="flex items-center gap-3 px-5 pt-4 pb-3">
-                                <div class="h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                                    :class="avatarColor(msg.role)">
-                                    {{ initiales(msg.auteur) }}
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-2 flex-wrap">
-                                        <span class="font-semibold text-gray-900 text-sm">{{ msg.auteur }}</span>
-                                        <span v-if="msg.role === 'ENSEIGNANT'"
-                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-700 uppercase tracking-wide">
-                                            Enseignant
-                                        </span>
-                                    </div>
-                                    <p class="text-xs text-gray-400 mt-0.5">
-                                        {{ msg.role === 'ENSEIGNANT' ? 'Répondu' : 'Posté' }}
-                                        le {{ new Date(msg.date).toLocaleDateString('fr-FR', {
-                                            day: 'numeric', month:
-                                                'long'
-                                        }) }}
-                                        à {{ new Date(msg.date).toLocaleTimeString('fr-FR', {
-                                            hour: '2-digit', minute:
-                                                '2-digit'
-                                        }) }}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <!-- Corps message -->
-                            <div class="px-5 pb-5 text-gray-700 text-sm leading-relaxed"
-                                :class="msg.role === 'ENSEIGNANT' ? 'bg-blue-50/40' : ''">
-                                <div v-html="msg.contenu" />
-                            </div>
-                        </div>
+                        <IssueMessage
+                            v-for="msg in messages"
+                            :key="msg.id"
+                            :auteur="msg.auteur"
+                            :role="msg.role"
+                            :date="msg.date"
+                            :contenu="msg.contenu"
+                            :is-mine="msg.userId === user?.id"
+                        />
 
                         <!-- État vide -->
-                        <div v-if="messages?.length === 0"
-                            class="bg-white rounded-xl border border-gray-200 p-10 text-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 mx-auto text-gray-300 mb-3"
-                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                            </svg>
-                            <p class="text-gray-400 text-sm">Aucun message pour le moment</p>
-                        </div>
+                        <IssueEmptyMessages v-if="messages.length === 0" />
                     </div>
 
-                    <!-- Zone de réponse -->
-                    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                        <!-- Toolbar -->
-                        <div class="flex items-center gap-1 px-3 py-2 border-b border-gray-100">
-                            <button
-                                class="p-1.5 rounded hover:bg-gray-100 text-gray-500 transition-colors font-bold text-sm">B</button>
-                            <button
-                                class="p-1.5 rounded hover:bg-gray-100 text-gray-500 transition-colors italic text-sm">I</button>
-                            <button class="p-1.5 rounded hover:bg-gray-100 text-gray-500 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
-                                </svg>
-                            </button>
-                            <button class="p-1.5 rounded hover:bg-gray-100 text-gray-500 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14" />
-                                </svg>
-                            </button>
-                            <button class="p-1.5 rounded hover:bg-gray-100 text-gray-500 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        <!-- Textarea -->
-                        <textarea v-model="newMessage" placeholder="Ajouter un commentaire ou une réponse..." rows="4"
-                            class="w-full px-4 py-3 text-sm text-gray-700 placeholder-gray-400 resize-y focus:outline-none"
-                            @keydown.ctrl.enter="handleSend" />
-
-                        <!-- Footer -->
-                        <div class="flex justify-end px-4 pb-3">
-                            <button @click="handleSend" :disabled="sending || !newMessage?.trim()"
-                                class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed transition-transform duration-200 hover:scale-105">
-                                <svg v-if="sending" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                        stroke-width="4" />
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                </svg>
-                                Envoyer la réponse
-                            </button>
-                        </div>
-                    </div>
-                    </template>
+                    <!-- Zone d'envoi de message -->
+                    <MessageInput
+                        v-model="newMessage"
+                        :sending="sending"
+                        @send="handleSend"
+                    />
                 </div>
 
                 <!-- ===== COLONNE DROITE : SIDEBAR ===== -->
