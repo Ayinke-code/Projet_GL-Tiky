@@ -104,6 +104,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useAuth } from '~/composables/useAuth'
+import { ROLE } from '~/utils/roles'
 
 /**
  * Récupération de l'utilisateur connecté.
@@ -141,7 +142,7 @@ const canAccessCategory = computed(() => {
   if (!ready || !user?.value) return false
 
   const isTeacher =
-    user.value.roles?.includes('TEACHER')
+    user.value.roles?.includes(ROLE.TEACHER)
 
   const isOwner =
     user.value.name === props.category.ownerName

@@ -1,3 +1,5 @@
+import { ROLE, ROLE_PRIORITY } from '~/utils/roles'
+
 export const useConversations = () => {
   const api = useApi()
 
@@ -10,19 +12,17 @@ export const useConversations = () => {
    * Détermine le rôle prioritaire.
    */
   const getPriorityRole = (roles) => {
-    if (!roles) return 'STUDENT'
+    if (!roles) return ROLE.STUDENT
 
     const upperRoles = roles.map(r => String(r).toUpperCase())
-    if (upperRoles.includes('ADMIN')) return 'ADMIN'
-    if (upperRoles.includes('TEACHER')) return 'TEACHER'
-    return 'STUDENT'
+    return ROLE_PRIORITY.find((role) => upperRoles.includes(role) || upperRoles.includes(`ROLE_${role}`)) || ROLE.STUDENT
   }
 
   /**
    * Normalise un message reçu du backend.
    */
   const normalizeMessage = (msg) => {
-    const rawRoles = Array.isArray(msg.user?.roles) ? msg.user.roles : [msg.user?.role || 'STUDENT']
+    const rawRoles = Array.isArray(msg.user?.roles) ? msg.user.roles : [msg.user?.role || ROLE.STUDENT]
     const role = getPriorityRole(rawRoles)
 
     return {
