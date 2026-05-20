@@ -145,10 +145,10 @@ deploy_dev:
     - ssh-keyscan -H $DEPLOY_SERVER_DEV >> ~/.ssh/known_hosts
     
   script:
-    # Vérifier connexion
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "echo '✅ SSH OK'"
+    # test connexion
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "echo OK"
 
-    # Créer structure avec dossier SSL
+    # création dossiers
     - |
       ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV << 'ENDSSH'
         mkdir -p ~/app/backend
@@ -157,36 +157,52 @@ deploy_dev:
         mkdir -p ~/app/logs
       ENDSSH
 
-    # Transférer les certificats SSL
+    # SSL
     - echo "$SSL_CERT_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/ssl/server.crt"
     - echo "$SSL_KEY_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/ssl/server.key"
     - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "chmod 644 ~/app/ssl/server.crt && chmod 600 ~/app/ssl/server.key"
 
-    # Backend
+    # Backend jar
     - scp back/target/*.jar $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/backend/app.jar
 
-    # Frontend
-    - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/frontend/
+    # Frontend (copie vers dossier web Apache/Nginx)
+    - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER_DEV:/tmp/frontend/
 
-    # Env
+    # Déploiement serveur (sudo côté remote)
+    - |
+      ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV << 'ENDSSH'
+        set -e
+
+        # FRONT
+        sudo rsync -avz --delete /tmp/frontend/ /var/www/html/
+
+        # BACKEND STOP (si déjà lancé)
+        pkill -f app.jar || true
+
+        # BACKEND START
+        nohup java -jar ~/app/backend/app.jar > ~/app/logs/app.log 2>&1 &
+
+      ENDSSH
+
+    # env file
     - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/backend/.env"
 
-    # Config Apache
+    # apache config
     - scp apache-site-dev.conf $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/apache-site.conf
-    
+
   environment:
     name: dev
     url: https://172.24.1.16
-    
+      
   dependencies:
     - build-backend
-    - build-frontend-dev
-  
+    - build-frontend-devs
+    
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev"
+    # - if: $CI_COMMIT_BRANCH == "dev"
     # - if: $CI_COMMIT_BRANCH == "main"
     # - when: never
-    # - if: $CI_COMMIT_BRANCH   # toutes les branches
+    - if: $CI_COMMIT_BRANCH   # toutes les branches
 
 deploy_prod:
   stage: deploy
@@ -280,8 +296,8 @@ selenium-test:
     # - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     # - if: $CI_COMMIT_BRANCH == "main"
     # - if: $CI_COMMIT_BRANCH == "dev"
-    - if: $CI_COMMIT_BRANCH
-    # - when: never # Pas encore de test SELENIUM
+    # - if: $CI_COMMIT_BRANCH
+    - when: never # Pas encore de test SELENIUM
 
 # Stage 5: SonarQube Analysis
 sonar-dev:
