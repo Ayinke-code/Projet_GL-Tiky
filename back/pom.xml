@@ -12,6 +12,7 @@
 	<groupId>fr.horizon</groupId>
 	<artifactId>backend-api</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+	<packaging>war</packaging>
 	<name />
 	<description />
 	<url />
@@ -34,6 +35,12 @@
 		<sonar.host.url>http://172.24.1.1/sonar</sonar.host.url>
 	</properties>
 	<dependencies>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-tomcat</artifactId>
+			<scope>provided</scope>
+		</dependency>
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

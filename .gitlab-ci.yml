@@ -41,14 +41,15 @@ build-backend:
   script:
     - cd back
     - mvn $MAVEN_CLI_OPTS clean package -DskipTests
-    - ls -lh target/*.jar
+    - ls -lh target/*.war
   artifacts:
     paths:
-      - back/target/*.jar
+      - back/target/*.war
     expire_in: 1 day
   rules:
     - if: $CI_COMMIT_BRANCH
     # - when: never
+    - if: $CI_COMMIT_BRANCH
 
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend-dev:
@@ -73,8 +74,9 @@ build-frontend-dev:
       - front/.output/public/
     expire_in: 1 day
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev"
+    # - if: $CI_COMMIT_BRANCH == "dev"
     # - when: never
+    - if: $CI_COMMIT_BRANCH
 
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend-prod:
@@ -119,8 +121,8 @@ unit-test:
   dependencies:
     - build-backend
   rules:
-    - if: $CI_COMMIT_BRANCH   # toutes les branches
-    # - when: never # Pipeline dev
+    # - if: $CI_COMMIT_BRANCH   # toutes les branches
+    - when: never # Pipeline dev
 
 # Stage 3: Deploy sur serveur de dev/prod
 deploy_dev:
@@ -145,34 +147,25 @@ deploy_dev:
     - ssh-keyscan -H $DEPLOY_SERVER_DEV >> ~/.ssh/known_hosts
     
   script:
-    # Vérifier connexion
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "echo '✅ SSH OK'"
+    # 1. check SSH
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "echo OK"
 
-    # Créer structure avec dossier SSL
-    - |
-      ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV << 'ENDSSH'
-        mkdir -p ~/app/backend
-        mkdir -p ~/app/frontend
-        mkdir -p ~/app/ssl
-        mkdir -p ~/app/logs
-      ENDSSH
+    # 2. créer structure si besoin
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "
+        sudo mkdir -p /srv/tomcat10/webapps
+      "
 
-    # Transférer les certificats SSL
-    - echo "$SSL_CERT_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/ssl/server.crt"
-    - echo "$SSL_KEY_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/ssl/server.key"
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "chmod 644 ~/app/ssl/server.crt && chmod 600 ~/app/ssl/server.key"
+    # 3. upload WAR
+    - scp back/target/*.war $DEPLOY_USER@$DEPLOY_SERVER_DEV:/tmp/app.war
 
-    # Backend
-    - scp back/target/*.jar $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/backend/app.jar
-
-    # Frontend
-    - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/frontend/
-
-    # Env
-    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/backend/.env"
-
-    # Config Apache
-    - scp apache-site-dev.conf $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/apache-site.conf
+    # 4. deploy dans Tomcat
+    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "
+      sudo systemctl stop tomcat10 || true &&
+      sudo rm -rf /srv/tomcat10/webapps/ROOT &&
+      sudo rm -rf /srv/tomcat10/webapps/ROOT.war &&
+      sudo mv /tmp/app.war /srv/tomcat10/webapps/ROOT.war &&
+      sudo systemctl start tomcat10
+      "
     
   environment:
     name: dev
@@ -183,10 +176,10 @@ deploy_dev:
     - build-frontend-dev
   
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev"
+    # - if: $CI_COMMIT_BRANCH == "dev"
     # - if: $CI_COMMIT_BRANCH == "main"
     # - when: never
-    # - if: $CI_COMMIT_BRANCH   # toutes les branches
+    - if: $CI_COMMIT_BRANCH   # toutes les branches
 
 deploy_prod:
   stage: deploy
@@ -280,8 +273,8 @@ selenium-test:
     # - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     # - if: $CI_COMMIT_BRANCH == "main"
     # - if: $CI_COMMIT_BRANCH == "dev"
-    - if: $CI_COMMIT_BRANCH
-    # - when: never # Pas encore de test SELENIUM
+    # - if: $CI_COMMIT_BRANCH
+    - when: never # Pas encore de test SELENIUM
 
 # Stage 5: SonarQube Analysis
 sonar-dev:
