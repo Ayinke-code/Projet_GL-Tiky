@@ -1,7 +1,5 @@
 package fr.horizon.backend_api.model;
 
-import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.EventType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
