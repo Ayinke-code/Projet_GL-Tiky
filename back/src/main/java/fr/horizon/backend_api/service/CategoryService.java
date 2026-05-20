@@ -178,7 +178,6 @@ public class CategoryService {
      *
      * @param category entité catégorie à convertir
      * @return DTO contenant les informations publiques de la catégorie
-     * Convertit l'entité Category → DTO.
      */
     private CategoryDto toDto(Category category) {
         return CategoryDto.builder()
@@ -186,6 +185,7 @@ public class CategoryService {
                 .name(category.getName())
                 .subject(category.getSubject())
                 .status(category.getStatus())
+                .eventType(category.getEventType())
                 .ownerName(category.getOwner() != null ? category.getOwner().getName() : null)
                 .ownerId(category.getOwner() != null ? category.getOwner().getId() : null)
                 .build();
@@ -219,7 +219,6 @@ public class CategoryService {
                                 .map(this::toUserRefDto)
                                 .toList()
                 )
-                .eventType(category.getEventType())
                 .build();
     }
 }

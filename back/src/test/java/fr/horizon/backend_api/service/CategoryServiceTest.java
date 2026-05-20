@@ -314,7 +314,6 @@ class CategoryServiceTest {
         assertThat(result).isEmpty();
         verify(categoryRepository).findByEventType(EventType.AUDIT);
     }
-}
 
     @Test
     void shouldThrowWhenAlreadyFollower() {
