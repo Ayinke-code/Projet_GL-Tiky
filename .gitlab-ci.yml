@@ -189,12 +189,22 @@ deploy_dev:
 
       echo "=== Starting backend ==="
       mkdir -p ~/app/logs
-      nohup java -jar ~/app/backend/app.jar > ~/app/logs/app.log 2>&1 &
-      sleep 1
-      NEW_PID=$(pgrep -f app.jar || echo "unknown")
-      echo "Backend started (PID: $NEW_PID)"
-      ENDSSH
 
+      # Lancer en arrière-plan avec nohup ET détacher du shell
+      nohup java -jar ~/app/backend/app.jar > ~/app/logs/app.log 2>&1 < /dev/null &
+      BACKEND_PID=$!
+      sleep 2
+
+      # Vérifier que c'est bien lancé
+      if ps -p $BACKEND_PID > /dev/null; then
+        echo "✓ Backend started successfully (PID: $BACKEND_PID)"
+      else
+        echo "✗ ERROR: Backend failed to start!"
+        echo "Last logs:"
+        tail -20 ~/app/logs/app.log
+        exit 1
+      fi
+      ENDSSH
     # Env file
     - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/backend/.env"
     
