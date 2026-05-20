@@ -2,7 +2,14 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.*;
 import fr.horizon.backend_api.service.IssueService;
+import fr.horizon.backend_api.model.Issue;
+import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.IssueFollower;
+import fr.horizon.backend_api.service.IssueFollowerService;
+import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -26,7 +33,8 @@ public class IssueController {
      * Service métier des issues.
      */
     private final IssueService issueService;
-
+    private final UserRepository userRepository;
+    private final IssueFollowerService issueFollowerService;
     /**
      * Récupère toutes les issues.
      *
@@ -98,6 +106,19 @@ public class IssueController {
     @DeleteMapping("/{id}")
     public void deleteIssue(@PathVariable Long id) {
         issueService.deleteById(id);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/{id}/follow")
+    public ResponseEntity<IssueFollower> followIssue(
+            @PathVariable Long id,
+            @RequestParam String raison,
+            Authentication auth) {
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        IssueFollower follower = issueFollowerService.followIssue(id, raison, user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(follower);
     }
 
 }
