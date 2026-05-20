@@ -176,37 +176,48 @@ deploy_dev:
 
       echo "=== Deploying frontend ==="
       sudo rsync -avz --delete /tmp/frontend/ /var/www/html/
+      echo "✓ Frontend deployed"
 
       echo "=== Stopping backend ==="
       PID=$(pgrep -f app.jar || echo "")
       if [ -n "$PID" ]; then
         kill $PID 2>/dev/null || true
         sleep 2
-        echo "Backend stopped (was PID: $PID)"
+        if pgrep -f app.jar > /dev/null 2>&1; then
+          kill -9 $PID 2>/dev/null || true
+          sleep 1
+        fi
+        echo "✓ Backend stopped (was PID: $PID)"
       else
-        echo "No backend running"
+        echo "✓ No backend running"
       fi
 
+      echo "=== Creating .env file ==="
+      mkdir -p ~/app/backend
+      cat > ~/app/backend/.env << 'ENV'
+      $DEPLOY_ENV_FILE
+      ENV
+
       echo "=== Starting backend ==="
-      mkdir -p ~/app/logs
-
-      # Lancer en arrière-plan avec nohup ET détacher du shell
-      nohup java -jar ~/app/backend/app.jar > ~/app/logs/app.log 2>&1 < /dev/null &
+      cd ~/app/backend
+      nohup java -jar app.jar > ~/app/logs/app.log 2>&1 < /dev/null &
       BACKEND_PID=$!
-      sleep 2
+      sleep 3
 
-      # Vérifier que c'est bien lancé
-      if ps -p $BACKEND_PID > /dev/null; then
+      if ps -p $BACKEND_PID > /dev/null 2>&1; then
         echo "✓ Backend started successfully (PID: $BACKEND_PID)"
+        sleep 1
+        echo "=== Latest logs ==="
+        tail -10 ~/app/logs/app.log
       else
         echo "✗ ERROR: Backend failed to start!"
-        echo "Last logs:"
-        tail -20 ~/app/logs/app.log
+        echo "=== Last logs ==="
+        tail -30 ~/app/logs/app.log
         exit 1
       fi
       ENDSSH
     # Env file
-    - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/backend/.env"
+    # - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/backend/.env"
     
     # Apache config
     - scp apache-site-dev.conf $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/apache-site.conf
