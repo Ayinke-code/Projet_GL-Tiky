@@ -6,6 +6,10 @@ import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.Message;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.ConversationRole;
+import fr.horizon.backend_api.exception.ConversationNotFoundException;
+import fr.horizon.backend_api.exception.IssueNotFoundException;
+import fr.horizon.backend_api.exception.MessageTooLongException;
+import fr.horizon.backend_api.exception.UserNotFoundException;
 import fr.horizon.backend_api.repository.ConversationRepository;
 import fr.horizon.backend_api.repository.ConversationUserRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
@@ -89,7 +93,7 @@ public class ConversationService {
 
         // Créer une nouvelle conversation
         Issue issue = issueRepository.findById(issueId)
-                .orElseThrow(() -> new RuntimeException("Issue not found"));
+                .orElseThrow(() -> new IssueNotFoundException(issueId));
 
         Conversation conversation = createConversationForIssue(issue);
 
@@ -125,10 +129,10 @@ public class ConversationService {
      */
     public Message addMessageToConversation(Long conversationId, String content, User user, Long issueId) {
         Conversation conversation = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
 
         Issue issue = issueRepository.findById(issueId)
-                .orElseThrow(() -> new RuntimeException("Issue not found"));
+                .orElseThrow(() -> new IssueNotFoundException(issueId));
 
         Message message = Message.builder()
                 .content(content)
@@ -152,11 +156,11 @@ public class ConversationService {
      */
     public MessageDispatchResult addMessage(Long conversationId, Map<String, String> payload, String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException(email));
 
         String content = payload.get("content");
         if (content != null && content.length() > 4000) {
-            throw new RuntimeException("Le message dépasse la limite de 4000 caractères");
+            throw new MessageTooLongException(4000);
         }
 
         Long issueId = Long.parseLong(payload.get("issueId"));
@@ -192,7 +196,7 @@ public class ConversationService {
      */
     public List<Message> getMessagesForConversation(Long conversationId) {
         Conversation conversation = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
         return messageRepository.findByConversationOrderByCreatedAtAsc(conversation);
     }
 
@@ -204,7 +208,7 @@ public class ConversationService {
      */
     public List<ConversationUser> getUsersInConversation(Long conversationId) {
         Conversation conversation = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
         return conversationUserRepository.findByConversation(conversation);
     }
 
