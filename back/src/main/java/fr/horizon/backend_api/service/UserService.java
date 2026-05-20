@@ -71,6 +71,7 @@ public class UserService {
                 .email(dto.getEmail())
                 .password(passwordEncoder.encode(dto.getPassword()))
                 .roles(roles)
+                .teacherType(dto.getTeacherType())
                 .build();
 
         userRepository.save(user);
@@ -168,6 +169,7 @@ public class UserService {
                                 .collect(Collectors.toSet())
                 )
                 .isContributor(hasOpenIssues)
+                .teacherType(user.getTeacherType())
                 .wsToken(wsToken)
                 .build();
     }

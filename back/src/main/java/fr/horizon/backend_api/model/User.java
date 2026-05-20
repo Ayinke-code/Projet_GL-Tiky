@@ -4,6 +4,7 @@ import java.util.stream.Collectors;
 import java.util.HashSet;
 import java.util.Set;
 
+import fr.horizon.backend_api.model.enums.TeacherType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -28,6 +29,10 @@ public class User extends BaseEntity {
 
     @Column(nullable = false)
     private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true)
+    private TeacherType teacherType;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
