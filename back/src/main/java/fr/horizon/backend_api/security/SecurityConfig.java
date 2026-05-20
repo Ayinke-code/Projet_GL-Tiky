@@ -2,7 +2,6 @@ package fr.horizon.backend_api.security;
 
 import java.util.List;
 
-import fr.horizon.backend_api.model.enums.RoleEnum;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +15,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import fr.horizon.backend_api.model.enums.RoleEnum;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -39,6 +39,10 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
+                        .requestMatchers("/auth/login").permitAll()
+                        .requestMatchers("/auth/logout").authenticated()
+                        .requestMatchers("/auth/me", "/categories/**").authenticated()
+
                         .requestMatchers("/admin/**")
                         .hasAuthority(RoleEnum.ADMIN.value())
 
@@ -52,8 +56,7 @@ public class SecurityConfig {
                         .hasAnyAuthority(
                                 RoleEnum.STUDENT.value(),
                                 RoleEnum.TEACHER.value(),
-                                RoleEnum.ADMIN.value()
-                        )
+                                RoleEnum.ADMIN.value())
 
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
