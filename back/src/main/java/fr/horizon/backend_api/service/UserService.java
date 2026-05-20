@@ -7,6 +7,7 @@ import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.UserDto;
+import fr.horizon.backend_api.model.dto.UserFollowerDto;
 import fr.horizon.backend_api.model.dto.UserRefDto;
 import fr.horizon.backend_api.model.dto.UserRequestDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
@@ -195,6 +196,13 @@ public class UserService {
                 .build();
     }
 
+    private UserFollowerDto toUserFollowerDto(User user){
+        return UserFollowerDto.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .build();
+    }
+
     /**
      * Retorune la liste des teachers pour faire une affectation
      *
@@ -211,7 +219,7 @@ public class UserService {
                 .toList();
     }
 
-    public List<UserDto> getAllTeachersWithCategoryDetail(Long categoryId){
+    public List<UserFollowerDto> getAllTeachersWithCategoryDetail(Long categoryId){
         Role teacherRole = roleRepository.findByName("TEACHER")
                 .orElseThrow(() -> new EntityNotFoundException("Rôle TEACHER non trouvé en base"));
 
@@ -225,7 +233,7 @@ public class UserService {
 
         return teachers.stream()
                 .map(teacher -> {
-                    UserDto dto = this.toDto(teacher);
+                    UserFollowerDto dto = this.toUserFollowerDto(teacher);
 
                     // Vérifie si ce professeur est dans le Set des followers et met à jour le booléen
                     dto.setFollower(categoryFollowers.contains(teacher));

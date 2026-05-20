@@ -54,13 +54,6 @@ public class User extends BaseEntity {
     @Builder.Default
     private Set<ConversationUser> conversations = new HashSet<>();
 
-    public boolean isTeacher() {
-        if (this.roles == null) {
-            return false;
-        }
-        return this.roles.stream()
-                .anyMatch(role -> role.getName().equalsIgnoreCase("ROLE_TEACHER") || role.getName().equalsIgnoreCase("TEACHER"));
-    }
 
     public Set<String> getRoleNames() {
         if (this.roles == null) {

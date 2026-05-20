@@ -3,6 +3,7 @@ package fr.horizon.backend_api.controller;
 import java.util.List;
 
 import fr.horizon.backend_api.model.dto.UserDto;
+import fr.horizon.backend_api.model.dto.UserFollowerDto;
 import fr.horizon.backend_api.model.dto.UserRefDto;
 import fr.horizon.backend_api.model.dto.UserRequestDto;
 import fr.horizon.backend_api.service.UserService;
@@ -79,7 +80,7 @@ public class UserController {
      * @return la liste des teachers en marquant qui est follower d'une catégorie avec le role de professeur
      */
     @GetMapping("/teachers/{categoryId}")
-    public ResponseEntity<List<UserDto>> getAllTeacherWithCategoryDetail(@PathVariable Long categoryId) {
+    public ResponseEntity<List<UserFollowerDto>> getAllTeacherWithCategoryDetail(@PathVariable Long categoryId) {
         return ResponseEntity.ok(userService.getAllTeachersWithCategoryDetail(categoryId));
     }
 }

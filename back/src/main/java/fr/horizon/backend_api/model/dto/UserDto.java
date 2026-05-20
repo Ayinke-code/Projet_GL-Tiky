@@ -15,8 +15,6 @@ public class UserDto {
     private Set<String> roles;
     // Renseigne sur l'utilisateur a créé une issue qui est 'OUVERT'
     private boolean isContributor;
-    // Renseigne si il est follower de la catégorie
-    private boolean follower;
     // Token pour WebSocket
     private String wsToken;
 }
