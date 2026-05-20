@@ -42,6 +42,9 @@ class IssueServiceTest {
     @Mock
     private RequestManagerRepository requestManagerRepository;
 
+    @Mock
+    private ConversationService conversationService;
+
     @InjectMocks
     private IssueService issueService;
 

@@ -1,0 +1,277 @@
+package fr.horizon.backend_api.service;
+
+import fr.horizon.backend_api.model.Conversation;
+import fr.horizon.backend_api.model.ConversationUser;
+import fr.horizon.backend_api.model.Issue;
+import fr.horizon.backend_api.model.Message;
+import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.enums.ConversationRole;
+import fr.horizon.backend_api.repository.ConversationRepository;
+import fr.horizon.backend_api.repository.ConversationUserRepository;
+import fr.horizon.backend_api.repository.IssueRepository;
+import fr.horizon.backend_api.repository.MessageRepository;
+import fr.horizon.backend_api.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+/**
+ * Service métier des conversations.
+ * <p>
+ * Centralise la récupération des conversations, la gestion des participants
+ * et la création des messages associés à une issue.
+ * <p>
+ * Le service prépare également les structures de données destinées
+ * à la réponse REST et au broadcast WebSocket, afin de garder le contrôleur fin.
+ */
+public class ConversationService {
+
+    private final ConversationRepository conversationRepository;
+    private final ConversationUserRepository conversationUserRepository;
+    private final MessageRepository messageRepository;
+    private final IssueRepository issueRepository;
+    private final UserRepository userRepository;
+
+    /**
+     * Résultat de l'envoi d'un message : payload REST, payload WebSocket et issue ciblée.
+     */
+    public record MessageDispatchResult(Map<String, Object> message, String broadcastPayload, Long issueId) {
+    }
+
+    /**
+     * Récupère la conversation liée à une issue.
+     *
+     * @param issueId identifiant de l'issue
+     * @return conversation si elle existe, vide sinon
+     */
+    public Optional<Conversation> getConversationByIssueId(Long issueId) {
+        return conversationRepository.findByIssueId(issueId);
+    }
+
+    /**
+     * Crée une conversation pour une issue donnée.
+     *
+     * @param issue issue concernée
+     * @return conversation créée
+     */
+    public Conversation createConversationForIssue(Issue issue) {
+        Conversation conversation = Conversation.builder()
+                .issue(issue)
+                .build();
+        return conversationRepository.save(conversation);
+    }
+
+    /**
+     * Récupère ou crée une conversation pour une issue (idempotent).
+     * <p>
+     * Si la conversation n'existe pas, elle est créée.
+     * Si elle existe déjà, elle est retournée.
+     *
+     * @param issueId identifiant de l'issue
+     * @return map contenant la clé {@code conversation} avec la conversation sérialisée
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public Map<String, Object> getOrCreateConversationForIssue(Long issueId) {
+        Optional<Conversation> existing = getConversationByIssueId(issueId);
+
+        if (existing.isPresent()) {
+            // Conversation existe déjà
+            Map<String, Object> response = new HashMap<>();
+            response.put("conversation", toConversationMap(existing.get()));
+            return response;
+        }
+
+        // Créer une nouvelle conversation
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new RuntimeException("Issue not found"));
+
+        Conversation conversation = createConversationForIssue(issue);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("conversation", toConversationMap(conversation));
+        return response;
+    }
+
+    /**
+     * Ajoute un utilisateur à une conversation avec un rôle métier donné.
+     *
+     * @param conversation conversation cible
+     * @param user utilisateur à associer
+     * @param role rôle à attribuer dans la conversation
+     */
+    public void addUserToConversation(Conversation conversation, User user, String role) {
+        ConversationUser conversationUser = ConversationUser.builder()
+                .conversation(conversation)
+                .user(user)
+                .role(ConversationRole.valueOf(role))
+                .build();
+        conversationUserRepository.save(conversationUser);
+    }
+
+    /**
+     * Persiste un message dans une conversation liée à une issue.
+     *
+     * @param conversationId identifiant de la conversation
+     * @param content contenu du message
+     * @param user auteur du message
+     * @param issueId identifiant de l'issue liée
+     * @return message enregistré
+     */
+    public Message addMessageToConversation(Long conversationId, String content, User user, Long issueId) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new RuntimeException("Issue not found"));
+
+        Message message = Message.builder()
+                .content(content)
+                .user(user)
+                .conversation(conversation)
+                .issue(issue)
+                .build();
+
+        return messageRepository.save(message);
+    }
+
+    /**
+     * Enregistre un message à partir des données de requête HTTP.
+     * <p>
+     * La méthode prépare ensuite le payload REST et le payload de broadcast WebSocket.
+     *
+     * @param conversationId identifiant de la conversation
+     * @param payload données reçues depuis le front
+     * @param email email de l'utilisateur authentifié
+     * @return résultat contenant le message sérialisé et le payload de diffusion
+     */
+    public MessageDispatchResult addMessage(Long conversationId, Map<String, String> payload, String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String content = payload.get("content");
+        if (content != null && content.length() > 4000) {
+            throw new RuntimeException("Le message dépasse la limite de 4000 caractères");
+        }
+
+        Long issueId = Long.parseLong(payload.get("issueId"));
+        Message message = addMessageToConversation(conversationId, content, user, issueId);
+
+        return new MessageDispatchResult(toMessageMap(message), buildBroadcastPayload(message, issueId), issueId);
+    }
+
+    /**
+     * Construit la réponse complète d'une conversation associée à une issue.
+     *
+     * @param issueId identifiant de l'issue
+     * @return map contenant la clé {@code conversation}
+     */
+    public Map<String, Object> getConversationByIssuePayload(Long issueId) {
+        Map<String, Object> response = new HashMap<>();
+        Optional<Conversation> conversation = getConversationByIssueId(issueId);
+
+        if (conversation.isEmpty()) {
+            response.put("conversation", null);
+            return response;
+        }
+
+        response.put("conversation", toConversationMap(conversation.get()));
+        return response;
+    }
+
+    /**
+     * Récupère les messages d'une conversation, triés par date croissante.
+     *
+     * @param conversationId identifiant de la conversation
+     * @return liste des messages
+     */
+    public List<Message> getMessagesForConversation(Long conversationId) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        return messageRepository.findByConversationOrderByCreatedAtAsc(conversation);
+    }
+
+    /**
+     * Récupère les utilisateurs associés à une conversation.
+     *
+     * @param conversationId identifiant de la conversation
+     * @return liste des participants
+     */
+    public List<ConversationUser> getUsersInConversation(Long conversationId) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        return conversationUserRepository.findByConversation(conversation);
+    }
+
+    private Map<String, Object> toConversationMap(Conversation conversation) {
+        List<Message> messages = getMessagesForConversation(conversation.getId());
+        List<Map<String, Object>> messagesList = new java.util.ArrayList<>();
+        for (Message message : messages) {
+            messagesList.add(toMessageMap(message));
+        }
+
+        List<ConversationUser> conversationUsers = getUsersInConversation(conversation.getId());
+        List<Map<String, Object>> usersList = new java.util.ArrayList<>();
+        for (ConversationUser conversationUser : conversationUsers) {
+            Map<String, Object> userMap = toUserMap(conversationUser.getUser());
+            userMap.put("conversationRole", conversationUser.getRole().toString());
+            usersList.add(userMap);
+        }
+
+        Map<String, Object> conversationMap = new HashMap<>();
+        conversationMap.put("id", conversation.getId());
+        conversationMap.put("messages", messagesList);
+        conversationMap.put("users", usersList);
+        conversationMap.put("createdAt", conversation.getCreatedAt());
+        return conversationMap;
+    }
+
+    private Map<String, Object> toMessageMap(Message message) {
+        Map<String, Object> messageMap = new HashMap<>();
+        messageMap.put("id", message.getId());
+        messageMap.put("content", message.getContent());
+        messageMap.put("user", toUserMap(message.getUser()));
+        messageMap.put("createdAt", message.getCreatedAt());
+        return messageMap;
+    }
+
+    private Map<String, Object> toUserMap(User user) {
+        Map<String, Object> userMap = new HashMap<>();
+        userMap.put("id", user.getId());
+        userMap.put("name", user.getName());
+        userMap.put("email", user.getEmail());
+        userMap.put("displayRole", user.getDisplayRole());
+        userMap.put("roles", user.getRoleNames());
+        return userMap;
+    }
+
+    private String buildBroadcastPayload(Message message, Long issueId) {
+        org.json.JSONObject wsResponse = new org.json.JSONObject();
+        wsResponse.put("type", "new_message");
+        wsResponse.put("issueId", issueId);
+
+        org.json.JSONObject msgJson = new org.json.JSONObject();
+        msgJson.put("id", message.getId());
+        msgJson.put("content", message.getContent());
+        msgJson.put("createdAt", message.getCreatedAt());
+
+        org.json.JSONObject userJson = new org.json.JSONObject();
+        userJson.put("id", message.getUser().getId());
+        userJson.put("name", message.getUser().getName());
+        userJson.put("email", message.getUser().getEmail());
+        userJson.put("displayRole", message.getUser().getDisplayRole());
+        org.json.JSONArray roles = new org.json.JSONArray();
+        message.getUser().getRoleNames().forEach(roles::put);
+        userJson.put("roles", roles);
+        msgJson.put("user", userJson);
+
+        wsResponse.put("message", msgJson);
+        return wsResponse.toString();
+    }
+}
+

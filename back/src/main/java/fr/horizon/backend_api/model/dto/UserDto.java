@@ -17,4 +17,6 @@ public class UserDto {
     private boolean isContributor;
     // Renseigne si il est follower de la catégorie
     private boolean follower;
+    // Token pour WebSocket
+    private String wsToken;
 }

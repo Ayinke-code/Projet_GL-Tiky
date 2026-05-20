@@ -42,6 +42,7 @@ public class IssueService {
     private final IssueRepository issueRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final ConversationService conversationService;
     private final RequestManagerRepository requestManagerRepository;
 
     /**
@@ -73,6 +74,7 @@ public class IssueService {
      * <p>
      * L'issue est associée à un utilisateur (owner) via son email
      * et à une catégorie existante.
+     * Crée automatiquement une conversation pour cette issue.
      *
      * @param dto   données de création de l'issue
      * @param email email de l'utilisateur créateur
@@ -100,6 +102,9 @@ public class IssueService {
 
         createRequestManager(issue);
 
+
+        // Créer automatiquement une conversation pour cette issue
+        conversationService.createConversationForIssue(issue);
 
         return toDto(issue);
     }

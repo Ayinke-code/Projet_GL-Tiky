@@ -43,6 +43,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final IssueRepository issueRepository;
     private final CategoryRepository categoryRepository;
+    private final JwtToken jwtToken;
 
     /**
      * Crée et persiste un nouvel utilisateur.
@@ -151,6 +152,15 @@ public class UserService {
                         IssueStatus.OUVERT
                 );
 
+        String wsToken = jwtToken.generateToken(
+                user.getEmail(),
+                user.getId(),
+                user.getRoles()
+                        .stream()
+                        .map(Role::getName)
+                        .collect(Collectors.toSet())
+        );
+
         return UserDto.builder()
                 .id(user.getId())
                 .name(user.getName())
@@ -162,6 +172,7 @@ public class UserService {
                                 .collect(Collectors.toSet())
                 )
                 .isContributor(hasOpenIssues)
+                .wsToken(wsToken)
                 .build();
     }
 
