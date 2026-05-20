@@ -287,6 +287,16 @@ class IssueServiceTest {
     }
 
     @Test
+    void updateStatus_should_throw_when_issue_not_found() {
+
+        when(issueRepository.findById(99L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IssueNotFoundException.class,
+                () -> issueService.updateStatus("OUVERT", 99L));
+    }
+
+    @Test
     void updatePrivacy_should_toggle_privacy() {
 
         Issue issue = new Issue();
@@ -316,5 +326,15 @@ class IssueServiceTest {
 
         assertFalse(issue.isPrivate());
         verify(issueRepository).save(issue);
+    }
+
+    @Test
+    void updatePrivacy_should_throw_when_issue_not_found() {
+
+        when(issueRepository.findById(99L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IssueNotFoundException.class,
+                () -> issueService.updatePrivacy(99L));
     }
 }

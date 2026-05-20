@@ -6,6 +6,7 @@ import fr.horizon.backend_api.model.dto.CategoryDetailsDto;
 import fr.horizon.backend_api.model.dto.CategoryDto;
 import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
+import fr.horizon.backend_api.model.enums.EventType;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.CategoryRequestRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
@@ -229,6 +230,91 @@ class CategoryServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Only teachers");
     }
+
+    // =============================================
+    // findByEventType()
+    // =============================================
+
+    /**
+     * Vérifie que les catégories de type AUDIT sont retournées et correctement mappées.
+     */
+    @Test
+    void findByEventType_should_return_audit_categories() {
+
+        // GIVEN
+        Category auditCategory = Category.builder()
+                .id(11L)
+                .name("Test")
+                .subject("Audit Test")
+                .status(CategoryStatus.ACTIVE)
+                .eventType(EventType.AUDIT)
+                .owner(user)
+                .build();
+
+        when(categoryRepository.findByEventType(EventType.AUDIT))
+                .thenReturn(List.of(auditCategory));
+
+        // WHEN
+        List<CategoryDto> result = categoryService.findByEventType(EventType.AUDIT);
+
+        // THEN
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getName()).isEqualTo("Test");
+        assertThat(result.get(0).getSubject()).isEqualTo("Audit Test");
+        assertThat(result.get(0).getEventType()).isEqualTo(EventType.AUDIT);
+        assertThat(result.get(0).getOwnerName()).isEqualTo("Lucas");
+
+        verify(categoryRepository).findByEventType(EventType.AUDIT);
+    }
+
+    /**
+     * Vérifie que les catégories de type DEFENSE sont retournées.
+     */
+    @Test
+    void findByEventType_should_return_defense_categories() {
+
+        // GIVEN
+        Category defenseCategory = Category.builder()
+                .id(20L)
+                .name("PFE")
+                .subject("Projet Fin Études")
+                .status(CategoryStatus.ACTIVE)
+                .eventType(EventType.DEFENSE)
+                .owner(user)
+                .build();
+
+        when(categoryRepository.findByEventType(EventType.DEFENSE))
+                .thenReturn(List.of(defenseCategory));
+
+        // WHEN
+        List<CategoryDto> result = categoryService.findByEventType(EventType.DEFENSE);
+
+        // THEN
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getEventType()).isEqualTo(EventType.DEFENSE);
+        assertThat(result.get(0).getName()).isEqualTo("PFE");
+
+        verify(categoryRepository).findByEventType(EventType.DEFENSE);
+    }
+
+    /**
+     * Vérifie qu'une liste vide est retournée si aucune catégorie ne correspond au type.
+     */
+    @Test
+    void findByEventType_should_return_empty_when_no_match() {
+
+        // GIVEN
+        when(categoryRepository.findByEventType(EventType.AUDIT))
+                .thenReturn(List.of());
+
+        // WHEN
+        List<CategoryDto> result = categoryService.findByEventType(EventType.AUDIT);
+
+        // THEN
+        assertThat(result).isEmpty();
+        verify(categoryRepository).findByEventType(EventType.AUDIT);
+    }
+}
 
     @Test
     void shouldThrowWhenAlreadyFollower() {

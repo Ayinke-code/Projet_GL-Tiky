@@ -2,6 +2,7 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.CategoryDetailsDto;
 import fr.horizon.backend_api.model.dto.CategoryDto;
+import fr.horizon.backend_api.model.enums.EventType;
 import fr.horizon.backend_api.service.CategoryService;
 import fr.horizon.backend_api.service.JwtToken;
 import org.junit.jupiter.api.Test;
@@ -126,4 +127,60 @@ class CategoryControllerTest {
     }
 
 
+
+    // =============================================
+    // GET /categories/type/{type}
+    // =============================================
+
+    @Test
+    void shouldGetCategoriesByType_audit() throws Exception {
+
+        CategoryDto audit = CategoryDto.builder()
+                .id(11L)
+                .name("Test")
+                .subject("Audit Test")
+                .eventType(EventType.AUDIT)
+                .build();
+
+        when(categoryService.findByEventType(EventType.AUDIT)).thenReturn(List.of(audit));
+
+        mockMvc.perform(get("/categories/type/AUDIT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Test"))
+                .andExpect(jsonPath("$[0].subject").value("Audit Test"))
+                .andExpect(jsonPath("$[0].eventType").value("AUDIT"));
+
+        verify(categoryService).findByEventType(EventType.AUDIT);
+    }
+
+    @Test
+    void shouldGetCategoriesByType_defense() throws Exception {
+
+        CategoryDto defense = CategoryDto.builder()
+                .id(20L)
+                .name("PFE")
+                .subject("Projet Fin Études")
+                .eventType(EventType.DEFENSE)
+                .build();
+
+        when(categoryService.findByEventType(EventType.DEFENSE)).thenReturn(List.of(defense));
+
+        mockMvc.perform(get("/categories/type/DEFENSE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("PFE"))
+                .andExpect(jsonPath("$[0].eventType").value("DEFENSE"));
+
+        verify(categoryService).findByEventType(EventType.DEFENSE);
+    }
+
+    @Test
+    void shouldGetCategoriesByType_returnsEmpty() throws Exception {
+
+        when(categoryService.findByEventType(EventType.AUDIT)).thenReturn(List.of());
+
+        mockMvc.perform(get("/categories/type/AUDIT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
 }

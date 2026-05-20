@@ -16,6 +16,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Service de gestion des catégories.
+ * <p>
+ * Fournit les opérations métier liées aux catégories :
+ * création, récupération (avec filtrage par type d’événement),
+ * suppression en cascade (issues + demandes associées) et conversion en DTO.
+ */
 @Service
 @RequiredArgsConstructor
 public class CategoryService {
@@ -27,6 +34,8 @@ public class CategoryService {
 
     /**
      * Récupère toutes les catégories.
+     *
+     * @return liste de DTO de toutes les catégories
      */
     public List<CategoryDto> findAll() {
         return categoryRepository.findAll()
@@ -51,6 +60,10 @@ public class CategoryService {
 
     /**
      * Crée une nouvelle catégorie.
+     *
+     * @param dto données de création (nom, sujet, identifiant du propriétaire)
+     * @return catégorie créée sous forme de DTO
+     * @throws RuntimeException si le propriétaire n’existe pas
      */
     public CategoryDto createCategory(CategoryCreateDto dto) {
 
@@ -128,7 +141,10 @@ public class CategoryService {
     }
 
     /**
-     * Supprime une catégorie par ID.
+     * Supprime une catégorie et toutes les entités associées (issues et demandes).
+     *
+     * @param id identifiant de la catégorie
+     * @throws CategoryNotFoundException si la catégorie n’existe pas
      */
     @Transactional
     public void deleteById(Long id) {
@@ -145,7 +161,10 @@ public class CategoryService {
     }
 
     /**
-     * Récupère les catégories par type d'événement.
+     * Récupère les catégories filtrées par type d’événement.
+     *
+     * @param eventType type d’événement ({@code AUDIT}, {@code DEFENSE} ou {@code MEETING})
+     * @return liste de DTO des catégories correspondant au type
      */
     public List<CategoryDto> findByEventType(EventType eventType) {
         return categoryRepository.findByEventType(eventType)
@@ -155,6 +174,10 @@ public class CategoryService {
     }
 
     /**
+     * Convertit une entité {@link Category} en DTO.
+     *
+     * @param category entité catégorie à convertir
+     * @return DTO contenant les informations publiques de la catégorie
      * Convertit l'entité Category → DTO.
      */
     private CategoryDto toDto(Category category) {

@@ -1,6 +1,8 @@
 package fr.horizon.backend_api.config;
 
 import fr.horizon.backend_api.model.Category;
+import fr.horizon.backend_api.model.Role;
+import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.RoleRepository;
@@ -17,6 +19,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -89,9 +92,52 @@ class DataInitializerTest {
 
         // THEN
         verify(roleRepository, times(3)).save(any());
-        verify(userRepository, times(3)).save(any());
-        verify(categoryRepository, times(8)).save(any());
+        verify(userRepository, times(4)).save(any());
+        verify(categoryRepository, times(22)).save(any());
 
         verify(issueRepository).save(any());
+    }
+
+    @Test
+    void shouldUpdateExistingUsersAndRoles() {
+
+        // GIVEN — rôles déjà existants → getOrCreateRole prend le chemin "existant"
+        Role adminRole = new Role("ADMIN");
+        Role teacherRole = new Role("TEACHER");
+        Role studentRole = new Role("STUDENT");
+
+        when(roleRepository.findByName("ADMIN")).thenReturn(Optional.of(adminRole));
+        when(roleRepository.findByName("TEACHER")).thenReturn(Optional.of(teacherRole));
+        when(roleRepository.findByName("STUDENT")).thenReturn(Optional.of(studentRole));
+
+        // Utilisateurs déjà existants → getOrCreateUser prend le chemin "upsert"
+        User existingAdmin   = User.builder().id(1L).name("Old Admin").email("admin@admin.fr").build();
+        User existingTeacher = User.builder().id(2L).name("Old Teacher").email("teacher@teacher.fr").build();
+        User existingTeacher2 = User.builder().id(3L).name("Old Teacher2").email("teacher2@teacher.fr").build();
+        User existingStudent = User.builder().id(4L).name("Old Student").email("student@student.fr").build();
+
+        when(userRepository.findByEmail("admin@admin.fr")).thenReturn(Optional.of(existingAdmin));
+        when(userRepository.findByEmail("teacher@teacher.fr")).thenReturn(Optional.of(existingTeacher));
+        when(userRepository.findByEmail("teacher2@teacher.fr")).thenReturn(Optional.of(existingTeacher2));
+        when(userRepository.findByEmail("student@student.fr")).thenReturn(Optional.of(existingStudent));
+
+        when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Catégories et issues déjà existantes → skip création
+        when(categoryRepository.count()).thenReturn(1L);
+        when(issueRepository.count()).thenReturn(1L);
+
+        // WHEN
+        dataInitializer.run();
+
+        // THEN — les rôles n'ont pas été re-créés
+        verify(roleRepository, never()).save(any());
+
+        // Les 4 utilisateurs ont été mis à jour (save appelé pour chaque)
+        verify(userRepository, times(4)).save(any());
+
+        // Les noms ont bien été mis à jour
+        assertEquals("Richard WOODWARD", existingAdmin.getName());
+        assertEquals("Sophie ROUSSEAU", existingTeacher.getName());
     }
 }
