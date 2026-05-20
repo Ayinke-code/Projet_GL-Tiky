@@ -380,11 +380,9 @@ public class IssueService {
         List<RequestManager> requestDenied = requestManagerRepository
                 .findByCategoryOwner_IdAndTargetTeacherIsNullAndStatusOrderByCreatedAtDesc(userId, RequestManagerStatus.DENIED);
 
-        List<RequestManager> merge = Stream.concat(requestApproved.stream(), requestDenied.stream())
-                .sorted(Comparator.comparing(RequestManager::getCreatedAt).reversed())
-                .toList();
-
-        return merge.stream()
+        return Stream.concat(requestApproved.stream(), requestDenied.stream())
+                .sorted(Comparator.comparing(RequestManager::getUpdatedAt).reversed())
+                .limit(5)
                 .map(this::toDto)
                 .toList();
     }

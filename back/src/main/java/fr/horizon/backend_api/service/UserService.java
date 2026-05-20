@@ -203,21 +203,6 @@ public class UserService {
                 .build();
     }
 
-    /**
-     * Retorune la liste des teachers pour faire une affectation
-     *
-     * @return la liste des teachers
-     */
-    public List<UserDto> getAllTeachers() {
-        Role teacherRole = roleRepository.findByName("TEACHER")
-                .orElseThrow(() -> new EntityNotFoundException("Rôle TEACHER non trouvé en base"));
-
-        List<User> teachers = userRepository.getAllByRoles(Set.of(teacherRole));
-
-        return teachers.stream()
-                .map(this::toDto)
-                .toList();
-    }
 
     public List<UserFollowerDto> getAllTeachersWithCategoryDetail(Long categoryId){
         Role teacherRole = roleRepository.findByName("TEACHER")

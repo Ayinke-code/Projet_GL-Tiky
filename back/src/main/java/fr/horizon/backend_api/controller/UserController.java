@@ -64,15 +64,6 @@ public class UserController {
         userService.deleteById(id);
     }
 
-    /**
-     * Retourne la liste des teachers
-     *
-     * @return la liste des utilisateurs avec le role de professeur
-     */
-    @GetMapping("/teachers")
-    public ResponseEntity<List<UserDto>> getAllTeacherWithDetail() {
-        return ResponseEntity.ok(userService.getAllTeachers());
-    }
 
     /**
      * Retourne la liste des teachers
