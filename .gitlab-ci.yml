@@ -170,7 +170,7 @@ deploy_dev:
     - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER_DEV:/tmp/frontend/
 
     # Déploiement serveur (sudo côté remote)
-    - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "set -e;"
+    # - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "set -e;"
     - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "sudo rsync -avz --delete /tmp/frontend/ /var/www/html/"
     - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "if pgrep -f app.jar > /dev/null 2>&1; then pkill -f app.jar; echo 'Backend stopped'; else echo 'No backend running'; fi"
     - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "mkdir -p ~/app/logs"
