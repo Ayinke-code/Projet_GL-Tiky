@@ -121,8 +121,9 @@ class ConversationServiceTest {
     void addMessageToConversation_should_throw_when_conversation_missing() {
         when(conversationRepository.findById(11L)).thenReturn(Optional.empty());
 
-        ConversationNotFoundException ex = assertThrows(ConversationNotFoundException.class,
-                () -> conversationService.addMessageToConversation(11L, "Hello", new User(), 22L));
+        User user = new User();
+        org.junit.jupiter.api.function.Executable executable = () -> conversationService.addMessageToConversation(11L, "Hello", user, 22L);
+        ConversationNotFoundException ex = assertThrows(ConversationNotFoundException.class, executable);
 
         assertEquals("Conversation not found with id: 11", ex.getMessage());
     }
@@ -133,8 +134,9 @@ class ConversationServiceTest {
         when(conversationRepository.findById(11L)).thenReturn(Optional.of(conversation));
         when(issueRepository.findById(22L)).thenReturn(Optional.empty());
 
-        IssueNotFoundException ex = assertThrows(IssueNotFoundException.class,
-                () -> conversationService.addMessageToConversation(11L, "Hello", new User(), 22L));
+        User user = new User();
+        org.junit.jupiter.api.function.Executable executable = () -> conversationService.addMessageToConversation(11L, "Hello", user, 22L);
+        IssueNotFoundException ex = assertThrows(IssueNotFoundException.class, executable);
 
         assertEquals("Issue not found with id: 22", ex.getMessage());
     }
