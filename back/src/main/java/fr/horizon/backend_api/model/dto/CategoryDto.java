@@ -13,4 +13,5 @@ public class CategoryDto {
     private String subject;
     private CategoryStatus status;
     private String ownerName;
+    private Long ownerId;
 }
