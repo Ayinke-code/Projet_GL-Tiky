@@ -247,8 +247,10 @@ class ConversationServiceTest {
     void addMessage_should_throw_when_user_missing() {
         when(userRepository.findByEmail("missing@test.com")).thenReturn(Optional.empty());
 
+        Map<String, String> payload = Map.of("content", "Salut", "issueId", "77");
+
         UserNotFoundException ex = assertThrows(UserNotFoundException.class,
-                () -> conversationService.addMessage(44L, Map.of("content", "Salut", "issueId", "77"), "missing@test.com"));
+                () -> conversationService.addMessage(44L, payload, "missing@test.com"));
 
         assertEquals("User not found with email: missing@test.com", ex.getMessage());
     }
@@ -262,8 +264,9 @@ class ConversationServiceTest {
         when(userRepository.findByEmail("bob@test.com")).thenReturn(Optional.of(user));
 
         String longContent = "a".repeat(4001);
+        Map<String, String> payload = Map.of("content", longContent, "issueId", "77");
         MessageTooLongException ex = assertThrows(MessageTooLongException.class,
-                () -> conversationService.addMessage(44L, Map.of("content", longContent, "issueId", "77"), "bob@test.com"));
+                () -> conversationService.addMessage(44L, payload, "bob@test.com"));
 
         assertEquals("Le message dépasse la limite de 4000 caractères", ex.getMessage());
     }
