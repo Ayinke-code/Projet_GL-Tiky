@@ -170,7 +170,7 @@ class IssueControllerTest {
         when(authentication.getName()).thenReturn("user@test.com");
 
         mockMvc.perform(post("/issues/1/follow")
-                        .param("raison", "INTERESTED")
+                        .param("reason", "INTERESTED")
                         .principal(authentication))
                 .andExpect(status().isCreated());
 
@@ -185,7 +185,7 @@ class IssueControllerTest {
         when(authentication.getName()).thenReturn("user@test.com");
 
         mockMvc.perform(post("/issues/1/follow")
-                        .param("raison", "INTERESTED")
+                        .param("reason", "INTERESTED")
                         .principal(authentication))
                 .andExpect(status().isConflict());
     }
