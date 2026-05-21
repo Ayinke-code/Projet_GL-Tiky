@@ -1,6 +1,6 @@
 package fr.horizon.backend_api.model;
 
-import fr.horizon.backend_api.model.enums.EventType;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,8 +29,8 @@ public class Event {
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private EventType eventType; // AUDIT, DEFENSE, MEETING
+    @Column(nullable = false, columnDefinition = "varchar(50)")
+    private CategoryType categoryType; // AUDIT, DEFENSE, MEETING, ISSUE
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)

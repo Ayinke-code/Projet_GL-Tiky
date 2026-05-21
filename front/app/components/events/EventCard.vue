@@ -4,14 +4,14 @@
     Même convention visuelle que CategoryCard.vue.
   -->
   <div class="bg-white border-l-4 rounded-lg shadow-sm p-5 hover:shadow-lg transition-all"
-    :class="event.eventType === 'AUDIT' ? 'border-indigo-500' : 'border-emerald-500'">
+    :class="event.categoryType === 'AUDIT' ? 'border-indigo-500' : 'border-emerald-500'">
 
     <div class="flex justify-between items-start mb-2">
       <div>
         <!-- Type + nom de la catégorie en petit -->
         <p class="text-[10px] font-bold uppercase tracking-widest"
-          :class="event.eventType === 'AUDIT' ? 'text-indigo-600' : 'text-emerald-600'">
-          {{ event.eventType === 'AUDIT' ? 'Audit' : 'Soutenance' }} · {{ event.categoryName }}
+          :class="event.categoryType === 'AUDIT' ? 'text-indigo-600' : 'text-emerald-600'">
+          {{ event.categoryType === 'AUDIT' ? 'Audit' : 'Soutenance' }} · {{ event.categoryName }}
         </p>
 
         <!-- Nom de l'événement -->

@@ -1,8 +1,8 @@
 package fr.horizon.backend_api.model.enums;
 
-public enum EventType {
+public enum CategoryType {
     AUDIT,
     DEFENSE,
-    MEETING
+    MEETING,
+    ISSUE
 }
-

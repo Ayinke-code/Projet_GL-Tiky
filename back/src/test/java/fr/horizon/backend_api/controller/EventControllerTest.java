@@ -1,7 +1,7 @@
 package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.EventResponseDto;
-import fr.horizon.backend_api.model.enums.EventType;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.service.EventService;
 import fr.horizon.backend_api.service.JwtToken;
 import org.junit.jupiter.api.Test;
@@ -52,7 +52,7 @@ class EventControllerTest {
                 .id(1L)
                 .name("Audit Sprint 3")
                 .description("Revue du code du sprint 3")
-                .eventType(EventType.AUDIT)
+                .categoryType(CategoryType.AUDIT)
                 .categoryName("UI/UX")
                 .createdBy("Sophie ROUSSEAU")
                 .createdAt(LocalDateTime.now())
@@ -73,7 +73,7 @@ class EventControllerTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Audit Sprint 3"))
-                .andExpect(jsonPath("$.eventType").value("AUDIT"))
+                .andExpect(jsonPath("$.categoryType").value("AUDIT"))
                 .andExpect(jsonPath("$.categoryName").value("UI/UX"))
                 .andExpect(jsonPath("$.createdBy").value("Sophie ROUSSEAU"));
 
@@ -87,7 +87,7 @@ class EventControllerTest {
                 .id(2L)
                 .name("Soutenance PFE - Groupe A")
                 .description("Présentation du projet de fin d'études")
-                .eventType(EventType.DEFENSE)
+                .categoryType(CategoryType.DEFENSE)
                 .categoryName("PFE")
                 .createdBy("Richard WOODWARD")
                 .createdAt(LocalDateTime.now())
@@ -108,7 +108,7 @@ class EventControllerTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Soutenance PFE - Groupe A"))
-                .andExpect(jsonPath("$.eventType").value("DEFENSE"))
+                .andExpect(jsonPath("$.categoryType").value("DEFENSE"))
                 .andExpect(jsonPath("$.categoryName").value("PFE"))
                 .andExpect(jsonPath("$.createdBy").value("Richard WOODWARD"));
     }
@@ -124,22 +124,22 @@ class EventControllerTest {
                 .id(1L)
                 .name("Audit Sprint 1")
                 .description("Revue sprint 1")
-                .eventType(EventType.AUDIT)
+                .categoryType(CategoryType.AUDIT)
                 .categoryName("CI/CD")
                 .createdBy("Sophie ROUSSEAU")
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        when(eventService.listByType(EventType.AUDIT)).thenReturn(List.of(dto));
+        when(eventService.listByType(CategoryType.AUDIT)).thenReturn(List.of(dto));
 
         mockMvc.perform(get("/events/type/AUDIT"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Audit Sprint 1"))
-                .andExpect(jsonPath("$[0].eventType").value("AUDIT"))
+                .andExpect(jsonPath("$[0].categoryType").value("AUDIT"))
                 .andExpect(jsonPath("$[0].categoryName").value("CI/CD"))
                 .andExpect(jsonPath("$[0].createdBy").value("Sophie ROUSSEAU"));
 
-        verify(eventService).listByType(EventType.AUDIT);
+        verify(eventService).listByType(CategoryType.AUDIT);
     }
 
     @Test
@@ -149,27 +149,27 @@ class EventControllerTest {
                 .id(2L)
                 .name("Soutenance PFE - Groupe A")
                 .description("Présentation du projet de fin d'études")
-                .eventType(EventType.DEFENSE)
+                .categoryType(CategoryType.DEFENSE)
                 .categoryName("PFE")
                 .createdBy("Richard WOODWARD")
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        when(eventService.listByType(EventType.DEFENSE)).thenReturn(List.of(dto));
+        when(eventService.listByType(CategoryType.DEFENSE)).thenReturn(List.of(dto));
 
         mockMvc.perform(get("/events/type/DEFENSE"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Soutenance PFE - Groupe A"))
-                .andExpect(jsonPath("$[0].eventType").value("DEFENSE"))
+                .andExpect(jsonPath("$[0].categoryType").value("DEFENSE"))
                 .andExpect(jsonPath("$[0].categoryName").value("PFE"));
 
-        verify(eventService).listByType(EventType.DEFENSE);
+        verify(eventService).listByType(CategoryType.DEFENSE);
     }
 
     @Test
     void shouldReturnEmptyList_whenNoEvents() throws Exception {
 
-        when(eventService.listByType(EventType.AUDIT)).thenReturn(List.of());
+        when(eventService.listByType(CategoryType.AUDIT)).thenReturn(List.of());
 
         mockMvc.perform(get("/events/type/AUDIT"))
                 .andExpect(status().isOk())

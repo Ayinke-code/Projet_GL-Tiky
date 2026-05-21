@@ -2,7 +2,7 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.CategoryDetailsDto;
 import fr.horizon.backend_api.model.dto.CategoryDto;
-import fr.horizon.backend_api.model.enums.EventType;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.service.CategoryService;
 import fr.horizon.backend_api.service.JwtToken;
 import org.junit.jupiter.api.Test;
@@ -139,18 +139,18 @@ class CategoryControllerTest {
                 .id(11L)
                 .name("Test")
                 .subject("Audit Test")
-                .eventType(EventType.AUDIT)
+                .categoryType(CategoryType.AUDIT)
                 .build();
 
-        when(categoryService.findByEventType(EventType.AUDIT)).thenReturn(List.of(audit));
+        when(categoryService.findByCategoryType(CategoryType.AUDIT)).thenReturn(List.of(audit));
 
         mockMvc.perform(get("/categories/type/AUDIT"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Test"))
                 .andExpect(jsonPath("$[0].subject").value("Audit Test"))
-                .andExpect(jsonPath("$[0].eventType").value("AUDIT"));
+                .andExpect(jsonPath("$[0].categoryType").value("AUDIT"));
 
-        verify(categoryService).findByEventType(EventType.AUDIT);
+        verify(categoryService).findByCategoryType(CategoryType.AUDIT);
     }
 
     @Test
@@ -160,23 +160,23 @@ class CategoryControllerTest {
                 .id(20L)
                 .name("PFE")
                 .subject("Projet Fin Études")
-                .eventType(EventType.DEFENSE)
+                .categoryType(CategoryType.DEFENSE)
                 .build();
 
-        when(categoryService.findByEventType(EventType.DEFENSE)).thenReturn(List.of(defense));
+        when(categoryService.findByCategoryType(CategoryType.DEFENSE)).thenReturn(List.of(defense));
 
         mockMvc.perform(get("/categories/type/DEFENSE"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("PFE"))
-                .andExpect(jsonPath("$[0].eventType").value("DEFENSE"));
+                .andExpect(jsonPath("$[0].categoryType").value("DEFENSE"));
 
-        verify(categoryService).findByEventType(EventType.DEFENSE);
+        verify(categoryService).findByCategoryType(CategoryType.DEFENSE);
     }
 
     @Test
     void shouldGetCategoriesByType_returnsEmpty() throws Exception {
 
-        when(categoryService.findByEventType(EventType.AUDIT)).thenReturn(List.of());
+        when(categoryService.findByCategoryType(CategoryType.AUDIT)).thenReturn(List.of());
 
         mockMvc.perform(get("/categories/type/AUDIT"))
                 .andExpect(status().isOk())

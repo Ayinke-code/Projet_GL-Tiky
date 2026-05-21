@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-import fr.horizon.backend_api.model.enums.EventType;
+import fr.horizon.backend_api.model.enums.CategoryType;
 
 /**
  * Gestion des catégories.
@@ -110,7 +110,7 @@ public class CategoryController {
      */
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/type/{type}")
-    public List<CategoryDto> getCategoriesByType(@PathVariable EventType type) {
-        return categoryService.findByEventType(type);
+    public List<CategoryDto> getCategoriesByType(@PathVariable CategoryType type) {
+        return categoryService.findByCategoryType(type);
     }
 }

@@ -2,7 +2,7 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.EventRequestDto;
 import fr.horizon.backend_api.model.dto.EventResponseDto;
-import fr.horizon.backend_api.model.enums.EventType;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.model.enums.TeacherType;
 import fr.horizon.backend_api.service.EventService;
 import lombok.RequiredArgsConstructor;
@@ -50,7 +50,7 @@ public class EventController {
      * @return liste des événements correspondants, triés par date décroissante
      */
     @GetMapping("/type/{type}")
-    public ResponseEntity<List<EventResponseDto>> listByType(@PathVariable EventType type) {
+    public ResponseEntity<List<EventResponseDto>> listByType(@PathVariable CategoryType type) {
         List<EventResponseDto> events = eventService.listByType(type);
         return ResponseEntity.ok(events);
     }

@@ -3,7 +3,7 @@ package fr.horizon.backend_api.config;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
-import fr.horizon.backend_api.model.enums.EventType;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.model.enums.TeacherType;
 import fr.horizon.backend_api.model.enums.RoleEnum;
 import fr.horizon.backend_api.repository.CategoryRepository;
@@ -72,33 +72,41 @@ public class DataInitializer implements CommandLineRunner {
         if (categoryRepository.count() == 0) {
             // Issues Categories
 
-            createCategory("Maintenance & Infrastructure", "Maintenance",null, admin);
-            createCategory("Scolarité & Administration", "Scolarité",null, admin);
-            createCategory("Sécurité", "Sécurité",null, admin);
-            createCategory("Vie étudiante", "Vie Étudiante",null, admin);
-            createCategory("Pédagogie", "Pédagogie", null,admin);
-            createCategory("Discrimination & Harcèlement", "Discrimination",null, admin);
-            createCategory("Réseau & Informatique", "Réseau", null,admin);
-            createCategory("Bibliothèque & Documentation", "Bibliothèque", null,admin);
+            createCategory("Maintenance & Infrastructure", "Maintenance", CategoryType.ISSUE, admin);
+            createCategory("Scolarité & Administration", "Scolarité", CategoryType.ISSUE, admin);
+            createCategory("Sécurité", "Sécurité", CategoryType.ISSUE, admin);
+            createCategory("Vie étudiante", "Vie Étudiante", CategoryType.ISSUE, admin);
+            createCategory("Pédagogie", "Pédagogie", CategoryType.ISSUE, admin);
+            createCategory("Discrimination & Harcèlement", "Discrimination", CategoryType.ISSUE, admin);
+            createCategory("Réseau & Informatique", "Réseau", CategoryType.ISSUE, admin);
+            createCategory("Bibliothèque & Documentation", "Bibliothèque", CategoryType.ISSUE, admin);
 
             // Audit Categories
-            createCategory("Test", "Audit Test", EventType.AUDIT, admin);
-            createCategory("Base de données", "Audit BD", EventType.AUDIT, admin);
-            createCategory("UI/UX", "Audit Interface", EventType.AUDIT, admin);
-            createCategory("CI/CD", "Audit Pipeline", EventType.AUDIT, admin);
-            createCategory("Qualité Code", "Audit Qualité", EventType.AUDIT, admin);
-            createCategory("Modélisation et conception", "Audit Modélisation", EventType.AUDIT, admin);
+            createCategory("Test", "Audit Test", CategoryType.AUDIT, admin);
+            createCategory("Base de données", "Audit BD", CategoryType.AUDIT, admin);
+            createCategory("UI/UX", "Audit Interface", CategoryType.AUDIT, admin);
+            createCategory("CI/CD", "Audit Pipeline", CategoryType.AUDIT, admin);
+            createCategory("Qualité Code", "Audit Qualité", CategoryType.AUDIT, admin);
+            createCategory("Modélisation et conception", "Audit Modélisation", CategoryType.AUDIT, admin);
 
             // Defense Categories
-            createCategory("Soutenance stage technique", "Stage Technique", EventType.DEFENSE, admin);
-            createCategory("Stage de fin d'étude", "Fin d'étude", EventType.DEFENSE, admin);
-            createCategory("PFE", "Projet Fin Études", EventType.DEFENSE, admin);
-            createCategory("Projet starter", "Starter", EventType.DEFENSE, admin);
-            createCategory("PGL", "Génie Logiciel", EventType.DEFENSE, admin);
-            createCategory("Sprint 1", "Sprint 1", EventType.DEFENSE, admin);
-            createCategory("Sprint 2", "Sprint 2", EventType.DEFENSE, admin);
-            createCategory("Sprint 3", "Sprint 3", EventType.DEFENSE, admin);
+            createCategory("Soutenance stage technique", "Stage Technique", CategoryType.DEFENSE, admin);
+            createCategory("Stage de fin d'étude", "Fin d'étude", CategoryType.DEFENSE, admin);
+            createCategory("PFE", "Projet Fin Études", CategoryType.DEFENSE, admin);
+            createCategory("Projet starter", "Starter", CategoryType.DEFENSE, admin);
+            createCategory("PGL", "Génie Logiciel", CategoryType.DEFENSE, admin);
+            createCategory("Sprint 1", "Sprint 1", CategoryType.DEFENSE, admin);
+            createCategory("Sprint 2", "Sprint 2", CategoryType.DEFENSE, admin);
+            createCategory("Sprint 3", "Sprint 3", CategoryType.DEFENSE, admin);
         }
+
+        // Migration : catégories sans type → CategoryType.ISSUE
+        categoryRepository.findAll().stream()
+                .filter(c -> c.getCategoryType() == null)
+                .forEach(c -> {
+                    c.setCategoryType(CategoryType.ISSUE);
+                    categoryRepository.save(c);
+                });
 
         // =========================
         // ISSUE TEST
@@ -159,15 +167,15 @@ public class DataInitializer implements CommandLineRunner {
      *
      * @param name      nom de la catégorie
      * @param subject   sujet / libellé court
-     * @param eventType type d’événement associé ({@code null} pour les catégories générales)
+     * @param categoryType type de catégorie associé ({@code ISSUE}, {@code AUDIT}, {@code DEFENSE}...)
      * @param owner     utilisateur propriétaire de la catégorie
      */
-    private void createCategory(String name, String subject, EventType eventType, User owner) {
+    private void createCategory(String name, String subject, CategoryType categoryType, User owner) {
         categoryRepository.save(
                 Category.builder()
                         .name(name)
                         .subject(subject)
-                        .eventType(eventType)
+                        .categoryType(categoryType)
                         .status(CategoryStatus.ACTIVE)
                         .owner(owner)
                         .build()

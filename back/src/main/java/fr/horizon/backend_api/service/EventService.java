@@ -5,7 +5,7 @@ import fr.horizon.backend_api.model.dto.EventResponseDto;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Event;
 import fr.horizon.backend_api.model.User;
-import fr.horizon.backend_api.model.enums.EventType;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.EventRepository;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
@@ -47,18 +47,18 @@ public class EventService {
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new CategoryNotFoundException(request.getCategoryId()));
 
-        if (category.getEventType() == EventType.AUDIT || category.getEventType() == EventType.DEFENSE) {
+        if (category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE) {
             boolean hasTeacherRole = user.getRoles().stream()
                     .anyMatch(r -> "TEACHER".equals(r.getName()) || "ADMIN".equals(r.getName()));
             if (!hasTeacherRole) {
-                throw new AccessDeniedException("Seuls les enseignants peuvent créer des événements de type " + category.getEventType());
+                throw new AccessDeniedException("Seuls les enseignants peuvent créer des événements de type " + category.getCategoryType());
             }
         }
 
         Event event = Event.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .eventType(category.getEventType())
+                .categoryType(category.getCategoryType())
                 .category(category)
                 .createdBy(user)
                 .build();
@@ -73,8 +73,8 @@ public class EventService {
      * @param type type d’événement ({@code AUDIT} ou {@code DEFENSE})
      * @return liste de DTO correspondant aux événements trouvés
      */
-    public List<EventResponseDto> listByType(EventType type) {
-        return eventRepository.findByEventTypeOrderByCreatedAtDesc(type)
+    public List<EventResponseDto> listByType(CategoryType type) {
+        return eventRepository.findByCategoryTypeOrderByCreatedAtDesc(type)
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
@@ -91,7 +91,7 @@ public class EventService {
                 .id(event.getId())
                 .name(event.getName())
                 .description(event.getDescription())
-                .eventType(event.getEventType())
+                .categoryType(event.getCategoryType())
                 .categoryName(event.getCategory().getName())
                 .createdBy(event.getCreatedBy().getName())
                 .createdAt(event.getCreatedAt())

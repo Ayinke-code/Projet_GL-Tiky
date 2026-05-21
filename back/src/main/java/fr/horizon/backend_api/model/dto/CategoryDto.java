@@ -1,7 +1,7 @@
 package fr.horizon.backend_api.model.dto;
 
 import fr.horizon.backend_api.model.enums.CategoryStatus;
-import fr.horizon.backend_api.model.enums.EventType;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import lombok.Builder;
 import lombok.Data;
 
@@ -14,6 +14,6 @@ public class CategoryDto {
     private String subject;
     private CategoryStatus status;
     private String ownerName;
-    private EventType eventType;
+    private CategoryType categoryType;
     private Long ownerId;
 }

@@ -93,7 +93,7 @@ class DataInitializerTest {
         // THEN
         verify(roleRepository, times(3)).save(any());
         verify(userRepository, times(4)).save(any());
-        verify(categoryRepository, times(22)).save(any());
+        verify(categoryRepository, times(23)).save(any());
 
         verify(issueRepository).save(any());
     }

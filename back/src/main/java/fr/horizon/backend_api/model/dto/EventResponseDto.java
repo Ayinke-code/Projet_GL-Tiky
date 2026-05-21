@@ -1,6 +1,6 @@
 package fr.horizon.backend_api.model.dto;
 
-import fr.horizon.backend_api.model.enums.EventType;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,7 +15,7 @@ public class EventResponseDto {
     private Long id;
     private String name;
     private String description;
-    private EventType eventType;
+    private CategoryType categoryType;
     private String categoryName;
     private String createdBy;
     private LocalDateTime createdAt;

@@ -7,7 +7,7 @@ import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.EventRequestDto;
 import fr.horizon.backend_api.model.dto.EventResponseDto;
-import fr.horizon.backend_api.model.enums.EventType;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.EventRepository;
 import org.junit.jupiter.api.Test;
@@ -59,7 +59,7 @@ class EventServiceTest {
         Category category = new Category();
         category.setId(10L);
         category.setName("UI/UX");
-        category.setEventType(EventType.AUDIT);
+        category.setCategoryType(CategoryType.AUDIT);
 
         EventRequestDto request = new EventRequestDto();
         request.setCategoryId(10L);
@@ -70,7 +70,7 @@ class EventServiceTest {
                 .id(1L)
                 .name("Audit Sprint 3")
                 .description("Revue du code du sprint 3")
-                .eventType(EventType.AUDIT)
+                .categoryType(CategoryType.AUDIT)
                 .category(category)
                 .createdBy(teacher)
                 .createdAt(LocalDateTime.now())
@@ -85,7 +85,7 @@ class EventServiceTest {
         assertNotNull(result);
         assertEquals("Audit Sprint 3", result.getName());
         assertEquals("Revue du code du sprint 3", result.getDescription());
-        assertEquals(EventType.AUDIT, result.getEventType());
+        assertEquals(CategoryType.AUDIT, result.getCategoryType());
         assertEquals("UI/UX", result.getCategoryName());
         assertEquals("Sophie ROUSSEAU", result.getCreatedBy());
 
@@ -106,18 +106,18 @@ class EventServiceTest {
         Category category = new Category();
         category.setId(20L);
         category.setName("PFE");
-        category.setEventType(EventType.DEFENSE);
+        category.setCategoryType(CategoryType.DEFENSE);
 
         EventRequestDto request = new EventRequestDto();
         request.setCategoryId(20L);
         request.setName("Soutenance PFE - Groupe A");
-        request.setDescription("Présentation du projet de fin d'études");
+        request.setDescription("Présentation du projet de fin d’études");
 
         Event saved = Event.builder()
                 .id(2L)
                 .name("Soutenance PFE - Groupe A")
-                .description("Présentation du projet de fin d'études")
-                .eventType(EventType.DEFENSE)
+                .description("Présentation du projet de fin d’études")
+                .categoryType(CategoryType.DEFENSE)
                 .category(category)
                 .createdBy(admin)
                 .createdAt(LocalDateTime.now())
@@ -131,7 +131,7 @@ class EventServiceTest {
 
         assertNotNull(result);
         assertEquals("Soutenance PFE - Groupe A", result.getName());
-        assertEquals(EventType.DEFENSE, result.getEventType());
+        assertEquals(CategoryType.DEFENSE, result.getCategoryType());
         assertEquals("PFE", result.getCategoryName());
         assertEquals("Richard WOODWARD", result.getCreatedBy());
     }
@@ -150,7 +150,7 @@ class EventServiceTest {
         Category category = new Category();
         category.setId(10L);
         category.setName("CI/CD");
-        category.setEventType(EventType.AUDIT);
+        category.setCategoryType(CategoryType.AUDIT);
 
         EventRequestDto request = new EventRequestDto();
         request.setCategoryId(10L);
@@ -179,7 +179,7 @@ class EventServiceTest {
         Category category = new Category();
         category.setId(20L);
         category.setName("Stage");
-        category.setEventType(EventType.DEFENSE);
+        category.setCategoryType(CategoryType.DEFENSE);
 
         EventRequestDto request = new EventRequestDto();
         request.setCategoryId(20L);
@@ -234,20 +234,20 @@ class EventServiceTest {
                 .id(1L)
                 .name("Audit Sprint 1")
                 .description("Revue sprint 1")
-                .eventType(EventType.AUDIT)
+                .categoryType(CategoryType.AUDIT)
                 .category(category)
                 .createdBy(teacher)
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        when(eventRepository.findByEventTypeOrderByCreatedAtDesc(EventType.AUDIT))
+        when(eventRepository.findByCategoryTypeOrderByCreatedAtDesc(CategoryType.AUDIT))
                 .thenReturn(List.of(event));
 
-        List<EventResponseDto> result = eventService.listByType(EventType.AUDIT);
+        List<EventResponseDto> result = eventService.listByType(CategoryType.AUDIT);
 
         assertEquals(1, result.size());
         assertEquals("Audit Sprint 1", result.get(0).getName());
-        assertEquals(EventType.AUDIT, result.get(0).getEventType());
+        assertEquals(CategoryType.AUDIT, result.get(0).getCategoryType());
         assertEquals("UI/UX", result.get(0).getCategoryName());
         assertEquals("Sophie ROUSSEAU", result.get(0).getCreatedBy());
     }
@@ -255,10 +255,10 @@ class EventServiceTest {
     @Test
     void listByType_should_return_empty_list_when_no_events() {
 
-        when(eventRepository.findByEventTypeOrderByCreatedAtDesc(EventType.DEFENSE))
+        when(eventRepository.findByCategoryTypeOrderByCreatedAtDesc(CategoryType.DEFENSE))
                 .thenReturn(List.of());
 
-        List<EventResponseDto> result = eventService.listByType(EventType.DEFENSE);
+        List<EventResponseDto> result = eventService.listByType(CategoryType.DEFENSE);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
@@ -267,7 +267,7 @@ class EventServiceTest {
     @Test
     void create_should_save_event_when_category_has_no_event_type_restriction() {
 
-        // Catégorie générale (eventType null) → pas de vérification de rôle
+        // Catégorie générale (categoryType null) → pas de vérification de rôle
         Role studentRole = new Role("STUDENT");
 
         User student = new User();
@@ -279,7 +279,7 @@ class EventServiceTest {
         Category category = new Category();
         category.setId(30L);
         category.setName("Vie étudiante");
-        category.setEventType(null);
+        category.setCategoryType(null);
 
         EventRequestDto request = new EventRequestDto();
         request.setCategoryId(30L);
@@ -290,7 +290,7 @@ class EventServiceTest {
                 .id(3L)
                 .name("Réunion étudiante")
                 .description("Réunion mensuelle")
-                .eventType(null)
+                .categoryType(null)
                 .category(category)
                 .createdBy(student)
                 .createdAt(LocalDateTime.now())

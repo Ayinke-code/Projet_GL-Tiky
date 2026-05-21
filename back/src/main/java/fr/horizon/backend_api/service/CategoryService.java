@@ -1,6 +1,6 @@
 package fr.horizon.backend_api.service;
 
-import fr.horizon.backend_api.model.enums.EventType;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.*;
@@ -164,11 +164,11 @@ public class CategoryService {
     /**
      * Récupère les catégories filtrées par type d’événement.
      *
-     * @param eventType type d’événement ({@code AUDIT}, {@code DEFENSE} ou {@code MEETING})
+     * @param categoryType type ({@code AUDIT}, {@code DEFENSE}, {@code MEETING} ou {@code ISSUE})
      * @return liste de DTO des catégories correspondant au type
      */
-    public List<CategoryDto> findByEventType(EventType eventType) {
-        return categoryRepository.findByEventType(eventType)
+    public List<CategoryDto> findByCategoryType(CategoryType categoryType) {
+        return categoryRepository.findByCategoryType(categoryType)
                 .stream()
                 .map(this::toDto)
                 .toList();
@@ -186,7 +186,7 @@ public class CategoryService {
                 .name(category.getName())
                 .subject(category.getSubject())
                 .status(category.getStatus())
-                .eventType(category.getEventType())
+                .categoryType(category.getCategoryType())
                 .ownerName(category.getOwner() != null ? category.getOwner().getName() : null)
                 .ownerId(category.getOwner() != null ? category.getOwner().getId() : null)
                 .build();

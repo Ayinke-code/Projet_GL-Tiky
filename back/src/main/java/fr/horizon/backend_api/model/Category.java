@@ -1,7 +1,7 @@
 package fr.horizon.backend_api.model;
 
 import fr.horizon.backend_api.model.enums.CategoryStatus;
-import fr.horizon.backend_api.model.enums.EventType;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -33,8 +33,8 @@ public class Category extends BaseEntity {
     private CategoryStatus status = CategoryStatus.ACTIVE;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = true)
-    private EventType eventType;
+    @Column(nullable = true, columnDefinition = "varchar(50)")
+    private CategoryType categoryType;
 
     @ManyToOne
     @JoinColumn(name = "owner_id")
