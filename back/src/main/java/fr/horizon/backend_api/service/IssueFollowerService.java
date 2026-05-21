@@ -36,7 +36,7 @@ public class IssueFollowerService {
      * @throws ResponseStatusException 409 si l'utilisateur suit déjà l'issue
      * @throws ResponseStatusException 400 si la raison est invalide
      */
-    public IssueFollower followIssue(Long issueId, String raison, User user) {
+    public IssueFollower followIssue(Long issueId, String reason, User user) {
 
         // Récupérer l'issue
         Issue issue = issueRepository.findById(issueId)
@@ -44,7 +44,7 @@ public class IssueFollowerService {
                         HttpStatus.NOT_FOUND, "Issue non trouvée"));
 
         // Vérifier que l'utilisateur ne suit pas déjà cette issue
-        if (issueFollowerRepository.existsByCreateurAndIssue(user, issue)) {
+        if (issueFollowerRepository.existsByUserAndIssue(user, issue)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Vous suivez déjà cette issue");
@@ -53,7 +53,7 @@ public class IssueFollowerService {
         // Valider et convertir la raison
         FollowedReason followedReason;
         try {
-            followedReason = FollowedReason.valueOf(raison);
+            followedReason = FollowedReason.valueOf(reason);
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -63,10 +63,30 @@ public class IssueFollowerService {
         // Créer et sauvegarder l'abonnement
         IssueFollower follower = IssueFollower.builder()
                 .issue(issue)
-                .createur(user)
-                .raison(followedReason)
+                .user(user)
+                .reason(followedReason)
                 .build();
 
         return issueFollowerRepository.save(follower);
+    }
+
+    /**
+     * Désabonne un utilisateur d'une issue.
+     *
+     * @param issueId identifiant de l'issue
+     * @param user utilisateur qui souhaite se désabonner
+     * @throws ResponseStatusException 404 si l'issue n'existe pas
+     * @throws ResponseStatusException 404 si l'abonnement n'existe pas
+     */
+    public void unfollowIssue(Long issueId, User user) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Issue non trouvée"));
+
+        IssueFollower follower = issueFollowerRepository.findByUserAndIssue(user, issue)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Abonnement non trouvé"));
+
+        issueFollowerRepository.delete(follower);
     }
 }

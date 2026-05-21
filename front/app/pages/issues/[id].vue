@@ -12,7 +12,7 @@ const route = useRoute()
 const { ready, user, wsToken } = useAuth()
 const { getIssueById, updateIssueStatus, updateIssuePrivacy } = useIssues()
 const { getIssueMessages, sendIssueMessage, normalizeMessage, initializeConversation } = useConversations()
-const { followIssue } = useIssueFollowers()
+const { followIssue, unfollowIssue } = useIssueFollowers()
 
 // ID de l'issue depuis l'URL
 const issueId = Number(route.params.id)
@@ -180,6 +180,15 @@ const handleSend = async () => {
     sending.value = false
   }
 }
+
+const handleUnfollow = async () => {
+  try {
+    await unfollowIssue(issueId)
+    alreadyFollowing.value = false
+  } catch (err) {
+    console.error(err)
+  }
+}
 </script>
 
 <template>
@@ -284,11 +293,15 @@ const handleSend = async () => {
             </svg>
             Suivre
           </button>
-          <span
+          <button
             v-else
-            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-green-300 text-green-700 bg-green-50 text-sm font-medium">
-                        ✓ Suivi
-                    </span>
+            @click="handleUnfollow"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-300 text-red-600 bg-white hover:bg-red-50 text-sm font-medium transition-colors cursor-pointer transition-transform duration-200 hover:scale-105">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Ne plus suivre
+          </button>
 
         </div>
       </div>

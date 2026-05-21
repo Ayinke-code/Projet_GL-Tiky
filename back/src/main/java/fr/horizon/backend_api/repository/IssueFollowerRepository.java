@@ -19,5 +19,7 @@ public interface IssueFollowerRepository extends JpaRepository<IssueFollower, Lo
      * @param issue    issue concernée
      * @return true si l'utilisateur suit déjà l'issue
      */
-    boolean existsByCreateurAndIssue(User createur, Issue issue);
+    boolean existsByUserAndIssue(User user, Issue issue);
+
+    Optional<IssueFollower> findByUserAndIssue(User user, Issue issue);
 }

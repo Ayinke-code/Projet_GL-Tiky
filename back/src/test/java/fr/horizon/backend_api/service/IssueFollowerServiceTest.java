@@ -54,13 +54,13 @@ class IssueFollowerServiceTest {
     @Test
     void followIssue_success() {
         when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
-        when(issueFollowerRepository.existsByCreateurAndIssue(user, issue)).thenReturn(false);
+        when(issueFollowerRepository.existsByUserAndIssue(user, issue)).thenReturn(false);
         when(issueFollowerRepository.save(any())).thenAnswer(i -> i.getArgument(0));
 
         IssueFollower result = issueFollowerService.followIssue(1L, "INTERESTED", user);
 
         assertNotNull(result);
-        assertEquals(FollowedReason.INTERESTED, result.getRaison());
+        assertEquals(FollowedReason.INTERESTED, result.getReason());
         verify(issueFollowerRepository, times(1)).save(any());
     }
 
@@ -68,7 +68,7 @@ class IssueFollowerServiceTest {
     @Test
     void followIssue_alreadyFollowing_throwsConflict() {
         when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
-        when(issueFollowerRepository.existsByCreateurAndIssue(user, issue)).thenReturn(true);
+        when(issueFollowerRepository.existsByUserAndIssue(user, issue)).thenReturn(true);
 
         assertThrows(ResponseStatusException.class, () ->
                 issueFollowerService.followIssue(1L, "INTERESTED", user));
@@ -78,7 +78,7 @@ class IssueFollowerServiceTest {
     @Test
     void followIssue_invalidReason_throwsBadRequest() {
         when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
-        when(issueFollowerRepository.existsByCreateurAndIssue(user, issue)).thenReturn(false);
+        when(issueFollowerRepository.existsByUserAndIssue(user, issue)).thenReturn(false);
 
         assertThrows(ResponseStatusException.class, () ->
                 issueFollowerService.followIssue(1L, "INVALID_REASON", user));
@@ -91,5 +91,30 @@ class IssueFollowerServiceTest {
 
         assertThrows(ResponseStatusException.class, () ->
                 issueFollowerService.followIssue(99L, "INTERESTED", user));
+    }
+
+    /** Vérifie qu'un utilisateur peut se désabonner d'une issue */
+    @Test
+    void unfollowIssue_success() {
+        IssueFollower follower = new IssueFollower();
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(issueFollowerRepository.findByUserAndIssue(user, issue))
+                .thenReturn(Optional.of(follower));
+
+        issueFollowerService.unfollowIssue(1L, user);
+
+        verify(issueFollowerRepository, times(1)).delete(follower);
+    }
+
+    /** Vérifie qu'une exception NOT_FOUND est levée si l'abonnement n'existe pas */
+    @Test
+    void unfollowIssue_notFollowing_throwsNotFound() {
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(issueFollowerRepository.findByUserAndIssue(user, issue))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class, () ->
+                issueFollowerService.unfollowIssue(1L, user));
     }
 }

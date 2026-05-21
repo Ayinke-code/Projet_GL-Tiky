@@ -17,13 +17,13 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "abonne_tick")
+@Table(name = "issue_follower")
 public class IssueFollower {
 
     /** Identifiant unique de l'abonnement */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idAbnTick;
+    private Long id;
 
     /**
      * Raison du suivi de l'issue.
@@ -32,26 +32,26 @@ public class IssueFollower {
      * IMPACTED = peut interagir (répondre, commenter)
      */
     @Enumerated(EnumType.STRING)
-    @Column(name = "raison", nullable = false)
-    private FollowedReason raison;
+    @Column(name = "reason", nullable = false)
+    private FollowedReason reason;
 
     /** Date de création de l'abonnement, générée automatiquement */
-    @Column(name = "date_creation")
-    private LocalDateTime dateCreation;
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
     /** Issue suivie */
     @ManyToOne
-    @JoinColumn(name = "id_tick", nullable = false)
+    @JoinColumn(name = "issue_id", nullable = false)
     private Issue issue;
 
     /** Utilisateur qui suit l'issue */
     @ManyToOne
-    @JoinColumn(name = "id_util", nullable = false)
-    private User createur;
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     /** Initialise la date de création avant la persistance */
     @PrePersist
     public void prePersist() {
-        this.dateCreation = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now();
     }
 }

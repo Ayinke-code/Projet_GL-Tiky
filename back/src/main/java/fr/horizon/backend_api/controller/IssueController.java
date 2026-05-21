@@ -112,13 +112,22 @@ public class IssueController {
     @PostMapping("/{id}/follow")
     public ResponseEntity<IssueFollower> followIssue(
             @PathVariable Long id,
-            @RequestParam String raison,
+            @RequestParam String reason,
             Authentication auth) {
         String email = auth.getName();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-        IssueFollower follower = issueFollowerService.followIssue(id, raison, user);
+        IssueFollower follower = issueFollowerService.followIssue(id, reason, user);
         return ResponseEntity.status(HttpStatus.CREATED).body(follower);
     }
 
+    @PreAuthorize("isAuthenticated()")
+    @DeleteMapping("/{id}/follow")
+    public ResponseEntity<Void> unfollowIssue(@PathVariable Long id, Authentication auth) {
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        issueFollowerService.unfollowIssue(id, user);
+        return ResponseEntity.noContent().build();
+    }
 }
