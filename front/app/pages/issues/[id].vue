@@ -12,7 +12,7 @@ const route = useRoute()
 const { ready, user, wsToken } = useAuth()
 const { getIssueById, updateIssueStatus, updateIssuePrivacy } = useIssues()
 const { getIssueMessages, sendIssueMessage, normalizeMessage, initializeConversation } = useConversations()
-const { followIssue, unfollowIssue } = useIssueFollowers()
+const { followIssue, unfollowIssue, isFollowing } = useIssueFollowers()
 
 // ID de l'issue depuis l'URL
 const issueId = Number(route.params.id)
@@ -90,6 +90,7 @@ onMounted(async () => {
 
   try {
     issue.value = await getIssueById(issueId)
+    alreadyFollowing.value = await isFollowing(issueId)
     await initializeConversation(issueId)
     messages.value = await getIssueMessages(issueId)
     connectWebSocket()

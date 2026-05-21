@@ -117,4 +117,40 @@ class IssueFollowerServiceTest {
         assertThrows(ResponseStatusException.class, () ->
                 issueFollowerService.unfollowIssue(1L, user));
     }
+
+    /** Vérifie que isFollowing retourne true si l'utilisateur suit l'issue */
+    @Test
+    void isFollowing_true() {
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(issueFollowerRepository.existsByUserAndIssue(user, issue)).thenReturn(true);
+
+        boolean result = issueFollowerService.isFollowing(1L, user);
+
+        assertTrue(result);
+    }
+
+    /** Vérifie que isFollowing retourne false si l'utilisateur ne suit pas l'issue */
+    @Test
+    void isFollowing_false() {
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(issueFollowerRepository.existsByUserAndIssue(user, issue)).thenReturn(false);
+
+        boolean result = issueFollowerService.isFollowing(1L, user);
+
+        assertFalse(result);
+    }
+
+    /** Vérifie que getFollowedIssues retourne bien la liste des issues suivies */
+    @Test
+    void getFollowedIssues_returnsList() {
+        IssueFollower follower = new IssueFollower();
+        follower.setIssue(issue);
+
+        when(issueFollowerRepository.findByUser(user)).thenReturn(List.of(follower));
+
+        List<Issue> result = issueFollowerService.getFollowedIssues(user);
+
+        assertEquals(1, result.size());
+        assertEquals(issue, result.get(0));
+    }
 }

@@ -130,4 +130,25 @@ public class IssueController {
         issueFollowerService.unfollowIssue(id, user);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/followed")
+    public ResponseEntity<List<IssueDto>> getFollowedIssues(Authentication auth) {
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        List<IssueDto> dtos = issueFollowerService.getFollowedIssues(user)
+                .stream()
+                .map(issueService::toDto)
+                .toList();
+        return ResponseEntity.ok(dtos);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/{id}/follow/status")
+    public ResponseEntity<Boolean> isFollowing(@PathVariable Long id, Authentication auth) {
+        String email = auth.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        return ResponseEntity.ok(issueFollowerService.isFollowing(id, user));
+    }
 }

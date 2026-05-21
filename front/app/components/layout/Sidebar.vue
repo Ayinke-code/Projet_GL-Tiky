@@ -25,7 +25,7 @@
         Activités
       </p>
 
-      <NuxtLink v-if="ready && user?.id" to="/issues" 
+      <NuxtLink v-if="ready && user?.id" to="/issues"
         class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
         :class="isActive('/issues') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <i class="fa-solid fa-circle-exclamation w-6"></i>
@@ -37,6 +37,13 @@
         :class="isActive('/categories') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
         <i class="fa-solid fa-folder w-6"></i>
         <span class="font-medium">Mes catégories</span>
+      </NuxtLink>
+
+      <NuxtLink v-if="user" to="/issues/followed"
+                class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
+                :class="isActive('/issues/followed') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
+        <i class="fa-solid fa-bell w-6"></i>
+        <span class="font-medium">Issues suivies</span>
       </NuxtLink>
 
 

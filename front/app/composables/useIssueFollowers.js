@@ -41,9 +41,42 @@ export const useIssueFollowers = () => {
     }
   }
 
+  /**
+   * Récupère la liste des issues suivies par l'utilisateur courant.
+   * @returns liste des issues suivies
+   */
+  const getFollowedIssues = async () => {
+    const api = useApi()
+    error.value = null
+    try {
+      return await api('/issues/followed')
+    } catch (e) {
+      error.value = e?.data?.message || 'GET_FOLLOWED_ISSUES_ERROR'
+      throw e
+    }
+  }
+
+  /**
+   * Vérifie si l'utilisateur courant suit une issue.
+   * @param {number} issueId - identifiant de l'issue
+   * @returns {boolean}
+   */
+  const isFollowing = async (issueId) => {
+    const api = useApi()
+    error.value = null
+    try {
+      return await api(`/issues/${issueId}/follow/status`)
+    } catch (e) {
+      error.value = e?.data?.message || 'IS_FOLLOWING_ERROR'
+      throw e
+    }
+  }
+
   return {
     followIssue,
     unfollowIssue,
+    getFollowedIssues,
+    isFollowing,
     error
   }
 }

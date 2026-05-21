@@ -89,4 +89,31 @@ public class IssueFollowerService {
 
         issueFollowerRepository.delete(follower);
     }
+
+    /**
+     * Retourne la liste des issues suivies par un utilisateur.
+     *
+     * @param user utilisateur dont on veut récupérer les issues suivies
+     * @return liste des issues suivies
+     */
+    public List<Issue> getFollowedIssues(User user) {
+        return issueFollowerRepository.findByUser(user)
+                .stream()
+                .map(IssueFollower::getIssue)
+                .toList();
+    }
+
+    /**
+     * Vérifie si un utilisateur suit une issue.
+     *
+     * @param issueId identifiant de l'issue
+     * @param user utilisateur à vérifier
+     * @return true si l'utilisateur suit l'issue
+     */
+    public boolean isFollowing(Long issueId, User user) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Issue non trouvée"));
+        return issueFollowerRepository.existsByUserAndIssue(user, issue);
+    }
 }

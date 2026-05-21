@@ -15,11 +15,18 @@ public interface IssueFollowerRepository extends JpaRepository<IssueFollower, Lo
     /**
      * Vérifie si un utilisateur suit déjà une issue.
      *
-     * @param createur utilisateur à vérifier
+     * @param user utilisateur à vérifier
      * @param issue    issue concernée
      * @return true si l'utilisateur suit déjà l'issue
      */
     boolean existsByUserAndIssue(User user, Issue issue);
 
     Optional<IssueFollower> findByUserAndIssue(User user, Issue issue);
+
+    /**
+     * Récupère tous les abonnements d'un utilisateur.
+     * @param user utilisateur dont on veut les abonnements
+     * @return liste des abonnements
+     */
+    List<IssueFollower> findByUser(User user);
 }
