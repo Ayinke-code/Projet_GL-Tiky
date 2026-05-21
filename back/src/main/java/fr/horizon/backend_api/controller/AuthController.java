@@ -15,9 +15,8 @@ import fr.horizon.backend_api.model.dto.LoginResponse;
 import fr.horizon.backend_api.model.dto.UserDto;
 import fr.horizon.backend_api.service.AuthService;
 import fr.horizon.backend_api.service.UserService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -35,8 +34,6 @@ public class AuthController {
     private final UserService userService;
     @Value("${jwt.expiration}")
     private long expiration;
-    @Value("${app.cookie.secure:false}")
-    private boolean cookieSecure;
 
     /**
      * Authentifie un utilisateur et génère un cookie contenant le JWT.
@@ -53,18 +50,15 @@ public class AuthController {
         LoginResponse loginResponse = authService.login(loginRequest);
 
         // Stock le token dans un Cookie en HTTPOnly
-        ResponseCookie cookie = ResponseCookie.from("token", loginResponse.getToken())
-            .httpOnly(true)
-            .path("/")
-            .maxAge(expiration / 1000)
-            .sameSite(cookieSecure ? "None" : "Lax")
-            .secure(cookieSecure)
-            .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        Cookie cookie = new Cookie("token", loginResponse.getToken());
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+        cookie.setPath("/");
+        cookie.setMaxAge((int) (expiration / 1000));
+
+        response.addCookie(cookie);
 
         return ResponseEntity.ok().build();
-
-
     }
 
     /**
@@ -89,14 +83,13 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletResponse response) {
 
-        ResponseCookie cookie = ResponseCookie.from("token", "")
-            .httpOnly(true)
-            .path("/")
-            .maxAge(0)
-            .sameSite(cookieSecure ? "None" : "Lax")
-            .secure(cookieSecure)
-            .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        Cookie cookie = new Cookie("token", null);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(0); // supprime le cookie
+
+        response.addCookie(cookie);
 
         return ResponseEntity.ok().build();
     }

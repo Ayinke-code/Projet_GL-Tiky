@@ -37,10 +37,7 @@
       Reçoit l'onglet actif pour présélectionner le type si souhaité.
       Émet "created" quand la création réussit → on rafraîchit la liste.
     -->
-    <CreateEventModal
-      v-model:open="isModalOpen"
-      @created="onEventCreated"
-    />
+    <CreateEventModal v-model:open="isModalOpen" />
 
     <!-- Chargement -->
     <div v-if="loading" class="space-y-4">
@@ -71,9 +68,17 @@
 </template>
 
 <script setup>
-// SSR désactivé sur cette page : le cookie JWT est indisponible côté serveur
-// → user=null au rendu serveur → bouton invisible + hydration mismatch.
+// SSR désactivé sur cette page : le cookie JWT n'est pas transmis au backend
+// lors du rendu serveur → 403 sur /auth/me → user=null → bouton invisible
+// + hydration mismatch. Les autres pages héritées de dev ne sont pas impactées
+// car elles bénéficiaient déjà d'une initialisation correcte côté client.
 definePageMeta({ ssr: false })
+
+import Button from '~/components/ui/Button.vue'
+import Alert from '~/components/ui/Alert.vue'
+import EventCard from '~/components/events/EventCard.vue'
+import CreateEventModal from '~/components/events/CreateEventModal.vue'
+import { ref, onMounted } from 'vue'
 
 const { user } = useAuth()
 const { events, fetchEventsByType } = useEvents()
@@ -104,12 +109,6 @@ const switchTab = async (type) => {
     // OBLIGATOIRE : sans finally, une erreur API bloque le spinner indéfiniment
     loading.value = false
   }
-}
-
-/** Appelé par CreateEventModal après une création réussie. */
-const onEventCreated = () => {
-  isModalOpen.value = false
-  switchTab(activeTab.value) // rafraîchit la liste du bon onglet
 }
 
 onMounted(() => switchTab('AUDIT'))
