@@ -20,9 +20,33 @@
             </UButton>
         </div>
 
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 overflow-visible">
-            <IssuesCard v-for="issue in issues" :key="issue.id" :issue="issue" @delete="deleteValidation" />
-        </div>
+        <template v-else>
+            <!-- Les issues dont l'utilisateur est categoryOwner -->
+            <div v-if="Object.keys(ownedIssuesByCategory).length > 0">
+                <h2 class="text-xl font-bold text-black mb-3">Vos catégories</h2>
+                <div v-for="(group, categoryId) in ownedIssuesByCategory" :key="categoryId" class="mb-8">
+                    <h3 class="mb-3 text-xl font-semibold text-gray-700">
+                        {{ group.name }}
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        <IssuesCard v-for="issue in group.issues" :key="issue.id" :issue="issue"
+                            @delete="deleteValidation" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Séparateur -->
+            <template v-if="Object.keys(ownedIssuesByCategory).length > 0 && ownedIssues.length > 0">
+                <Separator class="p-5" />
+            </template>
+
+            <!-- Les autres issues -->
+            <h2 v-if="ownedIssues.length > 0" class="text-xl font-bold text-black mb-3">Autres</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 overflow-visible">
+                <IssuesCard v-for="issue in otherIssues" :key="issue.id" :issue="issue" @delete="deleteValidation" />
+            </div>
+        </template>
 
         <UAlert v-if="error" color="error" class="mt-4" @close="error = null">
             <template #title>Erreur</template>
@@ -44,6 +68,8 @@
 
 import IssuesCard from '~/components/issues/IssuesCard.vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
+import { computed } from 'vue'
+import Separator from '~/components/ui/Separator.vue'
 
 const { ready, user } = useAuth()
 const { issues, fetchIssues, deleteIssue, error } = useIssues()
@@ -79,6 +105,42 @@ const isDeleteValidateModalOpen = ref(false)
 //     updatingStatusId.value = null
 //   }
 // }
+
+// Issues appartenant à l’utilisateur connecté
+// Filtre sur le champ categoryOwnerId
+const ownedIssues = computed(() => {
+    return issues.value.filter(
+        issue => issue.categoryOwnerId === user.value.id
+    )
+})
+
+/*
+ * Regroupement des issues du user par catégorie
+ * Clé utilisée : categoryId
+ */
+const ownedIssuesByCategory = computed(() => {
+    return ownedIssues.value.reduce((groups, issue) => {
+        const key = issue.categoryId
+
+        if (!groups[key]) {
+            groups[key] = {
+                name: issue.categoryName,
+                issues: []
+            }
+        }
+
+        groups[key].issues.push(issue)
+
+        return groups
+    }, {})
+})
+
+// Les autres issues n'appartenant pas à l'utilisateur connecté
+const otherIssues = computed(() => {
+    return issues.value.filter(
+        issue => issue.categoryOwnerId !== user.value.id
+    )
+})
 
 /**
  * Ouvre modal suppression
