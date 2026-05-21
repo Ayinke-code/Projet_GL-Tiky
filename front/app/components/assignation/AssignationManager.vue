@@ -4,8 +4,7 @@
       <template #header>
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold">Gérer mes affectations</h2>
-          <UBadge color="orange" variant="soft" size="sm">{{ alerts.length }} en attente</UBadge>
-        </div>
+          <UBadge color="orange" variant="soft" size="sm">{{ totalAlerts }} en attente</UBadge>        </div>
       </template>
 
       <div v-if="alerts.length > 0" class="space-y-4">
@@ -74,7 +73,10 @@
           </div>
         </div>
       </div>
-      <div v-else class="text-center py-8 text-gray-400 italic bg-gray-50/30 rounded-lg border border-dashed">
+      <div v-if="totalAlerts > 5" class="text-center text-xs text-gray-400 italic mt-2">
+        {{ totalAlerts - 5 }} demande(s) supplémentaire(s) en attente de traitement.
+      </div>
+      <div v-else class="text-center py-8 text-gray-400 italic bg-gray-50/30 rounded-lg border border-dashed mt-4">
         Aucune demande d'affectation à compléter.
       </div>
     </UCard>
@@ -101,7 +103,7 @@
         <p class="text-gray-600">
           Voulez-vous vraiment assigner
           <strong class="text-gray-900">{{ getSelectedTeacherName }}</strong>
-          pour traiter l'issue :
+          pour traiter le ticket :
         </p>
         <div class="mt-2 p-3 bg-gray-50 rounded border border-gray-100 italic text-sm text-gray-700">
           "{{ activeReq?.issueTitle }}"
@@ -120,7 +122,7 @@
       <template #body>
         <div class="space-y-4">
           <p class="text-gray-600">
-            Voulez-vous vraiment marquer l'issue suivante comme incomplète ? Cette action refusera la demande associée.
+            Voulez-vous vraiment marquer le ticket suivant comme incomplet ? Cette action refusera la demande associée.
           </p>
           <div class="p-3 bg-gray-50 rounded border border-gray-100 italic text-sm text-gray-700">
             "{{ incompleteReq?.issueTitle }}"
@@ -151,51 +153,23 @@
     </UModal>
 
     <!-- Modale : Détail de l'issue -->
-    <UModal v-model:open="isDetailOpen" title="Détail de l'issue">
-      <template #body>
-        <div v-if="loadingDetail" class="flex justify-center py-8">
-          <UIcon name="i-heroicons-arrow-path" class="animate-spin text-gray-400 text-2xl"/>
-        </div>
-        <div v-else-if="issueDetail" class="space-y-4">
-          <div class="space-y-1">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Titre</p>
-            <p class="text-gray-900 font-medium">{{ issueDetail.title }}</p>
-          </div>
-          <div class="border-t border-gray-100"/>
-          <div class="space-y-1">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Créé par</p>
-            <p class="text-gray-700 text-sm">{{ issueDetail.createdName }}</p>
-          </div>
-          <div class="border-t border-gray-100"/>
-          <div class="space-y-1">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Catégorie</p>
-            <UBadge color="primary" variant="soft">{{ issueDetail.categoryName }}</UBadge>
-          </div>
-          <div class="border-t border-gray-100"/>
-          <div class="space-y-1">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Description</p>
-            <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{{ issueDetail.description }}</p>
-          </div>
-        </div>
-        <div v-else class="text-center py-8 text-gray-400 italic">
-          Impossible de charger les détails de l'issue.
-        </div>
-      </template>
-      <template #footer>
-        <div class="flex justify-end">
-          <UButton color="neutral" variant="ghost" label="Fermer" @click="isDetailOpen = false"/>
-        </div>
-      </template>
-    </UModal>
+    <IssueDetailModal
+      v-model:open="isDetailOpen"
+      :issue-detail="issueDetail"
+      :loading="loadingDetail"
+    />
   </div>
 </template>
 
 <script setup>
+import IssueDetailModal from '~/components/issues/IssueDetailModal.vue'
 const props = defineProps(['userId'])
 
 const { getOwnerAlerts, getHistory, getTeachersList, assignTeacher, markIssueAsIncomplete, getIssueDtoById } = useAssignation()
 
 const alerts = ref([])
+const totalAlerts = ref(0)
+
 const history = ref([])
 const teachers = ref([])
 const selectedTeachers = ref({})
@@ -237,7 +211,8 @@ const columns = [
 const loadData = async () => {
   try {
     const alertsData = await getOwnerAlerts(props.userId)
-    alerts.value = Array.isArray(alertsData) ? alertsData : []
+    totalAlerts.value = Array.isArray(alertsData) ? alertsData.length : 0
+    alerts.value = Array.isArray(alertsData) ? alertsData.slice(0, 5) : []
 
     let currentCategoryId = null
 

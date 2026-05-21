@@ -68,8 +68,8 @@
 
 import IssuesCard from '~/components/issues/IssuesCard.vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
-import AssignationManager from '~/components/layout/AssignationManager.vue'
-import AssignationTeacher from '~/components/layout/AssignationTeacher.vue'
+import AssignationManager from '~/components/assignation/AssignationManager.vue'
+import AssignationTeacher from '~/components/assignation/AssignationTeacher.vue'
 import IncompleteIssuesList from '~/components/layout/IncompleteIssuesList.vue'
 
 const { ready, user } = useAuth()
