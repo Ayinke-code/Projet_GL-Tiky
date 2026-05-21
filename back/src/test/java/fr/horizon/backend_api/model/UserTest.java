@@ -41,4 +41,73 @@ class UserTest {
 
         assertEquals(1, user.getRoles().size());
     }
+
+    @Test
+    void isTeacher_shouldReturnFalse_whenRolesIsNull() {
+        User user = new User();
+        user.setRoles(null);
+
+        assertFalse(user.isTeacher());
+    }
+
+    @Test
+    void isTeacher_shouldReturnTrue_withTeacherRoleAndPrefix() {
+        User user = new User();
+        user.setRoles(Set.of(new Role("ROLE_TEACHER")));
+
+        assertTrue(user.isTeacher());
+    }
+
+    @Test
+    void getRoleNames_shouldUppercaseRoleNames() {
+        User user = new User();
+        user.setRoles(Set.of(new Role("teacher"), new Role("admin")));
+
+        Set<String> roleNames = user.getRoleNames();
+
+        assertEquals(Set.of("TEACHER", "ADMIN"), roleNames);
+    }
+
+    @Test
+    void getRoleNames_shouldReturnEmptySet_whenRolesIsNull() {
+        User user = new User();
+        user.setRoles(null);
+
+        Set<String> roleNames = user.getRoleNames();
+
+        assertNotNull(roleNames);
+        assertTrue(roleNames.isEmpty());
+    }
+
+    @Test
+    void getDisplayRole_shouldReturnAdmin_whenAdminAndTeacherArePresent() {
+        User user = new User();
+        user.setRoles(Set.of(new Role("ROLE_ADMIN"), new Role("TEACHER")));
+
+        assertEquals("ADMIN", user.getDisplayRole());
+    }
+
+    @Test
+    void getDisplayRole_shouldReturnTeacher_whenTeacherIsPresentWithoutAdmin() {
+        User user = new User();
+        user.setRoles(Set.of(new Role("role_teacher")));
+
+        assertEquals("TEACHER", user.getDisplayRole());
+    }
+
+    @Test
+    void getDisplayRole_shouldReturnStudent_whenNoRoles() {
+        User user = new User();
+        user.setRoles(Set.of());
+
+        assertEquals("STUDENT", user.getDisplayRole());
+    }
+
+    @Test
+    void getDisplayRole_shouldReturnStudent_whenRolesIsNull() {
+        User user = new User();
+        user.setRoles(null);
+
+        assertEquals("STUDENT", user.getDisplayRole());
+    }
 }

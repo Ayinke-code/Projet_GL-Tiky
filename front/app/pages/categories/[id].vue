@@ -129,6 +129,7 @@ import { useRoute } from 'vue-router'
 import { useCategories } from '~/composables/useCategories'
 import { useUsers } from '~/composables/useUsers'
 import { useAuth } from '~/composables/useAuth'
+import { ROLE } from '~/utils/roles'
 
 /**
  * ID de la catégorie récupéré depuis l’URL
@@ -191,7 +192,7 @@ const availableTeachers = computed(() => {
  */
 onMounted(async () => {
   await fetchCategoryById(categorieId)
-  await fetchUserByRoles(["TEACHER"])
+  await fetchUserByRoles([ROLE.TEACHER])
 });
 
 /**

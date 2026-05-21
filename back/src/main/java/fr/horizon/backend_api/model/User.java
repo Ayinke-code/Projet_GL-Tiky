@@ -1,5 +1,7 @@
 package fr.horizon.backend_api.model;
 
+import fr.horizon.backend_api.model.enums.RoleEnum;
+
 import java.util.stream.Collectors;
 import java.util.HashSet;
 import java.util.Set;
@@ -15,6 +17,8 @@ import lombok.*;
 @AllArgsConstructor
 @Table(name = "users")
 public class User extends BaseEntity {
+
+    private static final String ROLE_PREFIX = "ROLE_";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,14 +42,6 @@ public class User extends BaseEntity {
     @Builder.Default
     private Set<Role> roles = new HashSet<>();
 
-    public boolean isTeacher() {
-        if (this.roles == null) {
-            return false;
-        }
-        return this.roles.stream()
-                .anyMatch(role -> role.getName().equalsIgnoreCase("TEACHER"));
-    }
-
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<Message> messages = new HashSet<>();
@@ -54,6 +50,9 @@ public class User extends BaseEntity {
     @Builder.Default
     private Set<ConversationUser> conversations = new HashSet<>();
 
+    public boolean isTeacher() {
+        return hasRole(getRoleNames(), RoleEnum.TEACHER);
+    }
 
     public Set<String> getRoleNames() {
         if (this.roles == null) {
@@ -68,16 +67,24 @@ public class User extends BaseEntity {
         Set<String> roleNames = getRoleNames();
 
         // Priorité 1 : ADMIN (Si l'utilisateur a le rôle ADMIN, il est ADMIN avant tout)
-        if (roleNames.contains("ROLE_ADMIN") || roleNames.contains("ADMIN")) {
-            return "ADMIN";
+        if (hasRole(roleNames, RoleEnum.ADMIN)) {
+            return RoleEnum.ADMIN.value();
         }
 
         // Priorité 2 : TEACHER
-        if (roleNames.contains("ROLE_TEACHER") || roleNames.contains("TEACHER")) {
-            return "TEACHER";
+        if (hasRole(roleNames, RoleEnum.TEACHER)) {
+            return RoleEnum.TEACHER.value();
         }
 
         // Par défaut : STUDENT
-        return "STUDENT";
+        return RoleEnum.STUDENT.value();
+    }
+
+    private boolean hasRole(Set<String> roleNames, RoleEnum role) {
+        if (roleNames == null || roleNames.isEmpty()) {
+            return false;
+        }
+        String normalizedRole = role.value().toUpperCase();
+        return roleNames.contains(normalizedRole) || roleNames.contains(ROLE_PREFIX + normalizedRole);
     }
 }
