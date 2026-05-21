@@ -4,18 +4,27 @@ import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.exception.IssueNotFoundException;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Issue;
+import fr.horizon.backend_api.model.RequestManager;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.dto.IssueDto;
+import fr.horizon.backend_api.model.dto.RequestManagerDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
+import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
+import fr.horizon.backend_api.repository.RequestManagerRepository;
 import fr.horizon.backend_api.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Service de gestion des issues.
@@ -34,6 +43,7 @@ public class IssueService {
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
     private final ConversationService conversationService;
+    private final RequestManagerRepository requestManagerRepository;
 
     /**
      * Retourne la liste de toutes les issues.
@@ -89,6 +99,9 @@ public class IssueService {
                 .build();
 
         issueRepository.save(issue);
+
+        createRequestManager(issue);
+
 
         // Créer automatiquement une conversation pour cette issue
         conversationService.createConversationForIssue(issue);
@@ -156,6 +169,41 @@ public class IssueService {
     }
 
     /**
+     * Met à jour une issue lorsqu'elle est corrigé suite à une issue imcomplète et relance une demande de manager/validation
+     *
+     * @param email identifiant de l'utilisateur
+     * @param dto champ mis à jour pour la création de l'issue
+     * @param id identifiant de l'issue
+     */
+    @Transactional
+    public IssueDto updateIssueWhenIncomplete(String email,Long id, IssueCreateDto dto){
+
+        Issue issue = issueRepository.findById(id)
+                .orElseThrow(() -> new IssueNotFoundException(id));
+
+        User owner = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Owner not found"));
+
+        Category category = categoryRepository.findById(dto.getCategoryId())
+                .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));
+
+
+        issue.setTitle(dto.getTitle());
+        issue.setDescription(dto.getDescription());
+        issue.setCategory(category);
+        issue.setCreatedBy(owner);
+        // réouverture de la demande
+        issue.setStatus(IssueStatus.OUVERT);
+
+        issueRepository.save(issue);
+
+        createRequestManager(issue);
+
+        return toDto(issue);
+    }
+
+
+    /**
      * Convertit une entité Issue en DTO.
      *
      * @param issue entité issue
@@ -183,4 +231,202 @@ public class IssueService {
                 .updatedAt(issue.getUpdatedAt())
                 .build();
     }
+
+
+    /**
+     * envoyer une demande d'assignation d'un ticket à un teacher
+     * @param userId Id de l'enseignant visé par la demande.
+     * @param issueId Id du ticket visé par la demande.
+     * @return le DTO d'une demande d'assignation
+     */
+    @Transactional
+    public RequestManagerDto assignManagerToIssue(Long issueId, Long userId) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new EntityNotFoundException("Ticket non trouvé"));
+
+        User teacher = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Utilisateur non trouvé"));
+
+        if (requestManagerRepository.existsByIssueAndStatusAndTargetTeacherIsNotNull(issue, RequestManagerStatus.PENDING)) {
+            throw new IllegalStateException("Une demande de manager est déjà en cours pour ce ticket.");
+        }
+
+        if (issue.getManager() != null) {
+            throw new IllegalStateException("Ce ticket a déjà un manager assigné.");
+        }
+
+        if (!teacher.isTeacher()) {
+            throw new IllegalArgumentException("L'utilisateur visé n'est pas un teacher");
+        }
+
+        return sendManagerRequest(issue, teacher);
+    }
+
+    /**
+     * gère l'envoie d'une demande d'assignation d'un ticket à un teacher
+     * @param issue Ticket visé par la demande.
+     * @param targetedUser Teacher visé par la demande.
+     * @return le DTO d'une demande d'assignation
+     */
+    private RequestManagerDto sendManagerRequest(Issue issue, User targetedUser) {
+        RequestManager requestManager = requestManagerRepository.findFirstByIssueOrderByCreatedAtDesc(issue)
+                .orElseThrow(() -> new EntityNotFoundException("Demande initiale introuvable"));
+
+        RequestManagerStatus initialStatus = RequestManagerStatus.PENDING;
+
+        if (targetedUser.getId().equals(issue.getCategory().getOwner().getId())) {
+            initialStatus = RequestManagerStatus.ACCEPTED;
+            issue.setManager(targetedUser);
+            requestManager.setProcessingDate(LocalDateTime.now());
+        }
+
+        requestManager.setTargetTeacher(targetedUser);
+        requestManager.setStatus(initialStatus);
+
+        return toDto(requestManagerRepository.save(requestManager));
+    }
+
+    /**
+     * répondre à une demande d'assignation d'un ticket à un teacher et met à jour le status de la demande
+     * @param userId Id de l'enseignant qui répond à la demande.
+     * @param demandeManagerId Id de la demande d'assignation du ticket.
+     * @param response Réponse de l'enseignant.
+     * @return le DTO d'une demande d'assignation
+     */
+    @Transactional
+    public RequestManagerDto respondManagerRequest(boolean response, Long demandeManagerId, Long userId) {
+        RequestManager requestManager = requestManagerRepository.findById(demandeManagerId)
+                .orElseThrow(() -> new IllegalArgumentException("Demande non trouvée"));
+
+        if (!requestManager.getTargetTeacher().getId().equals(userId)) {
+            throw new IllegalStateException("Vous n'êtes pas autorisé à répondre à cette demande");
+        }
+
+        requestManager.setProcessingDate(LocalDateTime.now());
+
+        if (response) {
+            requestManager.setStatus(RequestManagerStatus.ACCEPTED);
+            requestManager.getIssue().setManager(requestManager.getTargetTeacher());
+            requestManager.getIssue().setStatus(IssueStatus.COMPLET);
+        } else {
+            requestManager.setStatus(RequestManagerStatus.DENIED);
+            createRequestManager(requestManager.getIssue());
+        }
+
+        issueRepository.save(requestManager.getIssue());
+        return toDto(requestManager);
+    }
+
+
+    /**
+     * Récupére un RequestManager en DTO pour un utilsateur spécifique.
+     */
+    public List<RequestManagerDto> getTeacherAssignations(Long userId) {
+        List<RequestManager> entities = requestManagerRepository.findByTargetTeacher_Id(userId);
+
+        return entities.stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+
+
+    public List<RequestManagerDto> alertCategoryOwner(Long userId){
+        List<RequestManager> entities = requestManagerRepository.findByCategoryOwner_IdAndTargetTeacherIsNullAndStatus(userId, RequestManagerStatus.PENDING);
+
+        return entities.stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+
+    /**
+     * Transforme un RequestManager en DTO.
+     * Si l'entité est nouvelle (pas encore de date de création), on peut passer une date par défaut.
+     */
+    public RequestManagerDto toDto(RequestManager entity) {
+        return RequestManagerDto.builder()
+                .id(entity.getRequestId())
+                // Renvoyer NULL si pas de prof
+                .target(entity.getTargetTeacher() != null ? entity.getTargetTeacher().getName() : null)
+                // Renvoyer le nom technique de l'Enum (PENDING, ACCEPTED, etc.)
+                .status(entity.getStatus() != null ? entity.getStatus().name() : "PENDING")
+                .creationDate(entity.getCreatedAt())
+                .issueId(entity.getIssue().getId())
+                .processingDate(entity.getProcessingDate())
+                .issueTitle(entity.getIssue().getTitle())
+                .creator(entity.getIssue().getCreatedBy().getName())
+                .build();
+    }
+
+    private void createRequestManager(Issue issue){
+        RequestManager requestManager = RequestManager.builder()
+                .issue(issue)
+                .categoryOwner(issue.getCategory().getOwner())
+                .status(RequestManagerStatus.PENDING)
+                .build();
+
+        requestManagerRepository.save(requestManager);
+    }
+
+    /**
+     * récupérer la liste des demandes assignés
+     * @param userId Id du categorie Owner
+     * @return le DTO d'une demande d'assignation
+     */
+    public List<RequestManagerDto> getHistoricalRequestManager(long userId) {
+        List<RequestManager> requestApproved = requestManagerRepository
+                .findByCategoryOwner_IdAndTargetTeacherIsNotNullOrderByCreatedAtDesc(userId);
+
+        List<RequestManager> requestDenied = requestManagerRepository
+                .findByCategoryOwner_IdAndTargetTeacherIsNullAndStatusOrderByCreatedAtDesc(userId, RequestManagerStatus.DENIED);
+
+        return Stream.concat(requestApproved.stream(), requestDenied.stream())
+                .sorted(Comparator.comparing(RequestManager::getUpdatedAt).reversed())
+                .limit(5)
+                .map(this::toDto)
+                .toList();
+    }
+
+    /**
+     * Marquer une issue comme imcomplète
+     */
+    @Transactional
+    public void markIssueAsIncomplete(Long idIssue, String commentaire, String raison) {
+        Issue issue = issueRepository.findById(idIssue)
+                .orElseThrow(() -> new EntityNotFoundException("Issue introuvable avec l'ID : " + idIssue));
+
+        if (issue.getStatus() == IssueStatus.TERMINE) {
+            throw new IllegalStateException("Impossible de marquer comme incomplète une issue déjà résolue.");
+        }
+        issue.setRejectComment(commentaire);
+        issue.setRejectReason(raison);
+        issue.setStatus(IssueStatus.INCOMPLET);
+        issueRepository.save(issue);
+
+        RequestManager requestManager = requestManagerRepository.findFirstByIssueOrderByCreatedAtDesc(issue)
+                .orElseThrow(() -> new EntityNotFoundException("Aucune demande associée à l'issue " + idIssue));
+
+        requestManager.setStatus(RequestManagerStatus.DENIED);
+        requestManager.setProcessingDate(LocalDateTime.now());
+        requestManagerRepository.save(requestManager);
+    }
+
+
+    public IssueDto getIssueDTOById(Long id) {
+        return toDto(issueRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Issue non trouvée")));
+    }
+
+    public List<IssueDto> getIncompleteIssuesToResent(Long userId) {
+        List<Issue> issues = issueRepository.findByStatusAndCreatedBy_Id(IssueStatus.INCOMPLET, userId);
+
+        return issues.stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+
+
+
 }
