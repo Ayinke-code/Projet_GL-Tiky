@@ -5,6 +5,7 @@ import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.*;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
+import fr.horizon.backend_api.model.enums.RoleEnum;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.CategoryRequestRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
@@ -96,7 +97,7 @@ public class CategoryService {
 
         boolean isTeacher = user.getRoles()
                 .stream()
-                .anyMatch(role -> role.getName().equals("TEACHER"));
+                .anyMatch(role -> role.getName().equals(RoleEnum.TEACHER.value()));
 
         if (!isTeacher) {
             throw new IllegalArgumentException("Only teachers can be followers");
@@ -125,7 +126,7 @@ public class CategoryService {
 
         boolean isTeacher = user.getRoles()
                 .stream()
-                .anyMatch(role -> role.getName().equals("TEACHER"));
+                .anyMatch(role -> role.getName().equals(RoleEnum.TEACHER.value()));
 
         if (!isTeacher) {
             throw new IllegalArgumentException("Only teachers can be followers");

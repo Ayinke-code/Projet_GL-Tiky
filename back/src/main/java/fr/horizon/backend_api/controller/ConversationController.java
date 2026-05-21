@@ -31,7 +31,7 @@ public class ConversationController {
      * @return réponse HTTP contenant la conversation sérialisée
      */
     @GetMapping("/issue/{issueId}")
-    public ResponseEntity<?> getConversationByIssue(@PathVariable Long issueId) {
+    public ResponseEntity<Map<String, Object>> getConversationByIssue(@PathVariable Long issueId) {
         return ResponseEntity.ok(conversationService.getConversationByIssuePayload(issueId));
     }
 
@@ -45,7 +45,7 @@ public class ConversationController {
      * @return réponse HTTP contenant la conversation sérialisée
      */
     @PostMapping("/issue/{issueId}/initialize")
-    public ResponseEntity<?> initializeConversationForIssue(@PathVariable Long issueId) {
+    public ResponseEntity<Map<String, Object>> initializeConversationForIssue(@PathVariable Long issueId) {
         return ResponseEntity.ok(conversationService.getOrCreateConversationForIssue(issueId));
     }
 

@@ -5,6 +5,7 @@ import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.model.enums.EventType;
 import fr.horizon.backend_api.model.enums.TeacherType;
+import fr.horizon.backend_api.model.enums.RoleEnum;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -53,9 +54,9 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
 
-        Role adminRole = getOrCreateRole("ADMIN");
-        Role teacherRole = getOrCreateRole("TEACHER");
-        Role studentRole = getOrCreateRole("STUDENT");
+        Role adminRole = getOrCreateRole(RoleEnum.ADMIN.value());
+        Role teacherRole = getOrCreateRole(RoleEnum.TEACHER.value());
+        Role studentRole = getOrCreateRole(RoleEnum.STUDENT.value());
 
         // User teacher et admin
         User admin = getOrCreateUser("admin@admin.fr", "Richard WOODWARD", Set.of(adminRole, teacherRole), null);

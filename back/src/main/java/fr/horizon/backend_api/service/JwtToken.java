@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import fr.horizon.backend_api.util.MapKeys;
 
 import io.jsonwebtoken.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,8 +43,8 @@ public class JwtToken {
     public String generateToken(String email, Long id, Set<String> roles) {
 
         Map<String, Object> claims = new HashMap<>();
-        claims.put("id", id);
-        claims.put("roles", roles);
+        claims.put(MapKeys.ID, id);
+        claims.put(MapKeys.ROLES, roles);
 
         return createToken(claims, email);
     }

@@ -6,6 +6,10 @@ import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.Message;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.ConversationRole;
+import fr.horizon.backend_api.exception.ConversationNotFoundException;
+import fr.horizon.backend_api.exception.IssueNotFoundException;
+import fr.horizon.backend_api.exception.MessageTooLongException;
+import fr.horizon.backend_api.exception.UserNotFoundException;
 import fr.horizon.backend_api.repository.ConversationRepository;
 import fr.horizon.backend_api.repository.ConversationUserRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
@@ -83,18 +87,18 @@ public class ConversationService {
         if (existing.isPresent()) {
             // Conversation existe déjà
             Map<String, Object> response = new HashMap<>();
-            response.put("conversation", toConversationMap(existing.get()));
+            response.put(fr.horizon.backend_api.util.MapKeys.CONVERSATION, toConversationMap(existing.get()));
             return response;
         }
 
         // Créer une nouvelle conversation
         Issue issue = issueRepository.findById(issueId)
-                .orElseThrow(() -> new RuntimeException("Issue not found"));
+                .orElseThrow(() -> new IssueNotFoundException(issueId));
 
         Conversation conversation = createConversationForIssue(issue);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("conversation", toConversationMap(conversation));
+        response.put(fr.horizon.backend_api.util.MapKeys.CONVERSATION, toConversationMap(conversation));
         return response;
     }
 
@@ -125,10 +129,10 @@ public class ConversationService {
      */
     public Message addMessageToConversation(Long conversationId, String content, User user, Long issueId) {
         Conversation conversation = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
 
         Issue issue = issueRepository.findById(issueId)
-                .orElseThrow(() -> new RuntimeException("Issue not found"));
+                .orElseThrow(() -> new IssueNotFoundException(issueId));
 
         Message message = Message.builder()
                 .content(content)
@@ -152,11 +156,11 @@ public class ConversationService {
      */
     public MessageDispatchResult addMessage(Long conversationId, Map<String, String> payload, String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException(email));
 
         String content = payload.get("content");
         if (content != null && content.length() > 4000) {
-            throw new RuntimeException("Le message dépasse la limite de 4000 caractères");
+            throw new MessageTooLongException(4000);
         }
 
         Long issueId = Long.parseLong(payload.get("issueId"));
@@ -176,11 +180,11 @@ public class ConversationService {
         Optional<Conversation> conversation = getConversationByIssueId(issueId);
 
         if (conversation.isEmpty()) {
-            response.put("conversation", null);
+            response.put(fr.horizon.backend_api.util.MapKeys.CONVERSATION, null);
             return response;
         }
 
-        response.put("conversation", toConversationMap(conversation.get()));
+        response.put(fr.horizon.backend_api.util.MapKeys.CONVERSATION, toConversationMap(conversation.get()));
         return response;
     }
 
@@ -192,7 +196,7 @@ public class ConversationService {
      */
     public List<Message> getMessagesForConversation(Long conversationId) {
         Conversation conversation = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
         return messageRepository.findByConversationOrderByCreatedAtAsc(conversation);
     }
 
@@ -204,7 +208,7 @@ public class ConversationService {
      */
     public List<ConversationUser> getUsersInConversation(Long conversationId) {
         Conversation conversation = conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+                .orElseThrow(() -> new ConversationNotFoundException(conversationId));
         return conversationUserRepository.findByConversation(conversation);
     }
 
@@ -219,58 +223,58 @@ public class ConversationService {
         List<Map<String, Object>> usersList = new java.util.ArrayList<>();
         for (ConversationUser conversationUser : conversationUsers) {
             Map<String, Object> userMap = toUserMap(conversationUser.getUser());
-            userMap.put("conversationRole", conversationUser.getRole().toString());
+            userMap.put(fr.horizon.backend_api.util.MapKeys.CONVERSATION_ROLE, conversationUser.getRole().toString());
             usersList.add(userMap);
         }
 
         Map<String, Object> conversationMap = new HashMap<>();
-        conversationMap.put("id", conversation.getId());
-        conversationMap.put("messages", messagesList);
-        conversationMap.put("users", usersList);
-        conversationMap.put("createdAt", conversation.getCreatedAt());
+        conversationMap.put(fr.horizon.backend_api.util.MapKeys.ID, conversation.getId());
+        conversationMap.put(fr.horizon.backend_api.util.MapKeys.MESSAGES, messagesList);
+        conversationMap.put(fr.horizon.backend_api.util.MapKeys.USERS, usersList);
+        conversationMap.put(fr.horizon.backend_api.util.MapKeys.CREATED_AT, conversation.getCreatedAt());
         return conversationMap;
     }
 
     private Map<String, Object> toMessageMap(Message message) {
         Map<String, Object> messageMap = new HashMap<>();
-        messageMap.put("id", message.getId());
-        messageMap.put("content", message.getContent());
-        messageMap.put("user", toUserMap(message.getUser()));
-        messageMap.put("createdAt", message.getCreatedAt());
+        messageMap.put(fr.horizon.backend_api.util.MapKeys.ID, message.getId());
+        messageMap.put(fr.horizon.backend_api.util.MapKeys.CONTENT, message.getContent());
+        messageMap.put(fr.horizon.backend_api.util.MapKeys.USER, toUserMap(message.getUser()));
+        messageMap.put(fr.horizon.backend_api.util.MapKeys.CREATED_AT, message.getCreatedAt());
         return messageMap;
     }
 
     private Map<String, Object> toUserMap(User user) {
         Map<String, Object> userMap = new HashMap<>();
-        userMap.put("id", user.getId());
-        userMap.put("name", user.getName());
-        userMap.put("email", user.getEmail());
-        userMap.put("displayRole", user.getDisplayRole());
-        userMap.put("roles", user.getRoleNames());
+        userMap.put(fr.horizon.backend_api.util.MapKeys.ID, user.getId());
+        userMap.put(fr.horizon.backend_api.util.MapKeys.NAME, user.getName());
+        userMap.put(fr.horizon.backend_api.util.MapKeys.EMAIL, user.getEmail());
+        userMap.put(fr.horizon.backend_api.util.MapKeys.DISPLAY_ROLE, user.getDisplayRole());
+        userMap.put(fr.horizon.backend_api.util.MapKeys.ROLES, user.getRoleNames());
         return userMap;
     }
 
     private String buildBroadcastPayload(Message message, Long issueId) {
         org.json.JSONObject wsResponse = new org.json.JSONObject();
-        wsResponse.put("type", "new_message");
-        wsResponse.put("issueId", issueId);
+        wsResponse.put(fr.horizon.backend_api.util.MapKeys.TYPE, fr.horizon.backend_api.util.MapKeys.NEW_MESSAGE);
+        wsResponse.put(fr.horizon.backend_api.util.MapKeys.ISSUE_ID, issueId);
 
         org.json.JSONObject msgJson = new org.json.JSONObject();
-        msgJson.put("id", message.getId());
-        msgJson.put("content", message.getContent());
-        msgJson.put("createdAt", message.getCreatedAt());
+        msgJson.put(fr.horizon.backend_api.util.MapKeys.ID, message.getId());
+        msgJson.put(fr.horizon.backend_api.util.MapKeys.CONTENT, message.getContent());
+        msgJson.put(fr.horizon.backend_api.util.MapKeys.CREATED_AT, message.getCreatedAt());
 
         org.json.JSONObject userJson = new org.json.JSONObject();
-        userJson.put("id", message.getUser().getId());
-        userJson.put("name", message.getUser().getName());
-        userJson.put("email", message.getUser().getEmail());
-        userJson.put("displayRole", message.getUser().getDisplayRole());
+        userJson.put(fr.horizon.backend_api.util.MapKeys.ID, message.getUser().getId());
+        userJson.put(fr.horizon.backend_api.util.MapKeys.NAME, message.getUser().getName());
+        userJson.put(fr.horizon.backend_api.util.MapKeys.EMAIL, message.getUser().getEmail());
+        userJson.put(fr.horizon.backend_api.util.MapKeys.DISPLAY_ROLE, message.getUser().getDisplayRole());
         org.json.JSONArray roles = new org.json.JSONArray();
         message.getUser().getRoleNames().forEach(roles::put);
-        userJson.put("roles", roles);
-        msgJson.put("user", userJson);
+        userJson.put(fr.horizon.backend_api.util.MapKeys.ROLES, roles);
+        msgJson.put(fr.horizon.backend_api.util.MapKeys.USER, userJson);
 
-        wsResponse.put("message", msgJson);
+        wsResponse.put(fr.horizon.backend_api.util.MapKeys.MESSAGE, msgJson);
         return wsResponse.toString();
     }
 }
