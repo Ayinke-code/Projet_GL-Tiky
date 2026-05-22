@@ -7,6 +7,7 @@
  */
 
 import { ref, onMounted, onUnmounted } from 'vue'
+import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 
 const route = useRoute()
 const { ready, user, wsToken } = useAuth()
@@ -478,5 +479,11 @@ const handleUnfollow = async () => {
     :issue-id="issueId"
     @followed="onFollowed"
   />
-
+  
+  <ConfirmModal
+    v-model:open="isUnfollowModalOpen"
+    title="Ne plus suivre"
+    description="Voulez-vous vraiment ne plus suivre cette issue ?"
+    @confirm="handleUnfollow"
+  />
 </template>

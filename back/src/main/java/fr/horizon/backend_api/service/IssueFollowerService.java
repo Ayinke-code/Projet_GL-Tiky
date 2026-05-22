@@ -13,11 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
-
 /**
  * Service gérant l'abonnement des utilisateurs aux issues.
- * Permet de suivre une issue avec une raison et d'appliquer les droits selon la raison choisie.
+ * Permet de suivre une issue avec une raison et de se désabonner.
  */
 @Service
 @RequiredArgsConstructor
@@ -41,19 +39,15 @@ public class IssueFollowerService {
      */
     public IssueFollower followIssue(Long issueId, String reason, User user) {
 
-        // Récupérer l'issue
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Issue non trouvée"));
 
-        // Vérifier que l'utilisateur ne suit pas déjà cette issue
         if (issueFollowerRepository.existsByUserAndIssue(user, issue)) {
             throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Vous suivez déjà cette issue");
+                    HttpStatus.CONFLICT, "Vous suivez déjà cette issue");
         }
 
-        // Valider et convertir la raison
         FollowedReason followedReason;
         try {
             followedReason = FollowedReason.valueOf(reason);
@@ -63,7 +57,6 @@ public class IssueFollowerService {
                     "Raison invalide. Valeurs acceptées : INTERESTED, ABLE_TO_HELP, IMPACTED");
         }
 
-        // Créer et sauvegarder l'abonnement
         IssueFollower follower = IssueFollower.builder()
                 .issue(issue)
                 .user(user)
@@ -77,7 +70,7 @@ public class IssueFollowerService {
      * Désabonne un utilisateur d'une issue.
      *
      * @param issueId identifiant de l'issue
-     * @param user utilisateur qui souhaite se désabonner
+     * @param user    utilisateur qui souhaite se désabonner
      * @throws ResponseStatusException 404 si l'issue n'existe pas
      * @throws ResponseStatusException 404 si l'abonnement n'existe pas
      */
@@ -104,32 +97,5 @@ public class IssueFollowerService {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Utilisateur non trouvé"));
-    }
-
-    /**
-     * Retourne la liste des issues suivies par un utilisateur.
-     *
-     * @param user utilisateur dont on veut récupérer les issues suivies
-     * @return liste des issues suivies
-     */
-    public List<Issue> getFollowedIssues(User user) {
-        return issueFollowerRepository.findByUser(user)
-                .stream()
-                .map(IssueFollower::getIssue)
-                .toList();
-    }
-
-    /**
-     * Vérifie si un utilisateur suit une issue.
-     *
-     * @param issueId identifiant de l'issue
-     * @param user    utilisateur à vérifier
-     * @return true si l'utilisateur suit l'issue
-     */
-    public boolean isFollowing(Long issueId, User user) {
-        Issue issue = issueRepository.findById(issueId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Issue non trouvée"));
-        return issueFollowerRepository.existsByUserAndIssue(user, issue);
     }
 }

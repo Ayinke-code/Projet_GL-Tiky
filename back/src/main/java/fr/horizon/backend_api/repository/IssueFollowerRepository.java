@@ -4,7 +4,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import fr.horizon.backend_api.model.IssueFollower;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -15,18 +14,18 @@ public interface IssueFollowerRepository extends JpaRepository<IssueFollower, Lo
     /**
      * Vérifie si un utilisateur suit déjà une issue.
      *
-     * @param user utilisateur à vérifier
-     * @param issue    issue concernée
+     * @param user  utilisateur à vérifier
+     * @param issue issue concernée
      * @return true si l'utilisateur suit déjà l'issue
      */
     boolean existsByUserAndIssue(User user, Issue issue);
 
-    Optional<IssueFollower> findByUserAndIssue(User user, Issue issue);
-
     /**
-     * Récupère tous les abonnements d'un utilisateur.
-     * @param user utilisateur dont on veut les abonnements
-     * @return liste des abonnements
+     * Récupère l'abonnement d'un utilisateur à une issue spécifique.
+     *
+     * @param user  utilisateur concerné
+     * @param issue issue concernée
+     * @return l'abonnement s'il existe
      */
-    List<IssueFollower> findByUser(User user);
+    Optional<IssueFollower> findByUserAndIssue(User user, Issue issue);
 }

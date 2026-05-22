@@ -1,7 +1,5 @@
 package fr.horizon.backend_api.model;
 
-import java.time.LocalDateTime;
-
 import fr.horizon.backend_api.model.enums.FollowedReason;
 import jakarta.persistence.*;
 import lombok.*;
@@ -18,7 +16,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "issue_follower")
-public class IssueFollower {
+public class IssueFollower extends BaseEntity {
 
     /** Identifiant unique de l'abonnement */
     @Id
@@ -35,10 +33,6 @@ public class IssueFollower {
     @Column(name = "reason", nullable = false)
     private FollowedReason reason;
 
-    /** Date de création de l'abonnement, générée automatiquement */
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
     /** Issue suivie */
     @ManyToOne
     @JoinColumn(name = "issue_id", nullable = false)
@@ -48,10 +42,4 @@ public class IssueFollower {
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-
-    /** Initialise la date de création avant la persistance */
-    @PrePersist
-    public void prePersist() {
-        this.createdAt = LocalDateTime.now();
-    }
 }

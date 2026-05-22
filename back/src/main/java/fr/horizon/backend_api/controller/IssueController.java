@@ -6,7 +6,6 @@ import fr.horizon.backend_api.service.IssueFollowerService;
 import jakarta.persistence.EntityNotFoundException;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.IssueFollower;
-import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +32,6 @@ public class IssueController {
     private final IssueService issueService;
     /** Service métier des abonnements aux issues. */
     private final IssueFollowerService issueFollowerService;
-    private final UserRepository userRepository;
 
     /**
      * Récupère toutes les issues.
@@ -258,38 +256,5 @@ public class IssueController {
         User user = issueFollowerService.getUserByEmail(auth.getName());
         issueFollowerService.unfollowIssue(id, user);
         return ResponseEntity.noContent().build();
-    }
-
-    /**
-     * Récupère la liste des issues suivies par l'utilisateur courant.
-     *
-     * @param auth contexte d'authentification Spring Security
-     * @return liste des issues suivies sous forme de DTO
-     */
-    @PreAuthorize("isAuthenticated()")
-    @GetMapping("/followed")
-    public ResponseEntity<List<IssueDto>> getFollowedIssues(Authentication auth) {
-        User user = issueFollowerService.getUserByEmail(auth.getName());
-        List<IssueDto> dtos = issueFollowerService.getFollowedIssues(user)
-                .stream()
-                .map(issueService::toDto)
-                .toList();
-        return ResponseEntity.ok(dtos);
-    }
-
-    /**
-     * Vérifie si l'utilisateur courant suit une issue.
-     *
-     * @param id   identifiant de l'issue
-     * @param auth contexte d'authentification Spring Security
-     * @return true si l'utilisateur suit l'issue, false sinon
-     */
-    @PreAuthorize("isAuthenticated()")
-    @GetMapping("/{id}/follow/status")
-    public ResponseEntity<Boolean> isFollowing(
-            @PathVariable Long id,
-            Authentication auth) {
-        User user = issueFollowerService.getUserByEmail(auth.getName());
-        return ResponseEntity.ok(issueFollowerService.isFollowing(id, user));
     }
 }

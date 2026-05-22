@@ -183,7 +183,6 @@ class IssueControllerTest {
     void shouldReturn409WhenAlreadyFollowing() throws Exception {
         User mockUser = new User();
 
-        // CORRECTION ICI AUSSI
         when(issueFollowerService.getUserByEmail(anyString())).thenReturn(mockUser);
         when(issueFollowerService.followIssue(anyLong(), anyString(), any(User.class)))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Vous suivez déjà cette issue"));
