@@ -24,25 +24,38 @@
             <!-- Les issues dont l'utilisateur est categoryOwner -->
             <div v-if="Object.keys(ownedIssuesByCategory).length > 0">
                 <h2 class="text-xl font-bold text-black mb-3">Vos catégories</h2>
-                <div v-for="(group, categoryId) in ownedIssuesByCategory" :key="categoryId" class="mb-8">
-                    <h3 class="mb-3 text-xl font-semibold text-gray-700">
-                        {{ group.name }}
-                    </h3>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        <IssuesCard v-for="issue in group.issues" :key="issue.id" :issue="issue"
-                            @delete="deleteValidation" />
-                    </div>
+                <div v-for="(group, categoryId) in ownedIssuesByCategory" :key="categoryId" class="mb-4">
+                    <!-- Composant collapse pour ouvrir/fermer l'affichage des issues de la catégorie -->
+                    <UCollapsible class="w-full">
+
+                        <!-- Bouton / Header -->
+                        <UButton class="group justify-between cursor-pointer" color="neutral" variant="subtle"
+                            trailing-icon="i-lucide-chevron-down" :label="group.name" :ui="{
+                                trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200'
+                            }" block />
+
+                        <!-- Contenu affiché quand ouvert -->
+                        <template #content>
+                            <div class="overflow-visible p-2">
+                                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    <IssuesCard v-for="issue in group.issues" :key="issue.id" :issue="issue"
+                                        @delete="deleteValidation" />
+                                </div>
+                            </div>
+                        </template>
+
+                    </UCollapsible>
                 </div>
             </div>
 
             <!-- Séparateur -->
-            <template v-if="Object.keys(ownedIssuesByCategory).length > 0 && ownedIssues.length > 0">
+            <template v-if="Object.keys(otherIssues).length > 0 && ownedIssues.length > 0">
                 <Separator class="p-5" />
             </template>
 
             <!-- Les autres issues -->
-            <h2 v-if="ownedIssues.length > 0" class="text-xl font-bold text-black mb-3">Autres</h2>
+            <h2 v-if="otherIssues.length > 0" class="text-xl font-bold text-black mb-3">Autres</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 overflow-visible">
                 <IssuesCard v-for="issue in otherIssues" :key="issue.id" :issue="issue" @delete="deleteValidation" />
             </div>
