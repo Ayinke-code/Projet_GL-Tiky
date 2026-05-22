@@ -121,8 +121,9 @@ class ConversationServiceTest {
     void addMessageToConversation_should_throw_when_conversation_missing() {
         when(conversationRepository.findById(11L)).thenReturn(Optional.empty());
 
-        ConversationNotFoundException ex = assertThrows(ConversationNotFoundException.class,
-                () -> conversationService.addMessageToConversation(11L, "Hello", new User(), 22L));
+        User user = new User();
+        org.junit.jupiter.api.function.Executable executable = () -> conversationService.addMessageToConversation(11L, "Hello", user, 22L);
+        ConversationNotFoundException ex = assertThrows(ConversationNotFoundException.class, executable);
 
         assertEquals("Conversation not found with id: 11", ex.getMessage());
     }
@@ -133,8 +134,9 @@ class ConversationServiceTest {
         when(conversationRepository.findById(11L)).thenReturn(Optional.of(conversation));
         when(issueRepository.findById(22L)).thenReturn(Optional.empty());
 
-        IssueNotFoundException ex = assertThrows(IssueNotFoundException.class,
-                () -> conversationService.addMessageToConversation(11L, "Hello", new User(), 22L));
+        User user = new User();
+        org.junit.jupiter.api.function.Executable executable = () -> conversationService.addMessageToConversation(11L, "Hello", user, 22L);
+        IssueNotFoundException ex = assertThrows(IssueNotFoundException.class, executable);
 
         assertEquals("Issue not found with id: 22", ex.getMessage());
     }
@@ -247,8 +249,10 @@ class ConversationServiceTest {
     void addMessage_should_throw_when_user_missing() {
         when(userRepository.findByEmail("missing@test.com")).thenReturn(Optional.empty());
 
+        Map<String, String> payload = Map.of("content", "Salut", "issueId", "77");
+
         UserNotFoundException ex = assertThrows(UserNotFoundException.class,
-                () -> conversationService.addMessage(44L, Map.of("content", "Salut", "issueId", "77"), "missing@test.com"));
+                () -> conversationService.addMessage(44L, payload, "missing@test.com"));
 
         assertEquals("User not found with email: missing@test.com", ex.getMessage());
     }
@@ -262,8 +266,9 @@ class ConversationServiceTest {
         when(userRepository.findByEmail("bob@test.com")).thenReturn(Optional.of(user));
 
         String longContent = "a".repeat(4001);
+        Map<String, String> payload = Map.of("content", longContent, "issueId", "77");
         MessageTooLongException ex = assertThrows(MessageTooLongException.class,
-                () -> conversationService.addMessage(44L, Map.of("content", longContent, "issueId", "77"), "bob@test.com"));
+                () -> conversationService.addMessage(44L, payload, "bob@test.com"));
 
         assertEquals("Le message dépasse la limite de 4000 caractères", ex.getMessage());
     }

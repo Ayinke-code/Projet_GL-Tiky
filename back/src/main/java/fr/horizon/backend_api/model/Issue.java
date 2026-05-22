@@ -35,9 +35,9 @@ public class Issue extends BaseEntity {
     private boolean isPrivate = false;
 
     private String rejectType;
-
+    @Column
     private String rejectReason;
-
+    @Column
     private String rejectComment;
 
     @ManyToOne
@@ -55,4 +55,8 @@ public class Issue extends BaseEntity {
     @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<Message> messages = new HashSet<>();
+    @ManyToOne
+    @JoinColumn(name = "id_util_1")
+    private User manager;
+
 }
