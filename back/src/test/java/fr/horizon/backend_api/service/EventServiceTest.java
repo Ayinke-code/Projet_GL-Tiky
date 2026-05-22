@@ -77,7 +77,6 @@ class EventServiceTest {
                 .createdBy(teacher)
                 .startDate(LocalDateTime.of(2026, 6, 1, 9, 0))
                 .endDate(LocalDateTime.of(2026, 6, 1, 11, 0))
-                .createdAt(LocalDateTime.now())
                 .build();
 
         when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
@@ -131,7 +130,6 @@ class EventServiceTest {
                 .createdBy(admin)
                 .startDate(defenseStart)
                 .endDate(defenseEnd)
-                .createdAt(LocalDateTime.now())
                 .build();
 
         when(userService.findByEmail("admin@admin.fr")).thenReturn(admin);
@@ -248,7 +246,6 @@ class EventServiceTest {
                 .categoryType(CategoryType.AUDIT)
                 .category(category)
                 .createdBy(teacher)
-                .createdAt(LocalDateTime.now())
                 .build();
 
         when(eventRepository.findByCategoryTypeOrderByCreatedAtDesc(CategoryType.AUDIT))
@@ -304,7 +301,6 @@ class EventServiceTest {
                 .categoryType(null)
                 .category(category)
                 .createdBy(student)
-                .createdAt(LocalDateTime.now())
                 .build();
 
         when(userService.findByEmail("student@student.fr")).thenReturn(student);
@@ -355,7 +351,6 @@ class EventServiceTest {
                 .createdBy(teacher)
                 .startDate(start)
                 .endDate(end)
-                .createdAt(LocalDateTime.now())
                 .build();
 
         when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
@@ -464,7 +459,6 @@ class EventServiceTest {
                 .createdBy(teacher)
                 .startDate(start)
                 .endDate(end)
-                .createdAt(LocalDateTime.now())
                 .build();
 
         when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
