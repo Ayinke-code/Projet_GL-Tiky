@@ -67,7 +67,7 @@
 
 const { ready, user } = useAuth()
 const { createIssue } = useIssues()
-const { fetchCategories, categories } = useCategories()
+const { fetchCategoriesByType, categories } = useCategories()
 
 /**
  * État UI
@@ -139,7 +139,7 @@ onMounted(async () => {
     }
 
     try {
-        await fetchCategories()
+        await fetchCategoriesByType('ISSUE')
 
         if (!categories.value.length) {
             error.value = 'Aucune catégorie disponible'

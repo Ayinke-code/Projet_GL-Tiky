@@ -7,18 +7,42 @@
             </UButton>
         </div>
 
-        <div v-if="loading" class="text-center py-8">
-            <USkeleton class="h-20 w-full mb-4" />
-            <USkeleton class="h-20 w-full mb-4" />
-            <USkeleton class="h-20 w-full" />
+      <!--Rebrique des affectations -->
+      <div v-if="isTeacher" class="py-12">
+        <section><AssignationManager :userId="user.id" @issue-updated="fetchIssues"/></section>
+
+        <div class="relative py-8">
+          <div class="absolute inset-0 flex items-center"><span class="w-full border-t border-gray-200"></span></div>
+          <div class="relative flex justify-center"><span class="bg-white px-2 text-sm text-gray-400"></span></div>
         </div>
 
-        <div v-else-if="issues.length === 0" class="text-center py-12">
-            <p class="text-gray-500 text-lg">Aucune issue pour le moment</p>
-            <UButton to="/issues/create" variant="outline" class="mt-4">
-                Créer la première issue
-            </UButton>
-        </div>
+        <section><AssignationTeacher :userId="user.id" @issue-updated="fetchIssues"/></section>
+      </div>
+
+      <div
+        v-if="user"
+        v-show="afficherSectionIncomplete"
+        class="bg-white p-6 mb-8 rounded-2xl shadow-sm border border-gray-100"
+      >
+        <IncompleteIssuesList
+          :userId="user.id"
+          @has-issues="afficherSectionIncomplete = $event"
+          @issue-updated="fetchIssues"
+        />
+      </div>
+
+      <div v-if="loading" class="text-center py-8">
+          <USkeleton class="h-20 w-full mb-4" />
+          <USkeleton class="h-20 w-full mb-4" />
+          <USkeleton class="h-20 w-full" />
+      </div>
+
+      <div v-else-if="issues.length === 0" class="text-center py-12">
+          <p class="text-gray-500 text-lg">Aucune issue pour le moment</p>
+          <UButton to="/issues/create" variant="outline" class="mt-4">
+              Créer la première issue
+          </UButton>
+      </div>
 
         <template v-else>
             <!-- Les issues dont l'utilisateur est categoryOwner -->
@@ -83,6 +107,9 @@ import IssuesCard from '~/components/issues/IssuesCard.vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import { computed } from 'vue'
 import Separator from '~/components/ui/Separator.vue'
+import AssignationManager from '~/components/assignation/AssignationManager.vue'
+import AssignationTeacher from '~/components/assignation/AssignationTeacher.vue'
+import IncompleteIssuesList from '~/components/layout/IncompleteIssuesList.vue'
 
 const { ready, user } = useAuth()
 const { issues, fetchIssues, deleteIssue, error } = useIssues()
@@ -204,4 +231,11 @@ onMounted(async () => {
         loading.value = false
     }
 })
+
+const isTeacher = computed(() => {
+  return user.value?.roles?.includes('TEACHER') || user.value?.roles?.includes('ADMIN') || false
+})
+
+const afficherSectionIncomplete = ref(false)
+
 </script>

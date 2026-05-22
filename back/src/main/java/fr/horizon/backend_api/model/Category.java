@@ -1,9 +1,9 @@
 package fr.horizon.backend_api.model;
 
 import fr.horizon.backend_api.model.enums.CategoryStatus;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.util.HashSet;
 import java.util.Set;
 
@@ -28,6 +28,10 @@ public class Category extends BaseEntity {
     @Column(nullable = false)
     private CategoryStatus status = CategoryStatus.ACTIVE;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true, columnDefinition = "varchar(50)")
+    private CategoryType categoryType;
+
     @ManyToOne
     @JoinColumn(name = "owner_id")
     private User owner;
@@ -47,5 +51,6 @@ public class Category extends BaseEntity {
             }
     )
     private Set<User> followers = new HashSet<>();
+
 
 }
