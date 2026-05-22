@@ -80,7 +80,7 @@ public class IssueWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private void handleNewMessage(WebSocketSession session, JSONObject json) throws IOException {
+    private void handleNewMessage(WebSocketSession session, JSONObject json) {
         String content = json.optString(MapKeys.CONTENT);
         Long conversationId = json.optLong("conversationId");
         Long issueId = (Long) session.getAttributes().get(MapKeys.ISSUE_ID);
