@@ -30,6 +30,17 @@
       <span>{{ formatDateTime(event.createdAt) }}</span>
     </div>
 
+    <!-- Plage de dates de l'audit -->
+    <div
+      v-if="event.startDate && event.endDate"
+      class="mt-3 flex items-center gap-2 text-xs text-indigo-600 bg-indigo-50 rounded-lg px-3 py-2"
+    >
+      <i class="fa-solid fa-calendar-days"></i>
+      <span>{{ formatDateTime(event.startDate) }}</span>
+      <i class="fa-solid fa-arrow-right text-[10px]"></i>
+      <span>{{ formatDateTime(event.endDate) }}</span>
+    </div>
+
   </div>
 </template>
 

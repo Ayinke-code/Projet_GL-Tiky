@@ -65,6 +65,8 @@ class EventServiceTest {
         request.setCategoryId(10L);
         request.setName("Audit Sprint 3");
         request.setDescription("Revue du code du sprint 3");
+        request.setStartDate(LocalDateTime.of(2026, 6, 1, 9, 0));
+        request.setEndDate(LocalDateTime.of(2026, 6, 1, 11, 0));
 
         Event saved = Event.builder()
                 .id(1L)
@@ -73,6 +75,8 @@ class EventServiceTest {
                 .categoryType(CategoryType.AUDIT)
                 .category(category)
                 .createdBy(teacher)
+                .startDate(LocalDateTime.of(2026, 6, 1, 9, 0))
+                .endDate(LocalDateTime.of(2026, 6, 1, 11, 0))
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -305,5 +309,114 @@ class EventServiceTest {
         assertNotNull(result);
         assertEquals("Réunion étudiante", result.getName());
         verify(eventRepository).save(any(Event.class));
+    }
+
+    // =============================================
+    // create() — validation des dates (AUDIT)
+    // =============================================
+
+    @Test
+    void create_should_save_audit_when_endDate_is_after_startDate() {
+
+        Role teacherRole = new Role("TEACHER");
+
+        User teacher = new User();
+        teacher.setId(1L);
+        teacher.setName("Sophie ROUSSEAU");
+        teacher.setEmail("teacher@teacher.fr");
+        teacher.setRoles(Set.of(teacherRole));
+
+        Category category = new Category();
+        category.setId(10L);
+        category.setName("UI/UX");
+        category.setCategoryType(CategoryType.AUDIT);
+
+        LocalDateTime start = LocalDateTime.of(2026, 6, 10, 9, 0);
+        LocalDateTime end   = LocalDateTime.of(2026, 6, 10, 11, 0);
+
+        EventRequestDto request = new EventRequestDto();
+        request.setCategoryId(10L);
+        request.setName("Audit Sprint 4");
+        request.setStartDate(start);
+        request.setEndDate(end);
+
+        Event saved = Event.builder()
+                .id(5L)
+                .name("Audit Sprint 4")
+                .categoryType(CategoryType.AUDIT)
+                .category(category)
+                .createdBy(teacher)
+                .startDate(start)
+                .endDate(end)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+        when(eventRepository.save(any(Event.class))).thenReturn(saved);
+
+        EventResponseDto result = eventService.create(request, "teacher@teacher.fr");
+
+        assertNotNull(result);
+        assertEquals(start, result.getStartDate());
+        assertEquals(end, result.getEndDate());
+        verify(eventRepository).save(any(Event.class));
+    }
+
+    @Test
+    void create_should_throw_IllegalArgumentException_when_endDate_not_after_startDate() {
+
+        Role teacherRole = new Role("TEACHER");
+
+        User teacher = new User();
+        teacher.setId(1L);
+        teacher.setEmail("teacher@teacher.fr");
+        teacher.setRoles(Set.of(teacherRole));
+
+        Category category = new Category();
+        category.setId(10L);
+        category.setCategoryType(CategoryType.AUDIT);
+
+        EventRequestDto request = new EventRequestDto();
+        request.setCategoryId(10L);
+        request.setName("Audit invalide");
+        request.setStartDate(LocalDateTime.of(2026, 6, 10, 11, 0));
+        request.setEndDate(LocalDateTime.of(2026, 6, 10, 9, 0)); // fin avant début
+
+        when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> eventService.create(request, "teacher@teacher.fr"));
+
+        verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    void create_should_throw_IllegalArgumentException_when_dates_missing_for_audit() {
+
+        Role teacherRole = new Role("TEACHER");
+
+        User teacher = new User();
+        teacher.setId(1L);
+        teacher.setEmail("teacher@teacher.fr");
+        teacher.setRoles(Set.of(teacherRole));
+
+        Category category = new Category();
+        category.setId(10L);
+        category.setCategoryType(CategoryType.AUDIT);
+
+        EventRequestDto request = new EventRequestDto();
+        request.setCategoryId(10L);
+        request.setName("Audit sans dates");
+        // startDate et endDate non renseignées
+
+        when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> eventService.create(request, "teacher@teacher.fr"));
+
+        verify(eventRepository, never()).save(any());
     }
 }

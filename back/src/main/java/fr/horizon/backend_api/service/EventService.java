@@ -56,12 +56,23 @@ public class EventService {
             }
         }
 
+        if (category.getCategoryType() == CategoryType.AUDIT) {
+            if (request.getStartDate() == null || request.getEndDate() == null) {
+                throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires pour un audit.");
+            }
+            if (!request.getEndDate().isAfter(request.getStartDate())) {
+                throw new IllegalArgumentException("La date de fin doit être postérieure à la date de début.");
+            }
+        }
+
         Event event = Event.builder()
                 .name(request.getName())
                 .description(request.getDescription())
                 .categoryType(category.getCategoryType())
                 .category(category)
                 .createdBy(user)
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
                 .build();
 
         Event saved = eventRepository.save(event);
@@ -96,6 +107,8 @@ public class EventService {
                 .categoryName(event.getCategory().getName())
                 .createdBy(event.getCreatedBy().getName())
                 .createdAt(event.getCreatedAt())
+                .startDate(event.getStartDate())
+                .endDate(event.getEndDate())
                 .build();
     }
 }
