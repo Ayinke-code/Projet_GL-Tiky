@@ -15,24 +15,53 @@ export const useConversations = () => {
     if (!roles) return ROLE.STUDENT
 
     const upperRoles = roles.map(r => String(r).toUpperCase())
-    return ROLE_PRIORITY.find((role) => upperRoles.includes(role) || upperRoles.includes(`ROLE_${role}`)) || ROLE.STUDENT
+    return ROLE_PRIORITY.find(role => upperRoles.includes(role) || upperRoles.includes(`ROLE_${role}`)) || ROLE.STUDENT
+  }
+
+  const normalizeUser = (user) => {
+    if (!user) return null
+
+    const rawRoles = Array.isArray(user.roles) ? user.roles : [user.role || ROLE.STUDENT]
+    const role = getPriorityRole(rawRoles)
+
+    return {
+      id: user.id ?? null,
+      name: user.name || user.email || 'Anonyme',
+      email: user.email || '',
+      role,
+      roles: [role],
+      displayRole: user.displayRole || role
+    }
   }
 
   /**
    * Normalise un message reçu du backend.
    */
   const normalizeMessage = (msg) => {
-    const rawRoles = Array.isArray(msg.user?.roles) ? msg.user.roles : [msg.user?.role || ROLE.STUDENT]
-    const role = getPriorityRole(rawRoles)
+    const user = normalizeUser(msg.user)
+    const replyToMessage = msg.replyToMessage || msg.replyTo || null
+    const replyToUser = normalizeUser(replyToMessage?.user)
 
     return {
       id: msg.id,
-      userId: msg.user?.id ?? null,
-      auteur: msg.user?.name || msg.user?.email || 'Anonyme',
-      role,
-      roles: [role],
+      userId: user?.id ?? null,
+      auteur: user?.name || 'Anonyme',
+      role: user?.role || ROLE.STUDENT,
+      roles: user?.roles || [ROLE.STUDENT],
       date: msg.createdAt,
-      contenu: msg.content ?? msg.contenu
+      contenu: msg.content ?? msg.contenu,
+      replyToMessageId: msg.replyToMessageId ?? replyToMessage?.id ?? null,
+      replyTo: replyToMessage
+        ? {
+            id: replyToMessage.id ?? null,
+            userId: replyToUser?.id ?? null,
+            auteur: replyToUser?.name || 'Anonyme',
+            role: replyToUser?.role || ROLE.STUDENT,
+            roles: replyToUser?.roles || [ROLE.STUDENT],
+            date: replyToMessage.createdAt,
+            contenu: replyToMessage.content ?? replyToMessage.contenu
+          }
+        : null
     }
   }
 
@@ -78,15 +107,21 @@ export const useConversations = () => {
   /**
    * Envoie un message sur une issue.
    */
-  const sendIssueMessage = async (issueId, content) => {
+  const sendIssueMessage = async (issueId, content, replyToMessageId = null) => {
     try {
       // Initialiser/créer la conversation si elle n'existe pas
       const conversation = await initializeConversation(issueId)
 
       const conversationId = conversation.id
+      const body = { content, issueId }
+
+      if (replyToMessageId !== null && replyToMessageId !== undefined) {
+        body.replyToMessageId = replyToMessageId
+      }
+
       const message = await api(`/conversations/${conversationId}/messages`, {
         method: 'POST',
-        body: { content, issueId }
+        body
       })
 
       return normalizeMessage(message)
@@ -107,4 +142,3 @@ export const useConversations = () => {
     error
   })
 }
-

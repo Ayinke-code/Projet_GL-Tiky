@@ -22,6 +22,7 @@ const loading = ref(true)
 const error = ref(null)
 const messages = ref([])
 const newMessage = ref('')
+const replyingToMessage = ref(null)
 const sending = ref(false)
 const socket = ref(null)
 
@@ -155,7 +156,7 @@ const handleSend = async () => {
 
   sending.value = true
   try {
-    const sentMessage = await sendIssueMessage(issueId, newMessage.value)
+    const sentMessage = await sendIssueMessage(issueId, newMessage.value, replyingToMessage.value?.id ?? null)
     // Avoid duplicates: the server broadcasts the new message via WebSocket,
     // which may arrive before or after the HTTP response. Only push the
     // message locally if we don't already have it (compare by id).
@@ -163,6 +164,7 @@ const handleSend = async () => {
       messages.value.push(sentMessage)
     }
     newMessage.value = ''
+    replyingToMessage.value = null
   } catch (err) {
     error.value = err?.message || 'Erreur lors de l\'envoi du message'
   } finally {
@@ -286,6 +288,8 @@ const handleSend = async () => {
                             :date="msg.date"
                             :contenu="msg.contenu"
                             :is-mine="msg.userId === user?.id"
+                            :reply-to="msg.replyTo"
+                            @reply="replyingToMessage = msg"
                         />
 
                         <!-- État vide -->
@@ -296,6 +300,8 @@ const handleSend = async () => {
                     <MessageInput
                         v-model="newMessage"
                         :sending="sending"
+                        :replying-to="replyingToMessage"
+                        @cancel-reply="replyingToMessage = null"
                         @send="handleSend"
                     />
                 </div>

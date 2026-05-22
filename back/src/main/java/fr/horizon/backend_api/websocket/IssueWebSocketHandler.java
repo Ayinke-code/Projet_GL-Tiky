@@ -73,18 +73,21 @@ public class IssueWebSocketHandler extends TextWebSocketHandler {
         String payload = textMessage.getPayload();
         JSONObject json = new JSONObject(payload);
 
-        String type = json.optString("type");
+        String type = json.optString(MapKeys.TYPE);
 
-        if ("message".equals(type)) {
+        if ("message".equals(type) || MapKeys.NEW_MESSAGE.equals(type)) {
             handleNewMessage(session, json);
         }
     }
 
-    private void handleNewMessage(WebSocketSession session, JSONObject json) throws IOException {
-        String content = json.optString("content");
+    private void handleNewMessage(WebSocketSession session, JSONObject json) {
+        String content = json.optString(MapKeys.CONTENT);
         Long conversationId = json.optLong("conversationId");
         Long issueId = (Long) session.getAttributes().get(MapKeys.ISSUE_ID);
         String email = (String) session.getAttributes().get(MapKeys.USER_EMAIL);
+        Long replyToMessageId = json.has(MapKeys.REPLY_TO_MESSAGE_ID) && !json.isNull(MapKeys.REPLY_TO_MESSAGE_ID)
+                ? json.optLong(MapKeys.REPLY_TO_MESSAGE_ID)
+                : null;
 
         if (content == null || content.isEmpty() || conversationId == 0) {
             return;
@@ -94,31 +97,8 @@ public class IssueWebSocketHandler extends TextWebSocketHandler {
         if (user == null) return;
 
         // Persist message
-        Message message = conversationService.addMessageToConversation(conversationId, content, user, issueId);
-
-        // Broadcast to all sessions interested in this issue
-        JSONObject response = new JSONObject();
-        response.put(MapKeys.TYPE, MapKeys.NEW_MESSAGE);
-
-        JSONObject userMap = new JSONObject();
-        userMap.put(MapKeys.ID, user.getId());
-        userMap.put(MapKeys.NAME, user.getName());
-        userMap.put(MapKeys.EMAIL, user.getEmail());
-        userMap.put(MapKeys.DISPLAY_ROLE, user.getDisplayRole());
-        JSONArray roles = new JSONArray();
-        user.getRoleNames().forEach(roles::put);
-        userMap.put(MapKeys.ROLES, roles);
-
-        JSONObject msgMap = new JSONObject();
-        msgMap.put(MapKeys.ID, message.getId());
-        msgMap.put(MapKeys.CONTENT, message.getContent());
-        msgMap.put(MapKeys.USER, userMap);
-        msgMap.put(MapKeys.CREATED_AT, message.getCreatedAt());
-
-        response.put(MapKeys.MESSAGE, msgMap);
-        response.put(MapKeys.ISSUE_ID, issueId);
-
-        broadcastToIssue(issueId, response.toString());
+        Message message = conversationService.addMessageToConversation(conversationId, content, user, issueId, replyToMessageId);
+        broadcastToIssue(issueId, conversationService.buildBroadcastPayload(message, issueId));
     }
 
     @Override
