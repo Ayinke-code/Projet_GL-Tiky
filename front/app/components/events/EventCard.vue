@@ -24,10 +24,39 @@
       </div>
     </div>
 
-    <!-- Pied de carte : créateur + date -->
-    <div class="flex items-center justify-between mt-3 text-xs text-gray-400">
+    <!-- Créateur -->
+    <div class="mt-3 text-xs text-gray-400">
       <span><i class="fa-solid fa-user mr-1"></i>{{ event.createdBy }}</span>
-      <span>{{ formatDateTime(event.createdAt) }}</span>
+    </div>
+
+    <!-- Plage de dates (même jour, heures différentes) -->
+    <div
+      v-if="event.startDate && event.endDate"
+      class="mt-3 rounded-lg px-3 py-2 text-xs"
+      :class="event.categoryType === 'AUDIT' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'"
+    >
+      <!-- Date unique -->
+      <div class="flex items-center gap-1.5 font-semibold mb-2">
+        <i class="fa-solid fa-calendar-days text-[10px]"></i>
+        <span class="capitalize">{{ formatDate(event.startDate) }}</span>
+      </div>
+      <!-- Heures début / fin -->
+      <div class="grid grid-cols-2 gap-2">
+        <div class="flex flex-col gap-0.5">
+          <span class="uppercase tracking-wide text-[9px] opacity-60 font-semibold">Début</span>
+          <span class="flex items-center gap-1">
+            <i class="fa-solid fa-clock text-[10px]"></i>
+            {{ formatTime(event.startDate) }}
+          </span>
+        </div>
+        <div class="flex flex-col gap-0.5">
+          <span class="uppercase tracking-wide text-[9px] opacity-60 font-semibold">Fin</span>
+          <span class="flex items-center gap-1">
+            <i class="fa-regular fa-clock text-[10px]"></i>
+            {{ formatTime(event.endDate) }}
+          </span>
+        </div>
+      </div>
     </div>
 
   </div>
@@ -39,7 +68,7 @@
  * Reçoit un EventResponseDto depuis la page events/index.vue.
  * Utilise formatDateTime (déjà présent dans utils/helpers.js).
  */
-import { formatDateTime } from '~/utils/helpers'
+import { formatDateTime, formatDate, formatTime } from '~/utils/helpers'
 
 defineProps({
   event: { type: Object, required: true }

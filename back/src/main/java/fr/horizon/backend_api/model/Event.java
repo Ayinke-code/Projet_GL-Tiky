@@ -5,19 +5,19 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "events")
 @Data
+@EqualsAndHashCode(callSuper = false)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Event {
+public class Event extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -29,7 +29,7 @@ public class Event {
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "varchar(50)")
+    @Column(name = "category_type", nullable = true, columnDefinition = "varchar(50)")
     private CategoryType categoryType; // AUDIT, DEFENSE, MEETING, ISSUE
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -40,9 +40,10 @@ public class Event {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
-    @CreationTimestamp
-    private LocalDateTime createdAt;
+    @Column
+    private LocalDateTime startDate;
 
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
+    @Column
+    private LocalDateTime endDate;
+
 }

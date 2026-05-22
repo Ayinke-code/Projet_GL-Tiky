@@ -94,6 +94,40 @@
           </select>
         </div>
 
+        <!-- Plage de dates — obligatoire pour les Audits et Soutenances -->
+        <div v-if="requiresDates" class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">
+              Date de début <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="form.startDate"
+              type="datetime-local"
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
+                     focus:ring-2 focus:ring-indigo-500 outline-none"
+              required
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-700 mb-1">
+              Date de fin <span class="text-red-500">*</span>
+            </label>
+            <input
+              v-model="form.endDate"
+              type="datetime-local"
+              :min="form.startDate"
+              :max="endDateMax"
+              class="w-full px-4 py-2 border rounded-lg text-sm outline-none
+                     focus:ring-2 focus:ring-indigo-500"
+              :class="dateError ? 'border-red-400' : 'border-gray-300'"
+              required
+            />
+            <p v-if="dateError" class="text-xs text-red-500 mt-1">
+              {{ dateError }}
+            </p>
+          </div>
+        </div>
+
         <!-- Actions -->
         <div class="flex justify-end gap-3 pt-2 border-t">
           <button
@@ -125,7 +159,7 @@
 definePageMeta({ ssr: false })
 
 import Alert from '~/components/ui/Alert.vue'
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -133,14 +167,29 @@ const { fetchCategoriesByType, createEvent } = useEvents()
 
 const type = route.params.type // 'AUDIT' ou 'DEFENSE'
 const isAudit = computed(() => type === 'AUDIT')
+const requiresDates = computed(() => type === 'AUDIT' || type === 'DEFENSE')
 
-const categories      = ref([])
+const categories        = ref([])
 const loadingCategories = ref(true)
-const categoryError   = ref(null)
-const submitting      = ref(false)
-const submitError     = ref(null)
+const categoryError     = ref(null)
+const submitting        = ref(false)
+const submitError       = ref(null)
+const dateError         = ref(null)
 
-const form = ref({ name: '', description: '', categoryId: '' })
+const form = ref({ name: '', description: '', categoryId: '', startDate: '', endDate: '' })
+
+// Force la date de fin sur le même jour que la date de début
+const endDateMax = computed(() => {
+  if (!form.value.startDate) return ''
+  return form.value.startDate.split('T')[0] + 'T23:59'
+})
+
+watch(() => form.value.startDate, (newStart) => {
+  if (!newStart) return
+  const datePart = newStart.split('T')[0]
+  const timePart = form.value.endDate?.split('T')[1] ?? ''
+  form.value.endDate = timePart ? `${datePart}T${timePart}` : ''
+})
 
 onMounted(async () => {
   try {
@@ -154,13 +203,31 @@ onMounted(async () => {
 
 const handleSubmit = async () => {
   submitError.value = null
-  submitting.value  = true
+  dateError.value   = null
+
+  if (requiresDates.value) {
+    if (!form.value.startDate || !form.value.endDate) {
+      dateError.value = 'Les dates de début et de fin sont obligatoires.'
+      return
+    }
+    if (new Date(form.value.endDate) <= new Date(form.value.startDate)) {
+      dateError.value = 'La date de fin doit être postérieure à la date de début.'
+      return
+    }
+  }
+
+  submitting.value = true
   try {
-    await createEvent({
+    const payload = {
       name:        form.value.name,
       description: form.value.description,
-      categoryId:  form.value.categoryId
-    })
+      categoryId:  form.value.categoryId,
+      ...(requiresDates.value && {
+        startDate: form.value.startDate,
+        endDate:   form.value.endDate
+      })
+    }
+    await createEvent(payload)
     router.push('/events')
   } catch (e) {
     submitError.value = e?.data?.message || 'Une erreur est survenue lors de la création.'
