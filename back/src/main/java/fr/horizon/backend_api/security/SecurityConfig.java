@@ -73,7 +73,7 @@ public class SecurityConfig {
                                 RoleEnum.TEACHER.value(),
                                 RoleEnum.ADMIN.value())
 
-                        .requestMatchers("/api/events/**").permitAll()
+                        .requestMatchers("/api/events", "/api/events/**").permitAll()
 
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
