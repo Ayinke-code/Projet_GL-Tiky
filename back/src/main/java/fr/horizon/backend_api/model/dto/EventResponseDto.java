@@ -1,4 +1,4 @@
-package fr.horizon.backend_api.dto;
+package fr.horizon.backend_api.model.dto;
 
 import java.time.LocalDateTime;
 
