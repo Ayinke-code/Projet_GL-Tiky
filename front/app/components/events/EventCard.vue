@@ -30,15 +30,28 @@
       <span>{{ formatDateTime(event.createdAt) }}</span>
     </div>
 
-    <!-- Plage de dates de l'audit -->
+    <!-- Plage de dates -->
     <div
       v-if="event.startDate && event.endDate"
-      class="mt-3 flex items-center gap-2 text-xs text-indigo-600 bg-indigo-50 rounded-lg px-3 py-2"
+      class="mt-3 grid grid-cols-2 gap-2 text-xs rounded-lg overflow-hidden"
+      :class="event.categoryType === 'AUDIT' ? 'text-indigo-600' : 'text-emerald-600'"
     >
-      <i class="fa-solid fa-calendar-days"></i>
-      <span>{{ formatDateTime(event.startDate) }}</span>
-      <i class="fa-solid fa-arrow-right text-[10px]"></i>
-      <span>{{ formatDateTime(event.endDate) }}</span>
+      <div class="flex flex-col gap-0.5 px-3 py-2 rounded-lg"
+        :class="event.categoryType === 'AUDIT' ? 'bg-indigo-50' : 'bg-emerald-50'">
+        <span class="font-semibold uppercase tracking-wide text-[9px] opacity-70">Début</span>
+        <span class="flex items-center gap-1">
+          <i class="fa-solid fa-calendar-days text-[10px]"></i>
+          {{ formatDateTime(event.startDate) }}
+        </span>
+      </div>
+      <div class="flex flex-col gap-0.5 px-3 py-2 rounded-lg"
+        :class="event.categoryType === 'AUDIT' ? 'bg-indigo-50' : 'bg-emerald-50'">
+        <span class="font-semibold uppercase tracking-wide text-[9px] opacity-70">Fin</span>
+        <span class="flex items-center gap-1">
+          <i class="fa-solid fa-calendar-check text-[10px]"></i>
+          {{ formatDateTime(event.endDate) }}
+        </span>
+      </div>
     </div>
 
   </div>
