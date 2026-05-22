@@ -23,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -86,7 +85,7 @@ public class IssueService {
     public IssueDto createIssue(IssueCreateDto dto, String email) {
 
         User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Owner not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
 
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));
@@ -182,7 +181,7 @@ public class IssueService {
                 .orElseThrow(() -> new IssueNotFoundException(id));
 
         User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Owner not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
 
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));

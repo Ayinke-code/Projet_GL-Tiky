@@ -17,3 +17,21 @@ export function formatDateTime(dateTime) {
     minute: '2-digit'
   })
 }
+
+export function formatDate(dateTime) {
+  if (!dateTime) return null
+  return new Date(dateTime).toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  })
+}
+
+export function formatTime(dateTime) {
+  if (!dateTime) return null
+  return new Date(dateTime).toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}

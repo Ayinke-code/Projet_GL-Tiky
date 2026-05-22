@@ -1,5 +1,6 @@
 package fr.horizon.backend_api.model;
 
+import fr.horizon.backend_api.model.enums.TeacherType;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
@@ -43,71 +44,39 @@ class UserTest {
     }
 
     @Test
-    void isTeacher_shouldReturnFalse_whenRolesIsNull() {
-        User user = new User();
-        user.setRoles(null);
+    void shouldCreateTeacherWithTeacherType() {
 
-        assertFalse(user.isTeacher());
+        User teacher = User.builder()
+                .name("Sophie ROUSSEAU")
+                .email("teacher@teacher.fr")
+                .teacherType(TeacherType.COURSE_LEADER)
+                .build();
+
+        assertEquals(TeacherType.COURSE_LEADER, teacher.getTeacherType());
+        assertEquals("Sophie ROUSSEAU", teacher.getName());
     }
 
     @Test
-    void isTeacher_shouldReturnTrue_withTeacherRoleAndPrefix() {
-        User user = new User();
-        user.setRoles(Set.of(new Role("ROLE_TEACHER")));
+    void shouldCreateTeacherWithOptionLeaderType() {
 
-        assertTrue(user.isTeacher());
+        User teacher = User.builder()
+                .name("Paul MARTIN")
+                .email("teacher2@teacher.fr")
+                .teacherType(TeacherType.OPTION_LEADER)
+                .build();
+
+        assertEquals(TeacherType.OPTION_LEADER, teacher.getTeacherType());
     }
 
     @Test
-    void getRoleNames_shouldUppercaseRoleNames() {
-        User user = new User();
-        user.setRoles(Set.of(new Role("teacher"), new Role("admin")));
+    void shouldHaveNullTeacherTypeForStudent() {
 
-        Set<String> roleNames = user.getRoleNames();
+        User student = User.builder()
+                .name("Raoudate")
+                .email("student@student.fr")
+                .teacherType(null)
+                .build();
 
-        assertEquals(Set.of("TEACHER", "ADMIN"), roleNames);
-    }
-
-    @Test
-    void getRoleNames_shouldReturnEmptySet_whenRolesIsNull() {
-        User user = new User();
-        user.setRoles(null);
-
-        Set<String> roleNames = user.getRoleNames();
-
-        assertNotNull(roleNames);
-        assertTrue(roleNames.isEmpty());
-    }
-
-    @Test
-    void getDisplayRole_shouldReturnAdmin_whenAdminAndTeacherArePresent() {
-        User user = new User();
-        user.setRoles(Set.of(new Role("ROLE_ADMIN"), new Role("TEACHER")));
-
-        assertEquals("ADMIN", user.getDisplayRole());
-    }
-
-    @Test
-    void getDisplayRole_shouldReturnTeacher_whenTeacherIsPresentWithoutAdmin() {
-        User user = new User();
-        user.setRoles(Set.of(new Role("role_teacher")));
-
-        assertEquals("TEACHER", user.getDisplayRole());
-    }
-
-    @Test
-    void getDisplayRole_shouldReturnStudent_whenNoRoles() {
-        User user = new User();
-        user.setRoles(Set.of());
-
-        assertEquals("STUDENT", user.getDisplayRole());
-    }
-
-    @Test
-    void getDisplayRole_shouldReturnStudent_whenRolesIsNull() {
-        User user = new User();
-        user.setRoles(null);
-
-        assertEquals("STUDENT", user.getDisplayRole());
+        assertNull(student.getTeacherType());
     }
 }

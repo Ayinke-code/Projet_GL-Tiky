@@ -8,6 +8,7 @@ import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.ConversationRole;
 import fr.horizon.backend_api.exception.ConversationNotFoundException;
 import fr.horizon.backend_api.exception.IssueNotFoundException;
+import fr.horizon.backend_api.exception.MessageNotFoundException;
 import fr.horizon.backend_api.exception.MessageTooLongException;
 import fr.horizon.backend_api.exception.UserNotFoundException;
 import fr.horizon.backend_api.repository.ConversationRepository;
@@ -15,6 +16,7 @@ import fr.horizon.backend_api.repository.ConversationUserRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.MessageRepository;
 import fr.horizon.backend_api.repository.UserRepository;
+import fr.horizon.backend_api.util.MapKeys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -128,18 +130,44 @@ public class ConversationService {
      * @return message enregistré
      */
     public Message addMessageToConversation(Long conversationId, String content, User user, Long issueId) {
+        return addMessageToConversation(conversationId, content, user, issueId, null);
+    }
+
+    /**
+     * Persiste un message dans une conversation liée à une issue, avec réponse optionnelle.
+     *
+     * @param conversationId identifiant de la conversation
+     * @param content contenu du message
+     * @param user auteur du message
+     * @param issueId identifiant de l'issue liée
+     * @param replyToMessageId identifiant du message parent, optionnel
+     * @return message enregistré
+     */
+    public Message addMessageToConversation(Long conversationId, String content, User user, Long issueId, Long replyToMessageId) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new ConversationNotFoundException(conversationId));
 
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new IssueNotFoundException(issueId));
 
-        Message message = Message.builder()
+        Message.MessageBuilder messageBuilder = Message.builder()
                 .content(content)
                 .user(user)
                 .conversation(conversation)
-                .issue(issue)
-                .build();
+                .issue(issue);
+
+        if (replyToMessageId != null) {
+            Message replyTo = messageRepository.findById(replyToMessageId)
+                    .orElseThrow(() -> new MessageNotFoundException(replyToMessageId));
+
+            if (replyTo.getConversation() == null || !conversationId.equals(replyTo.getConversation().getId())) {
+                throw new IllegalArgumentException("Reply target must belong to the same conversation");
+            }
+
+            messageBuilder.replyTo(replyTo);
+        }
+
+        Message message = messageBuilder.build();
 
         return messageRepository.save(message);
     }
@@ -158,13 +186,14 @@ public class ConversationService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UserNotFoundException(email));
 
-        String content = payload.get("content");
+        String content = payload.get(MapKeys.CONTENT);
         if (content != null && content.length() > 4000) {
             throw new MessageTooLongException(4000);
         }
 
-        Long issueId = Long.parseLong(payload.get("issueId"));
-        Message message = addMessageToConversation(conversationId, content, user, issueId);
+        Long issueId = Long.parseLong(payload.get(MapKeys.ISSUE_ID));
+        Long replyToMessageId = parseOptionalLong(payload.get(MapKeys.REPLY_TO_MESSAGE_ID));
+        Message message = addMessageToConversation(conversationId, content, user, issueId, replyToMessageId);
 
         return new MessageDispatchResult(toMessageMap(message), buildBroadcastPayload(message, issueId), issueId);
     }
@@ -237,10 +266,21 @@ public class ConversationService {
 
     private Map<String, Object> toMessageMap(Message message) {
         Map<String, Object> messageMap = new HashMap<>();
-        messageMap.put(fr.horizon.backend_api.util.MapKeys.ID, message.getId());
-        messageMap.put(fr.horizon.backend_api.util.MapKeys.CONTENT, message.getContent());
-        messageMap.put(fr.horizon.backend_api.util.MapKeys.USER, toUserMap(message.getUser()));
-        messageMap.put(fr.horizon.backend_api.util.MapKeys.CREATED_AT, message.getCreatedAt());
+        messageMap.put(MapKeys.ID, message.getId());
+        messageMap.put(MapKeys.CONTENT, message.getContent());
+        messageMap.put(MapKeys.USER, toUserMap(message.getUser()));
+        messageMap.put(MapKeys.CREATED_AT, message.getCreatedAt());
+        messageMap.put(MapKeys.REPLY_TO_MESSAGE_ID, message.getReplyTo() != null ? message.getReplyTo().getId() : null);
+        messageMap.put(MapKeys.REPLY_TO_MESSAGE, message.getReplyTo() != null ? toMessageSummaryMap(message.getReplyTo()) : null);
+        return messageMap;
+    }
+
+    private Map<String, Object> toMessageSummaryMap(Message message) {
+        Map<String, Object> messageMap = new HashMap<>();
+        messageMap.put(MapKeys.ID, message.getId());
+        messageMap.put(MapKeys.CONTENT, message.getContent());
+        messageMap.put(MapKeys.USER, toUserMap(message.getUser()));
+        messageMap.put(MapKeys.CREATED_AT, message.getCreatedAt());
         return messageMap;
     }
 
@@ -254,28 +294,19 @@ public class ConversationService {
         return userMap;
     }
 
-    private String buildBroadcastPayload(Message message, Long issueId) {
+    public String buildBroadcastPayload(Message message, Long issueId) {
         org.json.JSONObject wsResponse = new org.json.JSONObject();
-        wsResponse.put(fr.horizon.backend_api.util.MapKeys.TYPE, fr.horizon.backend_api.util.MapKeys.NEW_MESSAGE);
-        wsResponse.put(fr.horizon.backend_api.util.MapKeys.ISSUE_ID, issueId);
-
-        org.json.JSONObject msgJson = new org.json.JSONObject();
-        msgJson.put(fr.horizon.backend_api.util.MapKeys.ID, message.getId());
-        msgJson.put(fr.horizon.backend_api.util.MapKeys.CONTENT, message.getContent());
-        msgJson.put(fr.horizon.backend_api.util.MapKeys.CREATED_AT, message.getCreatedAt());
-
-        org.json.JSONObject userJson = new org.json.JSONObject();
-        userJson.put(fr.horizon.backend_api.util.MapKeys.ID, message.getUser().getId());
-        userJson.put(fr.horizon.backend_api.util.MapKeys.NAME, message.getUser().getName());
-        userJson.put(fr.horizon.backend_api.util.MapKeys.EMAIL, message.getUser().getEmail());
-        userJson.put(fr.horizon.backend_api.util.MapKeys.DISPLAY_ROLE, message.getUser().getDisplayRole());
-        org.json.JSONArray roles = new org.json.JSONArray();
-        message.getUser().getRoleNames().forEach(roles::put);
-        userJson.put(fr.horizon.backend_api.util.MapKeys.ROLES, roles);
-        msgJson.put(fr.horizon.backend_api.util.MapKeys.USER, userJson);
-
-        wsResponse.put(fr.horizon.backend_api.util.MapKeys.MESSAGE, msgJson);
+        wsResponse.put(MapKeys.TYPE, MapKeys.NEW_MESSAGE);
+        wsResponse.put(MapKeys.ISSUE_ID, issueId);
+        wsResponse.put(MapKeys.MESSAGE, new org.json.JSONObject(toMessageMap(message)));
         return wsResponse.toString();
+    }
+
+    private Long parseOptionalLong(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return Long.parseLong(value);
     }
 }
 
