@@ -1,6 +1,5 @@
 package fr.horizon.backend_api.model.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
