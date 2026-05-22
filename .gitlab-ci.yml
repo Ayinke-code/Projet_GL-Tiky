@@ -47,7 +47,8 @@ build-backend:
       - back/target/*.jar
     expire_in: 1 day
   rules:
-    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_BRANCH == "dev"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     # - when: never
 
 # Stage 2: Build Frontend (fichiers statiques)
@@ -74,6 +75,7 @@ build-frontend-dev:
     expire_in: 1 day
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     # - when: never
 
 # Stage 2: Build Frontend (fichiers statiques)
@@ -119,7 +121,8 @@ unit-test:
   dependencies:
     - build-backend
   rules:
-    - if: $CI_COMMIT_BRANCH   # toutes les branches
+    - if: $CI_COMMIT_BRANCH == "dev"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     # - when: never # Pipeline dev
 
 # Stage 3: Deploy sur serveur de dev/prod
@@ -291,6 +294,7 @@ sonar-dev:
   
   rules:
     - if: $CI_COMMIT_BRANCH == 'dev'
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
 
 # Stage 5: SonarQube Analysis
 sonar-prod:
