@@ -45,7 +45,7 @@ build-backend:
   artifacts:
     paths:
       - back/target/*.jar
-    expire_in: 1 day
+    expire_in: 1 days
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -72,7 +72,7 @@ build-frontend-dev:
   artifacts:
     paths:
       - front/.output/public/
-    expire_in: 1 day
+    expire_in: 1 days
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -99,7 +99,7 @@ build-frontend-prod:
   artifacts:
     paths:
       - front/.output/public/
-    expire_in: 1 day
+    expire_in: 1 days
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
     # - when: never
@@ -117,7 +117,7 @@ unit-test:
         - back/target/surefire-reports/TEST-*.xml
     paths:
       - back/target/surefire-reports/
-    expire_in: 1 day
+    expire_in: 1 days
   dependencies:
     - build-backend
   rules:
@@ -267,7 +267,7 @@ selenium-test:
     when: always
     paths:
       - back/target/selenium-reports/
-    expire_in: 1 day
+    expire_in: 1 days
 
   rules:
     # - if: $CI_PIPELINE_SOURCE == "merge_request_event"
