@@ -10,6 +10,7 @@ import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.CategoryRequestRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,12 +65,12 @@ public class CategoryService {
      *
      * @param dto données de création (nom, sujet, identifiant du propriétaire)
      * @return catégorie créée sous forme de DTO
-     * @throws RuntimeException si le propriétaire n’existe pas
+     * @throws EntityNotFoundException si le propriétaire n'existe pas
      */
     public CategoryDto createCategory(CategoryCreateDto dto) {
 
         User owner = userRepository.findById(dto.getOwnerId())
-                .orElseThrow(() -> new RuntimeException("Owner not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
 
         Category category = Category.builder()
                 .name(dto.getName())
@@ -90,7 +91,7 @@ public class CategoryService {
     public void deleteFollowerById(Long idCategory, Long idUser) {
 
         User user = userRepository.findById(idUser)
-                .orElseThrow(() -> new RuntimeException("User not found " + idUser));
+                .orElseThrow(() -> new EntityNotFoundException("User not found " + idUser));
 
         Category category = categoryRepository.findById(idCategory)
                 .orElseThrow(() -> new CategoryNotFoundException(idCategory));
@@ -119,7 +120,7 @@ public class CategoryService {
     public void addFollower(Long idCategory, Long idUser) {
 
         User user = userRepository.findById(idUser)
-                .orElseThrow(() -> new RuntimeException("User not found " + idUser));
+                .orElseThrow(() -> new EntityNotFoundException("User not found " + idUser));
 
         Category category = categoryRepository.findById(idCategory)
                 .orElseThrow(() -> new CategoryNotFoundException(idCategory));

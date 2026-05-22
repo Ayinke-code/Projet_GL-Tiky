@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import fr.horizon.backend_api.util.MapKeys;
 
+import fr.horizon.backend_api.exception.InvalidTokenException;
+import fr.horizon.backend_api.exception.TokenExpiredException;
 import io.jsonwebtoken.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -91,9 +93,9 @@ public class JwtToken {
                     .parseClaimsJws(token)
                     .getBody();
         } catch (ExpiredJwtException e) {
-            throw new RuntimeException("Token expiré", e);
+            throw new TokenExpiredException("Token expiré", e);
         } catch (JwtException e) {
-            throw new RuntimeException("Token invalide", e);
+            throw new InvalidTokenException("Token invalide", e);
         }
     }
 }

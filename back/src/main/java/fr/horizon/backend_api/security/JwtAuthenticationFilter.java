@@ -7,7 +7,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -28,11 +29,12 @@ import java.util.List;
  * les informations de l’utilisateur (email + rôles).
  * En cas de token invalide ou absent, la requête continue sans authentification.
  */
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JwtToken jwtToken;
+    private final JwtToken jwtToken;
 
     /**
      * Traite chaque requête HTTP entrante pour en extraire et valider le token JWT.
@@ -91,6 +93,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         );
                 SecurityContextHolder.getContext().setAuthentication(auth);
             } catch (Exception e) {
+                log.debug("JWT token invalide ou expiré : {}", e.getMessage());
                 SecurityContextHolder.clearContext();
             }
         }

@@ -34,4 +34,6 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     List<Category> findByCategoryType(CategoryType categoryType);
 
+    Optional<Category> findById(Long categoryId);
+
 }

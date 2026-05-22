@@ -6,6 +6,7 @@ import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Event;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.CategoryType;
+import fr.horizon.backend_api.model.enums.RoleEnum;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.EventRepository;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
@@ -49,7 +50,7 @@ public class EventService {
 
         if (category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE) {
             boolean hasTeacherRole = user.getRoles().stream()
-                    .anyMatch(r -> "TEACHER".equals(r.getName()) || "ADMIN".equals(r.getName()));
+                    .anyMatch(r -> RoleEnum.TEACHER.value().equals(r.getName()) || RoleEnum.ADMIN.value().equals(r.getName()));
             if (!hasTeacherRole) {
                 throw new AccessDeniedException("Seuls les enseignants peuvent créer des événements de type " + category.getCategoryType());
             }
