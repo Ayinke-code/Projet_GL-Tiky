@@ -90,8 +90,7 @@ class IssueServiceTest {
         // Vérification des appels
         verify(issueRepository).save(any(Issue.class));
         verify(conversationService).createConversationForIssue(any(Issue.class));
-        // Si ta méthode createRequestManager appelle un save sur le repo, tu peux aussi le vérifier :
-        // verify(requestManagerRepository).save(any(RequestManager.class));
+        verify(requestManagerRepository).save(any(RequestManager.class));
     }
 
     @Test
@@ -117,7 +116,7 @@ class IssueServiceTest {
         // Action
         issueService.createIssue(dto, "john@test.com");
 
-        // Assertions via capture d'argument pour vérifier que le statut est bien INCOMPLET
+        // Assertions pour vérifier que le statut est bien INCOMPLET
         org.mockito.ArgumentCaptor<Issue> issueCaptor = org.mockito.ArgumentCaptor.forClass(Issue.class);
         verify(issueRepository).save(issueCaptor.capture());
         Issue savedIssue = issueCaptor.getValue();
@@ -125,8 +124,7 @@ class IssueServiceTest {
         assertEquals(IssueStatus.INCOMPLET, savedIssue.getStatus());
 
         verify(conversationService).createConversationForIssue(any(Issue.class));
-        // On s'assure que le manager n'est PAS créé (si createRequestManager utilise le repo)
-        // verify(requestManagerRepository, never()).save(any());
+        verify(requestManagerRepository, never()).save(any());
     }
 
     @Test
