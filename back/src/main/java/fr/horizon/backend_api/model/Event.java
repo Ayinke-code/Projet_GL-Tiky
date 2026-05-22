@@ -13,7 +13,7 @@ import lombok.*;
 public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id_evt;
+    private Long id;
     private String title;
     @JsonProperty("start") // Sera envoyé comme "start" au front
     private LocalDateTime start_date;
