@@ -29,6 +29,7 @@ const socket = ref(null)
 const showFollowModal = ref(false)
 const alreadyFollowing = ref(false)
 const followSuccess = ref(false)
+const isUnfollowModalOpen = ref(false)
 
 /**
  * Callback après suivi réussi
@@ -295,7 +296,7 @@ const handleUnfollow = async () => {
           </button>
           <button
             v-else
-            @click="handleUnfollow"
+            @click="isUnfollowModalOpen = true"
             class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-300 text-red-600 bg-white hover:bg-red-50 text-sm font-medium transition-colors cursor-pointer transition-transform duration-200 hover:scale-105">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

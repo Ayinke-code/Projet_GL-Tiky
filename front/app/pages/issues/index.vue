@@ -55,8 +55,19 @@
     </div>
 
     <!-- Modal de suppression d'issue -->
-    <ConfirmModal v-model:open="isDeleteValidateModalOpen" title="Suppression"
-        :description="`Voulez-vous vraiment supprimer l'issue : ${deletingIssue?.title}`" @confirm="handleDelete" />
+    <ConfirmModal
+      v-model:open="isDeleteValidateModalOpen"
+      title="Suppression"
+      :description="`Voulez-vous vraiment supprimer l'issue : ${deletingIssue?.title}`"
+      @confirm="handleDelete"
+    />
+
+    <ConfirmModal
+      v-model:open="isUnfollowModalOpen"
+      title="Ne plus suivre"
+      description="Voulez-vous vraiment ne plus suivre cette issue ?"
+      @confirm="handleUnfollow"
+    />
 </template>
 
 <script setup lang="js">

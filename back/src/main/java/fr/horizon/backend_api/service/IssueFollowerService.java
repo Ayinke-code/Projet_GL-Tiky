@@ -6,11 +6,13 @@ import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.FollowedReason;
 import fr.horizon.backend_api.repository.IssueFollowerRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
+import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
 
 /**
@@ -24,12 +26,13 @@ public class IssueFollowerService {
 
     private final IssueFollowerRepository issueFollowerRepository;
     private final IssueRepository issueRepository;
+    private final UserRepository userRepository;
 
     /**
      * Abonne un utilisateur à une issue avec une raison.
      *
      * @param issueId identifiant de l'issue à suivre
-     * @param raison  raison du suivi (INTERESTED, ABLE_TO_HELP, IMPACTED)
+     * @param reason  raison du suivi (INTERESTED, ABLE_TO_HELP, IMPACTED)
      * @param user    utilisateur qui souhaite suivre l'issue
      * @return l'abonnement créé
      * @throws ResponseStatusException 404 si l'issue n'existe pas
@@ -88,5 +91,45 @@ public class IssueFollowerService {
                         HttpStatus.NOT_FOUND, "Abonnement non trouvé"));
 
         issueFollowerRepository.delete(follower);
+    }
+
+    /**
+     * Récupère un utilisateur par son email.
+     *
+     * @param email email de l'utilisateur
+     * @return l'utilisateur trouvé
+     * @throws ResponseStatusException 404 si l'utilisateur n'existe pas
+     */
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Utilisateur non trouvé"));
+    }
+
+    /**
+     * Retourne la liste des issues suivies par un utilisateur.
+     *
+     * @param user utilisateur dont on veut récupérer les issues suivies
+     * @return liste des issues suivies
+     */
+    public List<Issue> getFollowedIssues(User user) {
+        return issueFollowerRepository.findByUser(user)
+                .stream()
+                .map(IssueFollower::getIssue)
+                .toList();
+    }
+
+    /**
+     * Vérifie si un utilisateur suit une issue.
+     *
+     * @param issueId identifiant de l'issue
+     * @param user    utilisateur à vérifier
+     * @return true si l'utilisateur suit l'issue
+     */
+    public boolean isFollowing(Long issueId, User user) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Issue non trouvée"));
+        return issueFollowerRepository.existsByUserAndIssue(user, issue);
     }
 }

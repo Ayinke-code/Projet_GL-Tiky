@@ -2,11 +2,10 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.*;
 import fr.horizon.backend_api.service.IssueService;
+import fr.horizon.backend_api.service.IssueFollowerService;
 import jakarta.persistence.EntityNotFoundException;
-import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.IssueFollower;
-import fr.horizon.backend_api.service.IssueFollowerService;
 import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,7 +19,7 @@ import java.util.List;
 /**
  * Contrôleur des issues.
  * Expose les endpoints REST permettant de gérer les issues :
- * récupération, création et suppression.
+ * récupération, création, suppression et suivi.
  *
  * @author Tiky Team
  * @version 1.0
@@ -30,12 +29,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class IssueController {
 
-    /**
-     * Service métier des issues.
-     */
+    /** Service métier des issues. */
     private final IssueService issueService;
-    private final UserRepository userRepository;
+    /** Service métier des abonnements aux issues. */
     private final IssueFollowerService issueFollowerService;
+    private final UserRepository userRepository;
+
     /**
      * Récupère toutes les issues.
      *
@@ -48,8 +47,9 @@ public class IssueController {
     }
 
     /**
-     * Récupère l'issue correspondant à l'id.
+     * Récupère l'issue correspondant à l'identifiant.
      *
+     * @param id identifiant de l'issue
      * @return l'issue sous forme de DTO
      */
     @PreAuthorize("isAuthenticated()")
@@ -224,26 +224,72 @@ public class IssueController {
 
 
 
+    /**
+     * Abonne l'utilisateur courant à une issue avec une raison.
+     *
+     * @param id     identifiant de l'issue à suivre
+     * @param reason raison du suivi (INTERESTED, ABLE_TO_HELP, IMPACTED)
+     * @param auth   contexte d'authentification Spring Security
+     * @return l'abonnement créé avec le statut 201
+     */
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/follow")
     public ResponseEntity<IssueFollower> followIssue(
             @PathVariable Long id,
             @RequestParam String reason,
             Authentication auth) {
-        String email = auth.getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
-        IssueFollower follower = issueFollowerService.followIssue(id, reason, user);
-        return ResponseEntity.status(HttpStatus.CREATED).body(follower);
+        User user = issueFollowerService.getUserByEmail(auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(issueFollowerService.followIssue(id, reason, user));
     }
 
+    /**
+     * Désabonne l'utilisateur courant d'une issue.
+     *
+     * @param id   identifiant de l'issue
+     * @param auth contexte d'authentification Spring Security
+     * @return réponse vide avec le statut 204
+     */
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}/follow")
-    public ResponseEntity<Void> unfollowIssue(@PathVariable Long id, Authentication auth) {
-        String email = auth.getName();
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+    public ResponseEntity<Void> unfollowIssue(
+            @PathVariable Long id,
+            Authentication auth) {
+        User user = issueFollowerService.getUserByEmail(auth.getName());
         issueFollowerService.unfollowIssue(id, user);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Récupère la liste des issues suivies par l'utilisateur courant.
+     *
+     * @param auth contexte d'authentification Spring Security
+     * @return liste des issues suivies sous forme de DTO
+     */
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/followed")
+    public ResponseEntity<List<IssueDto>> getFollowedIssues(Authentication auth) {
+        User user = issueFollowerService.getUserByEmail(auth.getName());
+        List<IssueDto> dtos = issueFollowerService.getFollowedIssues(user)
+                .stream()
+                .map(issueService::toDto)
+                .toList();
+        return ResponseEntity.ok(dtos);
+    }
+
+    /**
+     * Vérifie si l'utilisateur courant suit une issue.
+     *
+     * @param id   identifiant de l'issue
+     * @param auth contexte d'authentification Spring Security
+     * @return true si l'utilisateur suit l'issue, false sinon
+     */
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/{id}/follow/status")
+    public ResponseEntity<Boolean> isFollowing(
+            @PathVariable Long id,
+            Authentication auth) {
+        User user = issueFollowerService.getUserByEmail(auth.getName());
+        return ResponseEntity.ok(issueFollowerService.isFollowing(id, user));
     }
 }
