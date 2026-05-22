@@ -4,78 +4,86 @@
       <template #header>
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-semibold">Gérer mes affectations</h2>
-          <UBadge color="orange" variant="soft" size="sm">{{ totalAlerts }} en attente</UBadge>        </div>
+          <UBadge color="orange" variant="soft" size="sm">{{ totalAlerts }} en attente</UBadge>
+        </div>
       </template>
 
-      <div v-if="alerts.length > 0" class="space-y-4">
-        <div v-for="req in alerts" :key="req.id" class="flex items-center justify-between p-4 border rounded-xl bg-gray-50/50">
-          <!-- Infos -->
-          <div class="flex flex-col w-1/3">
-            <span class="font-bold text-gray-900">{{ req.issueTitle }}</span>
-            <div class="mt-1 flex flex-col space-y-0.5">
-              <span class="text-xs font-semibold text-primary-600 uppercase tracking-wide">
-                Par : {{ req.creator }}
-              </span>
-              <span class="text-[10px] text-gray-500 uppercase">
-                Le {{ formatDate(req.creationDate) }}
-              </span>
+      <!-- Si on a au moins 1 alerte, on affiche le bloc principal -->
+      <div v-if="alerts.length > 0">
+        <div class="space-y-4">
+          <div v-for="req in alerts" :key="req.id" class="flex items-center justify-between p-4 border rounded-xl bg-gray-50/50">
+            <!-- Infos -->
+            <div class="flex flex-col w-1/3">
+              <span class="font-bold text-gray-900">{{ req.issueTitle }}</span>
+              <div class="mt-1 flex flex-col space-y-0.5">
+                <span class="text-xs font-semibold text-primary-600 uppercase tracking-wide">
+                  Par : {{ req.creator }}
+                </span>
+                <span class="text-[10px] text-gray-500 uppercase">
+                  Le {{ formatDate(req.creationDate) }}
+                </span>
+              </div>
             </div>
-          </div>
 
-          <!-- Bouton voir : centré dans la card -->
-          <div class="flex justify-center w-1/3">
-            <UButton
-              label="Voir le détail"
-              icon="i-heroicons-eye"
-              color="neutral"
-              variant="outline"
-              size="lg"
-              @click="openDetail(req)"
-            />
-          </div>
-
-          <!-- Actions : droite -->
-          <div class="flex items-center justify-end gap-3 w-1/3">
-            <USelectMenu
-              v-model="selectedTeachers[req.id]"
-              :items="formattedTeachers"
-              placeholder="Assigner à..."
-              value-key="value"
-              label-key="label"
-              class="w-56">
-              <template #option="{ option }">
-                <div class="flex items-center gap-2">
-                  <UIcon v-if="option.isFollower" name="i-heroicons-star" class="text-primary-500 w-4 h-4" />
-                  <span :class="{'font-medium': option.isFollower, 'text-gray-600': !option.isFollower}">
-                    {{ option.label }}
-                  </span>
-                </div>
-              </template>
-            </USelectMenu>
-
-            <div class="flex flex-col gap-1.5">
+            <!-- Bouton voir : centré dans la card -->
+            <div class="flex justify-center w-1/3">
               <UButton
-                label="Assigner"
-                icon="i-heroicons-paper-airplane"
-                :disabled="!selectedTeachers[req.id] || loadingIds.has(req.id)"
-                :loading="loadingIds.has(req.id)"
-                @click="openConfirm(req)"
+                label="Voir le détail"
+                icon="i-heroicons-eye"
+                color="neutral"
+                variant="outline"
+                size="lg"
+                @click="openDetail(req)"
               />
-              <UButton
-                label="Incomplet"
-                icon="i-heroicons-x-mark"
-                class="bg-red-600 hover:bg-red-700 text-white border-0"
-                :disabled="loadingIncompleteIds.has(req.id)"
-                :loading="loadingIncompleteIds.has(req.id)"
-                @click="openIncompleteConfirm(req)"
-              />
+            </div>
+
+            <!-- Actions : droite -->
+            <div class="flex items-center justify-end gap-3 w-1/3">
+              <USelectMenu
+                v-model="selectedTeachers[req.id]"
+                :items="formattedTeachers"
+                placeholder="Assigner à..."
+                value-key="value"
+                label-key="label"
+                class="w-56">
+                <template #option="{ option }">
+                  <div class="flex items-center gap-2">
+                    <UIcon v-if="option.isFollower" name="i-heroicons-star" class="text-primary-500 w-4 h-4" />
+                    <span :class="{'font-medium': option.isFollower, 'text-gray-600': !option.isFollower}">
+                      {{ option.label }}
+                    </span>
+                  </div>
+                </template>
+              </USelectMenu>
+
+              <div class="flex flex-col gap-1.5">
+                <UButton
+                  label="Assigner"
+                  icon="i-heroicons-paper-airplane"
+                  :disabled="!selectedTeachers[req.id] || loadingIds.has(req.id)"
+                  :loading="loadingIds.has(req.id)"
+                  @click="openConfirm(req)"
+                />
+                <UButton
+                  label="Incomplet"
+                  icon="i-heroicons-x-mark"
+                  class="bg-red-600 hover:bg-red-700 text-white border-0"
+                  :disabled="loadingIncompleteIds.has(req.id)"
+                  :loading="loadingIncompleteIds.has(req.id)"
+                  @click="openIncompleteConfirm(req)"
+                />
+              </div>
             </div>
           </div>
         </div>
+
+        <!-- Si il y a plus de 5 demandes -->
+        <div v-if="totalAlerts > 5" class="text-center text-xs text-gray-400 italic mt-4">
+          {{ totalAlerts - 5 }} demande(s) supplémentaire(s) en attente de traitement.
+        </div>
       </div>
-      <div v-if="totalAlerts > 5" class="text-center text-xs text-gray-400 italic mt-2">
-        {{ totalAlerts - 5 }} demande(s) supplémentaire(s) en attente de traitement.
-      </div>
+
+      <!-- Sinon, message vide -->
       <div v-else class="text-center py-8 text-gray-400 italic bg-gray-50/30 rounded-lg border border-dashed mt-4">
         Aucune demande d'affectation à compléter.
       </div>
@@ -293,9 +301,9 @@ const confirmAssignation = async () => {
   isConfirmOpen.value = false
   loadingIds.value = new Set(loadingIds.value).add(req.id)
   try {
-    // L'API attend l'ID de l'issue, donc on passe req.issueId
     await assignTeacher(req.issueId, teacherId)
     await loadData()
+    emit('issue-updated')
   } catch (e) {
     console.error("Erreur d'assignation :", e)
   } finally {
