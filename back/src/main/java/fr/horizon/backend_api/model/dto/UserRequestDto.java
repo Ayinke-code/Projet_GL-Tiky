@@ -11,6 +11,8 @@ import lombok.NoArgsConstructor;
 
 import java.util.Set;
 
+import fr.horizon.backend_api.model.enums.TeacherType;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -29,4 +31,6 @@ public class UserRequestDto {
 
     @NotEmpty
     private Set<Long> roleIds;
+
+    private TeacherType teacherType;  // nullable, uniquement pour les teachers
 }

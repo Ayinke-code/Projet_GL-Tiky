@@ -48,8 +48,8 @@ class IssueServiceTest {
     @InjectMocks
     private IssueService issueService;
 
-    private String commentaire;
-    private String raison;
+    private final String commentaire = "commentaire";
+    private final String raison = "raison";
 
     @Test
     void createIssue_should_save_issue_when_valid() {
@@ -295,6 +295,16 @@ class IssueServiceTest {
     }
 
     @Test
+    void updateStatus_should_throw_when_issue_not_found() {
+
+        when(issueRepository.findById(99L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IssueNotFoundException.class,
+                () -> issueService.updateStatus("OUVERT", 99L));
+    }
+
+    @Test
     void updatePrivacy_should_toggle_privacy() {
 
         Issue issue = new Issue();
@@ -324,6 +334,16 @@ class IssueServiceTest {
 
         assertFalse(issue.isPrivate());
         verify(issueRepository).save(issue);
+    }
+
+    @Test
+    void updatePrivacy_should_throw_when_issue_not_found() {
+
+        when(issueRepository.findById(99L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IssueNotFoundException.class,
+                () -> issueService.updatePrivacy(99L));
     }
 
     @Test
@@ -429,9 +449,6 @@ class IssueServiceTest {
     }
 
     private User setupUser(){
-        Role teacherRole = new Role("TEACHER");
-        Role studentRole = new Role("STUDENT");
-
         User testUser = new User();
         testUser.setId(1L);
         testUser.setEmail("test@test.fr");

@@ -86,7 +86,7 @@ public class IssueService {
     public IssueDto createIssue(IssueCreateDto dto, String email) {
 
         User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Owner not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
 
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));
@@ -182,7 +182,7 @@ public class IssueService {
                 .orElseThrow(() -> new IssueNotFoundException(id));
 
         User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Owner not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
 
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));
@@ -275,9 +275,10 @@ public class IssueService {
         RequestManagerStatus initialStatus = RequestManagerStatus.PENDING;
 
         if (targetedUser.getId().equals(issue.getCategory().getOwner().getId())) {
-            initialStatus = RequestManagerStatus.ACCEPTED;
             issue.setManager(targetedUser);
             requestManager.setProcessingDate(LocalDateTime.now());
+            initialStatus = RequestManagerStatus.ACCEPTED;
+            issue.setStatus(IssueStatus.COMPLET);
         }
 
         requestManager.setTargetTeacher(targetedUser);
@@ -423,7 +424,7 @@ public class IssueService {
 
         return issues.stream()
                 .map(this::toDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
 
