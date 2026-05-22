@@ -3,6 +3,7 @@ package fr.horizon.backend_api.repository;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -30,6 +31,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findByOwner(User owner);
 
     List<Category> findByOwnerId(Long ownerId);
+
+    List<Category> findByCategoryType(CategoryType categoryType);
 
     Optional<Category> findById(Long categoryId);
 

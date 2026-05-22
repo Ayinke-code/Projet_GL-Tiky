@@ -2,6 +2,7 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.CategoryDetailsDto;
 import fr.horizon.backend_api.model.dto.CategoryDto;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.service.CategoryService;
 import fr.horizon.backend_api.service.JwtToken;
 import org.junit.jupiter.api.Test;
@@ -126,4 +127,56 @@ class CategoryControllerTest {
     }
 
 
+
+    @Test
+    void shouldGetCategoriesByType_audit() throws Exception {
+
+        CategoryDto audit = CategoryDto.builder()
+                .id(11L)
+                .name("Test")
+                .subject("Audit Test")
+                .categoryType(CategoryType.AUDIT)
+                .build();
+
+        when(categoryService.findByCategoryType(CategoryType.AUDIT)).thenReturn(List.of(audit));
+
+        mockMvc.perform(get("/categories/type/AUDIT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Test"))
+                .andExpect(jsonPath("$[0].subject").value("Audit Test"))
+                .andExpect(jsonPath("$[0].categoryType").value("AUDIT"));
+
+        verify(categoryService).findByCategoryType(CategoryType.AUDIT);
+    }
+
+    @Test
+    void shouldGetCategoriesByType_defense() throws Exception {
+
+        CategoryDto defense = CategoryDto.builder()
+                .id(20L)
+                .name("PFE")
+                .subject("Projet Fin Études")
+                .categoryType(CategoryType.DEFENSE)
+                .build();
+
+        when(categoryService.findByCategoryType(CategoryType.DEFENSE)).thenReturn(List.of(defense));
+
+        mockMvc.perform(get("/categories/type/DEFENSE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("PFE"))
+                .andExpect(jsonPath("$[0].categoryType").value("DEFENSE"));
+
+        verify(categoryService).findByCategoryType(CategoryType.DEFENSE);
+    }
+
+    @Test
+    void shouldGetCategoriesByType_returnsEmpty() throws Exception {
+
+        when(categoryService.findByCategoryType(CategoryType.AUDIT)).thenReturn(List.of());
+
+        mockMvc.perform(get("/categories/type/AUDIT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
 }

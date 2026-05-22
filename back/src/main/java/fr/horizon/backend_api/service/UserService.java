@@ -76,6 +76,7 @@ public class UserService {
                 .email(dto.getEmail())
                 .password(passwordEncoder.encode(dto.getPassword()))
                 .roles(roles)
+                .teacherType(dto.getTeacherType())
                 .build();
 
         userRepository.save(user);
@@ -128,7 +129,7 @@ public class UserService {
      */
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
     }
 
     /**
@@ -173,6 +174,7 @@ public class UserService {
                                 .collect(Collectors.toSet())
                 )
                 .isContributor(hasOpenIssues)
+                .teacherType(user.getTeacherType())
                 .wsToken(wsToken)
                 .build();
     }

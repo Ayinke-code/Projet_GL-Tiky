@@ -114,7 +114,7 @@ import { ROLE } from '~/utils/roles'
  */
 const {
     categories,
-    fetchCategories,
+    fetchCategoriesByType,
     createCategory,
     deleteCategory,
     error: categoriesError
@@ -164,7 +164,7 @@ const isDetailOpen = ref(false)
  * Chargement initial des catégories au montage de la page.
  */
 onMounted(async () => {
-    await fetchCategories()
+    await fetchCategoriesByType('ISSUE')
     await fetchCategoryRequests()
 })
 
@@ -200,7 +200,7 @@ const handleCreate = async (data) => {
 
     if (!res) return
 
-    await fetchCategories()
+    await fetchCategoriesByType('ISSUE')
     isCreateModalOpen.value = false
 }
 
@@ -223,7 +223,7 @@ const handleDelete = async (id) => {
     selectedCat.value = null
 
     // refresh liste
-    await fetchCategories();
+    await fetchCategoriesByType('ISSUE');
 }
 
 /**
@@ -258,7 +258,7 @@ const handleAcceptCategoryRequest = async (data) => {
     const res = await acceptCategoryRequest(data.id)
     if (!res) return
 
-    await fetchCategories()
+    await fetchCategoriesByType('ISSUE')
     await fetchCategoryRequests()
 }
 </script>
