@@ -116,6 +116,7 @@
               v-model="form.endDate"
               type="datetime-local"
               :min="form.startDate"
+              :max="endDateMax"
               class="w-full px-4 py-2 border rounded-lg text-sm outline-none
                      focus:ring-2 focus:ring-indigo-500"
               :class="dateError ? 'border-red-400' : 'border-gray-300'"
@@ -158,7 +159,7 @@
 definePageMeta({ ssr: false })
 
 import Alert from '~/components/ui/Alert.vue'
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -176,6 +177,19 @@ const submitError       = ref(null)
 const dateError         = ref(null)
 
 const form = ref({ name: '', description: '', categoryId: '', startDate: '', endDate: '' })
+
+// Force la date de fin sur le même jour que la date de début
+const endDateMax = computed(() => {
+  if (!form.value.startDate) return ''
+  return form.value.startDate.split('T')[0] + 'T23:59'
+})
+
+watch(() => form.value.startDate, (newStart) => {
+  if (!newStart) return
+  const datePart = newStart.split('T')[0]
+  const timePart = form.value.endDate?.split('T')[1] ?? ''
+  form.value.endDate = timePart ? `${datePart}T${timePart}` : ''
+})
 
 onMounted(async () => {
   try {
