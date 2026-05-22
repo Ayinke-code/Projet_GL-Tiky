@@ -36,5 +36,9 @@ public class Message extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "id_convs", nullable = false)
     private Conversation conversation;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_msg_parent")
+    private Message replyTo;
 }
 

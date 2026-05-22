@@ -23,6 +23,8 @@ public final class MapKeys {
     public static final String MESSAGE = "message";
     public static final String CONTENT = "content";
     public static final String CREATED_AT = "createdAt";
+    public static final String REPLY_TO_MESSAGE_ID = "replyToMessageId";
+    public static final String REPLY_TO_MESSAGE = "replyToMessage";
 
     public static final String CONVERSATION = "conversation";
     public static final String CONVERSATION_ROLE = "conversationRole";

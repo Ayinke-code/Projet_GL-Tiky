@@ -1,6 +1,30 @@
 <template>
   <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-    <label class="mb-2 block text-sm font-medium text-gray-700">Ajouter un commentaire ou une réponse</label>
+    <label class="mb-2 block text-sm font-medium text-gray-700">
+      Ajouter un commentaire ou une réponse
+    </label>
+    <div
+      v-if="replyingTo"
+      class="mb-3 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-700"
+    >
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="font-semibold">
+            Réponse à {{ replyingTo.auteur }}
+          </p>
+          <p class="mt-1 line-clamp-2 whitespace-pre-line text-indigo-600">
+            {{ replyingTo.contenu }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="text-indigo-500 hover:text-indigo-800"
+          @click="emit('cancel-reply')"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
     <textarea
       v-model="value"
       rows="4"
@@ -32,20 +56,21 @@ defineOptions({ inheritAttrs: false })
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
-  sending: { type: Boolean, default: false }
+  sending: { type: Boolean, default: false },
+  replyingTo: { type: Object, default: null }
 })
 
 const emit = defineEmits([
   'update:modelValue',
-  'send'
+  'send',
+  'cancel-reply'
 ])
 
 const value = computed({
   get: () => props.modelValue,
-  set: (val) => emit('update:modelValue', val)
+  set: val => emit('update:modelValue', val)
 })
 
 const emitSend = () => emit('send')
 </script>
-
 
