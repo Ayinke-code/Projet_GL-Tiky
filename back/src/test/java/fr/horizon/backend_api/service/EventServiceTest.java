@@ -112,18 +112,25 @@ class EventServiceTest {
         category.setName("PFE");
         category.setCategoryType(CategoryType.DEFENSE);
 
+        LocalDateTime defenseStart = LocalDateTime.of(2026, 7, 1, 14, 0);
+        LocalDateTime defenseEnd   = LocalDateTime.of(2026, 7, 1, 16, 0);
+
         EventRequestDto request = new EventRequestDto();
         request.setCategoryId(20L);
         request.setName("Soutenance PFE - Groupe A");
-        request.setDescription("Présentation du projet de fin d’études");
+        request.setDescription("Présentation du projet de fin d'études");
+        request.setStartDate(defenseStart);
+        request.setEndDate(defenseEnd);
 
         Event saved = Event.builder()
                 .id(2L)
                 .name("Soutenance PFE - Groupe A")
-                .description("Présentation du projet de fin d’études")
+                .description("Présentation du projet de fin d'études")
                 .categoryType(CategoryType.DEFENSE)
                 .category(category)
                 .createdBy(admin)
+                .startDate(defenseStart)
+                .endDate(defenseEnd)
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -413,6 +420,115 @@ class EventServiceTest {
 
         when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
         when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> eventService.create(request, "teacher@teacher.fr"));
+
+        verify(eventRepository, never()).save(any());
+    }
+
+    // =============================================
+    // create() — validation des dates (DEFENSE)
+    // =============================================
+
+    @Test
+    void create_should_save_defense_when_endDate_is_after_startDate() {
+
+        Role teacherRole = new Role("TEACHER");
+
+        User teacher = new User();
+        teacher.setId(1L);
+        teacher.setName("Sophie ROUSSEAU");
+        teacher.setEmail("teacher@teacher.fr");
+        teacher.setRoles(Set.of(teacherRole));
+
+        Category category = new Category();
+        category.setId(20L);
+        category.setName("PFE");
+        category.setCategoryType(CategoryType.DEFENSE);
+
+        LocalDateTime start = LocalDateTime.of(2026, 7, 15, 10, 0);
+        LocalDateTime end   = LocalDateTime.of(2026, 7, 15, 12, 0);
+
+        EventRequestDto request = new EventRequestDto();
+        request.setCategoryId(20L);
+        request.setName("Soutenance PFE - Groupe B");
+        request.setStartDate(start);
+        request.setEndDate(end);
+
+        Event saved = Event.builder()
+                .id(6L)
+                .name("Soutenance PFE - Groupe B")
+                .categoryType(CategoryType.DEFENSE)
+                .category(category)
+                .createdBy(teacher)
+                .startDate(start)
+                .endDate(end)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
+        when(categoryRepository.findById(20L)).thenReturn(Optional.of(category));
+        when(eventRepository.save(any(Event.class))).thenReturn(saved);
+
+        EventResponseDto result = eventService.create(request, "teacher@teacher.fr");
+
+        assertNotNull(result);
+        assertEquals(start, result.getStartDate());
+        assertEquals(end, result.getEndDate());
+        verify(eventRepository).save(any(Event.class));
+    }
+
+    @Test
+    void create_should_throw_IllegalArgumentException_when_endDate_not_after_startDate_for_defense() {
+
+        Role teacherRole = new Role("TEACHER");
+
+        User teacher = new User();
+        teacher.setId(1L);
+        teacher.setEmail("teacher@teacher.fr");
+        teacher.setRoles(Set.of(teacherRole));
+
+        Category category = new Category();
+        category.setId(20L);
+        category.setCategoryType(CategoryType.DEFENSE);
+
+        EventRequestDto request = new EventRequestDto();
+        request.setCategoryId(20L);
+        request.setName("Soutenance invalide");
+        request.setStartDate(LocalDateTime.of(2026, 7, 15, 12, 0));
+        request.setEndDate(LocalDateTime.of(2026, 7, 15, 10, 0)); // fin avant début
+
+        when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
+        when(categoryRepository.findById(20L)).thenReturn(Optional.of(category));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> eventService.create(request, "teacher@teacher.fr"));
+
+        verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    void create_should_throw_IllegalArgumentException_when_dates_missing_for_defense() {
+
+        Role teacherRole = new Role("TEACHER");
+
+        User teacher = new User();
+        teacher.setId(1L);
+        teacher.setEmail("teacher@teacher.fr");
+        teacher.setRoles(Set.of(teacherRole));
+
+        Category category = new Category();
+        category.setId(20L);
+        category.setCategoryType(CategoryType.DEFENSE);
+
+        EventRequestDto request = new EventRequestDto();
+        request.setCategoryId(20L);
+        request.setName("Soutenance sans dates");
+        // startDate et endDate non renseignées
+
+        when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
+        when(categoryRepository.findById(20L)).thenReturn(Optional.of(category));
 
         assertThrows(IllegalArgumentException.class,
                 () -> eventService.create(request, "teacher@teacher.fr"));

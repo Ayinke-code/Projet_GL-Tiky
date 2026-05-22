@@ -56,9 +56,9 @@ public class EventService {
             }
         }
 
-        if (category.getCategoryType() == CategoryType.AUDIT) {
+        if (category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE) {
             if (request.getStartDate() == null || request.getEndDate() == null) {
-                throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires pour un audit.");
+                throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires pour un événement de ce type.");
             }
             if (!request.getEndDate().isAfter(request.getStartDate())) {
                 throw new IllegalArgumentException("La date de fin doit être postérieure à la date de début.");

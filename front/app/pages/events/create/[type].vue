@@ -94,8 +94,8 @@
           </select>
         </div>
 
-        <!-- Plage de dates — obligatoire pour les Audits -->
-        <div v-if="isAudit" class="grid grid-cols-2 gap-4">
+        <!-- Plage de dates — obligatoire pour les Audits et Soutenances -->
+        <div v-if="requiresDates" class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-xs font-medium text-gray-700 mb-1">
               Date de début <span class="text-red-500">*</span>
@@ -166,6 +166,7 @@ const { fetchCategoriesByType, createEvent } = useEvents()
 
 const type = route.params.type // 'AUDIT' ou 'DEFENSE'
 const isAudit = computed(() => type === 'AUDIT')
+const requiresDates = computed(() => type === 'AUDIT' || type === 'DEFENSE')
 
 const categories        = ref([])
 const loadingCategories = ref(true)
@@ -190,9 +191,9 @@ const handleSubmit = async () => {
   submitError.value = null
   dateError.value   = null
 
-  if (isAudit.value) {
+  if (requiresDates.value) {
     if (!form.value.startDate || !form.value.endDate) {
-      dateError.value = 'Les dates de début et de fin sont obligatoires pour un audit.'
+      dateError.value = 'Les dates de début et de fin sont obligatoires.'
       return
     }
     if (new Date(form.value.endDate) <= new Date(form.value.startDate)) {
@@ -207,7 +208,7 @@ const handleSubmit = async () => {
       name:        form.value.name,
       description: form.value.description,
       categoryId:  form.value.categoryId,
-      ...(isAudit.value && {
+      ...(requiresDates.value && {
         startDate: form.value.startDate,
         endDate:   form.value.endDate
       })
