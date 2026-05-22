@@ -48,8 +48,8 @@ class IssueServiceTest {
     @InjectMocks
     private IssueService issueService;
 
-    private String commentaire;
-    private String raison;
+    private final String commentaire = "commentaire";
+    private final String raison = "raison";
 
     @Test
     void createIssue_should_save_issue_when_valid() {
@@ -449,9 +449,6 @@ class IssueServiceTest {
     }
 
     private User setupUser(){
-        Role teacherRole = new Role("TEACHER");
-        Role studentRole = new Role("STUDENT");
-
         User testUser = new User();
         testUser.setId(1L);
         testUser.setEmail("test@test.fr");
