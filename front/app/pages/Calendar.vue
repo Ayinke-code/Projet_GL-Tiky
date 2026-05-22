@@ -65,7 +65,7 @@ const mappedEvents = computed(() => {
         };
 
         return {
-            id: String(evt.id_evt),
+            id: String(evt.id),
             title: evt.title,
             start: formatPath(evt.start),
             end: formatPath(evt.end),
