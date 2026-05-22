@@ -99,7 +99,8 @@ class IssueControllerTest {
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                    {
+
+                                {
                       "title": "Bug",
                       "description": "Something is broken",
                       "categoryId": 1
@@ -163,8 +164,9 @@ class IssueControllerTest {
     @Test
     void shouldFollowIssue() throws Exception {
         IssueFollower follower = new IssueFollower();
+        User mockUser = new User();
 
-        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(new User()));
+        when(issueFollowerService.getUserByEmail(anyString())).thenReturn(mockUser);
         when(issueFollowerService.followIssue(anyLong(), anyString(), any(User.class)))
                 .thenReturn(follower);
         when(authentication.getName()).thenReturn("user@test.com");
@@ -179,7 +181,10 @@ class IssueControllerTest {
 
     @Test
     void shouldReturn409WhenAlreadyFollowing() throws Exception {
-        when(userRepository.findByEmail(anyString())).thenReturn(Optional.of(new User()));
+        User mockUser = new User();
+
+        // CORRECTION ICI AUSSI
+        when(issueFollowerService.getUserByEmail(anyString())).thenReturn(mockUser);
         when(issueFollowerService.followIssue(anyLong(), anyString(), any(User.class)))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Vous suivez déjà cette issue"));
         when(authentication.getName()).thenReturn("user@test.com");
