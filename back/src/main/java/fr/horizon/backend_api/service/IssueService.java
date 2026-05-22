@@ -85,8 +85,6 @@ public class IssueService {
      */
     @Transactional
     public IssueDto createIssue(IssueCreateDto dto, String email) {
-        System.out.println("isPending reçu : " + dto.isPendingCase()); // debug
-
 
         User owner = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
