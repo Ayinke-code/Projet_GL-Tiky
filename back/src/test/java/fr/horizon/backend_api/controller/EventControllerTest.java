@@ -41,9 +41,6 @@ class EventControllerTest {
     @MockitoBean
     private Authentication authentication;
 
-    // =============================================
-    // POST /events
-    // =============================================
 
     @Test
     void shouldCreateEvent_returns201() throws Exception {
@@ -113,9 +110,6 @@ class EventControllerTest {
                 .andExpect(jsonPath("$.createdBy").value("Richard WOODWARD"));
     }
 
-    // =============================================
-    // GET /events/type/{type}
-    // =============================================
 
     @Test
     void shouldListAuditEvents_returns200() throws Exception {

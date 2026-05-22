@@ -78,7 +78,7 @@ public class EventService {
         return eventRepository.findByCategoryTypeOrderByCreatedAtDesc(type)
                 .stream()
                 .map(this::mapToResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**

@@ -128,10 +128,6 @@ class CategoryControllerTest {
 
 
 
-    // =============================================
-    // GET /categories/type/{type}
-    // =============================================
-
     @Test
     void shouldGetCategoriesByType_audit() throws Exception {
 

@@ -3,7 +3,6 @@ package fr.horizon.backend_api.controller;
 import fr.horizon.backend_api.model.dto.EventRequestDto;
 import fr.horizon.backend_api.model.dto.EventResponseDto;
 import fr.horizon.backend_api.model.enums.CategoryType;
-import fr.horizon.backend_api.model.enums.TeacherType;
 import fr.horizon.backend_api.service.EventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
