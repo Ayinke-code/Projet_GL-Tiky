@@ -15,15 +15,16 @@
 
     <!-- État vide : Aucune issue incomplète -->
     <div v-else-if="issues.length === 0" class="text-center py-8 text-gray-500 italic bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
-      Vous n'avez aucune demande nécessitant des corrections.
+      Vous n'avez aucune demande nécessitant des corrections ou en attente.
     </div>
 
-    <!-- Liste des issues incomplètes -->
+    <!-- Liste des issues incomplètes (Limitée) -->
     <div v-else class="space-y-4">
       <UCard
-        v-for="issue in issues"
+        v-for="issue in displayedIssues"
         :key="issue.id"
-        class="border-orange-200 ring-orange-500/10 shadow-sm"
+        class="shadow-sm"
+        :class="issue.rejectReason ? 'border-orange-200 ring-orange-500/10' : 'border-blue-200 ring-blue-500/10'"
       >
         <template #header>
           <div class="flex items-center justify-between">
@@ -33,8 +34,9 @@
         </template>
 
         <div class="space-y-4">
-          <!-- Bloc de retour du professeur (Raison + Commentaire) -->
+          <!-- Cas 1 : Retour du superviseur (Raison + Commentaire présents) -->
           <UAlert
+            v-if="issue.rejectReason"
             icon="i-heroicons-exclamation-triangle"
             color="orange"
             variant="soft"
@@ -42,9 +44,18 @@
             :description="issue.rejectComment"
           />
 
+          <!-- Cas 2 : Mis en attente à la création (Pas de raison de refus) -->
+          <UAlert
+            v-else
+            icon="i-heroicons-clock"
+            color="blue"
+            variant="soft"
+            title="Brouillon"
+          />
+
           <!-- Aperçu de la description actuelle -->
           <div>
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Votre description initiale</p>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Votre description actuelle</p>
             <p class="text-sm text-gray-600 line-clamp-3 bg-gray-50 p-3 rounded border border-gray-100">
               {{ issue.description }}
             </p>
@@ -54,24 +65,38 @@
         <template #footer>
           <div class="flex justify-end">
             <UButton
-              label="Corriger la demande"
+              :label="issue.rejectReason ? 'Corriger la demande' : 'Finaliser la demande'"
               icon="i-heroicons-pencil-square"
-              color="primary"
+              :color="issue.rejectReason ? 'primary' : 'blue'"
               @click="openEditModal(issue)"
             />
           </div>
         </template>
       </UCard>
+
+      <!-- Indicateur d'éléments supplémentaires -->
+      <div v-if="remainingIssuesCount > 0" class="text-center pt-2">
+        <p class="text-sm text-gray-500 italic bg-gray-50 py-2 rounded-lg border border-gray-100">
+          Et {{ remainingIssuesCount }} autre(s) demande(s) en attente... Résolvez celles-ci pour voir les suivantes.
+        </p>
+      </div>
     </div>
 
-    <!-- Modale de correction -->
-    <UModal v-model:open="isModalOpen" title="Mettre à jour la demande">
+    <!-- Modale de correction / finalisation -->
+    <UModal v-model:open="isModalOpen" :title="editingIssue?.rejectReason ? 'Mettre à jour la demande' : 'Finaliser la demande'">
       <template #body>
         <div v-if="editingIssue" class="space-y-4">
-          <!-- Rappel de ce qu'il faut corriger -->
-          <div class="p-3 bg-orange-50 text-orange-800 rounded text-sm border border-orange-100 mb-4">
+
+          <!-- Cas 1 : Rappel de ce qu'il faut corriger (Superviseur) -->
+          <div v-if="editingIssue.rejectReason" class="p-3 bg-orange-50 text-orange-800 rounded text-sm border border-orange-100 mb-4">
             <span class="font-semibold block mb-1">À corriger : {{ editingIssue.rejectReason }}</span>
             <span class="text-orange-700">{{ editingIssue.rejectComment }}</span>
+          </div>
+
+          <!-- Cas 2 : Message informatif de finalisation (Créateur) -->
+          <div v-else class="p-3 bg-blue-50 text-blue-800 rounded text-sm border border-blue-100 mb-4">
+            <span class="font-semibold block mb-1">Ticket en attente</span>
+            <span class="text-blue-700">Mettez à jour les informations de votre ticket pour le soumettre définitivement aux superviseurs.</span>
           </div>
 
           <!-- Formulaire -->
@@ -107,7 +132,7 @@
           />
           <UButton
             color="primary"
-            label="Enregistrer et renvoyer"
+            label="Enregistrer et soumettre"
             icon="i-heroicons-paper-airplane"
             :loading="submitting"
             :disabled="!isFormValid"
@@ -120,6 +145,8 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+
 const emit = defineEmits(['has-issues', 'issue-updated'])
 
 const props = defineProps({
@@ -131,17 +158,29 @@ const props = defineProps({
 
 // Dépendances API
 const { getIncompleteIssues, updateIssueWhenIncomplete } = useAssignation()
-const { fetchCategories, categories } = useCategories() // Ajout de useCategories
+const { fetchCategories, categories } = useCategories()
 
 // États
 const issues = ref([])
 const loading = ref(true)
 
+// ---  LOGIQUE DE LIMITATION ---
+const MAX_DISPLAYED = 3
+
+// Calcule les 3 premières issues à afficher
+const displayedIssues = computed(() => {
+  return issues.value.slice(0, MAX_DISPLAYED)
+})
+
+// Calcule combien d'issues ne sont pas affichées
+const remainingIssuesCount = computed(() => {
+  return Math.max(0, issues.value.length - MAX_DISPLAYED)
+})
+
 // Gestion de la modale et de l'édition
 const isModalOpen = ref(false)
 const editingIssue = ref(null)
 const submitting = ref(false)
-
 
 const formData = ref({
   title: '',
@@ -174,9 +213,6 @@ const fetchIssues = async () => {
 
 // Ouvrir la modale et pré-remplir les champs
 const openEditModal = (issue) => {
-
-  console.log("Données de l'issue reçues du backend :", issue)
-
   editingIssue.value = issue
   formData.value = {
     title: issue.title,
@@ -204,7 +240,7 @@ const submitCorrections = async () => {
     await updateIssueWhenIncomplete(editingIssue.value.id, formData.value)
 
     closeEditModal()
-    await fetchIssues()
+    await fetchIssues() // Rechargera la liste, et si on était à >3, le 4ème élément prendra la place du 3ème !
 
     emit('issue-updated')
   } catch (error) {
@@ -217,9 +253,7 @@ const submitCorrections = async () => {
 // Chargement des données au montage
 onMounted(async () => {
   if (props.userId) {
-    // On charge les catégories pour le menu déroulant
     await fetchCategories()
-    // On charge les issues incomplètes
     await fetchIssues()
   }
 })

@@ -9,6 +9,7 @@ import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.dto.RequestManagerDto;
+import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
@@ -94,13 +95,19 @@ public class IssueService {
                 .title(dto.getTitle())
                 .description(dto.getDescription())
                 .category(category)
+                .status(IssueStatus.OUVERT)
                 .createdBy(owner)
                 .build();
 
+        if(dto.isPendingCase()){
+            issue.setStatus(IssueStatus.INCOMPLET);
+        }
+
         issueRepository.save(issue);
 
-        createRequestManager(issue);
-
+        if (!dto.isPendingCase()) {
+            createRequestManager(issue);
+        }
 
         // Créer automatiquement une conversation pour cette issue
         conversationService.createConversationForIssue(issue);

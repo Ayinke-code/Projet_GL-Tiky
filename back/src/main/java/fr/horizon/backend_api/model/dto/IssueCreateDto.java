@@ -13,4 +13,5 @@ public class IssueCreateDto {
     private String title;
     private String description;
     private Long categoryId;
+    private boolean pendingCase;
 }
