@@ -1,6 +1,7 @@
 package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.UserDto;
+import fr.horizon.backend_api.model.dto.UserRefDto;
 import fr.horizon.backend_api.security.JwtAuthenticationFilter;
 import fr.horizon.backend_api.service.JwtToken;
 import fr.horizon.backend_api.service.UserService;
@@ -8,11 +9,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -86,8 +88,33 @@ class UserControllerTest {
     void shouldDeleteUser() throws Exception {
 
         mockMvc.perform(delete("/users/1"))
-                .andExpect(status().isOk()); // ou isNoContent()
+                .andExpect(status().isOk());
 
         verify(userService).deleteById(1L);
+    }
+
+    // ✅ AJOUT : test endpoint byRoles
+    @Test
+    void shouldGetUsersByRoles() throws Exception {
+
+        UserRefDto dto = UserRefDto.builder()
+                .id(1L)
+                .name("Teacher")
+                .roles(Set.of("TEACHER"))
+                .build();
+
+        when(userService.findAllByRoles(List.of("TEACHER")))
+                .thenReturn(List.of(dto));
+
+        mockMvc.perform(post("/users/byRoles")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            ["TEACHER"]
+                            """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Teacher"))
+                .andExpect(jsonPath("$[0].roles[0]").value("TEACHER"));
+
+        verify(userService).findAllByRoles(List.of("TEACHER"));
     }
 }

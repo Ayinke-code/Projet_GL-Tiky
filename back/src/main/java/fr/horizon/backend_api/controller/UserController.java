@@ -3,10 +3,13 @@ package fr.horizon.backend_api.controller;
 import java.util.List;
 
 import fr.horizon.backend_api.model.dto.UserDto;
+import fr.horizon.backend_api.model.dto.UserFollowerDto;
+import fr.horizon.backend_api.model.dto.UserRefDto;
 import fr.horizon.backend_api.model.dto.UserRequestDto;
 import fr.horizon.backend_api.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -33,6 +36,14 @@ public class UserController {
     }
 
     /**
+     * Récupère les utilisateurs filtrés par rôles.
+     */
+    @PostMapping("/byRoles")
+    public List<UserRefDto> getAllUsersByRole(@RequestBody List<String> roles) {
+        return userService.findAllByRoles(roles);
+    }
+
+    /**
      * Crée un nouvel utilisateur.
      *
      * @param dto données de création utilisateur
@@ -51,5 +62,16 @@ public class UserController {
     @DeleteMapping("/{id}")
     public void deleteUser(@PathVariable Long id){
         userService.deleteById(id);
+    }
+
+
+    /**
+     * Retourne la liste des teachers
+     *
+     * @return la liste des teachers en marquant qui est follower d'une catégorie avec le role de professeur
+     */
+    @GetMapping("/teachers/{categoryId}")
+    public ResponseEntity<List<UserFollowerDto>> getAllTeacherWithCategoryDetail(@PathVariable Long categoryId) {
+        return ResponseEntity.ok(userService.getAllTeachersWithCategoryDetail(categoryId));
     }
 }

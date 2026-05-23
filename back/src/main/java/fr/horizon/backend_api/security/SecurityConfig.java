@@ -15,6 +15,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import fr.horizon.backend_api.model.enums.RoleEnum;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -23,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    public final JwtAuthenticationFilter jwtAuthFilter;
+    private final JwtAuthenticationFilter jwtAuthFilter;
 
     @Value("#{'${cors.allowed-origins}'.split(',')}")
     private List<String> allowedOrigins;
@@ -42,11 +43,20 @@ public class SecurityConfig {
                         .requestMatchers("/auth/logout").authenticated()
                         .requestMatchers("/auth/me", "/categories/**").authenticated()
 
-                        .requestMatchers("/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers("/users/**").hasAuthority("ADMIN")
+                        .requestMatchers("/admin/**")
+                        .hasAuthority(RoleEnum.ADMIN.value())
 
-                        .requestMatchers("/teacher/**").hasAnyAuthority("TEACHER", "ADMIN")
-                        .requestMatchers("/student/**").hasAnyAuthority("STUDENT", "TEACHER", "ADMIN")
+                        .requestMatchers("/users/**")
+                        .hasAnyAuthority(RoleEnum.ADMIN.value(), RoleEnum.TEACHER.value())
+
+                        .requestMatchers("/teacher/**")
+                        .hasAnyAuthority(RoleEnum.TEACHER.value(), RoleEnum.ADMIN.value())
+
+                        .requestMatchers("/student/**")
+                        .hasAnyAuthority(
+                                RoleEnum.STUDENT.value(),
+                                RoleEnum.TEACHER.value(),
+                                RoleEnum.ADMIN.value())
 
                         .requestMatchers("/events/**").permitAll()
 

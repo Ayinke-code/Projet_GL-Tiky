@@ -1,19 +1,24 @@
 export const useCategories = () => {
   const api = useApi()
 
-    /**
-   * État global des catégories.
-   */
+  /**
+ * État global des catégories.
+ */
   const categories = useState('categories', () => [])
 
-    /**
-   * Utilisateur actuellement connecté.
-   */
+  /**
+ * Catégorie couramment sélectionnée / affichée
+ */
+  const category = useState('category', () => null)
+
+  /**
+ * Utilisateur actuellement connecté.
+ */
   const { user } = useAuth()
 
-    /**
-   * État global des erreurs liées aux catégories.
-   */
+  /**
+ * État global des erreurs liées aux catégories.
+ */
   const error = ref(null)
 
   /**
@@ -26,6 +31,55 @@ export const useCategories = () => {
     const data = await api('/categories')
     categories.value = data
     return data
+  }
+
+  /**
+   * Récupère les catégories filtrées par type (AUDIT, DEFENSE, ISSUE…).
+   *
+   * @param type type de catégorie
+   * @return liste des catégories correspondant au type
+   */
+  const fetchCategoriesByType = async (type) => {
+    const data = await api(`/categories/type/${type}`)
+    categories.value = data
+    return data
+  }
+
+  /**
+ * Récupère une catégorie par son ID
+ */
+  const fetchCategoryById = async (id) => {
+    const data = await api(`/categories/${id}`)
+    category.value = data
+    return data
+  }
+
+  /**
+ * Supprime un utilisateur des followers d'une catégorie
+ * et met à jour le state local
+ */
+  const deleteTeacherFollower = async (idUser, idCategory) => {
+    if (!idUser || !idCategory) return
+
+    await api(`/categories/followers/${idUser}/${idCategory}`, {
+      method: 'DELETE'
+    })
+
+    category.value.followers = category.value.followers.filter(u => u.id !== idUser)
+  }
+
+  /**
+ * Ajoute un utilisateur aux followers d'une catégorie
+ * et remplace la catégorie locale par la version mise à jour
+ */
+  const addTeacherFollower = async (idUser, idCategory) => {
+    if (!idUser || !idCategory) return
+
+    const res = await api(`/categories/followers/${idUser}/${idCategory}`, {
+      method: 'POST'
+    })
+    category.value = res
+    return res
   }
 
   /**
@@ -86,9 +140,14 @@ export const useCategories = () => {
 
   return {
     categories,
+    category,
     fetchCategories,
+    fetchCategoriesByType,
+    fetchCategoryById,
     createCategory,
     deleteCategory,
+    deleteTeacherFollower,
+    addTeacherFollower,
     error
   }
 }

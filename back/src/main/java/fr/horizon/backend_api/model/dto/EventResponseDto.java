@@ -1,13 +1,26 @@
 package fr.horizon.backend_api.model.dto;
 
+import fr.horizon.backend_api.model.enums.CategoryType;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
-public record EventResponseDto(
-    Long id,
-    String title,
-    LocalDateTime start,
-    LocalDateTime end,
-    String description,
-    String statut,
-    String color
-) {}
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class EventResponseDto {
+    private Long id;
+    private String name;
+    private String description;
+    private CategoryType categoryType;
+    private String categoryName;
+    private String createdBy;
+    private LocalDateTime createdAt;
+    private LocalDateTime start;
+    private LocalDateTime end;
+}

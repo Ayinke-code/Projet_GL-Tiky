@@ -4,6 +4,11 @@ import jakarta.persistence.*;
 import lombok.*;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 @Entity
 @Getter
 @Setter
@@ -33,9 +38,9 @@ public class Issue extends BaseEntity {
     private boolean isPrivate = false;
 
     private String rejectType;
-
+    @Column
     private String rejectReason;
-
+    @Column
     private String rejectComment;
 
     @ManyToOne
@@ -45,5 +50,20 @@ public class Issue extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User createdBy;
+
+    @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<Conversation> conversations = new HashSet<>();
+
+    @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<Message> messages = new HashSet<>();
+    @ManyToOne
+    @JoinColumn(name = "id_util_1")
+    private User manager;
+    
+    @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RequestManager> requests = new ArrayList<>();
+
 
 }

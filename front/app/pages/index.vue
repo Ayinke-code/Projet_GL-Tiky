@@ -1,6 +1,8 @@
-<template>
-</template>
-
 <script setup>
-const { user, fetchUser } = useAuth()
+definePageMeta({ ssr: false })
+navigateTo('/login', { replace: true })
 </script>
+
+<template>
+  <div></div>
+</template>

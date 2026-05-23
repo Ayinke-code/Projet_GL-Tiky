@@ -8,10 +8,31 @@ export const useAuth = () => {
     const user = useState('user', () => null)
 
     /**
+     * Token WebSocket pour la connexion temps réel
+     */
+    const wsToken = useState('wsToken', () => null)
+
+    /**
      * Indique si l'état d'authentification a été initialisé.
      * Devient true après l'appel à /auth/me.
      */
     const ready = useState('ready', () => false)
+
+    const setSession = (data) => {
+        user.value = data
+        if (data?.wsToken) {
+            wsToken.value = data.wsToken
+            if (process.client) localStorage.setItem('wsToken', data.wsToken)
+        }
+        ready.value = true
+    }
+
+    const clearSession = () => {
+        user.value = null
+        wsToken.value = null
+        if (process.client) localStorage.removeItem('wsToken')
+        ready.value = true
+    }
 
     /**
      * Authentifie un utilisateur via email et mot de passe.
@@ -37,8 +58,8 @@ export const useAuth = () => {
             await fetchUser()
             return true
         } catch (e) {
-            // Réinitialisation user en cas d’erreur
-            user.value = null
+            // Réinitialisation user en cas d'erreur
+            clearSession()
 
             // Erreur métier : identifiants invalides
             if (e?.response?.status === 401) {
@@ -63,13 +84,10 @@ export const useAuth = () => {
         try {
             const data = await api('/auth/me')
 
-            user.value = data
-            ready.value = true
+            setSession(data)
         } catch (e) {
             // Si token invalide ou expiré
-            user.value = null
-            // Marque la fin de l’initialisation (succès ou échec)
-            ready.value = true
+            clearSession()
             throw e
         }
     }
@@ -89,7 +107,7 @@ export const useAuth = () => {
             // Suppression de la session serveur
             await api('/auth/logout', { method: 'POST' })
             // Réinitialisation utilisateur local
-            user.value = null
+            clearSession()
 
             // Redirection vers login
             await navigateTo('/login')
@@ -98,5 +116,5 @@ export const useAuth = () => {
         }
     }
 
-    return { user, ready, login, fetchUser, logout }
+    return { user, wsToken, ready, login, fetchUser, logout }
 }

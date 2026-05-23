@@ -1,83 +1,68 @@
+/**
+ * Composable de gestion des événements.
+ *
+ * Fournit :
+ * - fetchCategoriesByType : récupère les catégories filtrées par type (AUDIT/DEFENSE)
+ *   → utilisé à l'étape 2 du formulaire de création
+ * - createEvent : POST /events — restreint TEACHER/ADMIN côté backend
+ * - fetchEventsByType : GET /events/type/{type} — alimente la liste selon l'onglet actif
+ */
 export const useEvents = () => {
   const api = useApi()
-
-    /**
-   * État global des catégories.
-   */
-  const events = useState('events', () => [])
-
-    /**
-   * Utilisateur actuellement connecté.
-   */
   const { user } = useAuth()
 
-    /**
-   * État global des erreurs liées aux catégories.
-   */
+  // État global partagé entre toutes les instances du composable
+  const events = useState('events', () => [])
   const error = ref(null)
 
   /**
-   * Récupère toutes les catégories depuis l'API.
+   * Récupère les catégories filtrées par type d'événement.
+   * Appelé quand l'utilisateur choisit AUDIT ou DEFENSE dans EventForms.
    *
-   * @return liste des catégories
-   * @throws erreur API si le chargement échoue
+   * @param type - 'AUDIT' | 'DEFENSE'
+   * @returns liste de CategoryDto avec eventType correspondant
    */
-  const fetchEvents = async () => {
-    const data = await api('/events')
-    events.value = data
-    return data
+  const fetchCategoriesByType = async (type) => {
+    return await api(`/categories/type/${type}`)
   }
 
   /**
-   * Crée une nouvelle catégorie.
+   * Crée un nouvel événement.
+   * Le backend dérive le eventType depuis la catégorie choisie.
+   * Lève une AccessDeniedException (403) si l'user n'est pas TEACHER/ADMIN.
    *
-   * @param payload données de création
-   * @param payload.name nom de la catégorie
-   * @param payload.subject sujet de la catégorie
-   *
-   * @return catégorie créée
-   *
-   * @throws redirection vers /login si utilisateur non connecté
-   * @throws met à jour `error` si erreur API
+   * @param payload - { name, description, categoryId }
    */
-  const createEvents = async (payload) => {
-
+  const createEvent = async (payload) => {
     error.value = null
-
+    if (!user?.value?.id) {
+      await navigateTo('/login')
+      return
+    }
     try {
-      const created = await api('/events', {
-        method: 'POST',
-        body: payload
-      })
-
-      // refresh local state
-      await fetchEvents()
-
-      return created
+      return await api('/events', { method: 'POST', body: payload })
     } catch (e) {
-      error.value = e?.data?.message || 'UNKNOWN_ERROR'
-      return null
+      error.value = e?.data?.message || 'CREATE_EVENT_ERROR'
+      throw e
     }
   }
 
   /**
-   * Supprime une catégorie.
+   * Récupère les événements par type et met à jour l'état global.
+   * Appelé au montage de la page et lors du changement d'onglet.
    *
-   * @param id identifiant de la catégorie
+   * @param type - 'AUDIT' | 'DEFENSE'
    */
-  const deleteEvents = async (id) => {
-    await api(`/events/${id}`, {
-      method: 'DELETE'
-    })
-
-    events.value = events.value.filter(c => c.id !== id)
+  const fetchEventsByType = async (type) => {
+    try {
+      const data = await api(`/events/type/${type}`)
+      events.value = data
+      return data
+    } catch (e) {
+      error.value = e?.data?.message || 'FETCH_EVENTS_ERROR'
+      return []
+    }
   }
 
-  return {
-    events,
-    fetchEvents,
-    createEvents,
-    deleteEvents,
-    error
-  }
+  return { events, error, fetchCategoriesByType, createEvent, fetchEventsByType }
 }
