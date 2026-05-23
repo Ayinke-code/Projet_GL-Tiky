@@ -3,6 +3,21 @@
     Bordure gauche colorée selon le type : indigo (AUDIT) ou emerald (DEFENSE).
     Même convention visuelle que CategoryCard.vue.
   -->
+  <div class="bg-white border-l-4 rounded-lg shadow-sm p-5 hover:shadow-lg transition-all" :class="{
+    'border-indigo-500': event.categoryType === 'AUDIT',
+    'border-emerald-500': event.categoryType === 'DEFENSE',
+    'border-amber-500': event.categoryType === 'RDV'
+  }">
+    <div class="flex justify-between items-start mb-2">
+      <div>
+        <!-- Type + nom de la catégorie -->
+        <p class="text-[10px] font-bold uppercase tracking-widest" :class="{
+          'text-indigo-600': event.categoryType === 'AUDIT',
+          'text-emerald-600': event.categoryType === 'DEFENSE',
+          'text-amber-600': event.categoryType === 'RDV'
+        }">
+          {{ getCategoryLabel }} · {{ event.categoryName }}
+        </p>
   <div class="bg-white border-l-4 rounded-lg shadow-sm p-5 hover:shadow-lg transition-all flex flex-col h-full"
     :class="event.categoryType === 'AUDIT' ? 'border-indigo-500' : 'border-emerald-500'">
 
@@ -21,12 +36,60 @@
         {{ event.description }}
       </p>
     </div>
+    <!-- Section Spécifique RDV : Professeur et/ou Issue -->
+    <div v-if="event.categoryType === 'RDV'" class="mt-3 space-y-2">
+      <!-- Professeur associé -->
+      <div v-if="event.associatedTeacher"
+        class="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 p-2 rounded border border-gray-100">
+        <i class="fa-solid fa-chalkboard-user text-amber-500 w-4"></i>
+        <span class="font-medium">Prof : {{ event.associatedTeacher }}</span>
+      </div>
 
-    <!-- Créateur -->
-    <div class="mt-3 text-xs text-gray-400">
-      <span><i class="fa-solid fa-user mr-1"></i>{{ event.createdBy }}</span>
+      <!-- Issue / Problématique associée -->
+      <div v-if="event.associatedIssue"
+        class="flex items-center gap-2 text-sm text-gray-700 bg-gray-50 p-2 rounded border border-gray-100">
+        <i class="fa-solid fa-circle-exclamation text-amber-500 w-4"></i>
+        <span class="italic">Sujet : {{ event.associatedIssue }}</span>
+      </div>
+
+      <!-- Créateur -->
+      <div class="mt-3 text-xs text-gray-400">
+        <span><i class="fa-solid fa-user mr-1"></i>{{ event.createdBy }}</span>
+      </div>
+
+      <!-- Plage de dates (même jour, heures différentes) -->
+      <<div v-if="event.startDate && event.endDate"
+     class="mt-3 rounded-lg px-3 py-2 text-xs"
+     :class="{
+       'bg-indigo-50 text-indigo-600': event.categoryType === 'AUDIT',
+       'bg-emerald-50 text-emerald-600': event.categoryType === 'DEFENSE',
+       'bg-amber-50 text-amber-600': event.categoryType === 'RDV'
+     }">
+     <!-- Date unique -->
+        <div class="flex items-center gap-1.5 font-semibold mb-2">
+          <i class="fa-solid fa-calendar-days text-[10px]"></i>
+          <span class="capitalize">{{ formatDate(event.startDate) }}</span>
+        </div>
+        <!-- Heures début / fin -->
+        <div class="grid grid-cols-2 gap-2">
+          <div class="flex flex-col gap-0.5">
+            <span class="uppercase tracking-wide text-[9px] opacity-60 font-semibold">Début</span>
+            <span class="flex items-center gap-1">
+              <i class="fa-solid fa-clock text-[10px]"></i>
+              {{ formatTime(event.startDate) }}
+            </span>
+          </div>
+          <div class="flex flex-col gap-0.5">
+            <span class="uppercase tracking-wide text-[9px] opacity-60 font-semibold">Fin</span>
+            <span class="flex items-center gap-1">
+              <i class="fa-regular fa-clock text-[10px]"></i>
+              {{ formatTime(event.endDate) }}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
-
+  </div> <!-- Fermeture du premier div -->
     <!-- Plage de dates (même jour, heures différentes) -->
     <div
       v-if="event.startDate && event.endDate"
@@ -118,6 +181,16 @@ import { formatDateTime, formatDate, formatTime } from '~/utils/helpers'
 
 defineProps({
   event: { type: Object, required: true }
+})
+
+// Définition du label selon le type
+const getCategoryLabel = computed(() => {
+  switch (props.event.categoryType) {
+    case 'AUDIT': return 'Audit'
+    case 'DEFENSE': return 'Soutenance'
+    case 'RDV': return 'Rendez-vous'
+    default: return 'Événement'
+  }
 })
 
 const emit = defineEmits(['delete'])

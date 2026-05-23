@@ -32,6 +32,17 @@
           <span class="text-xs text-gray-400 text-center">PFE, Sprint, Stage…</span>
         </button>
 
+        <!-- Card Rendez-vous -->
+        <button
+        @click="goToCreate('RDV')"
+          class="flex flex-col items-center gap-3 p-6 border-2 rounded-xl transition-all cursor-pointer 
+       border-amber-200 hover:border-amber-500 hover:bg-amber-50"
+        >
+          <i class="fa-solid fa-graduation-cap text-3xl text-violet-500"></i>
+          <span class="font-bold text-gray-800">Rendez-vous</span>
+          <span class="text-xs text-gray-400 text-center"> Rendez-vous lié à une Issue ou autres</span>
+        </button>
+
       </div>
     </div>
   </Modal>

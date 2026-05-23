@@ -12,14 +12,14 @@
       </button>
       <div class="flex items-center gap-3">
         <UBadge
-          :color="isAudit ? 'primary' : 'success'"
+          :color="eventTypeConfig.badgeColor"
           variant="soft" size="lg"
         >
-          <i :class="isAudit ? 'fa-solid fa-magnifying-glass' : 'fa-solid fa-graduation-cap'" class="mr-1"></i>
-          {{ isAudit ? 'Audit' : 'Soutenance' }}
+          <i :class="eventTypeConfig.icon" class="mr-1"></i>
+          {{ eventTypeConfig.label }}
         </UBadge>
         <h1 class="text-2xl font-bold text-gray-800">
-          Créer {{ isAudit ? 'un Audit' : 'une Soutenance' }}
+          Créer {{ eventTypeConfig.title }}
         </h1>
       </div>
     </div>
@@ -55,7 +55,7 @@
           <input
             v-model="form.name"
             type="text"
-            :placeholder="isAudit ? 'Ex : Audit Sprint 3 — Groupe A' : 'Ex : Soutenance PFE — Promo 2025'"
+            :placeholder="eventTypeConfig.placeholder"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
                    focus:ring-2 focus:ring-indigo-500 outline-none"
             required
@@ -74,8 +74,8 @@
           />
         </div>
 
-        <!-- Catégorie filtrée par type -->
-        <div>
+        <!-- Catégorie filtrée par type (Masqué pour RDV) -->
+        <div v-if="!isRdv">
           <label class="block text-xs font-medium text-gray-700 mb-1">
             Catégorie <span class="text-red-500">*</span>
           </label>
@@ -90,6 +90,46 @@
             <option disabled value="">— Sélectionnez une catégorie —</option>
             <option v-for="cat in categories" :key="cat.id" :value="cat.id">
               {{ cat.name }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Issue (Spécifique au RDV) -->
+        <div v-if="isRdv">
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Issue associée <span class="text-red-500">*</span>
+          </label>
+          <USkeleton v-if="loadingCategories" class="h-10 w-full rounded-lg" />
+          <select
+            v-else
+            v-model="form.idIssue"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
+                   focus:ring-2 focus:ring-indigo-500 outline-none"
+            required
+          >
+            <option disabled value="">— Sélectionnez une issue —</option>
+            <option v-for="issue in issues" :key="issue.id" :value="issue.id">
+              {{ issue.title }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Professeur (Spécifique au RDV) -->
+        <div v-if="isRdv">
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Professeur <span class="text-red-500">*</span>
+          </label>
+          <USkeleton v-if="loadingCategories" class="h-10 w-full rounded-lg" />
+          <select
+            v-else
+            v-model="form.idTeacher"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
+                   focus:ring-2 focus:ring-indigo-500 outline-none"
+            required
+          >
+            <option disabled value="">— Sélectionnez un professeur —</option>
+            <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.id">
+              {{ teacher.name }}
             </option>
           </select>
         </div>
@@ -207,10 +247,43 @@ import { ref, onMounted, computed, watch } from 'vue'
 const route = useRoute()
 const router = useRouter()
 const { fetchCategoriesByType, createEvent } = useEvents()
+const { issues, fetchIssues } = useIssues()
+const { users: teachers, fetchUserByRoles } = useUsers()
 
-const type = route.params.type // 'AUDIT' ou 'DEFENSE'
-const isAudit = computed(() => type === 'AUDIT')
-const requiresDates = computed(() => type === 'AUDIT' || type === 'DEFENSE')
+const type = route.params.type // 'AUDIT', 'DEFENSE' ou 'RDV'
+const isRdv = computed(() => type === 'RDV')
+
+const eventTypeConfig = computed(() => {
+  switch (type) {
+    case 'AUDIT':
+      return {
+        badgeColor: 'primary',
+        icon: 'fa-solid fa-magnifying-glass',
+        label: 'Audit',
+        title: 'un Audit',
+        placeholder: 'Ex : Audit Sprint 3 — Groupe A'
+      }
+    case 'RDV':
+      return {
+        badgeColor: 'amber',
+        icon: 'fa-solid fa-calendar-days',
+        label: 'Rendez-vous',
+        title: 'un Rendez-vous',
+        placeholder: 'Ex : Point de synchronisation Issue #42'
+      }
+    case 'DEFENSE':
+    default:
+      return {
+        badgeColor: 'success',
+        icon: 'fa-solid fa-graduation-cap',
+        label: 'Soutenance',
+        title: 'une Soutenance',
+        placeholder: 'Ex : Soutenance PFE — Promo 2025'
+      }
+  }
+})
+
+const requiresDates = computed(() => ['AUDIT', 'DEFENSE', 'RDV'].includes(type))
 
 const categories        = ref([])
 const loadingCategories = ref(true)
@@ -232,6 +305,7 @@ const filteredProjectGroups = computed(() => {
     g.name.toLowerCase().includes(q) || g.categoryName?.toLowerCase().includes(q)
   )
 })
+const form = ref({ name: '', description: '', categoryId: '', startDate: '', endDate: '', idTeacher: '', idIssue: '' })
 
 // Force la date de fin sur le même jour que la date de début
 const endDateMax = computed(() => {
@@ -248,9 +322,14 @@ watch(() => form.value.startDate, (newStart) => {
 
 onMounted(async () => {
   try {
-    categories.value = await fetchCategoriesByType(type)
+    if (isRdv.value) {
+      await fetchIssues()
+      await fetchUserByRoles(['TEACHER'])
+    } else {
+      categories.value = await fetchCategoriesByType(type)
+    }
   } catch (e) {
-    categoryError.value = 'Impossible de charger les catégories. Vérifiez que vous êtes bien connecté.'
+    categoryError.value = isRdv.value ? 'Impossible de charger les données.' : 'Impossible de charger les catégories. Vérifiez que vous êtes bien connecté.'
   } finally {
     loadingCategories.value = false
   }
@@ -285,10 +364,22 @@ const handleSubmit = async () => {
 
   submitting.value = true
   try {
+    let finalCategoryId = form.value.categoryId
+    if (isRdv.value) {
+      const selectedIssue = issues.value.find(i => i.id === form.value.idIssue)
+      if (selectedIssue) {
+        finalCategoryId = selectedIssue.category?.id || selectedIssue.categoryId
+      }
+    }
+
     const payload = {
       name:        form.value.name,
       description: form.value.description,
-      categoryId:  form.value.categoryId,
+      categoryId:  finalCategoryId,
+      ...(isRdv.value && {
+        idTeacher: form.value.idTeacher,
+        idIssue: form.value.idIssue
+      }),
       ...(requiresDates.value && {
         startDate: form.value.startDate,
         endDate:   form.value.endDate,
