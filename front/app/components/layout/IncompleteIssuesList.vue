@@ -95,8 +95,8 @@
 
           <!-- Cas 2 : Message informatif de finalisation (Créateur) -->
           <div v-else class="p-3 bg-blue-50 text-blue-800 rounded text-sm border border-blue-100 mb-4">
-            <span class="font-semibold block mb-1">Ticket en attente</span>
-            <span class="text-blue-700">Mettez à jour les informations de votre ticket pour le soumettre définitivement aux superviseurs.</span>
+            <span class="font-semibold block mb-1">Ticket incomplet</span>
+            <span class="text-blue-700">Mettez à jour les informations de votre ticket pour le soumettre définitivement à un superviseur.</span>
           </div>
 
           <!-- Formulaire -->
