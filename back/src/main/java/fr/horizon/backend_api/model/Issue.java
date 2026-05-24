@@ -31,7 +31,7 @@ public class Issue extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Builder.Default
     @Column(nullable = false)
-    private IssueStatus status = IssueStatus.OUVERT;
+    private IssueStatus status = IssueStatus.EN_ATTENTE;
 
     @Builder.Default
     @Column(nullable = false)

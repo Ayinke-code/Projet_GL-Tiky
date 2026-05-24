@@ -9,7 +9,7 @@ class IssueStatusTest {
     void shouldReturnEnumWhenValidValue() {
 
         assertEquals(IssueStatus.OUVERT, IssueStatus.fromValue("OUVERT"));
-        assertEquals(IssueStatus.COMPLET, IssueStatus.fromValue("COMPLET"));
+        assertEquals(IssueStatus.EN_ATTENTE, IssueStatus.fromValue("EN_ATTENTE"));
         assertEquals(IssueStatus.INCOMPLET, IssueStatus.fromValue("INCOMPLET"));
         assertEquals(IssueStatus.TERMINE, IssueStatus.fromValue("TERMINE"));
     }
@@ -18,18 +18,18 @@ class IssueStatusTest {
     void shouldBeCaseInsensitive() {
 
         assertEquals(IssueStatus.TERMINE, IssueStatus.fromValue("termine"));
-        assertEquals(IssueStatus.COMPLET, IssueStatus.fromValue("complet"));
+        assertEquals(IssueStatus.EN_ATTENTE, IssueStatus.fromValue("en_attente"));
     }
 
     @Test
     void shouldReturnDefaultWhenNull() {
 
-        assertEquals(IssueStatus.OUVERT, IssueStatus.fromValue(null));
+        assertEquals(IssueStatus.EN_ATTENTE, IssueStatus.fromValue(null));
     }
 
     @Test
     void shouldReturnDefaultWhenInvalidValue() {
 
-        assertEquals(IssueStatus.OUVERT, IssueStatus.fromValue("INVALID"));
+        assertEquals(IssueStatus.EN_ATTENTE, IssueStatus.fromValue("INVALID"));
     }
 }
