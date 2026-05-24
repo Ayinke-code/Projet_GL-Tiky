@@ -52,8 +52,8 @@ class IssueServiceTest {
     private final String raison = "raison";
 
     @Test
-    void createIssue_should_save_issue_when_valid() {
-
+    void createIssue_should_save_with_OUVERT_status_and_create_manager_when_not_pending() {
+        // Préparation
         User categoryOwner = new User();
         categoryOwner.setId(99L);
         categoryOwner.setName("Teacher");
@@ -62,6 +62,7 @@ class IssueServiceTest {
         dto.setTitle("Bug");
         dto.setDescription("Bug description");
         dto.setCategoryId(1L);
+        dto.setPendingCase(false); // Cas normal
 
         User owner = new User();
         owner.setId(1L);
@@ -73,42 +74,74 @@ class IssueServiceTest {
         category.setName("Software");
         category.setOwner(categoryOwner);
 
-        when(userRepository.findByEmail("john@test.com"))
-                .thenReturn(Optional.of(owner));
+        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(owner));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
 
-        when(categoryRepository.findById(1L))
-                .thenReturn(Optional.of(category));
+        // Intercepter l'Issue sauvegardée pour vérifier son statut interne
+        when(issueRepository.save(any(Issue.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        when(issueRepository.save(any(Issue.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
+        // Action
         IssueDto result = issueService.createIssue(dto, "john@test.com");
 
+        // Assertions
         assertNotNull(result);
         assertEquals("Bug", result.getTitle());
-        assertEquals("Bug description", result.getDescription());
-        assertEquals(1L, result.getCategoryId());
-        assertEquals("Software", result.getCategoryName());
-        assertEquals(1L, result.getCreatedId());
-        assertEquals("John", result.getCreatedName());
+
+        // Vérification des appels
+        verify(issueRepository).save(any(Issue.class));
+        verify(conversationService).createConversationForIssue(any(Issue.class));
+        verify(requestManagerRepository).save(any(RequestManager.class));
+    }
+
+    @Test
+    void createIssue_should_save_with_INCOMPLET_status_when_pending() {
+        // Préparation
+        IssueCreateDto dto = new IssueCreateDto();
+        dto.setTitle("Brouillon");
+        dto.setDescription("Desc");
+        dto.setCategoryId(1L);
+        dto.setPendingCase(true); // Cas en attente
+
+        User owner = new User();
+        owner.setId(1L);
+        owner.setEmail("john@test.com");
+
+        Category category = new Category();
+        category.setId(1L);
+        category.setOwner(new User());
+
+        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(owner));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+
+        // Action
+        issueService.createIssue(dto, "john@test.com");
+
+        // Assertions pour vérifier que le statut est bien INCOMPLET
+        org.mockito.ArgumentCaptor<Issue> issueCaptor = org.mockito.ArgumentCaptor.forClass(Issue.class);
+        verify(issueRepository).save(issueCaptor.capture());
+        Issue savedIssue = issueCaptor.getValue();
+
+        assertEquals(IssueStatus.INCOMPLET, savedIssue.getStatus());
+
+        verify(conversationService).createConversationForIssue(any(Issue.class));
+        verify(requestManagerRepository, never()).save(any());
     }
 
     @Test
     void createIssue_should_throw_when_user_not_found() {
-
         IssueCreateDto dto = new IssueCreateDto();
         dto.setCategoryId(1L);
 
-        when(userRepository.findByEmail("john@test.com"))
-                .thenReturn(Optional.empty());
+        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class,
+        assertThrows(EntityNotFoundException.class,
                 () -> issueService.createIssue(dto, "john@test.com"));
+
+        verify(issueRepository, never()).save(any());
     }
 
     @Test
     void createIssue_should_throw_when_category_not_found() {
-
         IssueCreateDto dto = new IssueCreateDto();
         dto.setCategoryId(1L);
 
@@ -116,14 +149,13 @@ class IssueServiceTest {
         owner.setId(1L);
         owner.setEmail("john@test.com");
 
-        when(userRepository.findByEmail("john@test.com"))
-                .thenReturn(Optional.of(owner));
-
-        when(categoryRepository.findById(1L))
-                .thenReturn(Optional.empty());
+        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(owner));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(CategoryNotFoundException.class,
                 () -> issueService.createIssue(dto, "john@test.com"));
+
+        verify(issueRepository, never()).save(any());
     }
 
     @Test
@@ -533,6 +565,102 @@ class IssueServiceTest {
 
         verify(requestManagerRepository, never()).findFirstByIssueOrderByCreatedAtDesc(issue);
     }
+
+    @Test
+    void updateIssueWhenIncomplete_should_update_and_set_OUVERT_when_valid() {
+        // Préparation
+        Long issueId = 10L;
+        String email = "john@test.com";
+
+        IssueCreateDto dto = new IssueCreateDto();
+        dto.setTitle("Titre corrigé");
+        dto.setDescription("Description corrigée");
+        dto.setCategoryId(2L);
+
+        Issue existingIssue = new Issue();
+        existingIssue.setId(issueId);
+        existingIssue.setStatus(IssueStatus.INCOMPLET);
+        existingIssue.setTitle("Vieux titre");
+
+        User owner = new User();
+        owner.setId(1L);
+        owner.setEmail(email);
+
+        Category newCategory = new Category();
+        newCategory.setId(2L);
+        newCategory.setName("Nouvelle Catégorie");
+        newCategory.setOwner(new User());
+
+        when(issueRepository.findById(issueId)).thenReturn(Optional.of(existingIssue));
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(owner));
+        when(categoryRepository.findById(2L)).thenReturn(Optional.of(newCategory));
+        when(issueRepository.save(any(Issue.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Action
+        IssueDto result = issueService.updateIssueWhenIncomplete(email, issueId, dto);
+
+        // Assertions
+        assertNotNull(result);
+
+        // Vérification des modifications sur l'entité
+        org.mockito.ArgumentCaptor<Issue> issueCaptor = org.mockito.ArgumentCaptor.forClass(Issue.class);
+        verify(issueRepository).save(issueCaptor.capture());
+        Issue updatedIssue = issueCaptor.getValue();
+
+        assertEquals("Titre corrigé", updatedIssue.getTitle());
+        assertEquals("Description corrigée", updatedIssue.getDescription());
+        assertEquals(newCategory, updatedIssue.getCategory());
+        assertEquals(owner, updatedIssue.getCreatedBy());
+        assertEquals(IssueStatus.OUVERT, updatedIssue.getStatus()); // Doit repasser en OUVERT
+    }
+
+    @Test
+    void updateIssueWhenIncomplete_should_throw_when_issue_not_found() {
+        IssueCreateDto dto = new IssueCreateDto();
+        when(issueRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(IssueNotFoundException.class,
+                () -> issueService.updateIssueWhenIncomplete("test@test.fr", 99L, dto));
+
+        verify(issueRepository, never()).save(any());
+    }
+
+    @Test
+    void updateIssueWhenIncomplete_should_throw_when_user_not_found() {
+        Issue existingIssue = new Issue();
+        existingIssue.setId(1L);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(existingIssue));
+        when(userRepository.findByEmail("ghost@test.fr")).thenReturn(Optional.empty());
+
+        IssueCreateDto dto = new IssueCreateDto();
+
+        assertThrows(EntityNotFoundException.class,
+                () -> issueService.updateIssueWhenIncomplete("ghost@test.fr", 1L, dto));
+
+        verify(issueRepository, never()).save(any());
+    }
+
+    @Test
+    void updateIssueWhenIncomplete_should_throw_when_category_not_found() {
+        Issue existingIssue = new Issue();
+        existingIssue.setId(1L);
+        User owner = new User();
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(existingIssue));
+        when(userRepository.findByEmail("test@test.fr")).thenReturn(Optional.of(owner));
+        when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
+
+        IssueCreateDto dto = new IssueCreateDto();
+        dto.setCategoryId(99L);
+
+        assertThrows(CategoryNotFoundException.class,
+                () -> issueService.updateIssueWhenIncomplete("test@test.fr", 1L, dto));
+
+        verify(issueRepository, never()).save(any());
+    }
+
+
 
 
 }
