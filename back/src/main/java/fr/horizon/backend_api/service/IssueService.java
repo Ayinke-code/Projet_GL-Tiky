@@ -9,7 +9,6 @@ import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.dto.RequestManagerDto;
-import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
@@ -95,7 +94,7 @@ public class IssueService {
                 .title(dto.getTitle())
                 .description(dto.getDescription())
                 .category(category)
-                .status(IssueStatus.OUVERT)
+                .status(IssueStatus.EN_ATTENTE)
                 .createdBy(owner)
                 .build();
 
@@ -199,7 +198,7 @@ public class IssueService {
         issue.setCategory(category);
         issue.setCreatedBy(owner);
         // réouverture de la demande
-        issue.setStatus(IssueStatus.OUVERT);
+        issue.setStatus(IssueStatus.EN_ATTENTE);
 
         issueRepository.save(issue);
 
@@ -284,7 +283,7 @@ public class IssueService {
             issue.setManager(targetedUser);
             requestManager.setProcessingDate(LocalDateTime.now());
             initialStatus = RequestManagerStatus.ACCEPTED;
-            issue.setStatus(IssueStatus.COMPLET);
+            issue.setStatus(IssueStatus.OUVERT);
         }
 
         requestManager.setTargetTeacher(targetedUser);
@@ -314,7 +313,7 @@ public class IssueService {
         if (response) {
             requestManager.setStatus(RequestManagerStatus.ACCEPTED);
             requestManager.getIssue().setManager(requestManager.getTargetTeacher());
-            requestManager.getIssue().setStatus(IssueStatus.COMPLET);
+            requestManager.getIssue().setStatus(IssueStatus.OUVERT);
         } else {
             requestManager.setStatus(RequestManagerStatus.DENIED);
             createRequestManager(requestManager.getIssue());
