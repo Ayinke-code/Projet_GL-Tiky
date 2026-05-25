@@ -11,6 +11,7 @@ import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.dto.RequestManagerDto;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.model.enums.IssueStatus;
+import fr.horizon.backend_api.model.enums.NotificationType;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
@@ -44,6 +45,7 @@ public class IssueService {
     private final CategoryRepository categoryRepository;
     private final ConversationService conversationService;
     private final RequestManagerRepository requestManagerRepository;
+    private final NotificationService notificationService;
 
     /**
      * Retourne la liste de toutes les issues.
@@ -141,6 +143,13 @@ public class IssueService {
         issue.setStatus(issueStatus);
 
         issueRepository.save(issue);
+
+        notificationService.notifyFollowers(
+                issue,
+                NotificationType.STATUS_UPDATED,
+                "Le statut de l'issue \"" + issue.getTitle() + "\" a été mis à jour : " + issueStatus.name(),
+                null
+        );
     }
 
     /**
@@ -158,6 +167,13 @@ public class IssueService {
         issue.setPrivate(!issue.isPrivate());
 
         issueRepository.save(issue);
+
+        notificationService.notifyFollowers(
+                issue,
+                NotificationType.VISIBILITY_UPDATED,
+                "La visibilité de l'issue \"" + issue.getTitle() + "\" a changé : " + (issue.isPrivate() ? "Privé" : "Public"),
+                null
+        );
     }
 
     /**

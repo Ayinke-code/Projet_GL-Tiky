@@ -11,6 +11,7 @@ import fr.horizon.backend_api.exception.IssueNotFoundException;
 import fr.horizon.backend_api.exception.MessageNotFoundException;
 import fr.horizon.backend_api.exception.MessageTooLongException;
 import fr.horizon.backend_api.exception.UserNotFoundException;
+import fr.horizon.backend_api.model.enums.NotificationType;
 import fr.horizon.backend_api.repository.ConversationRepository;
 import fr.horizon.backend_api.repository.ConversationUserRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
@@ -43,6 +44,7 @@ public class ConversationService {
     private final MessageRepository messageRepository;
     private final IssueRepository issueRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     /**
      * Résultat de l'envoi d'un message : payload REST, payload WebSocket et issue ciblée.
@@ -194,6 +196,13 @@ public class ConversationService {
         Long issueId = Long.parseLong(payload.get(MapKeys.ISSUE_ID));
         Long replyToMessageId = parseOptionalLong(payload.get(MapKeys.REPLY_TO_MESSAGE_ID));
         Message message = addMessageToConversation(conversationId, content, user, issueId, replyToMessageId);
+
+        notificationService.notifyFollowers(
+                message.getIssue(),
+                NotificationType.NEW_MESSAGE,
+                "Nouveau message sur l'issue \"" + message.getIssue().getTitle() + "\"",
+                user
+        );
 
         return new MessageDispatchResult(toMessageMap(message), buildBroadcastPayload(message, issueId), issueId);
     }

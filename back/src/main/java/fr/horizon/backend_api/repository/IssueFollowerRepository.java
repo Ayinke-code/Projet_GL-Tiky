@@ -31,9 +31,25 @@ public interface IssueFollowerRepository extends JpaRepository<IssueFollower, Lo
     Optional<IssueFollower> findByUserAndIssue(User user, Issue issue);
 
     /**
+     * Récupère les abonnements d'une issue en excluant un utilisateur spécifique.
+     *
+     * @param user  utilisateur à exclure
+     * @param issue issue concernée
+     * @return liste des abonnements
+     */
+    List<IssueFollower> findByUserNotAndIssue(User user, Issue issue);
+
+    /**
      * Récupère tous les abonnements d'un utilisateur.
      * @param user utilisateur dont on veut les abonnements
      * @return liste des abonnements
      */
     List<IssueFollower> findByUser(User user);
+
+    /**
+     * Récupère tous les abonnements d'une issue.
+     * @param issue issue concernée
+     * @return liste des abonnements
+     */
+    List<IssueFollower> findByIssue(Issue issue);
 }
