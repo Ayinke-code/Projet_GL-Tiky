@@ -61,8 +61,15 @@
 
     <!-- Liste des événements -->
     <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <EventCard v-for="event in events" :key="event.id" :event="event" />
+      <EventCard v-for="event in events" :key="event.id" :event="event" @delete="deleteValidation" />
     </div>
+
+    <ConfirmModal
+      v-model:open="isDeleteValidateModalOpen"
+      title="Suppression"
+      :description="`Voulez-vous vraiment supprimer l'événement : ${deletingEvent?.name}`"
+      @confirm="handleDelete"
+    />
 
   </div>
 </template>
@@ -78,15 +85,37 @@ import Button from '~/components/ui/Button.vue'
 import Alert from '~/components/ui/Alert.vue'
 import EventCard from '~/components/events/EventCard.vue'
 import CreateEventModal from '~/components/events/CreateEventModal.vue'
+import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import { ref, onMounted } from 'vue'
 
 const { user } = useAuth()
-const { events, fetchEventsByType } = useEvents()
+const { events, fetchEventsByType, deleteEvent } = useEvents()
 
 const activeTab = ref('AUDIT')
 const loading   = ref(true)
 const fetchError = ref(null)
 const isModalOpen = ref(false)
+
+const deletingEvent = ref(null)
+const isDeleteValidateModalOpen = ref(false)
+
+const deleteValidation = (event) => {
+  deletingEvent.value = { id: event?.id, name: event?.name }
+  isDeleteValidateModalOpen.value = true
+}
+
+const handleDelete = async () => {
+  if (!deletingEvent.value) return
+  const id = deletingEvent.value.id
+  try {
+    await deleteEvent(id)
+  } catch (err) {
+    fetchError.value = err.message || 'Erreur lors de la suppression'
+  } finally {
+    deletingEvent.value = null
+    isDeleteValidateModalOpen.value = false
+  }
+}
 
 const tabs = [
   { value: 'AUDIT',   label: 'Audits',       icon: 'fa-solid fa-magnifying-glass' },
