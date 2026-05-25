@@ -28,6 +28,10 @@ public class IssueFollowerService {
     private final IssueRepository issueRepository;
     private final UserRepository userRepository;
 
+    private static final String ISSUE_NOT_FOUND = "Issue non trouvée";
+    private static final String USER_NOT_FOUND = "Utilisateur non trouvé";
+    private static final String FOLLOWER_NOT_FOUND = "Abonnement non trouvé";
+
     /**
      * Abonne un utilisateur à une issue avec une raison.
      *
@@ -44,7 +48,7 @@ public class IssueFollowerService {
         // Récupérer l'issue
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Issue non trouvée"));
+                        HttpStatus.NOT_FOUND, ISSUE_NOT_FOUND));
 
         // Vérifier que l'utilisateur ne suit pas déjà cette issue
         if (issueFollowerRepository.existsByUserAndIssue(user, issue)) {
@@ -84,11 +88,11 @@ public class IssueFollowerService {
     public void unfollowIssue(Long issueId, User user) {
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Issue non trouvée"));
+                        HttpStatus.NOT_FOUND, ISSUE_NOT_FOUND));
 
         IssueFollower follower = issueFollowerRepository.findByUserAndIssue(user, issue)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Abonnement non trouvé"));
+                        HttpStatus.NOT_FOUND, FOLLOWER_NOT_FOUND));
 
         issueFollowerRepository.delete(follower);
     }
@@ -118,7 +122,7 @@ public class IssueFollowerService {
     public boolean isFollowing(Long issueId, User user) {
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Issue non trouvée"));
+                        HttpStatus.NOT_FOUND, ISSUE_NOT_FOUND));
         return issueFollowerRepository.existsByUserAndIssue(user, issue);
     }
 
@@ -132,6 +136,6 @@ public class IssueFollowerService {
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Utilisateur non trouvé"));
+                        HttpStatus.NOT_FOUND, USER_NOT_FOUND));
     }
 }
