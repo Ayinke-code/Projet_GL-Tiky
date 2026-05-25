@@ -42,6 +42,13 @@
 </template>
 
 <script setup lang="js">
+/**
+ * Modale de suivi d'une issue.
+ * - propose trois raisons exclusives : INTERESTED, ABLE_TO_HELP, IMPACTED
+ * - appelle POST /issues/{id}/follow avec la raison choisie
+ * - émet l'événement 'followed' après succès
+ */
+
 import Modal from '~/components/ui/Modal.vue'
 
 const props = defineProps({

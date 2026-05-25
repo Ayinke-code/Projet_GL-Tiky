@@ -39,6 +39,13 @@
 </template>
 
 <script setup lang="js">
+/**
+ * Page listant les issues suivies par l'utilisateur courant.
+ * - charge les issues via GET /issues/followed
+ * - affiche uniquement les issues avec statut OUVERT
+ * - redirige vers /login si non connecté
+ */
+
 import IssuesCard from '~/components/issues/IssuesCard.vue'
 
 const { ready, user } = useAuth()

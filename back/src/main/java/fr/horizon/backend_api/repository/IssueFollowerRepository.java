@@ -21,6 +21,13 @@ public interface IssueFollowerRepository extends JpaRepository<IssueFollower, Lo
      */
     boolean existsByUserAndIssue(User user, Issue issue);
 
+    /**
+    * Récupère l'abonnement d'un utilisateur à une issue spécifique
+    *
+    * @param user  utilisateur concerné
+    * @param issue issue concernée
+    * @return l'abonnement s'il existe
+    */
     Optional<IssueFollower> findByUserAndIssue(User user, Issue issue);
 
     /**

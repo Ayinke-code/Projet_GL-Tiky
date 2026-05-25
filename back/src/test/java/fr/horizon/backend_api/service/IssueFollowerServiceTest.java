@@ -2,6 +2,7 @@ package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.IssueFollower;
+import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.FollowedReason;
 import fr.horizon.backend_api.repository.IssueFollowerRepository;
@@ -48,6 +49,7 @@ class IssueFollowerServiceTest {
 
         issue = new Issue();
         issue.setId(1L);
+        issue.setStatus(IssueStatus.OUVERT);
     }
 
     /** Vérifie qu'un utilisateur peut suivre une issue avec succès */

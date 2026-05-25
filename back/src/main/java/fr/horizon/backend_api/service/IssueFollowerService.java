@@ -3,9 +3,11 @@ package fr.horizon.backend_api.service;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.IssueFollower;
 import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.FollowedReason;
 import fr.horizon.backend_api.repository.IssueFollowerRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
+import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,12 +26,13 @@ public class IssueFollowerService {
 
     private final IssueFollowerRepository issueFollowerRepository;
     private final IssueRepository issueRepository;
+    private final UserRepository userRepository;
 
     /**
      * Abonne un utilisateur à une issue avec une raison.
      *
      * @param issueId identifiant de l'issue à suivre
-     * @param raison  raison du suivi (INTERESTED, ABLE_TO_HELP, IMPACTED)
+     * @param reason  raison du suivi (INTERESTED, ABLE_TO_HELP, IMPACTED)
      * @param user    utilisateur qui souhaite suivre l'issue
      * @return l'abonnement créé
      * @throws ResponseStatusException 404 si l'issue n'existe pas
@@ -91,15 +94,17 @@ public class IssueFollowerService {
     }
 
     /**
-     * Retourne la liste des issues suivies par un utilisateur.
+     * Retourne la liste des issues ouvertes suivies par un utilisateur.
+     * Filtre les issues dont le statut n'est pas OUVERT.
      *
      * @param user utilisateur dont on veut récupérer les issues suivies
-     * @return liste des issues suivies
+     * @return liste des issues ouvertes suivies
      */
     public List<Issue> getFollowedIssues(User user) {
         return issueFollowerRepository.findByUser(user)
                 .stream()
                 .map(IssueFollower::getIssue)
+                .filter(issue -> issue.getStatus() == IssueStatus.OUVERT)
                 .toList();
     }
 
@@ -115,5 +120,18 @@ public class IssueFollowerService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Issue non trouvée"));
         return issueFollowerRepository.existsByUserAndIssue(user, issue);
+    }
+
+    /**
+     * Récupère un utilisateur par son email.
+     *
+     * @param email email de l'utilisateur
+     * @return l'utilisateur trouvé
+     * @throws ResponseStatusException 404 si l'utilisateur n'existe pas
+     */
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Utilisateur non trouvé"));
     }
 }
