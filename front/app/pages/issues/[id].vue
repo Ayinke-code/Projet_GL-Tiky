@@ -508,4 +508,11 @@ const handleUnfollow = async () => {
 
         </div>
     </div>
+
+  <FollowModal
+    v-model="showFollowModal"
+    :issue-id="issueId"
+    @followed="onFollowed"
+  />
+
 </template>
