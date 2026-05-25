@@ -47,6 +47,17 @@
           <i class="fa-solid fa-calendar-days w-6"></i>
           <span class="font-medium">Événements</span>
         </NuxtLink>
+
+        <NuxtLink
+          v-if="user"
+          to="/groups"
+          class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
+          :class="isActive('/groups')
+            ? 'bg-indigo-600 text-white shadow-lg'
+            : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
+          <i class="fa-solid fa-users w-6"></i>
+          <span class="font-medium">Groupes</span>
+        </NuxtLink>
       </nav>
 
       <!-- Footer Sidebar : Fixé en bas -->
