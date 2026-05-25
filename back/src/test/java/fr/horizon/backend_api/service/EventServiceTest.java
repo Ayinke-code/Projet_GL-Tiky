@@ -1,15 +1,19 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
+import fr.horizon.backend_api.exception.EventNotFoundException;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Event;
 import fr.horizon.backend_api.model.Role;
+import fr.horizon.backend_api.model.StudentGroup;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.EventRequestDto;
 import fr.horizon.backend_api.model.dto.EventResponseDto;
 import fr.horizon.backend_api.model.enums.CategoryType;
+import fr.horizon.backend_api.model.enums.GroupType;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.EventRepository;
+import fr.horizon.backend_api.repository.StudentGroupRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -37,6 +42,9 @@ class EventServiceTest {
 
     @Mock
     private UserService userService;
+
+    @Mock
+    private StudentGroupRepository studentGroupRepository;
 
     @InjectMocks
     private EventService eventService;
@@ -248,7 +256,7 @@ class EventServiceTest {
                 .createdBy(teacher)
                 .build();
 
-        when(eventRepository.findByCategoryTypeOrderByCreatedAtDesc(CategoryType.AUDIT))
+        when(eventRepository.findByCategoryTypeWithGroups(CategoryType.AUDIT))
                 .thenReturn(List.of(event));
 
         List<EventResponseDto> result = eventService.listByType(CategoryType.AUDIT);
@@ -263,7 +271,7 @@ class EventServiceTest {
     @Test
     void listByType_should_return_empty_list_when_no_events() {
 
-        when(eventRepository.findByCategoryTypeOrderByCreatedAtDesc(CategoryType.DEFENSE))
+        when(eventRepository.findByCategoryTypeWithGroups(CategoryType.DEFENSE))
                 .thenReturn(List.of());
 
         List<EventResponseDto> result = eventService.listByType(CategoryType.DEFENSE);
@@ -528,5 +536,212 @@ class EventServiceTest {
                 () -> eventService.create(request, "teacher@teacher.fr"));
 
         verify(eventRepository, never()).save(any());
+    }
+
+    // =============================================
+    // create() — projectGroupIds
+    // =============================================
+
+    @Test
+    void create_should_assign_project_groups_when_AUDIT_and_projectGroupIds_provided() {
+
+        Role teacherRole = new Role("TEACHER");
+
+        User teacher = new User();
+        teacher.setId(1L);
+        teacher.setName("Sophie ROUSSEAU");
+        teacher.setEmail("teacher@teacher.fr");
+        teacher.setRoles(Set.of(teacherRole));
+
+        Category eventCategory = new Category();
+        eventCategory.setId(10L);
+        eventCategory.setName("UI/UX");
+        eventCategory.setCategoryType(CategoryType.AUDIT);
+
+        Category groupCategory = new Category();
+        groupCategory.setId(20L);
+        groupCategory.setName("Projet Horizon");
+
+        StudentGroup projectGroup = StudentGroup.builder()
+                .id(5L)
+                .name("Projet Alpha")
+                .type(GroupType.PROJECT)
+                .category(groupCategory)
+                .createdBy(teacher)
+                .members(new HashSet<>())
+                .build();
+
+        LocalDateTime start = LocalDateTime.of(2026, 6, 1, 9, 0);
+        LocalDateTime end   = LocalDateTime.of(2026, 6, 1, 11, 0);
+
+        EventRequestDto request = new EventRequestDto();
+        request.setCategoryId(10L);
+        request.setName("Audit Sprint 3");
+        request.setDescription("Revue du code");
+        request.setStartDate(start);
+        request.setEndDate(end);
+        request.setProjectGroupIds(Set.of(5L));
+
+        Event saved = Event.builder()
+                .id(1L)
+                .name("Audit Sprint 3")
+                .description("Revue du code")
+                .categoryType(CategoryType.AUDIT)
+                .category(eventCategory)
+                .createdBy(teacher)
+                .startDate(start)
+                .endDate(end)
+                .projectGroups(Set.of(projectGroup))
+                .build();
+
+        when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(eventCategory));
+        when(studentGroupRepository.findAllById(Set.of(5L))).thenReturn(List.of(projectGroup));
+        when(eventRepository.save(any(Event.class))).thenReturn(saved);
+
+        EventResponseDto result = eventService.create(request, "teacher@teacher.fr");
+
+        assertNotNull(result);
+        assertNotNull(result.getProjectGroups());
+        assertEquals(1, result.getProjectGroups().size());
+        assertEquals("Projet Alpha", result.getProjectGroups().get(0).getName());
+        assertEquals("Projet Horizon", result.getProjectGroups().get(0).getCategoryName());
+        verify(studentGroupRepository).findAllById(Set.of(5L));
+    }
+
+    @Test
+    void create_should_not_assign_project_groups_when_no_projectGroupIds() {
+
+        Role teacherRole = new Role("TEACHER");
+
+        User teacher = new User();
+        teacher.setId(1L);
+        teacher.setName("Sophie ROUSSEAU");
+        teacher.setEmail("teacher@teacher.fr");
+        teacher.setRoles(Set.of(teacherRole));
+
+        Category eventCategory = new Category();
+        eventCategory.setId(10L);
+        eventCategory.setName("UI/UX");
+        eventCategory.setCategoryType(CategoryType.AUDIT);
+
+        LocalDateTime start = LocalDateTime.of(2026, 6, 1, 9, 0);
+        LocalDateTime end   = LocalDateTime.of(2026, 6, 1, 11, 0);
+
+        EventRequestDto request = new EventRequestDto();
+        request.setCategoryId(10L);
+        request.setName("Audit Sprint 5");
+        request.setStartDate(start);
+        request.setEndDate(end);
+        // Pas de projectGroupIds
+
+        Event saved = Event.builder()
+                .id(7L)
+                .name("Audit Sprint 5")
+                .categoryType(CategoryType.AUDIT)
+                .category(eventCategory)
+                .createdBy(teacher)
+                .startDate(start)
+                .endDate(end)
+                .build();
+
+        when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(eventCategory));
+        when(eventRepository.save(any(Event.class))).thenReturn(saved);
+
+        EventResponseDto result = eventService.create(request, "teacher@teacher.fr");
+
+        assertNotNull(result);
+        verify(studentGroupRepository, never()).findAllById(any());
+    }
+
+    @Test
+    void listByType_should_include_parentGroupName_in_project_group_ref() {
+
+        User teacher = new User();
+        teacher.setId(1L);
+        teacher.setName("Sophie ROUSSEAU");
+
+        Category eventCat = new Category();
+        eventCat.setId(10L);
+        eventCat.setName("UI/UX");
+
+        Category groupCat = new Category();
+        groupCat.setId(20L);
+        groupCat.setName("Projet Horizon");
+
+        StudentGroup optionGroup = StudentGroup.builder()
+                .id(100L)
+                .name("LD — Promo 2026")
+                .type(GroupType.OPTION)
+                .category(groupCat)
+                .createdBy(teacher)
+                .members(new HashSet<>())
+                .build();
+
+        StudentGroup projectGroup = StudentGroup.builder()
+                .id(5L)
+                .name("Projet Alpha")
+                .type(GroupType.PROJECT)
+                .category(groupCat)
+                .createdBy(teacher)
+                .parentGroup(optionGroup)
+                .members(new HashSet<>())
+                .build();
+
+        Event event = Event.builder()
+                .id(1L)
+                .name("Audit Sprint 1")
+                .description("Revue sprint 1")
+                .categoryType(CategoryType.AUDIT)
+                .category(eventCat)
+                .createdBy(teacher)
+                .projectGroups(Set.of(projectGroup))
+                .build();
+
+        when(eventRepository.findByCategoryTypeWithGroups(CategoryType.AUDIT))
+                .thenReturn(List.of(event));
+
+        List<EventResponseDto> result = eventService.listByType(CategoryType.AUDIT);
+
+        assertEquals(1, result.size());
+        assertNotNull(result.get(0).getProjectGroups());
+        assertEquals(1, result.get(0).getProjectGroups().size());
+
+        EventResponseDto.ProjectGroupRefDto ref = result.get(0).getProjectGroups().get(0);
+        assertEquals("Projet Alpha", ref.getName());
+        assertEquals("Projet Horizon", ref.getCategoryName());
+        assertEquals("LD — Promo 2026", ref.getParentGroupName());
+    }
+
+    // =============================================
+    // deleteById()
+    // =============================================
+
+    @Test
+    void deleteById_should_delete_event_when_found() {
+
+        Event event = Event.builder()
+                .id(1L)
+                .name("Audit Sprint 1")
+                .build();
+
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+        eventService.deleteById(1L);
+
+        verify(eventRepository).findById(1L);
+        verify(eventRepository).delete(event);
+    }
+
+    @Test
+    void deleteById_should_throw_EventNotFoundException_when_not_found() {
+
+        when(eventRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(EventNotFoundException.class,
+                () -> eventService.deleteById(99L));
+
+        verify(eventRepository, never()).delete(any());
     }
 }
