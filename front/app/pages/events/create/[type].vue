@@ -94,6 +94,26 @@
           </select>
         </div>
 
+        <!-- Enseignant pré-filtré par les followers de la catégorie -->
+        <div v-if="categoryFollowers.length > 0">
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Enseignant responsable
+          </label>
+          <select
+            v-model="form.teacherId"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
+               focus:ring-2 focus:ring-indigo-500 outline-none"
+          >
+            <option disabled value="">— Sélectionnez un enseignant —</option>
+            <option v-for="teacher in categoryFollowers" :key="teacher.id" :value="teacher.id">
+              {{ teacher.name }}
+            </option>
+          </select>
+          <p class="text-xs text-gray-400 mt-1">
+            Seuls les enseignants abonnés à cette catégorie sont proposés
+          </p>
+        </div>
+
         <!-- Plage de dates — obligatoire pour les Audits et Soutenances -->
         <div v-if="requiresDates" class="grid grid-cols-2 gap-4">
           <div>
@@ -176,7 +196,7 @@ const submitting        = ref(false)
 const submitError       = ref(null)
 const dateError         = ref(null)
 
-const form = ref({ name: '', description: '', categoryId: '', startDate: '', endDate: '' })
+const form = ref({ name: '', description: '', categoryId: '', startDate: '', endDate: '', teacherId: ''})
 
 // Force la date de fin sur le même jour que la date de début
 const endDateMax = computed(() => {
@@ -235,4 +255,12 @@ const handleSubmit = async () => {
     submitting.value = false
   }
 }
+
+const { fetchCategoryFollowers } = useCategories()
+const categoryFollowers = ref([])
+
+watch(() => form.value.categoryId, async (newId) => {
+  if (!newId) { categoryFollowers.value = []; return }
+  categoryFollowers.value = await fetchCategoryFollowers(newId)
+})
 </script>

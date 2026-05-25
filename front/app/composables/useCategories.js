@@ -138,6 +138,21 @@ export const useCategories = () => {
     categories.value = categories.value.filter(c => c.id !== id)
   }
 
+  /**
+   * Récupère les followers enseignants d'une catégorie.
+   * @param {number} categoryId - identifiant de la catégorie
+   * @returns liste des enseignants followers
+   */
+  const fetchCategoryFollowers = async (categoryId) => {
+    const api = useApi()
+    try {
+      return await api(`/categories/${categoryId}/followers`)
+    } catch (e) {
+      error.value = e?.data?.message || 'FETCH_FOLLOWERS_ERROR'
+      throw e
+    }
+  }
+
   return {
     categories,
     category,
@@ -148,6 +163,7 @@ export const useCategories = () => {
     deleteCategory,
     deleteTeacherFollower,
     addTeacherFollower,
+    fetchCategoryFollowers,
     error
   }
 }

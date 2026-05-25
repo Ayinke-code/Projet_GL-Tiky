@@ -223,4 +223,21 @@ public class CategoryService {
                 )
                 .build();
     }
+
+    /**
+     * Récupère les followers enseignants d'une catégorie.
+     *
+     * @param categoryId identifiant de la catégorie
+     * @return liste des followers enseignants sous forme de DTO
+     * @throws CategoryNotFoundException si la catégorie n'existe pas
+     */
+    public List<UserRefDto> getFollowersByCategory(Long categoryId) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new CategoryNotFoundException(categoryId));
+
+        return category.getFollowers()
+                .stream()
+                .map(this::toUserRefDto)
+                .toList();
+    }
 }
