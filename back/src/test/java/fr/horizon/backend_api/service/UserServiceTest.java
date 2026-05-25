@@ -6,6 +6,7 @@ import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.UserDto;
 import fr.horizon.backend_api.model.dto.UserRequestDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
+import fr.horizon.backend_api.model.enums.TeacherType;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.UserRepository;
@@ -255,5 +256,76 @@ class UserServiceTest {
 
         assertThrows(InvalidUserRolesException.class,
                 () -> userService.createUser(dto));
+    }
+
+    @Test
+    void toDto_should_include_teacherType_when_user_is_teacher() {
+
+        Role role = new Role();
+        role.setName("TEACHER");
+
+        User user = User.builder()
+                .id(5L)
+                .name("Sophie ROUSSEAU")
+                .email("teacher@teacher.fr")
+                .roles(Set.of(role))
+                .teacherType(TeacherType.COURSE_LEADER)
+                .build();
+
+        when(issueRepository.existsByCreatedByIdAndStatus(5L, IssueStatus.OUVERT))
+                .thenReturn(false);
+
+        UserDto dto = userService.toDto(user);
+
+        assertEquals(TeacherType.COURSE_LEADER, dto.getTeacherType());
+        assertEquals("Sophie ROUSSEAU", dto.getName());
+    }
+
+    @Test
+    void toDto_should_have_null_teacherType_when_user_is_student() {
+
+        Role role = new Role();
+        role.setName("STUDENT");
+
+        User user = User.builder()
+                .id(6L)
+                .name("Raoudate")
+                .email("student@student.fr")
+                .roles(Set.of(role))
+                .teacherType(null)
+                .build();
+
+        when(issueRepository.existsByCreatedByIdAndStatus(6L, IssueStatus.OUVERT))
+                .thenReturn(false);
+
+        UserDto dto = userService.toDto(user);
+
+        assertNull(dto.getTeacherType());
+    }
+
+    @Test
+    void createUser_should_save_teacherType_when_provided() {
+
+        UserRequestDto dto = new UserRequestDto();
+        dto.setName("Paul MARTIN");
+        dto.setEmail("teacher2@teacher.fr");
+        dto.setPassword("pass");
+        dto.setRoleIds(Set.of(2L));
+        dto.setTeacherType(TeacherType.OPTION_LEADER);
+
+        Role role = new Role();
+        role.setId(2L);
+        role.setName("TEACHER");
+
+        when(userRepository.existsByEmail("teacher2@teacher.fr")).thenReturn(false);
+        when(roleRepository.findAllById(Set.of(2L))).thenReturn(List.of(role));
+        when(passwordEncoder.encode("pass")).thenReturn("encodedPass");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(issueRepository.existsByCreatedByIdAndStatus(any(), any())).thenReturn(false);
+
+        UserDto result = userService.createUser(dto);
+
+        assertEquals(TeacherType.OPTION_LEADER, result.getTeacherType());
+        assertEquals("Paul MARTIN", result.getName());
     }
 }

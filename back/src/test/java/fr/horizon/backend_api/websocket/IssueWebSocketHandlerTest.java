@@ -1,6 +1,7 @@
 package fr.horizon.backend_api.websocket;
 
 import fr.horizon.backend_api.model.Message;
+import fr.horizon.backend_api.model.Conversation;
 import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.repository.UserRepository;
@@ -32,7 +33,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
@@ -136,7 +136,7 @@ class IssueWebSocketHandlerTest {
 
         issueWebSocketHandler.handleTextMessage(session, new TextMessage("{\"type\":\"ping\"}"));
 
-        verify(conversationService, never()).addMessageToConversation(any(), any(), any(), any());
+        verify(conversationService, never()).addMessageToConversation(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -149,7 +149,7 @@ class IssueWebSocketHandlerTest {
                 new TextMessage("{\"type\":\"message\",\"content\":\"\",\"conversationId\":5}"));
 
         verify(userRepository, never()).findByEmail(any());
-        verify(conversationService, never()).addMessageToConversation(any(), any(), any(), any());
+        verify(conversationService, never()).addMessageToConversation(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -162,7 +162,7 @@ class IssueWebSocketHandlerTest {
                 new TextMessage("{\"type\":\"message\",\"content\":\"Bonjour\",\"conversationId\":0}"));
 
         verify(userRepository, never()).findByEmail(any());
-        verify(conversationService, never()).addMessageToConversation(any(), any(), any(), any());
+        verify(conversationService, never()).addMessageToConversation(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -175,7 +175,7 @@ class IssueWebSocketHandlerTest {
         issueWebSocketHandler.handleTextMessage(session,
                 new TextMessage("{\"type\":\"message\",\"content\":\"Bonjour\",\"conversationId\":5}"));
 
-        verify(conversationService, never()).addMessageToConversation(any(), any(), any(), any());
+        verify(conversationService, never()).addMessageToConversation(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -198,12 +198,13 @@ class IssueWebSocketHandlerTest {
                 .build();
 
         when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(user));
-        when(conversationService.addMessageToConversation(5L, "Bonjour", user, 12L)).thenReturn(message);
+        when(conversationService.addMessageToConversation(5L, "Bonjour", user, 12L, null)).thenReturn(message);
+        when(conversationService.buildBroadcastPayload(message, 12L)).thenReturn("{\"type\":\"new_message\",\"issueId\":12,\"message\":{\"id\":42,\"user\":{\"displayRole\":\"ADMIN\"}}}");
 
         issueWebSocketHandler.handleTextMessage(session,
                 new TextMessage("{\"type\":\"message\",\"content\":\"Bonjour\",\"conversationId\":5}"));
 
-        verify(conversationService).addMessageToConversation(5L, "Bonjour", user, 12L);
+        verify(conversationService).addMessageToConversation(5L, "Bonjour", user, 12L, null);
 
         ArgumentCaptor<TextMessage> payloadCaptor = ArgumentCaptor.forClass(TextMessage.class);
         verify(session).sendMessage(payloadCaptor.capture());
@@ -212,6 +213,45 @@ class IssueWebSocketHandlerTest {
         assertTrue(payload.contains("\"type\":\"new_message\""));
         assertTrue(payload.contains("\"displayRole\":\"ADMIN\""));
         assertTrue(payload.contains("\"issueId\":12"));
+    }
+
+    @Test
+    void handleTextMessage_shouldPersistReplyAndBroadcast_whenReplyTargetIsProvided() throws Exception {
+        WebSocketSession session = mockSession();
+        withOpen(session);
+        session.getAttributes().put("issueId", 12L);
+        session.getAttributes().put("userEmail", "john@test.com");
+        addSession(session);
+
+        User user = User.builder()
+                .id(9L)
+                .name("John")
+                .email("john@test.com")
+                .roles(Set.of(new Role("ADMIN")))
+                .build();
+        Conversation conversation = fr.horizon.backend_api.model.Conversation.builder().id(5L).build();
+        Message parent = Message.builder().id(15L).conversation(conversation).build();
+        Message message = Message.builder()
+                .id(42L)
+                .content("Réponse")
+                .replyTo(parent)
+                .build();
+
+        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(user));
+        when(conversationService.addMessageToConversation(5L, "Réponse", user, 12L, 15L)).thenReturn(message);
+        when(conversationService.buildBroadcastPayload(message, 12L)).thenReturn("{\"type\":\"new_message\",\"issueId\":12,\"message\":{\"id\":42,\"replyToMessageId\":15,\"replyToMessage\":{\"id\":15}}}");
+
+        issueWebSocketHandler.handleTextMessage(session,
+                new TextMessage("{\"type\":\"message\",\"content\":\"Réponse\",\"conversationId\":5,\"replyToMessageId\":15}"));
+
+        verify(conversationService).addMessageToConversation(5L, "Réponse", user, 12L, 15L);
+
+        ArgumentCaptor<TextMessage> payloadCaptor = ArgumentCaptor.forClass(TextMessage.class);
+        verify(session).sendMessage(payloadCaptor.capture());
+
+        String payload = payloadCaptor.getValue().getPayload();
+        assertTrue(payload.contains("\"replyToMessageId\":15"));
+        assertTrue(payload.contains("\"replyToMessage\""));
     }
 
     @Test

@@ -7,6 +7,7 @@ import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.FollowedReason;
 import fr.horizon.backend_api.repository.IssueFollowerRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
+import fr.horizon.backend_api.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +36,9 @@ class IssueFollowerServiceTest {
     @Mock
     private IssueRepository issueRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
     @InjectMocks
     private IssueFollowerService issueFollowerService;
 
@@ -50,6 +54,27 @@ class IssueFollowerServiceTest {
         issue = new Issue();
         issue.setId(1L);
         issue.setStatus(IssueStatus.OUVERT);
+    }
+
+    /** Vérifie que getUserByEmail retourne l'utilisateur si trouvé */
+    @Test
+    void getUserByEmail_success() {
+        when(userRepository.findByEmail("test@test.com"))
+                .thenReturn(Optional.of(user));
+
+        User result = issueFollowerService.getUserByEmail("test@test.com");
+
+        assertEquals(user, result);
+    }
+
+    /** Vérifie qu'une exception NOT_FOUND est levée si l'email n'existe pas */
+    @Test
+    void getUserByEmail_notFound_throwsNotFound() {
+        when(userRepository.findByEmail("inconnu@test.com"))
+                .thenReturn(Optional.empty());
+
+        assertThrows(ResponseStatusException.class, () ->
+                issueFollowerService.getUserByEmail("inconnu@test.com"));
     }
 
     /** Vérifie qu'un utilisateur peut suivre une issue avec succès */

@@ -2,15 +2,17 @@ package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.exception.IssueNotFoundException;
-import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.Issue;
-import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.dto.IssueDto;
+import fr.horizon.backend_api.model.dto.RequestManagerDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
+import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
+import fr.horizon.backend_api.repository.RequestManagerRepository;
 import fr.horizon.backend_api.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -19,11 +21,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class IssueServiceTest {
@@ -38,14 +40,20 @@ class IssueServiceTest {
     private CategoryRepository categoryRepository;
 
     @Mock
+    private RequestManagerRepository requestManagerRepository;
+
+    @Mock
     private ConversationService conversationService;
 
     @InjectMocks
     private IssueService issueService;
 
-    @Test
-    void createIssue_should_save_issue_when_valid() {
+    private final String commentaire = "commentaire";
+    private final String raison = "raison";
 
+    @Test
+    void createIssue_should_save_with_OUVERT_status_and_create_manager_when_not_pending() {
+        // Préparation
         User categoryOwner = new User();
         categoryOwner.setId(99L);
         categoryOwner.setName("Teacher");
@@ -54,6 +62,7 @@ class IssueServiceTest {
         dto.setTitle("Bug");
         dto.setDescription("Bug description");
         dto.setCategoryId(1L);
+        dto.setPendingCase(false); // Cas normal
 
         User owner = new User();
         owner.setId(1L);
@@ -65,42 +74,74 @@ class IssueServiceTest {
         category.setName("Software");
         category.setOwner(categoryOwner);
 
-        when(userRepository.findByEmail("john@test.com"))
-                .thenReturn(Optional.of(owner));
+        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(owner));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
 
-        when(categoryRepository.findById(1L))
-                .thenReturn(Optional.of(category));
+        // Intercepter l'Issue sauvegardée pour vérifier son statut interne
+        when(issueRepository.save(any(Issue.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        when(issueRepository.save(any(Issue.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-
+        // Action
         IssueDto result = issueService.createIssue(dto, "john@test.com");
 
+        // Assertions
         assertNotNull(result);
         assertEquals("Bug", result.getTitle());
-        assertEquals("Bug description", result.getDescription());
-        assertEquals(1L, result.getCategoryId());
-        assertEquals("Software", result.getCategoryName());
-        assertEquals(1L, result.getCreatedId());
-        assertEquals("John", result.getCreatedName());
+
+        // Vérification des appels
+        verify(issueRepository).save(any(Issue.class));
+        verify(conversationService).createConversationForIssue(any(Issue.class));
+        verify(requestManagerRepository).save(any(RequestManager.class));
+    }
+
+    @Test
+    void createIssue_should_save_with_INCOMPLET_status_when_pending() {
+        // Préparation
+        IssueCreateDto dto = new IssueCreateDto();
+        dto.setTitle("Brouillon");
+        dto.setDescription("Desc");
+        dto.setCategoryId(1L);
+        dto.setPendingCase(true); // Cas en attente
+
+        User owner = new User();
+        owner.setId(1L);
+        owner.setEmail("john@test.com");
+
+        Category category = new Category();
+        category.setId(1L);
+        category.setOwner(new User());
+
+        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(owner));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+
+        // Action
+        issueService.createIssue(dto, "john@test.com");
+
+        // Assertions pour vérifier que le statut est bien INCOMPLET
+        org.mockito.ArgumentCaptor<Issue> issueCaptor = org.mockito.ArgumentCaptor.forClass(Issue.class);
+        verify(issueRepository).save(issueCaptor.capture());
+        Issue savedIssue = issueCaptor.getValue();
+
+        assertEquals(IssueStatus.INCOMPLET, savedIssue.getStatus());
+
+        verify(conversationService).createConversationForIssue(any(Issue.class));
+        verify(requestManagerRepository, never()).save(any());
     }
 
     @Test
     void createIssue_should_throw_when_user_not_found() {
-
         IssueCreateDto dto = new IssueCreateDto();
         dto.setCategoryId(1L);
 
-        when(userRepository.findByEmail("john@test.com"))
-                .thenReturn(Optional.empty());
+        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.empty());
 
-        assertThrows(RuntimeException.class,
+        assertThrows(EntityNotFoundException.class,
                 () -> issueService.createIssue(dto, "john@test.com"));
+
+        verify(issueRepository, never()).save(any());
     }
 
     @Test
     void createIssue_should_throw_when_category_not_found() {
-
         IssueCreateDto dto = new IssueCreateDto();
         dto.setCategoryId(1L);
 
@@ -108,14 +149,13 @@ class IssueServiceTest {
         owner.setId(1L);
         owner.setEmail("john@test.com");
 
-        when(userRepository.findByEmail("john@test.com"))
-                .thenReturn(Optional.of(owner));
-
-        when(categoryRepository.findById(1L))
-                .thenReturn(Optional.empty());
+        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(owner));
+        when(categoryRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(CategoryNotFoundException.class,
                 () -> issueService.createIssue(dto, "john@test.com"));
+
+        verify(issueRepository, never()).save(any());
     }
 
     @Test
@@ -287,6 +327,16 @@ class IssueServiceTest {
     }
 
     @Test
+    void updateStatus_should_throw_when_issue_not_found() {
+
+        when(issueRepository.findById(99L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IssueNotFoundException.class,
+                () -> issueService.updateStatus("OUVERT", 99L));
+    }
+
+    @Test
     void updatePrivacy_should_toggle_privacy() {
 
         Issue issue = new Issue();
@@ -317,4 +367,300 @@ class IssueServiceTest {
         assertFalse(issue.isPrivate());
         verify(issueRepository).save(issue);
     }
+
+    @Test
+    void updatePrivacy_should_throw_when_issue_not_found() {
+
+        when(issueRepository.findById(99L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(IssueNotFoundException.class,
+                () -> issueService.updatePrivacy(99L));
+    }
+
+    @Test
+    void assignManagerToIssue_Success() {
+        // Précondition
+        User testUser = setupUser();
+        Issue testIssue = setupIssue();
+
+        testUser.setRoles(Set.of(new Role("TEACHER")));
+
+        // Setup de l'Issue
+        User categoryOwner = new User();
+        categoryOwner.setId(99L);
+
+        Category category = new Category();
+        category.setOwner(categoryOwner);
+        testIssue.setCategory(category);
+
+        // Setup de la RequestManager
+        RequestManager existingRequest = new RequestManager();
+        existingRequest.setIssue(testIssue);
+
+
+        // Mocks
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(testIssue));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(testUser));
+        when(requestManagerRepository.existsByIssueAndStatusAndTargetTeacherIsNotNull(any(), any()))
+                .thenReturn(false);
+
+        when(requestManagerRepository.findFirstByIssueOrderByCreatedAtDesc(testIssue))
+                .thenReturn(Optional.of(existingRequest));
+
+        // On simule la sauvegarde et le retour de l'objet
+        when(requestManagerRepository.save(any(RequestManager.class))).thenAnswer(i -> i.getArgument(0));
+
+        // action
+        RequestManagerDto result = issueService.assignManagerToIssue(1L, 2L);
+
+        // assertion
+        assertNotNull(result);
+
+        assertEquals(RequestManagerStatus.PENDING, existingRequest.getStatus());
+        assertEquals(testUser, existingRequest.getTargetTeacher());
+
+        // Vérification des appels
+        verify(issueRepository).findById(1L);
+        verify(userRepository).findById(2L);
+        verify(requestManagerRepository).save(any(RequestManager.class));
+    }
+
+    @Test
+    void assignManagerToIssue_IssueNotFound_ThrowsException() {
+        // précondtion
+        User testUser = setupUser();
+
+        testUser.setRoles(Set.of(new Role("TEACHER")));
+
+        // Mock
+        when(issueRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // Action et Assertion
+        assertThrows(EntityNotFoundException.class, () ->
+                issueService.assignManagerToIssue(1L, 2L)
+        );
+    }
+
+    @Test
+    void assignManagerToIssue_PendingRequest_ThrowsException() {
+        // précondition
+        User testUser = setupUser();
+        Issue testIssue = setupIssue();
+
+        testUser.setRoles(Set.of(new Role("TEACHER")));
+
+        // Arrange
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(testIssue));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(testUser));
+        when(requestManagerRepository.existsByIssueAndStatusAndTargetTeacherIsNotNull(testIssue, RequestManagerStatus.PENDING))
+                .thenReturn(true);
+
+        // Action et Assertion
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () ->
+                issueService.assignManagerToIssue(1L, 2L)
+        );
+        assertEquals("Une demande de manager est déjà en cours pour ce ticket.", exception.getMessage());
+    }
+
+    @Test
+    void assignManagerToIssue_NotATeacher_ThrowsException() {
+        // précondition
+        User testUser = setupUser();
+        Issue testIssue = setupIssue();
+        testUser.setRoles(Set.of(new Role("STUDENT")));
+
+        // Mock
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(testIssue));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(testUser));
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () ->
+                issueService.assignManagerToIssue(1L, 2L)
+        );
+    }
+
+    private User setupUser(){
+        User testUser = new User();
+        testUser.setId(1L);
+        testUser.setEmail("test@test.fr");
+        return  testUser;
+    }
+
+    private Issue setupIssue(){
+        User testUser = setupUser();
+        Category testCategory = new Category();
+        testCategory.setId(1L);
+        testCategory.setName("Test Category");
+
+        Issue testIssue = new Issue();
+        testIssue.setId(1L);
+        testIssue.setTitle("Test Issue");
+        testIssue.setDescription("Test Description");
+        testIssue.setStatus(IssueStatus.OUVERT);
+        testIssue.setCategory(testCategory);
+        testIssue.setCreatedBy(testUser);
+
+        return testIssue;
+    }
+
+    @Test
+    void markIssueAsIncomplete_Success() {
+        // Précondtion
+        Long issueId = 1L;
+        Issue issue = new Issue();
+        issue.setId(issueId);
+        issue.setStatus(IssueStatus.OUVERT);
+
+        RequestManager requestManager = new RequestManager();
+        requestManager.setStatus(RequestManagerStatus.PENDING);
+
+        when(issueRepository.findById(issueId)).thenReturn(Optional.of(issue));
+        when(requestManagerRepository.findFirstByIssueOrderByCreatedAtDesc(issue)).thenReturn(Optional.of(requestManager));
+
+        // Action
+        issueService.markIssueAsIncomplete(issueId, commentaire, raison);
+
+        // Assertion
+        assertEquals(IssueStatus.INCOMPLET, issue.getStatus());
+        assertEquals(RequestManagerStatus.DENIED, requestManager.getStatus());
+
+        verify(issueRepository).save(issue);
+        verify(requestManagerRepository).save(requestManager);
+    }
+
+    @Test
+    void markIssueAsIncomplete_Already_Close() {
+        // Arrange
+        Long issueId = 1L;
+        Issue issue = new Issue();
+        issue.setId(issueId);
+        issue.setStatus(IssueStatus.TERMINE); // Déjà résolue
+
+        when(issueRepository.findById(issueId)).thenReturn(Optional.of(issue));
+
+        // Action et Assertion
+        assertThrows(IllegalStateException.class, () -> {
+            issueService.markIssueAsIncomplete(issueId, commentaire, raison);
+        });
+
+        // On vérifie qu'aucun save n'a été appelé
+        verify(issueRepository, never()).save(any());
+        verify(requestManagerRepository, never()).save(any());
+    }
+
+    @Test
+    void markIssueAsIncomplete_IssueNotFound() {
+        // Précondition
+        Long issueId = 1L;
+        Issue issue = new Issue();
+        issue.setId(issueId);
+        issue.setStatus(IssueStatus.OUVERT);
+        when(issueRepository.findById(issueId)).thenReturn(Optional.empty());
+
+        // Action et Assertion
+        assertThrows(EntityNotFoundException.class, () -> {
+            issueService.markIssueAsIncomplete(issueId, commentaire, raison);
+        });
+
+        verify(requestManagerRepository, never()).findFirstByIssueOrderByCreatedAtDesc(issue);
+    }
+
+    @Test
+    void updateIssueWhenIncomplete_should_update_and_set_OUVERT_when_valid() {
+        // Préparation
+        Long issueId = 10L;
+        String email = "john@test.com";
+
+        IssueCreateDto dto = new IssueCreateDto();
+        dto.setTitle("Titre corrigé");
+        dto.setDescription("Description corrigée");
+        dto.setCategoryId(2L);
+
+        Issue existingIssue = new Issue();
+        existingIssue.setId(issueId);
+        existingIssue.setStatus(IssueStatus.INCOMPLET);
+        existingIssue.setTitle("Vieux titre");
+
+        User owner = new User();
+        owner.setId(1L);
+        owner.setEmail(email);
+
+        Category newCategory = new Category();
+        newCategory.setId(2L);
+        newCategory.setName("Nouvelle Catégorie");
+        newCategory.setOwner(new User());
+
+        when(issueRepository.findById(issueId)).thenReturn(Optional.of(existingIssue));
+        when(userRepository.findByEmail(email)).thenReturn(Optional.of(owner));
+        when(categoryRepository.findById(2L)).thenReturn(Optional.of(newCategory));
+        when(issueRepository.save(any(Issue.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Action
+        IssueDto result = issueService.updateIssueWhenIncomplete(email, issueId, dto);
+
+        // Assertions
+        assertNotNull(result);
+
+        // Vérification des modifications sur l'entité
+        org.mockito.ArgumentCaptor<Issue> issueCaptor = org.mockito.ArgumentCaptor.forClass(Issue.class);
+        verify(issueRepository).save(issueCaptor.capture());
+        Issue updatedIssue = issueCaptor.getValue();
+
+        assertEquals("Titre corrigé", updatedIssue.getTitle());
+        assertEquals("Description corrigée", updatedIssue.getDescription());
+        assertEquals(newCategory, updatedIssue.getCategory());
+        assertEquals(owner, updatedIssue.getCreatedBy());
+        assertEquals(IssueStatus.OUVERT, updatedIssue.getStatus()); // Doit repasser en OUVERT
+    }
+
+    @Test
+    void updateIssueWhenIncomplete_should_throw_when_issue_not_found() {
+        IssueCreateDto dto = new IssueCreateDto();
+        when(issueRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(IssueNotFoundException.class,
+                () -> issueService.updateIssueWhenIncomplete("test@test.fr", 99L, dto));
+
+        verify(issueRepository, never()).save(any());
+    }
+
+    @Test
+    void updateIssueWhenIncomplete_should_throw_when_user_not_found() {
+        Issue existingIssue = new Issue();
+        existingIssue.setId(1L);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(existingIssue));
+        when(userRepository.findByEmail("ghost@test.fr")).thenReturn(Optional.empty());
+
+        IssueCreateDto dto = new IssueCreateDto();
+
+        assertThrows(EntityNotFoundException.class,
+                () -> issueService.updateIssueWhenIncomplete("ghost@test.fr", 1L, dto));
+
+        verify(issueRepository, never()).save(any());
+    }
+
+    @Test
+    void updateIssueWhenIncomplete_should_throw_when_category_not_found() {
+        Issue existingIssue = new Issue();
+        existingIssue.setId(1L);
+        User owner = new User();
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(existingIssue));
+        when(userRepository.findByEmail("test@test.fr")).thenReturn(Optional.of(owner));
+        when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
+
+        IssueCreateDto dto = new IssueCreateDto();
+        dto.setCategoryId(99L);
+
+        assertThrows(CategoryNotFoundException.class,
+                () -> issueService.updateIssueWhenIncomplete("test@test.fr", 1L, dto));
+
+        verify(issueRepository, never()).save(any());
+    }
+
+
+
+
 }

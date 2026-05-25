@@ -24,5 +24,5 @@ import Sidebar from '~/components/layout/Sidebar.vue'
 
 const route = useRoute()
 
-const isAuthPage = computed(() => route.path === '/login')
+const isAuthPage = computed(() => route.path === '/login' || route.path === '/')
 </script>

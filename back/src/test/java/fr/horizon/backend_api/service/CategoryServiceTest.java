@@ -6,6 +6,7 @@ import fr.horizon.backend_api.model.dto.CategoryDetailsDto;
 import fr.horizon.backend_api.model.dto.CategoryDto;
 import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.CategoryRequestRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
@@ -228,6 +229,90 @@ class CategoryServiceTest {
         assertThatThrownBy(() -> categoryService.addFollower(10L, 1L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Only teachers");
+    }
+
+    // =============================================
+    // findByCategoryType()
+    // =============================================
+
+    /**
+     * Vérifie que les catégories de type AUDIT sont retournées et correctement mappées.
+     */
+    @Test
+    void findByCategoryType_should_return_audit_categories() {
+
+        // GIVEN
+        Category auditCategory = Category.builder()
+                .id(11L)
+                .name("Test")
+                .subject("Audit Test")
+                .status(CategoryStatus.ACTIVE)
+                .categoryType(CategoryType.AUDIT)
+                .owner(user)
+                .build();
+
+        when(categoryRepository.findByCategoryType(CategoryType.AUDIT))
+                .thenReturn(List.of(auditCategory));
+
+        // WHEN
+        List<CategoryDto> result = categoryService.findByCategoryType(CategoryType.AUDIT);
+
+        // THEN
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getName()).isEqualTo("Test");
+        assertThat(result.get(0).getSubject()).isEqualTo("Audit Test");
+        assertThat(result.get(0).getCategoryType()).isEqualTo(CategoryType.AUDIT);
+        assertThat(result.get(0).getOwnerName()).isEqualTo("Lucas");
+
+        verify(categoryRepository).findByCategoryType(CategoryType.AUDIT);
+    }
+
+    /**
+     * Vérifie que les catégories de type DEFENSE sont retournées.
+     */
+    @Test
+    void findByCategoryType_should_return_defense_categories() {
+
+        // GIVEN
+        Category defenseCategory = Category.builder()
+                .id(20L)
+                .name("PFE")
+                .subject("Projet Fin Études")
+                .status(CategoryStatus.ACTIVE)
+                .categoryType(CategoryType.DEFENSE)
+                .owner(user)
+                .build();
+
+        when(categoryRepository.findByCategoryType(CategoryType.DEFENSE))
+                .thenReturn(List.of(defenseCategory));
+
+        // WHEN
+        List<CategoryDto> result = categoryService.findByCategoryType(CategoryType.DEFENSE);
+
+        // THEN
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getCategoryType()).isEqualTo(CategoryType.DEFENSE);
+        assertThat(result.get(0).getName()).isEqualTo("PFE");
+
+        verify(categoryRepository).findByCategoryType(CategoryType.DEFENSE);
+    }
+
+    /**
+     * Vérifie qu'une liste vide est retournée si aucune catégorie ne correspond au type.
+     */
+    @Test
+    void findByCategoryType_should_return_empty_when_no_match() {
+
+        // GIVEN
+        when(categoryRepository.findByCategoryType(CategoryType.AUDIT))
+                .thenReturn(List.of());
+
+        // WHEN
+        List<CategoryDto> result = categoryService.findByCategoryType(CategoryType.AUDIT);
+
+        // THEN
+        assertThat(result).isEmpty();
+        verify(categoryRepository).findByCategoryType(CategoryType.AUDIT);
     }
 
     @Test

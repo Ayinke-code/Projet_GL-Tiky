@@ -7,22 +7,83 @@
             </UButton>
         </div>
 
-        <div v-if="loading" class="text-center py-8">
-            <USkeleton class="h-20 w-full mb-4" />
-            <USkeleton class="h-20 w-full mb-4" />
-            <USkeleton class="h-20 w-full" />
+      <!--Rebrique des affectations -->
+      <div v-if="isTeacher" class="py-12">
+        <section><AssignationManager :userId="user.id" @issue-updated="fetchIssues"/></section>
+
+        <div class="relative py-8">
+          <div class="absolute inset-0 flex items-center"><span class="w-full border-t border-gray-200"></span></div>
+          <div class="relative flex justify-center"><span class="bg-white px-2 text-sm text-gray-400"></span></div>
         </div>
 
-        <div v-else-if="issues.length === 0" class="text-center py-12">
-            <p class="text-gray-500 text-lg">Aucune issue pour le moment</p>
-            <UButton to="/issues/create" variant="outline" class="mt-4">
-                Créer la première issue
-            </UButton>
-        </div>
+        <section><AssignationTeacher :userId="user.id" @issue-updated="fetchIssues"/></section>
+      </div>
 
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 overflow-visible">
-            <IssuesCard v-for="issue in issues" :key="issue.id" :issue="issue" @delete="deleteValidation" />
-        </div>
+      <div
+        v-if="user"
+        v-show="afficherSectionIncomplete"
+        class="bg-white p-6 mb-8 rounded-2xl shadow-sm border border-gray-100"
+      >
+        <IncompleteIssuesList
+          :userId="user.id"
+          @has-issues="afficherSectionIncomplete = $event"
+          @issue-updated="fetchIssues"
+        />
+      </div>
+
+      <div v-if="loading" class="text-center py-8">
+          <USkeleton class="h-20 w-full mb-4" />
+          <USkeleton class="h-20 w-full mb-4" />
+          <USkeleton class="h-20 w-full" />
+      </div>
+
+      <div v-else-if="issues.length === 0" class="text-center py-12">
+          <p class="text-gray-500 text-lg">Aucune issue pour le moment</p>
+          <UButton to="/issues/create" variant="outline" class="mt-4">
+              Créer la première issue
+          </UButton>
+      </div>
+
+        <template v-else>
+            <!-- Les issues dont l'utilisateur est categoryOwner -->
+            <div v-if="Object.keys(ownedIssuesByCategory).length > 0">
+                <h2 class="text-xl font-bold text-black mb-3">Vos catégories</h2>
+
+                <div v-for="(group, categoryId) in ownedIssuesByCategory" :key="categoryId" class="mb-4">
+                    <!-- Composant collapse pour ouvrir/fermer l'affichage des issues de la catégorie -->
+                    <UCollapsible class="w-full">
+
+                        <!-- Bouton / Header -->
+                        <UButton class="group justify-between cursor-pointer" color="neutral" variant="subtle"
+                            trailing-icon="i-lucide-chevron-down" :label="group.name" :ui="{
+                                trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200'
+                            }" block />
+
+                        <!-- Contenu affiché quand ouvert -->
+                        <template #content>
+                            <div class="overflow-visible p-2">
+                                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    <IssuesCard v-for="issue in group.issues" :key="issue.id" :issue="issue"
+                                        @delete="deleteValidation" />
+                                </div>
+                            </div>
+                        </template>
+
+                    </UCollapsible>
+                </div>
+            </div>
+
+            <!-- Séparateur -->
+            <template v-if="Object.keys(otherIssues).length > 0 && ownedIssues.length > 0">
+                <Separator class="p-5" />
+            </template>
+
+            <!-- Les autres issues -->
+            <h2 v-if="otherIssues.length > 0" class="text-xl font-bold text-black mb-3">Autres</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 overflow-visible">
+                <IssuesCard v-for="issue in otherIssues" :key="issue.id" :issue="issue" @delete="deleteValidation" />
+            </div>
+        </template>
 
         <UAlert v-if="error" color="error" class="mt-4" @close="error = null">
             <template #title>Erreur</template>
@@ -44,6 +105,11 @@
 
 import IssuesCard from '~/components/issues/IssuesCard.vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
+import { computed } from 'vue'
+import Separator from '~/components/ui/Separator.vue'
+import AssignationManager from '~/components/assignation/AssignationManager.vue'
+import AssignationTeacher from '~/components/assignation/AssignationTeacher.vue'
+import IncompleteIssuesList from '~/components/layout/IncompleteIssuesList.vue'
 
 const { ready, user } = useAuth()
 const { issues, fetchIssues, deleteIssue, error } = useIssues()
@@ -79,6 +145,42 @@ const isDeleteValidateModalOpen = ref(false)
 //     updatingStatusId.value = null
 //   }
 // }
+
+// Issues appartenant à l’utilisateur connecté
+// Filtre sur le champ categoryOwnerId
+const ownedIssues = computed(() => {
+    return issues.value.filter(
+        issue => issue.categoryOwnerId === user.value.id
+    )
+})
+
+/*
+ * Regroupement des issues du user par catégorie
+ * Clé utilisée : categoryId
+ */
+const ownedIssuesByCategory = computed(() => {
+    return ownedIssues.value.reduce((groups, issue) => {
+        const key = issue.categoryId
+
+        if (!groups[key]) {
+            groups[key] = {
+                name: issue.categoryName,
+                issues: []
+            }
+        }
+
+        groups[key].issues.push(issue)
+
+        return groups
+    }, {})
+})
+
+// Les autres issues n'appartenant pas à l'utilisateur connecté
+const otherIssues = computed(() => {
+    return issues.value.filter(
+        issue => issue.categoryOwnerId !== user.value.id
+    )
+})
 
 /**
  * Ouvre modal suppression
@@ -129,4 +231,11 @@ onMounted(async () => {
         loading.value = false
     }
 })
+
+const isTeacher = computed(() => {
+  return user.value?.roles?.includes('TEACHER') || user.value?.roles?.includes('ADMIN') || false
+})
+
+const afficherSectionIncomplete = ref(false)
+
 </script>
