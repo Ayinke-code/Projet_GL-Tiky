@@ -2,7 +2,6 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
-import fr.horizon.backend_api.repository.UserRepository;
 import fr.horizon.backend_api.service.IssueService;
 import fr.horizon.backend_api.model.IssueFollower;
 import fr.horizon.backend_api.service.IssueFollowerService;
@@ -46,9 +45,6 @@ class IssueControllerTest {
 
     @MockitoBean
     private IssueFollowerService issueFollowerService;
-
-    @MockitoBean
-    private UserRepository userRepository;
 
     @Test
     void shouldGetAllIssues() throws Exception {
