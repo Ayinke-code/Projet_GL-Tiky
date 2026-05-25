@@ -39,7 +39,7 @@
 
         <!-- Option de mise en attente -->
         <div class="pt-2">
-          <UCheckbox v-model="form.isPending" label="Mettre ce ticket en attente" />
+          <UCheckbox v-model="form.isPending" label="Marquer ce ticket incomplet, vous pourrez le compléter plus tard" />
         </div>
 
         <!-- Erreur -->

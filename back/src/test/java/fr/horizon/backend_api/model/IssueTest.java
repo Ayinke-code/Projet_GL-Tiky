@@ -29,7 +29,7 @@ class IssueTest {
         assertEquals("Internet down", issue.getDescription());
 
         // valeurs par défaut Lombok
-        assertEquals(IssueStatus.OUVERT, issue.getStatus());
+        assertEquals(IssueStatus.EN_ATTENTE, issue.getStatus());
         assertFalse(issue.isPrivate());
 
         // champs optionnels

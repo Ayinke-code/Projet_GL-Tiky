@@ -52,7 +52,7 @@ export const useIssues = () => {
             await navigateTo('/login')
             return
         }
-        if (!payload?.title || !payload?.description || !payload?.categoryId || !payload?.pendingCase) {
+        if (!payload?.title || !payload?.description || !payload?.categoryId) {
             error.value = 'INVALID_PAYLOAD'
             return
         }
@@ -64,7 +64,7 @@ export const useIssues = () => {
                     title: payload.title,
                     description: payload.description,
                     categoryId: payload.categoryId,
-                  pendingCase: payload.pendingCase
+                    pendingCase: payload.pendingCase
                 }
             })
 
