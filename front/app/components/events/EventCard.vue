@@ -3,25 +3,23 @@
     Bordure gauche colorée selon le type : indigo (AUDIT) ou emerald (DEFENSE).
     Même convention visuelle que CategoryCard.vue.
   -->
-  <div class="bg-white border-l-4 rounded-lg shadow-sm p-5 hover:shadow-lg transition-all"
+  <div class="bg-white border-l-4 rounded-lg shadow-sm p-5 hover:shadow-lg transition-all flex flex-col h-full"
     :class="event.categoryType === 'AUDIT' ? 'border-indigo-500' : 'border-emerald-500'">
 
-    <div class="flex justify-between items-start mb-2">
-      <div>
-        <!-- Type + nom de la catégorie en petit -->
-        <p class="text-[10px] font-bold uppercase tracking-widest"
-          :class="event.categoryType === 'AUDIT' ? 'text-indigo-600' : 'text-emerald-600'">
-          {{ event.categoryType === 'AUDIT' ? 'Audit' : 'Soutenance' }} · {{ event.categoryName }}
-        </p>
+    <div class="mb-2">
+      <!-- Type + nom de la catégorie en petit -->
+      <p class="text-[10px] font-bold uppercase tracking-widest"
+        :class="event.categoryType === 'AUDIT' ? 'text-indigo-600' : 'text-emerald-600'">
+        {{ event.categoryType === 'AUDIT' ? 'Audit' : 'Soutenance' }} · {{ event.categoryName }}
+      </p>
 
-        <!-- Nom de l'événement -->
-        <h3 class="text-lg font-bold text-gray-900 mt-1">{{ event.name }}</h3>
+      <!-- Nom de l'événement -->
+      <h3 class="text-lg font-bold text-gray-900 mt-1">{{ event.name }}</h3>
 
-        <!-- Description tronquée si trop longue -->
-        <p v-if="event.description" class="text-sm text-gray-500 mt-1 line-clamp-2">
-          {{ event.description }}
-        </p>
-      </div>
+      <!-- Description tronquée si trop longue -->
+      <p v-if="event.description" class="text-sm text-gray-500 mt-1 line-clamp-2">
+        {{ event.description }}
+      </p>
     </div>
 
     <!-- Créateur -->
@@ -59,6 +57,37 @@
       </div>
     </div>
 
+    <!-- Groupes projet affectés -->
+    <div v-if="event.projectGroups && event.projectGroups.length" class="mt-3">
+      <p class="text-[9px] uppercase tracking-widest font-semibold text-gray-400 mb-1.5">
+        <i class="fa-solid fa-rocket mr-1"></i>Groupes projet
+      </p>
+      <div class="flex flex-wrap gap-1.5">
+        <span
+          v-for="g in event.projectGroups"
+          :key="g.id"
+          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium
+                 bg-emerald-50 text-emerald-700 border border-emerald-200"
+        >
+          {{ g.name }}
+          <span v-if="g.categoryName" class="opacity-60">· {{ g.categoryName }}</span>
+          <span v-if="g.parentGroupName" class="opacity-60">· <i class="fa-solid fa-code-branch text-[9px]"></i> {{ g.parentGroupName }}</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Bouton suppression -->
+    <div class="flex justify-end mt-auto pt-3">
+      <UButton
+        @click.stop="emit('delete', event)"
+        variant="ghost"
+        size="xs"
+        color="error"
+        icon="i-lucide-trash-2"
+        class="cursor-pointer"
+      />
+    </div>
+
   </div>
 </template>
 
@@ -73,4 +102,6 @@ import { formatDateTime, formatDate, formatTime } from '~/utils/helpers'
 defineProps({
   event: { type: Object, required: true }
 })
+
+const emit = defineEmits(['delete'])
 </script>

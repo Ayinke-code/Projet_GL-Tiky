@@ -3,6 +3,7 @@ package fr.horizon.backend_api.security;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -41,7 +42,9 @@ public class SecurityConfig {
 
                         .requestMatchers("/auth/login").permitAll()
                         .requestMatchers("/auth/logout").authenticated()
-                        .requestMatchers("/auth/me", "/categories/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/events/**", "/groups/**")
+                        .hasAnyAuthority(RoleEnum.ADMIN.value(), RoleEnum.TEACHER.value())
+                        .requestMatchers("/auth/me", "/categories/**", "/groups/**").authenticated()
 
                         .requestMatchers("/admin/**")
                         .hasAuthority(RoleEnum.ADMIN.value())
