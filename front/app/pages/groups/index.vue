@@ -105,8 +105,45 @@
                     </button>
                 </div>
 
-                <!-- Bouton suppression -->
-                <div class="flex justify-end mt-auto pt-3">
+                <!-- Enseignants assignés -->
+                <div class="mt-3">
+                    <p class="text-xs font-medium text-gray-500 mb-2">Enseignant(s)</p>
+                    <div class="flex flex-col gap-1">
+                        <span
+                            v-for="teacher in (expandedTeachers.has(group.id) ? sortedTeachers(group) : sortedTeachers(group).slice(0, 3))"
+                            :key="teacher.id"
+                            class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full w-fit"
+                            :class="teacher.teacherType === 'OPTION_LEADER'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-violet-50 text-violet-700'"
+                        >
+                            <i v-if="teacher.teacherType === 'OPTION_LEADER'" class="fa-solid fa-star text-[9px]"></i>
+                            {{ teacher.name }}
+                            <span v-if="teacher.teacherType === 'OPTION_LEADER'" class="font-semibold opacity-70 text-[9px] uppercase tracking-wide ml-0.5">Option Leader</span>
+                        </span>
+                        <span v-if="!group.teachers?.length" class="text-gray-300 text-xs">Aucun enseignant</span>
+                    </div>
+                    <button
+                        v-if="group.teachers?.length > 3"
+                        @click.stop="toggleExpandTeachers(group.id)"
+                        class="mt-1 text-xs text-violet-500 hover:text-violet-700 font-medium transition cursor-pointer"
+                    >
+                        <i :class="expandedTeachers.has(group.id) ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="mr-1"></i>
+                        {{ expandedTeachers.has(group.id) ? 'Voir moins' : `+${group.teachers.length - 3} de plus` }}
+                    </button>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="flex justify-end gap-2 mt-auto pt-3">
+                    <UButton
+                        v-if="ready && (user?.roles?.includes(ROLE.TEACHER) || user?.roles?.includes(ROLE.ADMIN))"
+                        @click.stop="openTeacherModal(group)"
+                        variant="ghost"
+                        size="xs"
+                        color="primary"
+                        icon="i-lucide-user-plus"
+                        class="cursor-pointer"
+                    />
                     <UButton
                         @click.stop="deleteValidation(group)"
                         variant="ghost"
@@ -125,6 +162,12 @@
             @confirm="handleDelete"
         />
 
+        <TeacherAssignModal
+            v-model:open="isTeacherModalOpen"
+            :group="teacherModalGroup"
+            @updated="onTeacherUpdated"
+        />
+
     </div>
 </template>
 
@@ -133,8 +176,10 @@ definePageMeta({ ssr: false })
 
 import CreateGroupModal from '~/components/groups/CreateGroupModal.vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
+import TeacherAssignModal from '~/components/groups/TeacherAssignModal.vue'
 import { ROLE } from '~/utils/roles.js'
 
+const route = useRoute()
 const router = useRouter()
 const { user, ready } = useAuth()
 const { groups, loading, fetchGroups, deleteGroup } = useGroups()
@@ -170,12 +215,42 @@ const navigateToEdit = (group) => {
     }
 }
 
+const isTeacherModalOpen = ref(false)
+const teacherModalGroup = ref(null)
+
+const openTeacherModal = (group) => {
+    teacherModalGroup.value = group
+    isTeacherModalOpen.value = true
+}
+
+const onTeacherUpdated = (updatedGroup) => {
+    const idx = groups.value.findIndex(g => g.id === updatedGroup.id)
+    if (idx !== -1) groups.value[idx] = updatedGroup
+}
+
 const expandedGroups = ref(new Set())
 const toggleExpand = (groupId) => {
     const next = new Set(expandedGroups.value)
     if (next.has(groupId)) next.delete(groupId)
     else next.add(groupId)
     expandedGroups.value = next
+}
+
+const expandedTeachers = ref(new Set())
+const toggleExpandTeachers = (groupId) => {
+    const next = new Set(expandedTeachers.value)
+    if (next.has(groupId)) next.delete(groupId)
+    else next.add(groupId)
+    expandedTeachers.value = next
+}
+
+const sortedTeachers = (group) => {
+    if (!group.teachers?.length) return []
+    return [...group.teachers].sort((a, b) => {
+        if (a.teacherType === 'OPTION_LEADER' && b.teacherType !== 'OPTION_LEADER') return -1
+        if (a.teacherType !== 'OPTION_LEADER' && b.teacherType === 'OPTION_LEADER') return 1
+        return 0
+    })
 }
 
 const tabs = [
@@ -192,5 +267,11 @@ const switchTab = async (type) => {
     await fetchGroups(type)
 }
 
-onMounted(() => fetchGroups('OPTION'))
+onMounted(() => {
+    const tab = route.query.tab
+    const validTab = tabs.find(t => t.value === tab)
+    const initial = validTab ? validTab.value : 'OPTION'
+    activeTab.value = initial
+    fetchGroups(initial)
+})
 </script>
