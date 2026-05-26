@@ -295,7 +295,7 @@ selenium-test:
     - export WDM_CHROMEDRIVER_PATH=/usr/bin/chromedriver
   script:
       - cd back
-      - mvn $MAVEN_CLI_OPTS failsafe:integration-test failsafe:verify -Pselenium
+      - mvn $MAVEN_CLI_OPTS failsafe:integration-test failsafe:verify
           -Dwebdriver.chrome.driver=/usr/bin/chromedriver
           -Dsel.jup.chrome.arguments="--headless --no-sandbox --disable-dev-shm-usage --disable-gpu"
   artifacts:
