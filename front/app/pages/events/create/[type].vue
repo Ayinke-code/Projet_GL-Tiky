@@ -128,6 +128,49 @@
           </div>
         </div>
 
+        <!-- Groupes projet (AUDIT et DEFENSE uniquement) -->
+        <div v-if="requiresDates">
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Groupes projet
+            <span class="text-gray-400 font-normal ml-1">({{ form.projectGroupIds.length }} sélectionné(s))</span>
+          </label>
+
+          <!-- Barre de recherche -->
+          <input
+            v-model="groupSearch"
+            type="text"
+            placeholder="Rechercher un groupe projet…"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm mb-2
+                   focus:ring-2 focus:ring-indigo-500 outline-none"
+          />
+
+          <USkeleton v-if="loadingProjectGroups" class="h-32 w-full rounded-lg" />
+          <div
+            v-else
+            class="max-h-44 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100"
+          >
+            <label
+              v-for="g in filteredProjectGroups"
+              :key="g.id"
+              class="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-indigo-50 transition-colors"
+            >
+              <input
+                type="checkbox"
+                :value="g.id"
+                v-model="form.projectGroupIds"
+                class="accent-indigo-600"
+              />
+              <span class="text-sm text-gray-800">
+                {{ g.name }}
+                <span v-if="g.categoryName" class="text-xs text-gray-400 ml-1">· {{ g.categoryName }}</span>
+              </span>
+            </label>
+            <div v-if="filteredProjectGroups.length === 0" class="px-4 py-4 text-sm text-gray-400 text-center">
+              Aucun groupe projet trouvé
+            </div>
+          </div>
+        </div>
+
         <!-- Actions -->
         <div class="flex justify-end gap-3 pt-2 border-t">
           <button
@@ -176,7 +219,19 @@ const submitting        = ref(false)
 const submitError       = ref(null)
 const dateError         = ref(null)
 
-const form = ref({ name: '', description: '', categoryId: '', startDate: '', endDate: '' })
+const projectGroups      = ref([])
+const loadingProjectGroups = ref(false)
+const groupSearch        = ref('')
+
+const form = ref({ name: '', description: '', categoryId: '', startDate: '', endDate: '', projectGroupIds: [] })
+
+const filteredProjectGroups = computed(() => {
+  const q = groupSearch.value.toLowerCase().trim()
+  if (!q) return projectGroups.value
+  return projectGroups.value.filter(g =>
+    g.name.toLowerCase().includes(q) || g.categoryName?.toLowerCase().includes(q)
+  )
+})
 
 // Force la date de fin sur le même jour que la date de début
 const endDateMax = computed(() => {
@@ -198,6 +253,18 @@ onMounted(async () => {
     categoryError.value = 'Impossible de charger les catégories. Vérifiez que vous êtes bien connecté.'
   } finally {
     loadingCategories.value = false
+  }
+
+  if (requiresDates.value) {
+    loadingProjectGroups.value = true
+    try {
+      const api = useApi()
+      projectGroups.value = await api('/groups/type/PROJECT')
+    } catch {
+      // liste vide en cas d'erreur
+    } finally {
+      loadingProjectGroups.value = false
+    }
   }
 })
 
@@ -224,7 +291,8 @@ const handleSubmit = async () => {
       categoryId:  form.value.categoryId,
       ...(requiresDates.value && {
         startDate: form.value.startDate,
-        endDate:   form.value.endDate
+        endDate:   form.value.endDate,
+        projectGroupIds: form.value.projectGroupIds,
       })
     }
     await createEvent(payload)

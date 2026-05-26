@@ -92,8 +92,8 @@ class DataInitializerTest {
 
         // THEN
         verify(roleRepository, times(3)).save(any());
-        verify(userRepository, times(4)).save(any());
-        verify(categoryRepository, times(23)).save(any());
+        verify(userRepository, times(54)).save(any());
+        verify(categoryRepository, times(37)).save(any());
 
         verify(issueRepository).save(any());
     }
@@ -133,8 +133,8 @@ class DataInitializerTest {
         // THEN — les rôles n'ont pas été re-créés
         verify(roleRepository, never()).save(any());
 
-        // Les 4 utilisateurs ont été mis à jour (save appelé pour chaque)
-        verify(userRepository, times(4)).save(any());
+        // Les utilisateurs ont été créés ou mis à jour (save appelé pour chacun)
+        verify(userRepository, times(54)).save(any());
 
         // Les noms ont bien été mis à jour
         assertEquals("Richard WOODWARD", existingAdmin.getName());

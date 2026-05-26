@@ -4,5 +4,8 @@ public enum CategoryType {
     AUDIT,
     DEFENSE,
     MEETING,
-    ISSUE
+    ISSUE,
+    OPTION,
+    PROJECT,
+    PROMOTION
 }

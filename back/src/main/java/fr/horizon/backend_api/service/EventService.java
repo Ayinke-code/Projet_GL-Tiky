@@ -4,16 +4,22 @@ import fr.horizon.backend_api.model.dto.EventRequestDto;
 import fr.horizon.backend_api.model.dto.EventResponseDto;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Event;
+import fr.horizon.backend_api.model.StudentGroup;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.model.enums.RoleEnum;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.EventRepository;
+import fr.horizon.backend_api.repository.StudentGroupRepository;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
+import fr.horizon.backend_api.exception.EventNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Service de gestion des événements académiques.
@@ -29,6 +35,7 @@ import java.util.List;
 public class EventService {
     private final EventRepository eventRepository;
     private final CategoryRepository categoryRepository;
+    private final StudentGroupRepository studentGroupRepository;
     private final UserService userService;
 
     /**
@@ -74,6 +81,13 @@ public class EventService {
                 .endDate(request.getEndDate())
                 .build();
 
+        // Affectation des groupes projet (AUDIT / DEFENSE uniquement)
+        if ((category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE)
+                && request.getProjectGroupIds() != null && !request.getProjectGroupIds().isEmpty()) {
+            Set<StudentGroup> groups = new HashSet<>(studentGroupRepository.findAllById(request.getProjectGroupIds()));
+            event.setProjectGroups(groups);
+        }
+
         Event saved = eventRepository.save(event);
         return mapToResponse(saved);
     }
@@ -85,10 +99,17 @@ public class EventService {
      * @return liste de DTO correspondant aux événements trouvés
      */
     public List<EventResponseDto> listByType(CategoryType type) {
-        return eventRepository.findByCategoryTypeOrderByCreatedAtDesc(type)
+        return eventRepository.findByCategoryTypeWithGroups(type)
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    @Transactional
+    public void deleteById(Long id) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new EventNotFoundException(id));
+        eventRepository.delete(event);
     }
 
     /**
@@ -98,6 +119,15 @@ public class EventService {
      * @return DTO contenant les informations publiques de l’événement
      */
     private EventResponseDto mapToResponse(Event event) {
+        List<EventResponseDto.ProjectGroupRefDto> groups = event.getProjectGroups().stream()
+                .map(g -> EventResponseDto.ProjectGroupRefDto.builder()
+                        .id(g.getId())
+                        .name(g.getName())
+                        .categoryName(g.getCategory().getName())
+                        .parentGroupName(g.getParentGroup() != null ? g.getParentGroup().getName() : null)
+                        .build())
+                .toList();
+
         return EventResponseDto.builder()
                 .id(event.getId())
                 .name(event.getName())
@@ -108,6 +138,7 @@ public class EventService {
                 .createdAt(event.getCreatedAt())
                 .startDate(event.getStartDate())
                 .endDate(event.getEndDate())
+                .projectGroups(groups)
                 .build();
     }
 }

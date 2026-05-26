@@ -9,6 +9,8 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "events")
@@ -45,5 +47,15 @@ public class Event extends BaseEntity {
 
     @Column
     private LocalDateTime endDate;
+
+    /** Groupes projet affectés à cet événement (AUDIT ou DEFENSE) */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "event_project_groups",
+            joinColumns = @JoinColumn(name = "event_id"),
+            inverseJoinColumns = @JoinColumn(name = "group_id")
+    )
+    @Builder.Default
+    private Set<StudentGroup> projectGroups = new HashSet<>();
 
 }
