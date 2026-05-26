@@ -11,6 +11,8 @@ public class StudentGroupCreateDto {
     private GroupType type;
     private Long categoryId;
     private String customCategoryName;
-    private Long parentGroupId; // optionnel, uniquement pour les groupes PROJECT
+    private Long parentGroupId;  // optionnel, uniquement pour les groupes PROJECT
+    private Long promotionId;    // optionnel, pour les groupes OPTION
+    private Integer year;        // uniquement pour les groupes PROMOTION
     private Set<Long> memberIds;
 }

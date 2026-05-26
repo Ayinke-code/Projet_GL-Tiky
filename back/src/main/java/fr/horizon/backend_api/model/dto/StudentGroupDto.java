@@ -16,6 +16,9 @@ public class StudentGroupDto {
     private String categoryName;
     private Long parentGroupId;
     private String parentGroupName;
+    private Long promotionId;
+    private String promotionName;
+    private Integer year;
     private UserRefDto createdBy;
     private Set<UserRefDto> members;
 }
