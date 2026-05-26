@@ -16,4 +16,8 @@ public interface StudentGroupRepository extends JpaRepository<StudentGroup, Long
 
     @Query("SELECT g FROM StudentGroup g JOIN g.members m WHERE m.id = :studentId AND g.type = :type")
     List<StudentGroup> findByMemberIdAndType(@Param("studentId") Long studentId, @Param("type") GroupType type);
+
+    boolean existsByNameIgnoreCaseAndType(String name, GroupType type);
+
+    boolean existsByNameIgnoreCaseAndTypeAndIdNot(String name, GroupType type, Long id);
 }
