@@ -4,7 +4,7 @@
     <!-- En-tête -->
     <div class="flex items-center gap-4 mb-8">
       <button
-        @click="router.push('/groups')"
+        @click="router.push('/groups?tab=PROMOTION')"
         class="text-gray-400 hover:text-gray-700 transition cursor-pointer"
         title="Retour aux groupes"
       >
@@ -64,9 +64,7 @@
           <div class="flex justify-end gap-3 pt-2 border-t">
             <button
               type="button"
-              @click="router.push('/groups')"
-              class="px-4 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm
-                     hover:bg-gray-50 transition cursor-pointer"
+              @click="router.push('/groups?tab=PROMOTION')"
             >
               Annuler
             </button>
@@ -181,8 +179,7 @@
         <!-- Bouton terminer -->
         <div class="flex justify-end pt-2 border-t">
           <button
-            @click="router.push('/groups')"
-            class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium text-sm transition cursor-pointer"
+            @click="router.push('/groups?tab=PROMOTION')"
           >
             <i class="fa-solid fa-check mr-2"></i>
             Terminer

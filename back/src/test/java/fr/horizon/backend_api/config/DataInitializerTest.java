@@ -92,7 +92,7 @@ class DataInitializerTest {
 
         // THEN
         verify(roleRepository, times(3)).save(any());
-        verify(userRepository, times(54)).save(any());
+        verify(userRepository, times(66)).save(any());
         verify(categoryRepository, times(37)).save(any());
 
         verify(issueRepository).save(any());
@@ -120,6 +120,19 @@ class DataInitializerTest {
         when(userRepository.findByEmail("teacher@teacher.fr")).thenReturn(Optional.of(existingTeacher));
         when(userRepository.findByEmail("teacher2@teacher.fr")).thenReturn(Optional.of(existingTeacher2));
         when(userRepository.findByEmail("student@student.fr")).thenReturn(Optional.of(existingStudent));
+        // 12 nouveaux teachers → nouveaux utilisateurs
+        when(userRepository.findByEmail("marie.dupont@teacher.fr")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("luc.bernard@teacher.fr")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("claire.moreau@teacher.fr")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("julien.petit@teacher.fr")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("nathalie.simon@teacher.fr")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("thomas.leroy@teacher.fr")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("isabelle.roux@teacher.fr")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("pierre.garnier@teacher.fr")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("anne.faure@teacher.fr")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("nicolas.blanc@teacher.fr")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("laura.henry@teacher.fr")).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("olivier.lambert@teacher.fr")).thenReturn(Optional.empty());
 
         when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -134,7 +147,7 @@ class DataInitializerTest {
         verify(roleRepository, never()).save(any());
 
         // Les utilisateurs ont été créés ou mis à jour (save appelé pour chacun)
-        verify(userRepository, times(54)).save(any());
+        verify(userRepository, times(66)).save(any());
 
         // Les noms ont bien été mis à jour
         assertEquals("Richard WOODWARD", existingAdmin.getName());

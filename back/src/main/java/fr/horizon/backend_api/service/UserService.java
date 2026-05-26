@@ -195,6 +195,7 @@ public class UserService {
                                 .map(Role::getName)
                                 .collect(Collectors.toSet())
                 )
+                .teacherType(user.getTeacherType())
                 .build();
     }
 

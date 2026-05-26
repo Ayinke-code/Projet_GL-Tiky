@@ -63,6 +63,18 @@ public class DataInitializer implements CommandLineRunner {
         // User teacher
         getOrCreateUser("teacher@teacher.fr", "Sophie ROUSSEAU", Set.of(teacherRole), TeacherType.COURSE_LEADER);
         getOrCreateUser("teacher2@teacher.fr", "Paul MARTIN", Set.of(teacherRole), TeacherType.OPTION_LEADER);
+        getOrCreateUser("marie.dupont@teacher.fr", "Marie DUPONT", Set.of(teacherRole), TeacherType.COURSE_LEADER);
+        getOrCreateUser("luc.bernard@teacher.fr", "Luc BERNARD", Set.of(teacherRole), TeacherType.OPTION_LEADER);
+        getOrCreateUser("claire.moreau@teacher.fr", "Claire MOREAU", Set.of(teacherRole), TeacherType.COURSE_LEADER);
+        getOrCreateUser("julien.petit@teacher.fr", "Julien PETIT", Set.of(teacherRole), TeacherType.OPTION_LEADER);
+        getOrCreateUser("nathalie.simon@teacher.fr", "Nathalie SIMON", Set.of(teacherRole), TeacherType.COURSE_LEADER);
+        getOrCreateUser("thomas.leroy@teacher.fr", "Thomas LEROY", Set.of(teacherRole), TeacherType.OPTION_LEADER);
+        getOrCreateUser("isabelle.roux@teacher.fr", "Isabelle ROUX", Set.of(teacherRole), TeacherType.COURSE_LEADER);
+        getOrCreateUser("pierre.garnier@teacher.fr", "Pierre GARNIER", Set.of(teacherRole), TeacherType.OPTION_LEADER);
+        getOrCreateUser("anne.faure@teacher.fr", "Anne FAURE", Set.of(teacherRole), TeacherType.COURSE_LEADER);
+        getOrCreateUser("nicolas.blanc@teacher.fr", "Nicolas BLANC", Set.of(teacherRole), TeacherType.OPTION_LEADER);
+        getOrCreateUser("laura.henry@teacher.fr", "Laura HENRY", Set.of(teacherRole), TeacherType.COURSE_LEADER);
+        getOrCreateUser("olivier.lambert@teacher.fr", "Olivier LAMBERT", Set.of(teacherRole), TeacherType.OPTION_LEADER);
         // User students (50 étudiants)
         User student = getOrCreateUser("student@student.fr", "Raoudate", Set.of(studentRole), null);
         getOrCreateUser("alice.martin@student.fr", "Alice MARTIN", Set.of(studentRole), null);
