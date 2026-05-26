@@ -11,6 +11,7 @@ import fr.horizon.backend_api.model.dto.EventRequestDto;
 import fr.horizon.backend_api.model.dto.EventResponseDto;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.model.enums.GroupType;
+import fr.horizon.backend_api.model.enums.TeacherType;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.EventRepository;
 import fr.horizon.backend_api.repository.StudentGroupRepository;
@@ -428,6 +429,64 @@ class EventServiceTest {
                 () -> eventService.create(request, "teacher@teacher.fr"));
 
         verify(eventRepository, never()).save(any());
+    }
+
+    // =============================================
+    // create() — Option Leader
+    // =============================================
+
+    @Test
+    void create_should_save_audit_when_user_is_option_leader() {
+
+        Role teacherRole = new Role("TEACHER");
+
+        User optionLeader = new User();
+        optionLeader.setId(2L);
+        optionLeader.setName("Paul MARTIN");
+        optionLeader.setEmail("teacher2@teacher.fr");
+        optionLeader.setRoles(Set.of(teacherRole));
+        optionLeader.setTeacherType(TeacherType.OPTION_LEADER);
+
+        Category category = new Category();
+        category.setId(10L);
+        category.setName("UI/UX");
+        category.setCategoryType(CategoryType.AUDIT);
+
+        LocalDateTime start = LocalDateTime.of(2026, 6, 1, 9, 0);
+        LocalDateTime end   = LocalDateTime.of(2026, 6, 1, 11, 0);
+
+        EventRequestDto request = new EventRequestDto();
+        request.setCategoryId(10L);
+        request.setName("Audit Sprint 3 — Option");
+        request.setDescription("Revue du code du sprint 3 par l'option leader");
+        request.setStartDate(start);
+        request.setEndDate(end);
+
+        Event saved = Event.builder()
+                .id(10L)
+                .name("Audit Sprint 3 — Option")
+                .description("Revue du code du sprint 3 par l'option leader")
+                .categoryType(CategoryType.AUDIT)
+                .category(category)
+                .createdBy(optionLeader)
+                .startDate(start)
+                .endDate(end)
+                .build();
+
+        when(userService.findByEmail("teacher2@teacher.fr")).thenReturn(optionLeader);
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+        when(eventRepository.save(any(Event.class))).thenReturn(saved);
+
+        EventResponseDto result = eventService.create(request, "teacher2@teacher.fr");
+
+        assertNotNull(result);
+        assertEquals("Audit Sprint 3 — Option", result.getName());
+        assertEquals("Revue du code du sprint 3 par l'option leader", result.getDescription());
+        assertEquals(CategoryType.AUDIT, result.getCategoryType());
+        assertEquals("UI/UX", result.getCategoryName());
+        assertEquals("Paul MARTIN", result.getCreatedBy());
+
+        verify(eventRepository).save(any(Event.class));
     }
 
     // =============================================
