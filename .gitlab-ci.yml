@@ -34,6 +34,8 @@ before_script:
   - rm -f /usr/bin/chromedriver || true
   - export http_proxy=http://192.168.4.8:3128
   - export https_proxy=http://192.168.4.8:3128
+  - apt-get update && apt-get install -y chromium chromium-driver
+  - export CHROME_BIN=/usr/bin/chromium
 
 # Stage 1: Build Backend (JAR)
 build-backend:
@@ -168,36 +170,34 @@ deploy_dev:
     # 7. Déployer front + redémarrer backend (une fois tous les fichiers transférés)
     - |
       ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV << 'ENDSSH'
-        echo "⚙️ Application de la config Apache..."
         sudo cp ~/app/apache-site.conf /etc/apache2/sites-available/app.conf
         sudo a2ensite app.conf
         sudo a2enmod proxy proxy_http ssl headers rewrite
         sudo systemctl reload apache2
-        echo "✅ Apache rechargé"
 
-        echo "📁 Déploiement du frontend..."
+        echo "Déploiement du frontend..."
         sudo rsync -avz --delete ~/app/frontend/ /var/www/html/
 
-        echo "🔄 Arrêt du backend existant..."
+        echo "Arrêt du backend existant..."
         OLD_PID=$(pgrep -f "app.jar" || true)
         if [ -n "$OLD_PID" ]; then
           kill $OLD_PID
           sleep 2
-          echo "✅ Ancien processus $OLD_PID arrêté"
+          echo "Ancien processus $OLD_PID arrêté"
         else
-          echo "ℹ️ Aucun backend en cours"
+          echo "Aucun backend en cours"
         fi
 
-        echo "🚀 Démarrage du nouveau backend..."
+        echo "Démarrage du nouveau backend..."
         cd ~/app/backend
         nohup java -jar app.jar > ~/app/logs/app.log 2>&1 &
         NEW_PID=$!
         sleep 3
 
         if ps -p $NEW_PID > /dev/null 2>&1; then
-          echo "✅ Backend démarré (PID $NEW_PID)"
+          echo "Backend démarré (PID $NEW_PID)"
         else
-          echo "❌ Échec du démarrage — dernières lignes de log :"
+          echo "Échec du démarrage — dernières lignes de log :"
           tail -20 ~/app/logs/app.log
           exit 1
         fi
@@ -285,22 +285,26 @@ deploy_prod:
 # Stage 4: Selenium Tests
 selenium-test:
   stage: selenium
+  variables:
+    FRONT_URL: $FRONT_URL_DEV
   script:
     - cd back
-    # Lancer les tests Selenium
-    - mvn $MAVEN_CLI_OPTS verify -Pselenium
+    - mvn $MAVEN_CLI_OPTS failsafe:integration-test failsafe:verify -Pselenium
   artifacts:
     when: always
     paths:
       - back/target/selenium-reports/
     expire_in: 1 days
+  dependencies:
+    - build-backend
+    - build-frontend-dev
 
   rules:
     # - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     # - if: $CI_COMMIT_BRANCH == "main"
     # - if: $CI_COMMIT_BRANCH == "dev"
-    # - if: $CI_COMMIT_BRANCH
-    - when: never # Pas encore de test SELENIUM
+    - if: $CI_COMMIT_BRANCH
+    # - when: never # Pas encore de test SELENIUM
 
 # Stage 5: SonarQube Analysis
 sonar-dev:

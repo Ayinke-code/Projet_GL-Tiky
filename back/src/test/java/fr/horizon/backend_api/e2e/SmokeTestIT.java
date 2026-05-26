@@ -1,21 +1,36 @@
 package fr.horizon.backend_api.e2e;
 
-import io.github.bonigarcia.seljup.SeleniumJupiter;
-
-import io.github.cdimascio.dotenv.Dotenv;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 
+import io.github.bonigarcia.seljup.SeleniumJupiter;
+import io.github.cdimascio.dotenv.Dotenv;
+import org.openqa.selenium.chrome.ChromeOptions;
+
 @ExtendWith(SeleniumJupiter.class)
 public class SmokeTestIT {
 
-    Dotenv dotenv = Dotenv.load();
-    String frontUrl = dotenv.get("FRONT_URL");
+    String frontUrl;
+
+    @BeforeEach
+    void setup() {
+        Dotenv dotenv = Dotenv.load();
+        frontUrl = System.getenv("FRONT_URL");
+        if (frontUrl == null) {
+            frontUrl = dotenv.get("FRONT_URL");
+        }
+    }
+
+    static ChromeOptions options() {
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
+        return options;
+    }
 
     @Test
     void shouldOpenFrontend(ChromeDriver driver) {
