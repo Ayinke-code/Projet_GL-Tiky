@@ -21,14 +21,14 @@ public class IssueDto {
     private String rejectType;
     private String rejectReason;
     private String rejectComment;
-    // Catégorie
+    // Catégorie owner
     private Long categoryId;
     private String categoryName;
     private Long categoryOwnerId;
     private String categoryOwnerName;
-    // Manager
-    private Long managerId;
-    private String managerName;
+    // Catégorie manager
+    private Long categoryManagerId;
+    private String categoryManagerName;
     // Createur
     private Long createdId;
     private String createdName;

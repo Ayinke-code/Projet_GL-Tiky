@@ -235,6 +235,10 @@ public class IssueService {
      * @return DTO issue
      */
     public IssueDto toDto(Issue issue) {
+        // Vérifie si un manager est assigné à l'issue,
+        // pour récupérer ou non l'id et le nom
+        User manager = issue.getManager();
+
         return IssueDto.builder()
                 .id(issue.getId())
                 .title(issue.getTitle())
@@ -249,8 +253,9 @@ public class IssueService {
                 .categoryName(issue.getCategory().getName())
                 .categoryOwnerId(issue.getCategory().getOwner().getId())
                 .categoryOwnerName(issue.getCategory().getOwner().getName())
-                .managerId(issue.getManager() != null ? issue.getManager().getId() : null)
-                .managerName(issue.getManager() != null ? issue.getManager().getName() : null)
+                // Category manager
+                .categoryManagerId(manager != null ? manager.getId() : null)
+                .categoryManagerName(manager != null ? manager.getName() : null)
                 // CreatedBy
                 .createdId(issue.getCreatedBy().getId())
                 .createdName(issue.getCreatedBy().getName())
@@ -269,12 +274,12 @@ public class IssueService {
         Long categoryOwnerId = issue.getCategory() != null && issue.getCategory().getOwner() != null
                 ? issue.getCategory().getOwner().getId()
                 : null;
-        Long managerId = issue.getManager() != null ? issue.getManager().getId() : null;
+        Long categoryManagerId = issue.getManager() != null ? issue.getManager().getId() : null;
 
         return currentUserId != null && (
                 currentUserId.equals(creatorId)
                         || currentUserId.equals(categoryOwnerId)
-                        || currentUserId.equals(managerId)
+                        || currentUserId.equals(categoryManagerId)
         );
     }
 
@@ -283,11 +288,11 @@ public class IssueService {
         Long categoryOwnerId = issue.getCategory() != null && issue.getCategory().getOwner() != null
                 ? issue.getCategory().getOwner().getId()
                 : null;
-        Long managerId = issue.getManager() != null ? issue.getManager().getId() : null;
+        Long categoryManagerId = issue.getManager() != null ? issue.getManager().getId() : null;
 
         return currentUserId != null && (
                 currentUserId.equals(categoryOwnerId)
-                        || currentUserId.equals(managerId)
+                        || currentUserId.equals(categoryManagerId)
         );
     }
 
