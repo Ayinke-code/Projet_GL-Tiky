@@ -611,7 +611,7 @@ class IssueServiceTest {
         assertEquals("Description corrigée", updatedIssue.getDescription());
         assertEquals(newCategory, updatedIssue.getCategory());
         assertEquals(owner, updatedIssue.getCreatedBy());
-        assertEquals(IssueStatus.OUVERT, updatedIssue.getStatus()); // Doit repasser en OUVERT
+        assertEquals(IssueStatus.EN_ATTENTE, updatedIssue.getStatus()); // Doit repasser en attente
     }
 
     @Test

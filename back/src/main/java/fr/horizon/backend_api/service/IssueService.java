@@ -9,7 +9,6 @@ import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.dto.RequestManagerDto;
-import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
@@ -95,7 +94,7 @@ public class IssueService {
                 .title(dto.getTitle())
                 .description(dto.getDescription())
                 .category(category)
-                .status(IssueStatus.OUVERT)
+                .status(IssueStatus.EN_ATTENTE)
                 .createdBy(owner)
                 .build();
 
@@ -199,7 +198,7 @@ public class IssueService {
         issue.setCategory(category);
         issue.setCreatedBy(owner);
         // réouverture de la demande
-        issue.setStatus(IssueStatus.OUVERT);
+        issue.setStatus(IssueStatus.EN_ATTENTE);
 
         issueRepository.save(issue);
 
@@ -216,6 +215,10 @@ public class IssueService {
      * @return DTO issue
      */
     public IssueDto toDto(Issue issue) {
+        // Vérifie si un manager est assigné à l'issue,
+        // pour récupérer ou non l'id et le nom
+        User manager = issue.getManager();
+
         return IssueDto.builder()
                 .id(issue.getId())
                 .title(issue.getTitle())
@@ -230,6 +233,9 @@ public class IssueService {
                 .categoryName(issue.getCategory().getName())
                 .categoryOwnerId(issue.getCategory().getOwner().getId())
                 .categoryOwnerName(issue.getCategory().getOwner().getName())
+                // Category manager
+                .categoryManagerId(manager != null ? manager.getId() : null)
+                .categoryManagerName(manager != null ? manager.getName() : null)
                 // CreatedBy
                 .createdId(issue.getCreatedBy().getId())
                 .createdName(issue.getCreatedBy().getName())
@@ -284,7 +290,7 @@ public class IssueService {
             issue.setManager(targetedUser);
             requestManager.setProcessingDate(LocalDateTime.now());
             initialStatus = RequestManagerStatus.ACCEPTED;
-            issue.setStatus(IssueStatus.COMPLET);
+            issue.setStatus(IssueStatus.OUVERT);
         }
 
         requestManager.setTargetTeacher(targetedUser);
@@ -314,7 +320,7 @@ public class IssueService {
         if (response) {
             requestManager.setStatus(RequestManagerStatus.ACCEPTED);
             requestManager.getIssue().setManager(requestManager.getTargetTeacher());
-            requestManager.getIssue().setStatus(IssueStatus.COMPLET);
+            requestManager.getIssue().setStatus(IssueStatus.OUVERT);
         } else {
             requestManager.setStatus(RequestManagerStatus.DENIED);
             createRequestManager(requestManager.getIssue());

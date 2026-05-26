@@ -3,6 +3,7 @@ package fr.horizon.backend_api.controller;
 import fr.horizon.backend_api.model.dto.CategoryDetailsDto;
 import fr.horizon.backend_api.model.dto.CategoryDto;
 import fr.horizon.backend_api.model.dto.CategoryCreateDto;
+import fr.horizon.backend_api.model.dto.UserRefDto;
 import fr.horizon.backend_api.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -101,6 +102,7 @@ public class CategoryController {
     public void deleteCategory(@PathVariable Long id) {
         categoryService.deleteById(id);
     }
+
 
     /**
      * Récupère les catégories par type d'événement.

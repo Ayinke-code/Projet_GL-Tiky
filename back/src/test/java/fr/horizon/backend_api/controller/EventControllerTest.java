@@ -170,4 +170,39 @@ class EventControllerTest {
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$").isEmpty());
     }
+
+    @Test
+    void shouldCreateAuditEvent_whenUserIsOptionLeader_returns201() throws Exception {
+
+        EventResponseDto response = EventResponseDto.builder()
+                .id(10L)
+                .name("Audit Sprint 3 — Option")
+                .description("Revue du code du sprint 3 par l'option leader")
+                .categoryType(CategoryType.AUDIT)
+                .categoryName("UI/UX")
+                .createdBy("Paul MARTIN")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(eventService.create(any(), anyString())).thenReturn(response);
+        when(authentication.getName()).thenReturn("teacher2@teacher.fr");
+
+        mockMvc.perform(post("/events")
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "categoryId": 10,
+                                  "name": "Audit Sprint 3 — Option",
+                                  "description": "Revue du code du sprint 3 par l'option leader"
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("Audit Sprint 3 — Option"))
+                .andExpect(jsonPath("$.categoryType").value("AUDIT"))
+                .andExpect(jsonPath("$.categoryName").value("UI/UX"))
+                .andExpect(jsonPath("$.createdBy").value("Paul MARTIN"));
+
+        verify(eventService).create(any(), anyString());
+    }
 }
