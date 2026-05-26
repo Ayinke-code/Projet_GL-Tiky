@@ -6,5 +6,6 @@ public enum CategoryType {
     MEETING,
     ISSUE,
     OPTION,
-    PROJECT
+    PROJECT,
+    PROMOTION
 }

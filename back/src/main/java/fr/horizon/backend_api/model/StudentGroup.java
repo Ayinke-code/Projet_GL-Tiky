@@ -40,6 +40,15 @@ public class StudentGroup extends BaseEntity {
     @JoinColumn(name = "parent_group_id")
     private StudentGroup parentGroup;
 
+    /** Promotion associée (pour les groupes OPTION) */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "promotion_id")
+    private StudentGroup promotion;
+
+    /** Année de la promotion (uniquement pour les groupes PROMOTION) */
+    @Column(name = "promotion_year")
+    private Integer year;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "student_group_members",
