@@ -49,6 +49,7 @@ build-backend:
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH   # toutes les branches
     # - when: never
 
 # Stage 2: Build Frontend (fichiers statiques)
@@ -76,6 +77,7 @@ build-frontend-dev:
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH   # toutes les branches
     # - when: never
 
 # Stage 2: Build Frontend (fichiers statiques)
@@ -129,53 +131,70 @@ unit-test:
 deploy_dev:
   stage: deploy
   before_script:
-    # Installation des outils SSH
     - apt-get update && apt-get install -y openssh-client rsync
     - eval $(ssh-agent -s)
-    
-    # Créer le dossier SSH
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    
-    # Créer le fichier de clé avec la variable
     - echo "$SSH_PRIVATE_KEY_DEV" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
-    
-    # Ajouter la clé à l'agent
     - ssh-add ~/.ssh/id_rsa
-    
-    # Ajouter le serveur aux known_hosts
     - ssh-keyscan -H $DEPLOY_SERVER_DEV >> ~/.ssh/known_hosts
     
   script:
-    # Vérifier connexion
+    # 1. Vérifier connexion
     - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "echo '✅ SSH OK'"
 
-    # Créer structure avec dossier SSL
+    # 2. Créer la structure de dossiers
     - |
       ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV << 'ENDSSH'
-        mkdir -p ~/app/backend
-        mkdir -p ~/app/frontend
-        mkdir -p ~/app/ssl
-        mkdir -p ~/app/logs
+        mkdir -p ~/app/backend ~/app/frontend ~/app/ssl ~/app/logs
       ENDSSH
 
-    # Transférer les certificats SSL
+    # 3. Transférer les certificats SSL
     - echo "$SSL_CERT_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/ssl/server.crt"
     - echo "$SSL_KEY_DEV" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/ssl/server.key"
     - ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "chmod 644 ~/app/ssl/server.crt && chmod 600 ~/app/ssl/server.key"
 
-    # Backend
+    # 4. Transférer le backend
     - scp back/target/*.jar $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/backend/app.jar
 
-    # Frontend
+    # 5. Transférer le frontend
     - rsync -avz --delete front/.output/public/ $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/frontend/
 
-    # Env
+    # 6. Transférer l'env et la config Apache
     - echo "$DEPLOY_ENV_FILE" | ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV "cat > ~/app/backend/.env"
-
-    # Config Apache
     - scp apache-site-dev.conf $DEPLOY_USER@$DEPLOY_SERVER_DEV:~/app/apache-site.conf
+
+    # 7. Déployer front + redémarrer backend (une fois tous les fichiers transférés)
+    - |
+      ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV << 'ENDSSH'
+        echo "📁 Déploiement du frontend..."
+        sudo rsync -avz --delete ~/app/frontend/ /var/www/html/
+
+        echo "🔄 Arrêt du backend existant..."
+        OLD_PID=$(pgrep -f "app.jar" || true)
+        if [ -n "$OLD_PID" ]; then
+          kill $OLD_PID
+          sleep 2
+          echo "✅ Ancien processus $OLD_PID arrêté"
+        else
+          echo "ℹ️ Aucun backend en cours"
+        fi
+
+        echo "🚀 Démarrage du nouveau backend..."
+        cd ~/app/backend
+        nohup java -jar app.jar > ~/app/logs/app.log 2>&1 &
+        NEW_PID=$!
+        sleep 3
+
+        if ps -p $NEW_PID > /dev/null 2>&1; then
+          echo "✅ Backend démarré (PID $NEW_PID)"
+        else
+          echo "❌ Échec du démarrage — dernières lignes de log :"
+          tail -20 ~/app/logs/app.log
+          exit 1
+        fi
+      ENDSSH
     
   environment:
     name: dev
@@ -186,10 +205,10 @@ deploy_dev:
     - build-frontend-dev
   
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev"
+    # - if: $CI_COMMIT_BRANCH == "dev"
     # - if: $CI_COMMIT_BRANCH == "main"
     # - when: never
-    # - if: $CI_COMMIT_BRANCH   # toutes les branches
+    - if: $CI_COMMIT_BRANCH   # toutes les branches
 
 deploy_prod:
   stage: deploy
