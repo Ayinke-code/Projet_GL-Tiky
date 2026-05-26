@@ -62,6 +62,8 @@ export const useEvents = () => {
    * @param type - 'AUDIT' | 'DEFENSE'
    */
   const fetchEventsByType = async (type) => {
+    console.log("5. Fetching events pour le type :", type);
+    events.value = []; // Réinitialise la liste pour afficher le chargement
     try {
       const created = await api('/events', {
         method: 'POST',
@@ -73,6 +75,7 @@ export const useEvents = () => {
 
       return created
       const data = await api(`/events/type/${type}`)
+      console.log("6. Données reçues de l'API :", data); 
       events.value = data
       return data
     } catch (e) {

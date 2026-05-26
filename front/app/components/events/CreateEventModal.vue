@@ -1,4 +1,6 @@
+
 <template>
+  <ClientOnly>
   <!--
     Popup de sélection du type d'événement.
     Au clic sur une card, le modal se ferme et on navigue
@@ -46,14 +48,16 @@
       </div>
     </div>
   </Modal>
+  </ClientOnly>
 </template>
+
 
 <script setup>
 // Prop liée au v-model:open du parent
 const open = defineModel('open')
 const router = useRouter()
-
 import Modal from '~/components/ui/Modal.vue'
+
 
 /**
  * Ferme le popup et navigue vers la page de formulaire du type choisi.

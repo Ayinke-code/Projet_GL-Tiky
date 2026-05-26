@@ -46,7 +46,7 @@ public class Event {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category_type", nullable = true, columnDefinition = "varchar(50)")
-    private CategoryType categoryType; // AUDIT, DEFENSE, MEETING, ISSUE
+    private CategoryType categoryType; // AUDIT, DEFENSE, RDV, ISSUE
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)

@@ -165,7 +165,7 @@ public class CategoryService {
     /**
      * Récupère les catégories filtrées par type d’événement.
      *
-     * @param categoryType type ({@code AUDIT}, {@code DEFENSE}, {@code MEETING} ou {@code ISSUE})
+     * @param categoryType type ({@code AUDIT}, {@code DEFENSE}, {@code RDV} ou {@code ISSUE})
      * @return liste de DTO des catégories correspondant au type
      */
     public List<CategoryDto> findByCategoryType(CategoryType categoryType) {

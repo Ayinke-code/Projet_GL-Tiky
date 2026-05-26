@@ -37,7 +37,7 @@
       Reçoit l'onglet actif pour présélectionner le type si souhaité.
       Émet "created" quand la création réussit → on rafraîchit la liste.
     -->
-    <CreateEventModal v-model:open="isModalOpen" />
+    <CreateEventModal v-model:open="isModalOpen" @update:open="isModalOpen = $event" @created="handleEventCreated" />
 
     <!-- Chargement -->
     <div v-if="loading" class="space-y-4">
@@ -119,7 +119,8 @@ const handleDelete = async () => {
 
 const tabs = [
   { value: 'AUDIT',   label: 'Audits',       icon: 'fa-solid fa-magnifying-glass' },
-  { value: 'DEFENSE', label: 'Soutenances',   icon: 'fa-solid fa-graduation-cap'  }
+  { value: 'DEFENSE', label: 'Soutenances',   icon: 'fa-solid fa-graduation-cap'  },
+  { value: 'RDV', label: 'Rendez-vous',   icon: 'fa-solid fa-calendar-days' }
 ]
 
 /**
@@ -127,6 +128,7 @@ const tabs = [
  * Le finally garantit que loading repasse à false même en cas d'erreur API.
  */
 const switchTab = async (type) => {
+  console.log("8. switchTab appelé pour :", type);
   activeTab.value = type
   loading.value   = true
   fetchError.value = null
@@ -139,6 +141,13 @@ const switchTab = async (type) => {
     loading.value = false
   }
 }
+const handleEventCreated = () => {
+  console.log("Événement reçu : rafraîchissement en cours...");
+  isModalOpen.value = false; // Ferme la modale
+  switchTab(activeTab.value); // Recharge la liste
+}
 
-onMounted(() => switchTab('AUDIT'))
+onMounted(async () => {
+  await switchTab(activeTab.value)
+})
 </script>
