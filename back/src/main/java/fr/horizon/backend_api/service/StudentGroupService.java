@@ -176,6 +176,7 @@ public class StudentGroupService {
                 .id(u.getId())
                 .name(u.getName())
                 .roles(roleNames)
+                .teacherType(u.getTeacherType())
                 .build();
     }
 
@@ -183,6 +184,18 @@ public class StudentGroupService {
         Set<UserRefDto> membersDto = group.getMembers().stream()
                 .map(this::toUserRef)
                 .collect(Collectors.toSet());
+
+        // Pour les groupes PROJECT : les enseignants sont ceux du groupe d'option parent
+        Set<UserRefDto> teachersDto;
+        if (group.getType() == GroupType.PROJECT && group.getParentGroup() != null) {
+            teachersDto = group.getParentGroup().getTeachers().stream()
+                    .map(this::toUserRef)
+                    .collect(Collectors.toSet());
+        } else {
+            teachersDto = group.getTeachers().stream()
+                    .map(this::toUserRef)
+                    .collect(Collectors.toSet());
+        }
 
         return StudentGroupDto.builder()
                 .id(group.getId())
@@ -197,7 +210,26 @@ public class StudentGroupService {
                 .year(group.getYear())
                 .createdBy(toUserRef(group.getCreatedBy()))
                 .members(membersDto)
+                .teachers(teachersDto)
                 .build();
+    }
+
+    @Transactional
+    public StudentGroupDto assignTeacher(Long groupId, Long teacherId) {
+        StudentGroup group = studentGroupRepository.findById(groupId)
+                .orElseThrow(() -> new StudentGroupNotFoundException(groupId));
+        User teacher = userRepository.findById(teacherId)
+                .orElseThrow(() -> new EntityNotFoundException("Teacher not found: " + teacherId));
+        group.getTeachers().add(teacher);
+        return toDto(studentGroupRepository.save(group));
+    }
+
+    @Transactional
+    public StudentGroupDto unassignTeacher(Long groupId, Long teacherId) {
+        StudentGroup group = studentGroupRepository.findById(groupId)
+                .orElseThrow(() -> new StudentGroupNotFoundException(groupId));
+        group.getTeachers().removeIf(t -> t.getId().equals(teacherId));
+        return toDto(studentGroupRepository.save(group));
     }
 
     @Transactional
