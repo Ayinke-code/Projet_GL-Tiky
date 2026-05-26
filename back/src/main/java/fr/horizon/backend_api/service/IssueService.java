@@ -215,6 +215,10 @@ public class IssueService {
      * @return DTO issue
      */
     public IssueDto toDto(Issue issue) {
+        // Vérifie si un manager est assigné à l'issue,
+        // pour récupérer ou non l'id et le nom
+        User manager = issue.getManager();
+
         return IssueDto.builder()
                 .id(issue.getId())
                 .title(issue.getTitle())
@@ -229,6 +233,9 @@ public class IssueService {
                 .categoryName(issue.getCategory().getName())
                 .categoryOwnerId(issue.getCategory().getOwner().getId())
                 .categoryOwnerName(issue.getCategory().getOwner().getName())
+                // Category manager
+                .categoryManagerId(manager != null ? manager.getId() : null)
+                .categoryManagerName(manager != null ? manager.getName() : null)
                 // CreatedBy
                 .createdId(issue.getCreatedBy().getId())
                 .createdName(issue.getCreatedBy().getName())
