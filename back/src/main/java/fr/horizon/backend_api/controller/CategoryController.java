@@ -102,6 +102,7 @@ public class CategoryController {
         categoryService.deleteById(id);
     }
 
+
     /**
      * Récupère les catégories par type d'événement.
      *
