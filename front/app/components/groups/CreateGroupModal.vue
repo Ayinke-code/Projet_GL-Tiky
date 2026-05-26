@@ -32,6 +32,17 @@
           <span class="text-xs text-gray-400 text-center">Horizon, Challenger, Sirena…</span>
         </button>
 
+        <!-- Card PROMOTION (pleine largeur) -->
+        <button
+          @click="goToCreate('promotion')"
+          class="col-span-2 flex flex-col items-center gap-3 p-5 border-2 rounded-xl transition-all cursor-pointer
+                 border-indigo-200 hover:border-indigo-500 hover:bg-indigo-50"
+        >
+          <i class="fa-solid fa-users text-3xl text-indigo-500"></i>
+          <span class="font-bold text-gray-800">Promotion</span>
+          <span class="text-xs text-gray-400 text-center">IR 2026, RT 2025… — import CSV/Excel</span>
+        </button>
+
       </div>
     </div>
   </Modal>

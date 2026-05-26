@@ -56,7 +56,8 @@
             <div
                 v-for="group in groups"
                 :key="group.id"
-                class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow flex flex-col h-full"
+                @click="navigateToEdit(group)"
+                class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer flex flex-col h-full"
             >
                 <!-- Nom + badge catégorie -->
                 <div class="flex items-start justify-between mb-3">
@@ -84,7 +85,7 @@
                     </p>
                     <div class="flex flex-wrap gap-1">
                         <span
-                            v-for="member in group.members"
+                            v-for="member in (expandedGroups.has(group.id) ? group.members : group.members?.slice(0, 10))"
                             :key="member.id"
                             class="bg-indigo-50 text-indigo-700 text-xs px-2 py-0.5 rounded-full"
                         >
@@ -94,6 +95,14 @@
                             Aucun membre
                         </span>
                     </div>
+                    <button
+                        v-if="group.members?.length > 10"
+                        @click.stop="toggleExpand(group.id)"
+                        class="mt-2 text-xs text-indigo-500 hover:text-indigo-700 font-medium transition cursor-pointer"
+                    >
+                        <i :class="expandedGroups.has(group.id) ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="mr-1"></i>
+                        {{ expandedGroups.has(group.id) ? 'Voir moins' : `+${group.members.length - 10} de plus` }}
+                    </button>
                 </div>
 
                 <!-- Bouton suppression -->
@@ -106,8 +115,7 @@
                         icon="i-lucide-trash-2"
                         class="cursor-pointer"
                     />
-                </div>
-            </div>
+                </div>            </div>
         </div>
 
         <ConfirmModal
@@ -127,6 +135,7 @@ import CreateGroupModal from '~/components/groups/CreateGroupModal.vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import { ROLE } from '~/utils/roles.js'
 
+const router = useRouter()
 const { user, ready } = useAuth()
 const { groups, loading, fetchGroups, deleteGroup } = useGroups()
 
@@ -153,7 +162,24 @@ const handleDelete = async () => {
     }
 }
 
+const navigateToEdit = (group) => {
+    if (group.type === 'PROMOTION') {
+        router.push(`/groups/create/promotion?id=${group.id}`)
+    } else {
+        router.push(`/groups/create/${group.type}?id=${group.id}`)
+    }
+}
+
+const expandedGroups = ref(new Set())
+const toggleExpand = (groupId) => {
+    const next = new Set(expandedGroups.value)
+    if (next.has(groupId)) next.delete(groupId)
+    else next.add(groupId)
+    expandedGroups.value = next
+}
+
 const tabs = [
+    { value: 'PROMOTION', label: 'Promotions', icon: 'fa-solid fa-users' },
     { value: 'OPTION',  label: 'Options', icon: 'fa-solid fa-code-branch' },
     { value: 'PROJECT', label: 'Projets', icon: 'fa-solid fa-rocket' },
 ]

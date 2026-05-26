@@ -16,7 +16,7 @@
           {{ isOption ? 'Option' : 'Projet' }}
         </UBadge>
         <h1 class="text-2xl font-bold text-gray-800">
-          Créer un groupe {{ isOption ? 'd\'option' : 'de projet' }}
+          {{ editId ? 'Modifier' : 'Créer' }} un groupe {{ isOption ? 'd\'option' : 'de projet' }}
         </h1>
       </div>
     </div>
@@ -42,19 +42,38 @@
 
       <form @submit.prevent="handleSubmit" class="space-y-5">
 
-        <!-- Nom du groupe -->
-        <div>
+        <!-- Nom du groupe (PROJECT uniquement — OPTION = auto-généré) -->
+        <div v-if="!isOption">
           <label class="block text-xs font-medium text-gray-700 mb-1">
             Nom du groupe <span class="text-red-500">*</span>
           </label>
           <input
             v-model="form.name"
             type="text"
-            :placeholder="isOption ? 'Ex : LD — Promo 2026' : 'Ex : Groupe Horizon A'"
+            placeholder="Ex : Groupe Horizon A"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
                    focus:ring-2 focus:ring-indigo-500 outline-none"
             required
           />
+        </div>
+
+        <!-- Nom auto-généré (OPTION) — aperçu read-only -->
+        <div v-if="isOption">
+          <label class="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-2">
+            Nom du groupe
+            <span class="inline-flex items-center gap-1 text-indigo-500 font-medium text-xs">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              Auto-généré
+            </span>
+          </label>
+          <div
+            class="w-full px-4 py-2 border rounded-lg text-sm"
+            :class="form.name
+              ? 'border-indigo-200 bg-indigo-50 text-indigo-800 font-medium'
+              : 'border-gray-200 bg-gray-50 text-gray-400 italic'"
+          >
+            {{ form.name || 'Sélectionnez une option et une promotion…' }}
+          </div>
         </div>
 
         <!-- Catégorie filtrée par type -->
@@ -121,6 +140,27 @@
           </select>
         </div>
 
+        <!-- Promotion associée (OPTION uniquement) -->
+        <div v-if="isOption && promotions.length > 0">
+          <label class="block text-xs font-medium text-gray-700 mb-1">
+            Promotion associée
+            <span class="text-gray-400 font-normal ml-1">(optionnel)</span>
+          </label>
+          <select
+            v-model="form.promotionId"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
+                   focus:ring-2 focus:ring-indigo-500 outline-none"
+          >
+            <option value="">— Aucune promotion —</option>
+            <option v-for="p in promotions" :key="p.id" :value="p.id">
+              {{ p.name }}<template v-if="p.year"> · {{ p.year }}</template>
+            </option>
+          </select>
+        </div>
+
+        <!-- Filtrer les étudiants par promotion (PROJECT uniquement) -->
+        <div v-if="false"><!-- filtre promo masqué : la liste est déjà filtrée par le groupe d'option --></div>
+
         <!-- Sélection des étudiants -->
         <div>
           <label class="block text-xs font-medium text-gray-700 mb-1">
@@ -131,7 +171,16 @@
             </span>
           </label>
 
-          <!-- Barre de recherche -->
+          <!-- Hint PROJECT sans option sélectionnée -->
+          <div
+            v-if="!isOption && !form.parentGroupId"
+            class="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-xs text-amber-700"
+          >
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            Sélectionnez d'abord un groupe d'option pour afficher ses étudiants.
+          </div>
+
+          <template v-else>
           <input
             v-model="studentSearch"
             type="text"
@@ -162,6 +211,7 @@
               Aucun étudiant trouvé
             </div>
           </div>
+          </template>
         </div>
 
         <!-- Actions -->
@@ -176,13 +226,13 @@
           </button>
           <button
             type="submit"
-            :disabled="submitting || form.memberIds.length < minMembers || (!isOption && !form.parentGroupId)"
+            :disabled="submitting || form.memberIds.length < minMembers || (!isOption && !form.parentGroupId) || (isOption && !form.name)"
             class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50
                    text-white rounded-lg font-medium text-sm transition cursor-pointer"
           >
             <i v-if="submitting" class="fa-solid fa-spinner animate-spin mr-2"></i>
-            <i v-else class="fa-solid fa-plus mr-2"></i>
-            Créer le groupe
+            <i v-else :class="editId ? 'fa-solid fa-floppy-disk' : 'fa-solid fa-plus'" class="mr-2"></i>
+            {{ editId ? 'Enregistrer' : 'Créer le groupe' }}
           </button>
         </div>
 
@@ -201,6 +251,7 @@ const router = useRouter()
 const api = useApi()
 
 const type = route.params.type // 'OPTION' ou 'PROJECT'
+const editId = computed(() => route.query.id ? Number(route.query.id) : null)
 const isOption = computed(() => type === 'OPTION')
 const minMembers = computed(() => type === 'OPTION' ? 24 : 2)
 
@@ -218,19 +269,96 @@ const useCustomCategory = ref(false)
 
 const optionGroups = ref([])
 const loadingOptionGroups = ref(false)
+const promotions = ref([])
+const promotionFilter = ref('')
 
 const form = reactive({
   name: '',
   categoryId: '',
   customCategoryName: '',
   parentGroupId: '',
+  promotionId: '',
   memberIds: [],
+})
+
+const promotionMemberIds = computed(() => {
+  if (!promotionFilter.value) return null
+  const found = promotions.value.find(p => p.id === promotionFilter.value)
+  return found?.members ? new Set(found.members.map(m => m.id)) : null
+})
+
+// --- Auto-génération du nom OPTION ---
+const nameAutoFilled = ref(false)
+
+function normalizePart(str) {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-zA-Z0-9-_]/g, '')
+}
+
+function buildOptionName() {
+  const catName = useCustomCategory.value
+    ? form.customCategoryName
+    : categories.value.find(c => c.id === form.categoryId)?.name
+  const promo = promotions.value.find(p => p.id === form.promotionId)
+  if (!catName || !promo) return null
+  const cat = normalizePart(catName)
+  const promoName = normalizePart(promo.name)
+  return promo.year ? `${cat}-${promoName}_${promo.year}` : `${cat}-${promoName}`
+}
+
+function regenerateName() {
+  const generated = buildOptionName()
+  if (generated) { form.name = generated; nameAutoFilled.value = true }
+}
+
+watch(
+  [() => form.categoryId, () => form.customCategoryName, () => form.promotionId],
+  () => {
+    if (!isOption.value || editId.value) return
+    const generated = buildOptionName()
+    if (generated) { form.name = generated; nameAutoFilled.value = true }
+  }
+)
+
+// Pour OPTION : quand une promo est sélectionnée, auto-sélectionner tous ses étudiants
+watch(() => form.promotionId, (newPromoId) => {
+  if (!isOption.value) return
+  if (!newPromoId) {
+    form.memberIds = []
+    return
+  }
+  const promo = promotions.value.find(p => p.id === newPromoId)
+  form.memberIds = promo?.members?.map(m => m.id) ?? []
+})
+
+// Pour PROJECT : vider la sélection quand le groupe d'option change
+watch(() => form.parentGroupId, () => {
+  if (!isOption.value) form.memberIds = []
 })
 
 const filteredStudents = computed(() => {
   const q = studentSearch.value.toLowerCase().trim()
-  if (!q) return allStudents.value
-  return allStudents.value.filter(s => s.name.toLowerCase().includes(q))
+  let list = allStudents.value
+
+  // Pour OPTION avec promo : afficher UNIQUEMENT les étudiants de la promo
+  if (isOption.value && form.promotionId) {
+    const promo = promotions.value.find(p => p.id === form.promotionId)
+    const promoIds = promo?.members ? new Set(promo.members.map(m => m.id)) : null
+    if (promoIds) list = list.filter(s => promoIds.has(s.id))
+  }
+
+  // Pour PROJECT avec groupe d'option : afficher UNIQUEMENT les membres de ce groupe
+  if (!isOption.value && form.parentGroupId) {
+    const optGrp = optionGroups.value.find(og => og.id === form.parentGroupId)
+    const optIds = optGrp?.members ? new Set(optGrp.members.map(m => m.id)) : null
+    if (optIds) list = list.filter(s => optIds.has(s.id))
+  }
+
+  if (!q) return list
+  return list.filter(s => s.name.toLowerCase().includes(q))
 })
 
 onMounted(async () => {
@@ -253,6 +381,13 @@ onMounted(async () => {
     }
   }
 
+  // Charger les promotions (pour OPTION : lier, pour PROJECT : filtrer)
+  try {
+    promotions.value = await api('/groups/type/PROMOTION')
+  } catch {
+    // liste vide en cas d'erreur
+  }
+
   try {
     allStudents.value = await api('/users/byRoles', {
       method: 'POST',
@@ -263,26 +398,43 @@ onMounted(async () => {
   } finally {
     loadingStudents.value = false
   }
+
+  // Mode édition : pré-remplir le formulaire
+  if (editId.value) {
+    try {
+      const group = await api(`/groups/${editId.value}`)
+      form.name = group.name
+      form.categoryId = group.categoryId ?? ''
+      form.parentGroupId = group.parentGroupId ?? ''
+      form.promotionId = group.promotionId ?? ''
+      form.memberIds = group.members?.map(m => m.id) ?? []
+    } catch {
+      submitError.value = 'Impossible de charger les données du groupe.'
+    }
+  }
 })
 
 async function handleSubmit() {
   submitting.value = true
   submitError.value = null
   try {
-    await api('/groups', {
-      method: 'POST',
-      body: {
-        name: form.name,
-        type: type,
-        categoryId: useCustomCategory.value ? null : form.categoryId,
-        customCategoryName: useCustomCategory.value ? form.customCategoryName : null,
-        parentGroupId: (!isOption.value && form.parentGroupId) ? form.parentGroupId : null,
-        memberIds: form.memberIds,
-      },
-    })
+    const body = {
+      name: form.name,
+      type: type,
+      categoryId: useCustomCategory.value ? null : form.categoryId,
+      customCategoryName: useCustomCategory.value ? form.customCategoryName : null,
+      parentGroupId: (!isOption.value && form.parentGroupId) ? form.parentGroupId : null,
+      promotionId: (isOption.value && form.promotionId) ? form.promotionId : null,
+      memberIds: form.memberIds,
+    }
+    if (editId.value) {
+      await api(`/groups/${editId.value}`, { method: 'PUT', body })
+    } else {
+      await api('/groups', { method: 'POST', body })
+    }
     router.push('/groups')
   } catch (err) {
-    submitError.value = err?.data?.error ?? 'Une erreur est survenue lors de la création du groupe.'
+    submitError.value = err?.data?.error ?? err?.data?.message ?? 'Une erreur est survenue lors de la création du groupe.'
   } finally {
     submitting.value = false
   }
