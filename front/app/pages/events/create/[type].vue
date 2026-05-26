@@ -278,6 +278,7 @@ const handleSubmit = async () => {
         idTeacher: form.value.idTeacher,
         idIssue: form.value.idIssue
       }),
+      categoryType: type,
       ...(requiresDates.value && {
         startDate: form.value.startDate,
         endDate: form.value.endDate

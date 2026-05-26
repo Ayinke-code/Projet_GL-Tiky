@@ -5,6 +5,8 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
+import fr.horizon.backend_api.model.enums.CategoryType;
+
 @Data
 @Builder
 public class CategoryRequestDto {
@@ -16,6 +18,6 @@ public class CategoryRequestDto {
     private String requesterName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-
+    
     private String description; // Optionnel
 }

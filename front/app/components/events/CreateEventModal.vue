@@ -56,7 +56,10 @@
 // Prop liée au v-model:open du parent
 const open = defineModel('open')
 const router = useRouter()
+import { EmitFlags } from 'typescript'
 import Modal from '~/components/ui/Modal.vue'
+
+const emit = defineEmits(['created'])
 
 
 /**

@@ -55,9 +55,11 @@ public class EventService {
      * Vérifie que l’utilisateur possède le rôle requis avant la persistance.
      *
      * @param request données de création de l’événement
-     * @param email   email de l’utilisateur créateur, extrait du contexte de sécurité
+     * @param email   email de l’utilisateur créateur, extrait du contexte de
+     *                sécurité
      * @return événement créé sous forme de DTO
-     * @throws AccessDeniedException si l’utilisateur n’a pas le rôle TEACHER ou ADMIN
+     * @throws AccessDeniedException     si l’utilisateur n’a pas le rôle TEACHER ou
+     *                                   ADMIN
      * @throws CategoryNotFoundException si la catégorie n’existe pas
      */
     public EventResponseDto create(EventRequestDto request, String email) {
@@ -67,25 +69,31 @@ public class EventService {
 
         if (category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE) {
             boolean hasTeacherRole = user.getRoles().stream()
-                    .anyMatch(r -> RoleEnum.TEACHER.value().equals(r.getName()) || RoleEnum.ADMIN.value().equals(r.getName()));
+                    .anyMatch(r -> RoleEnum.TEACHER.value().equals(r.getName())
+                            || RoleEnum.ADMIN.value().equals(r.getName()));
             if (!hasTeacherRole) {
-                throw new AccessDeniedException("Seuls les enseignants peuvent créer des événements de type " + category.getCategoryType());
+                throw new AccessDeniedException(
+                        "Seuls les enseignants peuvent créer des événements de type " + category.getCategoryType());
             }
         }
 
         if (category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE) {
             if (request.getStartDate() == null || request.getEndDate() == null) {
-                throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires pour un événement de ce type.");
+                throw new IllegalArgumentException(
+                        "Les dates de début et de fin sont obligatoires pour un événement de ce type.");
             }
             if (!request.getEndDate().isAfter(request.getStartDate())) {
                 throw new IllegalArgumentException("La date de fin doit être postérieure à la date de début.");
             }
         }
+        CategoryType finalType = request.getCategoryType() != null
+                ? request.getCategoryType()
+                : category.getCategoryType();
 
         Event event = Event.builder()
                 .name(request.getName())
                 .description(request.getDescription())
-                .categoryType(category.getCategoryType())
+                .categoryType(finalType)
                 .category(category)
                 .validated(true)
                 .createdBy(user)
@@ -105,7 +113,8 @@ public class EventService {
     }
 
     /**
-     * Récupère la liste des événements d’un type donné, triés par date décroissante.
+     * Récupère la liste des événements d’un type donné, triés par date
+     * décroissante.
      *
      * @param type type d’événement ({@code AUDIT} ou {@code DEFENSE})
      * @return liste de DTO correspondant aux événements trouvés

@@ -149,5 +149,6 @@ const handleEventCreated = () => {
 
 onMounted(async () => {
   await switchTab(activeTab.value)
+
 })
 </script>
