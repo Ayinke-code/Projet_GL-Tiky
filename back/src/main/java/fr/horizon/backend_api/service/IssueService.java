@@ -45,6 +45,9 @@ public class IssueService {
     private final ConversationService conversationService;
     private final RequestManagerRepository requestManagerRepository;
 
+    // Common exception messages
+    private static final String USER_NOT_FOUND = "User not found";
+
     /**
      * Retourne la liste de toutes les issues.
      *
@@ -52,7 +55,7 @@ public class IssueService {
      */
     public List<IssueDto> findAll(String email) {
         User currentUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
 
         return issueRepository.findAll()
                 .stream()
@@ -72,7 +75,7 @@ public class IssueService {
                 .orElseThrow(() -> new IssueNotFoundException(id));
 
         User currentUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
 
         if (!canAccessIssue(issue, currentUser)) {
             throw new AccessDeniedException("Vous n'avez pas accès à cette issue privée");
@@ -168,7 +171,7 @@ public class IssueService {
                 .orElseThrow(() -> new IssueNotFoundException(id));
 
         User currentUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
 
         if (!canManageIssuePrivacy(issue, currentUser)) {
             throw new AccessDeniedException("Seul le category owner ou l'issue manager peut modifier la visibilité");
@@ -483,7 +486,7 @@ public class IssueService {
                 .orElseThrow(() -> new IllegalArgumentException("Issue non trouvée"));
 
         User currentUser = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
 
         if (!canAccessIssue(issue, currentUser)) {
             throw new AccessDeniedException("Vous n'avez pas accès à cette issue privée");
