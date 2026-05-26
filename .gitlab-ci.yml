@@ -34,8 +34,6 @@ before_script:
   - rm -f /usr/bin/chromedriver || true
   - export http_proxy=http://192.168.4.8:3128
   - export https_proxy=http://192.168.4.8:3128
-  - apt-get update && apt-get install -y chromium chromium-driver
-  - export CHROME_BIN=/usr/bin/chromium
 
 # Stage 1: Build Backend (JAR)
 build-backend:
@@ -287,9 +285,19 @@ selenium-test:
   stage: selenium
   variables:
     FRONT_URL: $FRONT_URL_DEV
+  before_script:
+    # Proxy
+    - export http_proxy=http://192.168.4.8:3128
+    - export https_proxy=http://192.168.4.8:3128
+    - apt-get update && apt-get install -y chromium chromium-driver
+    - export CHROME_BIN=/usr/bin/chromium
+    - export CHROMEDRIVER_PATH=/usr/bin/chromedriver
+    - export WDM_CHROMEDRIVER_PATH=/usr/bin/chromedriver
   script:
-    - cd back
-    - mvn $MAVEN_CLI_OPTS failsafe:integration-test failsafe:verify -Pselenium
+      - cd back
+      - mvn $MAVEN_CLI_OPTS failsafe:integration-test failsafe:verify -Pselenium
+          -Dwebdriver.chrome.driver=/usr/bin/chromedriver
+          -Dsel.jup.chrome.arguments="--headless --no-sandbox --disable-dev-shm-usage --disable-gpu"
   artifacts:
     when: always
     paths:
