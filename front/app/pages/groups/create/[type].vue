@@ -271,6 +271,7 @@ const optionGroups = ref([])
 const loadingOptionGroups = ref(false)
 const promotions = ref([])
 const promotionFilter = ref('')
+const sameTypeGroups = ref([])
 
 const form = reactive({
   name: '',
@@ -339,6 +340,16 @@ watch(() => form.parentGroupId, () => {
   if (!isOption.value) form.memberIds = []
 })
 
+// Étudiants déjà dans un groupe du même type (exclus de la sélection)
+const busyStudentIds = computed(() => {
+  const ids = new Set()
+  for (const g of sameTypeGroups.value) {
+    if (editId.value && g.id === editId.value) continue
+    if (g.members) g.members.forEach(m => ids.add(m.id))
+  }
+  return ids
+})
+
 const filteredStudents = computed(() => {
   const q = studentSearch.value.toLowerCase().trim()
   let list = allStudents.value
@@ -355,6 +366,12 @@ const filteredStudents = computed(() => {
     const optGrp = optionGroups.value.find(og => og.id === form.parentGroupId)
     const optIds = optGrp?.members ? new Set(optGrp.members.map(m => m.id)) : null
     if (optIds) list = list.filter(s => optIds.has(s.id))
+  }
+
+  // Exclure les étudiants déjà dans un groupe du même type
+  // Exception : PROMOTION — un étudiant peut redoubler et rejoindre une nouvelle promo
+  if (type !== 'PROMOTION') {
+    list = list.filter(s => !busyStudentIds.value.has(s.id))
   }
 
   if (!q) return list
@@ -384,6 +401,12 @@ onMounted(async () => {
   // Charger les promotions (pour OPTION : lier, pour PROJECT : filtrer)
   try {
     promotions.value = await api('/groups/type/PROMOTION')
+  } catch {
+    // liste vide en cas d'erreur
+  }
+
+  try {
+    sameTypeGroups.value = await api(`/groups/type/${type}`)
   } catch {
     // liste vide en cas d'erreur
   }
