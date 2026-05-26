@@ -8,17 +8,9 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @Configuration
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
-
-    private final IssueWebSocketHandler issueWebSocketHandler;
-
-    public WebSocketConfig(IssueWebSocketHandler issueWebSocketHandler) {
-        this.issueWebSocketHandler = issueWebSocketHandler;
-    }
-
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(issueWebSocketHandler, "/ws/issue")
-                .setAllowedOrigins("*");
+        // WebSocket endpoints for issues have been removed. No handlers registered.
     }
 }
 

@@ -1,7 +1,7 @@
 package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.service.ConversationService;
-import fr.horizon.backend_api.websocket.IssueWebSocketHandler;
+// Issue WebSocket support removed
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +22,6 @@ import java.util.Map;
 public class ConversationController {
 
     private final ConversationService conversationService;
-    private final IssueWebSocketHandler issueWebSocketHandler;
 
     /**
      * Récupère la conversation associée à une issue.
@@ -64,7 +63,7 @@ public class ConversationController {
             Authentication auth) {
 
         ConversationService.MessageDispatchResult result = conversationService.addMessage(conversationId, payload, auth.getName());
-        issueWebSocketHandler.broadcastToIssue(result.issueId(), result.broadcastPayload());
+        // WebSocket broadcast for issues removed — just return the created message
         return ResponseEntity.status(HttpStatus.CREATED).body(result.message());
     }
 }

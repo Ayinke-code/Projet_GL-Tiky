@@ -25,46 +25,7 @@ const messages = ref([])
 const newMessage = ref('')
 const replyingToMessage = ref(null)
 const sending = ref(false)
-const socket = ref(null)
 
-/**
- * Connecte au WebSocket pour les mises à jour en temps réel
- */
-const connectWebSocket = () => {
-  if (process.server) return
-  if (socket.value) socket.value.close()
-
-  const config = useRuntimeConfig()
-
-  const token = wsToken.value || localStorage.getItem('wsToken')
-  if (!token) return
-
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const apiBase = config.public.apiBase
-  const host = apiBase.startsWith('/') ? window.location.host + apiBase : new URL(apiBase).host + new URL(apiBase).pathname
-  const wsUrl = `${protocol}//${host}/ws/issue?token=${token}&issueId=${issueId}`
-
-  socket.value = new WebSocket(wsUrl)
-
-  socket.value.onmessage = (event) => {
-    try {
-      const data = JSON.parse(event.data)
-      if (data.type === 'new_message' && data.message) {
-        const normalized = normalizeMessage(data.message)
-        if (!messages.value.find((m) => m.id === normalized.id)) {
-          messages.value.push(normalized)
-        }
-      }
-    } catch (e) {
-      console.error('Erreur WebSocket:', e)
-    }
-  }
-
-  socket.value.onerror = () => {
-    console.error('Erreur WebSocket')
-    socket.value?.close()
-  }
-}
 
 /**
  * Chargement initial de l'issue et des messages
@@ -76,11 +37,10 @@ onMounted(async () => {
     return
   }
 
-  try {
+    try {
     issue.value = await getIssueById(issueId)
     await initializeConversation(issueId)
     messages.value = await getIssueMessages(issueId)
-    connectWebSocket()
   } catch (err) {
     error.value = err?.message || 'Erreur de chargement'
   } finally {
@@ -91,9 +51,7 @@ onMounted(async () => {
 /**
  * Nettoie la connexion WebSocket à la fermeture
  */
-onUnmounted(() => {
-  socket.value?.close()
-})
+// no-op: real-time WebSocket updates for issues disabled
 
 /**
  * Marquer l'issue comme terminée
