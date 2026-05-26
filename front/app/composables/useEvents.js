@@ -20,6 +20,7 @@ export const useEvents = () => {
   const error = ref(null)
 
   /**
+   * Récupère toutes les catégories depuis l'API.
    * Récupère les catégories filtrées par type d'événement.
    * Appelé quand l'utilisateur choisit AUDIT ou DEFENSE dans EventForms.
    *
@@ -41,6 +42,8 @@ export const useEvents = () => {
    *
    * @param payload - { name, description, categoryId }
    */
+  const createEvents = async (payload) => {
+
   const createEvent = async (payload) => {
     error.value = null
     if (!user?.value?.id) {
@@ -59,31 +62,58 @@ export const useEvents = () => {
    * Récupère les événements par type et met à jour l'état global.
    * Appelé au montage de la page et lors du changement d'onglet.
    *
-   * @param type - 'AUDIT' | 'DEFENSE'
+   * @param type - 'AUDIT' | 'DEFENSE' | 'RDV'
    */
   const fetchEventsByType = async (type) => {
     console.log("5. Fetching events pour le type :", type);
     events.value = []; // Réinitialise la liste pour afficher le chargement
     try {
-      const created = await api('/events', {
-        method: 'POST',
-        body: payload
-      })
-
-      // refresh local state
-      await fetchEvents()
-
-      return created
       const data = await api(`/events/type/${type}`)
-      console.log("6. Données reçues de l'API :", data); 
+      console.log("6. Données reçues de l'API :", data);
       events.value = data
       return data
     } catch (e) {
+      error.value = e?.data?.message || 'UNKNOWN_ERROR'
+      return null
       error.value = e?.data?.message || 'FETCH_EVENTS_ERROR'
       return []
     }
   }
 
+  /**
+   * Récupère tous les événements (tous types confondus).
+   * Utilisé par le Calendrier et la page Interactions.
+   *
+   * @returns liste de tous les EventResponseDto
+   */
+  const fetchAllEvents = async () => {
+    events.value = []
+    try {
+      const data = await api('/events')
+      events.value = data
+      return data
+    } catch (e) {
+      error.value = e?.data?.message || 'FETCH_ALL_EVENTS_ERROR'
+      return []
+    }
+  }
+
+  const listAll = async () => {
+  return await api('/events')
+}
+
+  return { events, error, fetchCategoriesByType, createEvent, fetchEventsByType, fetchAllEvents }
+  /**
+   * Supprime une catégorie.
+   *
+   * @param id identifiant de la catégorie
+   */
+  const deleteEvents = async (id) => {
+    await api(`/events/${id}`, {
+      method: 'DELETE'
+    })
+
+    events.value = events.value.filter(c => c.id !== id)
   const deleteEvent = async (id) => {
     await api(`/events/${id}`, { method: 'DELETE' })
     events.value = events.value.filter(e => e.id !== id)

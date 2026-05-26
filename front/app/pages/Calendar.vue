@@ -151,12 +151,11 @@ const mappedEvents = computed(() => {
         };
 
         return {
-            id: String(evt.id_evt),
-            title: evt.title,
-            start: formatPath(evt.start), 
-            end: formatPath(evt.end),
-            color: evt.color || '#3b82f6',
-            allDay: evt.allDay || false, 
+            id: String(evt.id), // evt.id au lieu de evt.id_evt
+            title: evt.name,    // evt.name au lieu de evt.title
+            start: evt.startDate, // direct si format ISO (sinon garde ton formatPath)
+            end: evt.endDate,     // evt.endDate au lieu de evt.end
+            color: colors[evt.categoryType] || '#3b82f6',
             extendedProps: {
                 description: evt.description,
                 statut: evt.statut

@@ -290,6 +290,11 @@ const handleSubmit = async () => {
     emit('update:open', false)
     console.log("Payload envoyé :", JSON.stringify(payload, null, 2));
 
+    router.push('/events') 
+    
+    // Toast de succès si tu as Nuxt UI
+    useToast().add({ title: 'Événement créé !', color: 'green' })
+
   } catch (e) {
     submitError.value = e?.data?.message || 'Une erreur est survenue lors de la création.'
   } finally {

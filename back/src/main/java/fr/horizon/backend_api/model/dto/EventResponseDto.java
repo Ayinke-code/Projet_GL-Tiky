@@ -24,6 +24,8 @@ public class EventResponseDto {
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private Set<String> participantNames;
+    private String associatedTeacher;
+    private String associatedIssue;
     private List<ProjectGroupRefDto> projectGroups;
 
     @Data

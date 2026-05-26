@@ -74,6 +74,18 @@ public class EventController {
      * @param type type d’événement ({@code AUDIT} ou {@code DEFENSE})
      * @return liste des événements correspondants, triés par date décroissante
      */
+    /**
+     * Récupère la liste de tous les événements, tous types confondus.
+     * Utilisé par le Calendrier pour afficher l'ensemble des événements.
+     *
+     * @return liste de tous les événements, triés par date décroissante
+     */
+    @GetMapping
+    public ResponseEntity<List<EventResponseDto>> listAll() {
+        List<EventResponseDto> events = eventService.listAll();
+        return ResponseEntity.ok(events);
+    }
+
     @GetMapping("/type/{type}")
     public ResponseEntity<List<EventResponseDto>> listByType(@PathVariable CategoryType type) {
         List<EventResponseDto> events = eventService.listByType(type);

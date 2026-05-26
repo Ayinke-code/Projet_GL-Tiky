@@ -12,6 +12,9 @@ import fr.horizon.backend_api.model.enums.RoleEnum;
 import fr.horizon.backend_api.repository.*;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
+import fr.horizon.backend_api.model.Issue;
+import fr.horizon.backend_api.repository.UserRepository;
+import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.exception.EventNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -41,6 +44,8 @@ public class EventService {
     private final CategoryRepository categoryRepository;
     private final UserService userService;
     private final UserRepository userRepository;
+    private final IssueRepository issueRepository;
+    private final UserRepository userRepository;
     private final StudentGroupRepository studentGroupRepository;
     private final IssueFollowerRepository issueFollowerRepository;
 
@@ -67,13 +72,23 @@ public class EventService {
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new CategoryNotFoundException(request.getCategoryId()));
 
-        if (category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE) {
+        /*if (category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE) {
             boolean hasTeacherRole = user.getRoles().stream()
                     .anyMatch(r -> RoleEnum.TEACHER.value().equals(r.getName())
                             || RoleEnum.ADMIN.value().equals(r.getName()));
             if (!hasTeacherRole) {
                 throw new AccessDeniedException(
                         "Seuls les enseignants peuvent créer des événements de type " + category.getCategoryType());
+            }
+        } */
+       // Plus résistant
+        if (category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE) {
+            Set<String> roles = user.getRoleNames();
+            boolean isAllowed = roles.contains("TEACHER") || roles.contains("ROLE_TEACHER")
+                    || roles.contains("ADMIN") || roles.contains("ROLE_ADMIN");
+
+            if (!isAllowed) {
+                throw new AccessDeniedException("Seuls les enseignants ou admins peuvent créer des événements.");
             }
         }
 
@@ -86,9 +101,18 @@ public class EventService {
                 throw new IllegalArgumentException("La date de fin doit être postérieure à la date de début.");
             }
         }
-        CategoryType finalType = request.getCategoryType() != null
-                ? request.getCategoryType()
-                : category.getCategoryType();
+        User teacher = null;
+        if (request.getIdTeacher() != null) {
+            teacher = userRepository.findById(request.getIdTeacher()).orElse(null);
+        }
+
+        Issue issue = null;
+        if (request.getIdIssue() != null) {
+            issue = issueRepository.findById(request.getIdIssue()).orElse(null);
+        }
+
+        CategoryType finalType = (request.getIdIssue() != null) ? CategoryType.RDV
+                : (request.getCategoryType() != null ? request.getCategoryType() : category.getCategoryType());
 
         Event event = Event.builder()
                 .name(request.getName())
@@ -99,6 +123,8 @@ public class EventService {
                 .createdBy(user)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
+                .teacher(teacher)
+                .issue(issue)
                 .build();
 
         // Affectation des groupes projet (AUDIT / DEFENSE uniquement)
@@ -122,6 +148,25 @@ public class EventService {
     public List<EventResponseDto> listByType(CategoryType type) {
         return eventRepository.findByCategoryTypeOrderByCreatedAtDesc(type)
                 .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    /**
+     * Récupère la liste de tous les événements, triés par date de création
+     * décroissante.
+     *
+     * @return liste de tous les événements
+     */
+    public List<EventResponseDto> listAll() {
+        return eventRepository.findAll().stream()
+                .sorted((e1, e2) -> {
+                    if (e1.getCreatedAt() == null)
+                        return 1;
+                    if (e2.getCreatedAt() == null)
+                        return -1;
+                    return e2.getCreatedAt().compareTo(e1.getCreatedAt());
+                })
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -396,6 +441,8 @@ public class EventService {
                 .createdAt(event.getCreatedAt())
                 .startDate(event.getStartDate())
                 .endDate(event.getEndDate())
+                .associatedTeacher(event.getTeacher() != null ? event.getTeacher().getName() : null)
+                .associatedIssue(event.getIssue() != null ? event.getIssue().getTitle() : null)
                 .projectGroups(groups)
                 .participantNames(event.getParticipants().stream()
                         .map(participant -> participant.getUser().getName())
@@ -739,6 +786,4 @@ public class EventService {
                 .role(user.getDisplayRole())
                 .build();
     }
-
-
 }

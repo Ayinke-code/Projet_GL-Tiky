@@ -79,6 +79,14 @@ public class Event {
     @Builder.Default
     private Set<StudentGroup> projectGroups = new HashSet<>();
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "teacher_id")
+    private User teacher;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "issue_id")
+    private Issue issue;
+
     @Builder.Default
     @OneToMany(
             mappedBy = "event",

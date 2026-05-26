@@ -21,6 +21,8 @@ public class EventRequestDto {
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private CategoryType categoryType;
+    private Long idTeacher;
+    private Long idIssue;
     /** IDs des groupes projet à affecter (AUDIT / DEFENSE uniquement) */
     private Set<Long> projectGroupIds;
 }
