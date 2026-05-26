@@ -6,7 +6,7 @@
  * - gère les messages et conversations
  */
 
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 
 const route = useRoute()
 const { ready, user, wsToken } = useAuth()
@@ -129,10 +129,19 @@ const statutColor = (statut) => {
 const isResolveModalOpen = ref(false)
 const isVisibilityModalOpen = ref(false)
 
+const canTogglePrivacy = computed(() => {
+  const currentUserId = user?.value?.id
+  if (!currentUserId || !issue.value) return false
+
+  return currentUserId === issue.value.categoryOwnerId || currentUserId === issue.value.managerId
+})
+
 /**
  * Toggle visibilité (public / privé)
  */
 const toggleVisibility = async () => {
+  if (!canTogglePrivacy.value) return
+
   try {
     await updateIssuePrivacy(issueId)
 
@@ -256,7 +265,7 @@ const handleSend = async () => {
                     <!--  -->
                     <!-- Privé/Public : TODO: Quand on aura les 'Issue Manager', on pourra bloquer ce bouton pour les autres -->
                     <!--  -->
-                    <button @click="isVisibilityModalOpen = true"
+                    <button v-if="canTogglePrivacy" @click="isVisibilityModalOpen = true"
                         class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors transition-transform duration-200 hover:scale-105 cursor-pointer"
                         :class="issue.private
                             ? 'border-blue-300 text-blue-600 bg-white hover:bg-blue-50'
@@ -422,7 +431,7 @@ const handleSend = async () => {
 
         </div>
     </div>
-    <div v-if="isVisibilityModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+    <div v-if="isVisibilityModalOpen && canTogglePrivacy" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
         @click.self="isVisibilityModalOpen = false">
         <div
             class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
