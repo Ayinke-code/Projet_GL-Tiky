@@ -168,6 +168,13 @@ deploy_dev:
     # 7. Déployer front + redémarrer backend (une fois tous les fichiers transférés)
     - |
       ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV << 'ENDSSH'
+        echo "⚙️ Application de la config Apache..."
+        sudo cp ~/app/apache-site.conf /etc/apache2/sites-available/app.conf
+        sudo a2ensite app.conf
+        sudo a2enmod proxy proxy_http ssl headers rewrite
+        sudo systemctl reload apache2
+        echo "✅ Apache rechargé"
+
         echo "📁 Déploiement du frontend..."
         sudo rsync -avz --delete ~/app/frontend/ /var/www/html/
 
