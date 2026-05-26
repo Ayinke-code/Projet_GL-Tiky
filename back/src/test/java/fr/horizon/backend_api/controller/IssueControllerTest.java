@@ -52,15 +52,16 @@ class IssueControllerTest {
                 .createdName("John")
                 .build();
 
-        when(issueService.findAll()).thenReturn(List.of(dto));
+        when(authentication.getName()).thenReturn("john@test.com");
+        when(issueService.findAll("john@test.com")).thenReturn(List.of(dto));
 
-        mockMvc.perform(get("/issues"))
+        mockMvc.perform(get("/issues").principal(authentication))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].title").value("Bug"))
                 .andExpect(jsonPath("$[0].categoryName").value("DEV"))
                 .andExpect(jsonPath("$[0].createdName").value("John"));
 
-        verify(issueService).findAll();
+        verify(issueService).findAll("john@test.com");
     }
 
     @Test
@@ -117,14 +118,15 @@ class IssueControllerTest {
                 .description("desc")
                 .build();
 
-        when(issueService.findById(1L)).thenReturn(dto);
+        when(authentication.getName()).thenReturn("john@test.com");
+        when(issueService.findById(1L, "john@test.com")).thenReturn(dto);
 
-        mockMvc.perform(get("/issues/1"))
+        mockMvc.perform(get("/issues/1").principal(authentication))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.title").value("Bug"));
 
-        verify(issueService).findById(1L);
+        verify(issueService).findById(1L, "john@test.com");
     }
 
     @Test
@@ -141,9 +143,11 @@ class IssueControllerTest {
     @Test
     void shouldToggleIssuePrivacy() throws Exception {
 
-        mockMvc.perform(post("/issues/1/update-private"))
+        when(authentication.getName()).thenReturn("john@test.com");
+
+        mockMvc.perform(post("/issues/1/update-private").principal(authentication))
                 .andExpect(status().isOk());
 
-        verify(issueService).updatePrivacy(1L);
+        verify(issueService).updatePrivacy(1L, "john@test.com");
     }
 }

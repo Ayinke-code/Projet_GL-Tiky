@@ -26,6 +26,9 @@ public class IssueDto {
     private String categoryName;
     private Long categoryOwnerId;
     private String categoryOwnerName;
+    // Manager
+    private Long managerId;
+    private String managerName;
     // Createur
     private Long createdId;
     private String createdName;

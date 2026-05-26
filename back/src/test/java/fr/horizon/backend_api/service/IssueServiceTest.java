@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 import java.util.Optional;
@@ -185,7 +186,10 @@ class IssueServiceTest {
         when(issueRepository.findAll())
                 .thenReturn(List.of(issue));
 
-        List<IssueDto> result = issueService.findAll();
+        when(userRepository.findByEmail("john@test.com"))
+                .thenReturn(Optional.of(user));
+
+        List<IssueDto> result = issueService.findAll("john@test.com");
 
         assertEquals(1, result.size());
         assertEquals("Bug", result.get(0).getTitle());
@@ -282,7 +286,10 @@ class IssueServiceTest {
         when(issueRepository.findById(1L))
                 .thenReturn(Optional.of(issue));
 
-        IssueDto result = issueService.findById(1L);
+        when(userRepository.findByEmail("john@test.com"))
+                .thenReturn(Optional.of(user));
+
+        IssueDto result = issueService.findById(1L, "john@test.com");
 
         assertNotNull(result);
         assertEquals(1L, result.getId());
@@ -300,7 +307,7 @@ class IssueServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(IssueNotFoundException.class,
-                () -> issueService.findById(1L));
+                () -> issueService.findById(1L, "john@test.com"));
     }
 
     @Test
@@ -339,14 +346,27 @@ class IssueServiceTest {
     @Test
     void updatePrivacy_should_toggle_privacy() {
 
+        User currentUser = new User();
+        currentUser.setId(10L);
+
+        User categoryOwner = new User();
+        categoryOwner.setId(10L);
+
+        Category category = new Category();
+        category.setOwner(categoryOwner);
+
         Issue issue = new Issue();
         issue.setId(1L);
         issue.setPrivate(false);
+        issue.setCategory(category);
 
         when(issueRepository.findById(1L))
                 .thenReturn(Optional.of(issue));
 
-        issueService.updatePrivacy(1L);
+        when(userRepository.findByEmail("owner@test.com"))
+                .thenReturn(Optional.of(currentUser));
+
+        issueService.updatePrivacy(1L, "owner@test.com");
 
         assertTrue(issue.isPrivate());
         verify(issueRepository).save(issue);
@@ -355,14 +375,24 @@ class IssueServiceTest {
     @Test
     void updatePrivacy_should_toggle_from_true_to_false() {
 
+        User currentUser = new User();
+        currentUser.setId(42L);
+
+        User manager = new User();
+        manager.setId(42L);
+
         Issue issue = new Issue();
         issue.setId(1L);
         issue.setPrivate(true);
+        issue.setManager(manager);
 
         when(issueRepository.findById(1L))
                 .thenReturn(Optional.of(issue));
 
-        issueService.updatePrivacy(1L);
+        when(userRepository.findByEmail("manager@test.com"))
+                .thenReturn(Optional.of(currentUser));
+
+        issueService.updatePrivacy(1L, "manager@test.com");
 
         assertFalse(issue.isPrivate());
         verify(issueRepository).save(issue);
@@ -375,7 +405,30 @@ class IssueServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(IssueNotFoundException.class,
-                () -> issueService.updatePrivacy(99L));
+                () -> issueService.updatePrivacy(99L, "owner@test.com"));
+    }
+
+    @Test
+    void updatePrivacy_should_throw_when_user_is_not_category_owner_or_manager() {
+
+        User currentUser = new User();
+        currentUser.setId(100L);
+
+        User categoryOwner = new User();
+        categoryOwner.setId(200L);
+
+        Category category = new Category();
+        category.setOwner(categoryOwner);
+
+        Issue issue = new Issue();
+        issue.setId(1L);
+        issue.setCategory(category);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(currentUser));
+
+        assertThrows(AccessDeniedException.class,
+                () -> issueService.updatePrivacy(1L, "user@test.com"));
     }
 
     @Test

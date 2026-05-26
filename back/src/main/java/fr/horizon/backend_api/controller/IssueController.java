@@ -37,8 +37,8 @@ public class IssueController {
      */
     @PreAuthorize("isAuthenticated()")
     @GetMapping
-    public List<IssueDto> getAllIssues() {
-        return issueService.findAll();
+    public List<IssueDto> getAllIssues(Authentication authentication) {
+        return issueService.findAll(authentication.getName());
     }
 
     /**
@@ -48,8 +48,8 @@ public class IssueController {
      */
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
-    public IssueDto getIssueById(@PathVariable Long id) {
-        return issueService.findById(id);
+    public IssueDto getIssueById(@PathVariable Long id, Authentication authentication) {
+        return issueService.findById(id, authentication.getName());
     }
 
     /**
@@ -88,8 +88,8 @@ public class IssueController {
      */
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/update-private")
-    public void updatePrivacy(@PathVariable Long id) {
-        issueService.updatePrivacy(id);
+    public void updatePrivacy(@PathVariable Long id, Authentication authentication) {
+        issueService.updatePrivacy(id, authentication.getName());
     }
 
     /**
@@ -195,8 +195,8 @@ public class IssueController {
     }
 
     @GetMapping("dto/{id}")
-    public ResponseEntity<IssueDto> getIssueDTOById(@PathVariable Long id) {
-        return ResponseEntity.ok(issueService.getIssueDTOById(id));
+    public ResponseEntity<IssueDto> getIssueDTOById(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(issueService.getIssueDTOById(id, authentication.getName()));
     }
 
     /**
