@@ -58,4 +58,21 @@ public class Event extends BaseEntity {
     @Builder.Default
     private Set<StudentGroup> projectGroups = new HashSet<>();
 
+    @Builder.Default
+    @OneToMany(
+            mappedBy = "event",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private Set<EventParticipant> participants = new HashSet<>();
+
+    public void addParticipant(User user, Boolean hasAccepted) {
+        EventParticipant participation = EventParticipant.builder()
+                .event(this)
+                .user(user)
+                .hasAccepted(hasAccepted)
+                .build();
+        this.participants.add(participation);
+    }
+
 }

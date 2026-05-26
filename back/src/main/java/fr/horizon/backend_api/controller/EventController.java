@@ -1,7 +1,7 @@
 package fr.horizon.backend_api.controller;
 
-import fr.horizon.backend_api.model.dto.EventRequestDto;
-import fr.horizon.backend_api.model.dto.EventResponseDto;
+import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.dto.*;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.service.EventService;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/events")
@@ -52,6 +53,74 @@ public class EventController {
     public ResponseEntity<List<EventResponseDto>> listByType(@PathVariable CategoryType type) {
         List<EventResponseDto> events = eventService.listByType(type);
         return ResponseEntity.ok(events);
+    }
+
+    /**
+     * Invite un seul utilisateur à un événement spécifique.
+     */
+    @PostMapping("/{eventId}/invitations")
+    public ResponseEntity<EventResponseDto> inviteUserToEvent(
+            @PathVariable Long eventId,
+            @RequestBody Long userId) {
+
+        EventResponseDto response = eventService.inviteUserToMeeting(eventId, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Invite un groupe d'utilisateurs à un événement spécifique.
+     */
+    @PostMapping("/{eventId}/invitations/bulk")
+    public ResponseEntity<EventResponseDto> inviteUsersToEvent(
+            @PathVariable Long eventId,
+            @RequestBody Set<Long> userIds) {
+
+        EventResponseDto response = eventService.inviteUsersToMeeting(eventId, userIds);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Permet à un utilisateur de répondre à une invitation.
+     */
+    @PutMapping("/{eventId}/invitations/respond")
+    public ResponseEntity<EventInvitationResponseDto> respondToInvitation(
+            @PathVariable Long eventId,
+            @RequestBody InvitationResponseRequestDto request,
+            Authentication authentication) {
+
+        EventInvitationResponseDto response = eventService.responseToMeetingInvitation(
+                eventId,
+                request.getResponse(),
+                authentication.getName(),
+                request.getRaison()
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Récupère le statut de toutes les invitations pour un événement.
+     */
+    @GetMapping("/{eventId}/invitations/status")
+    public ResponseEntity<List<StatutInvitationParticipantDto>> getEventInvitationStatus(
+            @PathVariable Long eventId,
+            Authentication authentication) {
+
+        List<StatutInvitationParticipantDto> statusList = eventService.getEventInvitationStatut(
+                eventId,
+                authentication.getName()
+        );
+
+        return ResponseEntity.ok(statusList);
+    }
+
+    /**
+     * Récupère la liste de toutes les invitations en attente de l'utilisateur connecté.
+     */
+    @GetMapping("/invitations/me")
+    public ResponseEntity<List<EventInvitationResponseDto>> getMyInvitations(Authentication authentication) {
+        List<EventInvitationResponseDto> response = eventService.getInvitationsToEvent(authentication.getName());
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Data
 @Builder
@@ -22,6 +23,7 @@ public class EventResponseDto {
     private LocalDateTime createdAt;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
+    private Set<String> participantNames;
     private List<ProjectGroupRefDto> projectGroups;
 
     @Data
