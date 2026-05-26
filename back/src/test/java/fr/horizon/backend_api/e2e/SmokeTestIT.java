@@ -7,10 +7,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 
 import io.github.bonigarcia.seljup.SeleniumJupiter;
 import io.github.cdimascio.dotenv.Dotenv;
-import org.openqa.selenium.chrome.ChromeOptions;
 
 @ExtendWith(SeleniumJupiter.class)
 public class SmokeTestIT {
@@ -19,9 +19,9 @@ public class SmokeTestIT {
 
     @BeforeEach
     void setup() {
-        Dotenv dotenv = Dotenv.load();
         frontUrl = System.getenv("FRONT_URL");
         if (frontUrl == null) {
+            Dotenv dotenv = Dotenv.load();
             frontUrl = dotenv.get("FRONT_URL");
         }
     }
