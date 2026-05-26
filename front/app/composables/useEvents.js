@@ -64,5 +64,10 @@ export const useEvents = () => {
     }
   }
 
-  return { events, error, fetchCategoriesByType, createEvent, fetchEventsByType }
+  const deleteEvent = async (id) => {
+    await api(`/events/${id}`, { method: 'DELETE' })
+    events.value = events.value.filter(e => e.id !== id)
+  }
+
+  return { events, error, fetchCategoriesByType, createEvent, fetchEventsByType, deleteEvent }
 }

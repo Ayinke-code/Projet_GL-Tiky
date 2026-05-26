@@ -53,5 +53,10 @@ public class EventController {
         List<EventResponseDto> events = eventService.listByType(type);
         return ResponseEntity.ok(events);
     }
+
+    @DeleteMapping("/{id}")
+    public void deleteEvent(@PathVariable Long id) {
+        eventService.deleteById(id);
+    }
 }
 
