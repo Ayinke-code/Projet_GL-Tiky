@@ -63,8 +63,58 @@ public class DataInitializer implements CommandLineRunner {
         // User teacher
         getOrCreateUser("teacher@teacher.fr", "Sophie ROUSSEAU", Set.of(teacherRole), TeacherType.COURSE_LEADER);
         getOrCreateUser("teacher2@teacher.fr", "Paul MARTIN", Set.of(teacherRole), TeacherType.OPTION_LEADER);
-        // User student
+        // User students (50 étudiants)
         User student = getOrCreateUser("student@student.fr", "Raoudate", Set.of(studentRole), null);
+        getOrCreateUser("alice.martin@student.fr", "Alice MARTIN", Set.of(studentRole), null);
+        getOrCreateUser("baptiste.dupont@student.fr", "Baptiste DUPONT", Set.of(studentRole), null);
+        getOrCreateUser("camille.leroy@student.fr", "Camille LEROY", Set.of(studentRole), null);
+        getOrCreateUser("damien.moreau@student.fr", "Damien MOREAU", Set.of(studentRole), null);
+        getOrCreateUser("emma.bernard@student.fr", "Emma BERNARD", Set.of(studentRole), null);
+        getOrCreateUser("florian.petit@student.fr", "Florian PETIT", Set.of(studentRole), null);
+        getOrCreateUser("gabriel.thomas@student.fr", "Gabriel THOMAS", Set.of(studentRole), null);
+        getOrCreateUser("hugo.robert@student.fr", "Hugo ROBERT", Set.of(studentRole), null);
+        getOrCreateUser("inès.richard@student.fr", "Inès RICHARD", Set.of(studentRole), null);
+        getOrCreateUser("jade.simon@student.fr", "Jade SIMON", Set.of(studentRole), null);
+        getOrCreateUser("kevin.michel@student.fr", "Kevin MICHEL", Set.of(studentRole), null);
+        getOrCreateUser("lea.lefebvre@student.fr", "Léa LEFEBVRE", Set.of(studentRole), null);
+        getOrCreateUser("mathieu.garcia@student.fr", "Mathieu GARCIA", Set.of(studentRole), null);
+        getOrCreateUser("nina.david@student.fr", "Nina DAVID", Set.of(studentRole), null);
+        getOrCreateUser("oscar.bertrand@student.fr", "Oscar BERTRAND", Set.of(studentRole), null);
+        getOrCreateUser("pauline.roux@student.fr", "Pauline ROUX", Set.of(studentRole), null);
+        getOrCreateUser("quentin.vincent@student.fr", "Quentin VINCENT", Set.of(studentRole), null);
+        getOrCreateUser("romane.fournier@student.fr", "Romane FOURNIER", Set.of(studentRole), null);
+        getOrCreateUser("samuel.morel@student.fr", "Samuel MOREL", Set.of(studentRole), null);
+        getOrCreateUser("thibault.girard@student.fr", "Thibault GIRARD", Set.of(studentRole), null);
+        getOrCreateUser("ulysse.andre@student.fr", "Ulysse ANDRE", Set.of(studentRole), null);
+        getOrCreateUser("victoire.blanc@student.fr", "Victoire BLANC", Set.of(studentRole), null);
+        getOrCreateUser("william.guerin@student.fr", "William GUERIN", Set.of(studentRole), null);
+        getOrCreateUser("xena.perrin@student.fr", "Xena PERRIN", Set.of(studentRole), null);
+        getOrCreateUser("yann.faure@student.fr", "Yann FAURE", Set.of(studentRole), null);
+        getOrCreateUser("zoe.rousseau@student.fr", "Zoé ROUSSEAU", Set.of(studentRole), null);
+        getOrCreateUser("adrien.henry@student.fr", "Adrien HENRY", Set.of(studentRole), null);
+        getOrCreateUser("beatrice.durand@student.fr", "Béatrice DURAND", Set.of(studentRole), null);
+        getOrCreateUser("charlie.lambert@student.fr", "Charlie LAMBERT", Set.of(studentRole), null);
+        getOrCreateUser("delphine.bonnet@student.fr", "Delphine BONNET", Set.of(studentRole), null);
+        getOrCreateUser("edouard.francois@student.fr", "Edouard FRANCOIS", Set.of(studentRole), null);
+        getOrCreateUser("fatima.legrand@student.fr", "Fatima LEGRAND", Set.of(studentRole), null);
+        getOrCreateUser("gauthier.garnier@student.fr", "Gauthier GARNIER", Set.of(studentRole), null);
+        getOrCreateUser("heloise.chevalier@student.fr", "Héloïse CHEVALIER", Set.of(studentRole), null);
+        getOrCreateUser("igor.robin@student.fr", "Igor ROBIN", Set.of(studentRole), null);
+        getOrCreateUser("joanna.muller@student.fr", "Joanna MULLER", Set.of(studentRole), null);
+        getOrCreateUser("killian.lecomte@student.fr", "Killian LECOMTE", Set.of(studentRole), null);
+        getOrCreateUser("laurie.mercier@student.fr", "Laurie MERCIER", Set.of(studentRole), null);
+        getOrCreateUser("maxence.clement@student.fr", "Maxence CLEMENT", Set.of(studentRole), null);
+        getOrCreateUser("noemie.gros@student.fr", "Noémie GROS", Set.of(studentRole), null);
+        getOrCreateUser("olivier.colin@student.fr", "Olivier COLIN", Set.of(studentRole), null);
+        getOrCreateUser("perrine.baudoin@student.fr", "Perrine BAUDOIN", Set.of(studentRole), null);
+        getOrCreateUser("renaud.vidal@student.fr", "Renaud VIDAL", Set.of(studentRole), null);
+        getOrCreateUser("sarah.bourgeois@student.fr", "Sarah BOURGEOIS", Set.of(studentRole), null);
+        getOrCreateUser("theo.carpentier@student.fr", "Théo CARPENTIER", Set.of(studentRole), null);
+        getOrCreateUser("ursula.savoy@student.fr", "Ursula SAVOY", Set.of(studentRole), null);
+        getOrCreateUser("valentin.menard@student.fr", "Valentin MENARD", Set.of(studentRole), null);
+        getOrCreateUser("wendy.barbier@student.fr", "Wendy BARBIER", Set.of(studentRole), null);
+        getOrCreateUser("xavier.aubry@student.fr", "Xavier AUBRY", Set.of(studentRole), null);
+        getOrCreateUser("yasmine.caron@student.fr", "Yasmine CARON", Set.of(studentRole), null);
 
         // =========================
         // CATEGORIES DEFAULT
@@ -107,6 +157,25 @@ public class DataInitializer implements CommandLineRunner {
                     c.setCategoryType(CategoryType.ISSUE);
                     categoryRepository.save(c);
                 });
+
+        // =========================
+        // CATEGORIES OPTION / PROJECT (idempotent)
+        // =========================
+        getOrCreateCategory("LD", "Logiciels Distribués", CategoryType.OPTION, admin);
+        getOrCreateCategory("CSS", "Cybersécurité des Systèmes et des Softwares", CategoryType.OPTION, admin);
+        getOrCreateCategory("SE", "Systèmes Embarqués", CategoryType.OPTION, admin);
+        getOrCreateCategory("DISA", "Données & Intelligence des Systèmes d'Affaires", CategoryType.OPTION, admin);
+        getOrCreateCategory("EOC", "Entrepreneuriat & Organisation des Entreprises Connectées", CategoryType.OPTION, admin);
+        getOrCreateCategory("Big Data", "Big Data & Analytique", CategoryType.OPTION, admin);
+        getOrCreateCategory("IA", "Intelligence Artificielle", CategoryType.OPTION, admin);
+        getOrCreateCategory("Cybersécurité", "Cybersécurité Avancée", CategoryType.OPTION, admin);
+        getOrCreateCategory("Énergie", "Systèmes Énergétiques", CategoryType.OPTION, admin);
+
+        getOrCreateCategory("Horizon", "Projet Horizon", CategoryType.PROJECT, admin);
+        getOrCreateCategory("Challenger", "Projet Challenger", CategoryType.PROJECT, admin);
+        getOrCreateCategory("Sirena", "Projet Sirena", CategoryType.PROJECT, admin);
+        getOrCreateCategory("Atlas", "Projet Atlas", CategoryType.PROJECT, admin);
+        getOrCreateCategory("Nexus", "Projet Nexus", CategoryType.PROJECT, admin);
 
         // =========================
         // ISSUE TEST
@@ -180,6 +249,12 @@ public class DataInitializer implements CommandLineRunner {
                         .owner(owner)
                         .build()
         );
+    }
+
+    private void getOrCreateCategory(String name, String subject, CategoryType categoryType, User owner) {
+        if (!categoryRepository.existsByNameIgnoreCase(name)) {
+            createCategory(name, subject, categoryType, owner);
+        }
     }
 
     /**
