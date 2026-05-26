@@ -537,14 +537,12 @@ const handleUnfollow = async () => {
     @followed="onFollowed"
   />
 
-        </div>
-    </div>
 
-    <!-- Modal de confirmation de réouverture -->
-    <ConfirmModal
-        v-model:open="isReopeningModalOpen"
-        title="Demande de réouverture"
-        description="Voulez-vous vraiment rouvrir cette issue ?"
-        @confirm="handleReopening"
-    />
+  <!-- Modal de confirmation de réouverture -->
+  <ConfirmModal
+      v-model:open="isReopeningModalOpen"
+      title="Demande de réouverture"
+      description="Voulez-vous vraiment rouvrir cette issue ?"
+      @confirm="handleReopening"
+  />
 </template>
