@@ -33,7 +33,7 @@ public class Event {
     private String description;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, columnDefinition = "varchar(50)")
+    @Column(name = "category_type", nullable = true, columnDefinition = "varchar(50)")
     private CategoryType categoryType; // AUDIT, DEFENSE, MEETING, ISSUE
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -43,6 +43,12 @@ public class Event {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
     private User createdBy;
+
+    @Column
+    private LocalDateTime startDate;
+
+    @Column
+    private LocalDateTime endDate;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
