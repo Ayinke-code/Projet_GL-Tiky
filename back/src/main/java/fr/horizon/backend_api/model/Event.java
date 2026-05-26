@@ -23,9 +23,7 @@ public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @JsonProperty("start") // Sera envoyé comme "start" au front
     private LocalDateTime start_date;
-    @JsonProperty("end") // Sera envoyé comme "end" au front
     private LocalDateTime end_date;
 
     @Column(nullable = false)
