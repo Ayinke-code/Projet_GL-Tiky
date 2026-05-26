@@ -25,6 +25,8 @@
 </template>
 
 <script setup>
+import NotificationBell from '~/components/notifications/NotificationBell.vue'
+
 defineEmits(['toggle-sidebar'])
 const { user, ready } = useAuth()
 const userInitial = computed(() => {

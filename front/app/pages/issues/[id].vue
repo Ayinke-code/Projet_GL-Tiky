@@ -7,6 +7,7 @@
  */
 
 import { ref, onMounted, onUnmounted } from 'vue'
+import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 
 const route = useRoute()
 const { ready, user, wsToken } = useAuth()
@@ -126,6 +127,13 @@ const handleMarkResolved = async () => {
 }
 
 /**
+ * Demander la réouverture d'un ticket 'terminé'
+ */
+const handleReopening = async () => {
+    // TODO: US-6700: Demande de réouverture
+}
+
+/**
  * Couleurs des statuts (aligné backend)
  */
 const statutColor = (statut) => {
@@ -142,6 +150,7 @@ const statutColor = (statut) => {
  * Modals UI
  */
 const isResolveModalOpen = ref(false)
+const isReopeningModalOpen = ref(false)
 const isVisibilityModalOpen = ref(false)
 
 /**
@@ -268,14 +277,25 @@ const handleUnfollow = async () => {
                     <!--  -->
                     <!-- Résolu : TODO: Quand on aura les 'Issue Manager', on pourra bloquer ce bouton pour les autres -->
                     <!--  -->
-                    <button v-if="issue.status !== 'TERMINE'" @click="isResolveModalOpen = true"
-                        :disabled="issue.status === 'résolu'"
+                    <button
+                        v-if="issue.status !== 'TERMINE' && user?.id === issue?.categoryManagerId && user.id !== null"
+                        @click="isResolveModalOpen = true" :disabled="issue.status === 'résolu'"
                         class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-transform duration-200 hover:scale-105">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
                         Marquer Résolu
+                    </button>
+                    <button
+                        v-else-if="issue.status === 'TERMINE' && user?.id === issue?.createdId && user.id !== null"
+                        @click="isReopeningModalOpen = true" :disabled="issue.status === 'résolu'"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-transform duration-200 hover:scale-105">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Rouvrir
                     </button>
                     <!--  -->
                     <!-- Privé/Public : TODO: Quand on aura les 'Issue Manager', on pourra bloquer ce bouton pour les autres -->
@@ -507,8 +527,16 @@ const handleUnfollow = async () => {
         </div>
       </div>
 
+        </div>
     </div>
-  </div>
+
+    <!-- Modal de confirmation de réouverture -->
+    <ConfirmModal
+        v-model:open="isReopeningModalOpen"
+        title="Demande de réouverture"
+        description="Voulez-vous vraiment rouvrir cette issue ?"
+        @confirm="handleReopening"
+    />
 
   <!-- Modale de suivi -->
   <FollowModal
