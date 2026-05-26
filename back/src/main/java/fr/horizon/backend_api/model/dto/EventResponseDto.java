@@ -21,6 +21,6 @@ public class EventResponseDto {
     private String categoryName;
     private String createdBy;
     private LocalDateTime createdAt;
-    private LocalDateTime start;
-    private LocalDateTime end;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
 }

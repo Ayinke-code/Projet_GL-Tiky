@@ -23,8 +23,6 @@ public class Event extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private LocalDateTime start_date;
-    private LocalDateTime end_date;
 
     @Column(nullable = false)
     private String name;
