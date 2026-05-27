@@ -42,21 +42,6 @@
 
       <form @submit.prevent="handleSubmit" class="space-y-5">
 
-        <!-- Nom du groupe (PROJECT uniquement — OPTION = auto-généré) -->
-        <div v-if="!isOption">
-          <label class="block text-xs font-medium text-gray-700 mb-1">
-            Nom du groupe <span class="text-red-500">*</span>
-          </label>
-          <input
-            v-model="form.name"
-            type="text"
-            placeholder="Ex : Groupe Horizon A"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
-                   focus:ring-2 focus:ring-indigo-500 outline-none"
-            required
-          />
-        </div>
-
         <!-- Nom auto-généré (OPTION) — aperçu read-only -->
         <div v-if="isOption">
           <label class="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-2">
@@ -80,7 +65,7 @@
         <div>
           <div class="flex items-center justify-between mb-1">
             <label class="block text-xs font-medium text-gray-700">
-              {{ isOption ? 'Option' : 'Projet' }} <span class="text-red-500">*</span>
+              {{ isOption ? 'Option' : 'Nom du groupe' }} <span class="text-red-500">*</span>
             </label>
             <button
               type="button"
@@ -96,7 +81,7 @@
             v-if="useCustomCategory"
             v-model="form.customCategoryName"
             type="text"
-            :placeholder="isOption ? 'Ex : Génie Logiciel' : 'Ex : Projet Phoenix'"
+            :placeholder="isOption ? 'Ex : Génie Logiciel' : 'Ex : Horizon Alpha'"
             class="w-full px-4 py-2 border border-indigo-300 rounded-lg text-sm
                    focus:ring-2 focus:ring-indigo-500 outline-none"
             required
@@ -112,7 +97,7 @@
                      focus:ring-2 focus:ring-indigo-500 outline-none"
               required
             >
-              <option disabled value="">— Sélectionnez {{ isOption ? 'une option' : 'un projet' }} —</option>
+              <option disabled value="">— Sélectionnez {{ isOption ? 'une option' : 'un nom de groupe' }} —</option>
               <option v-for="cat in categories" :key="cat.id" :value="cat.id">
                 {{ cat.name }}
               </option>
@@ -138,6 +123,21 @@
               {{ og.categoryName ? `${og.name} · ${og.categoryName}` : og.name }}
             </option>
           </select>
+
+          <!-- Enseignants assignés au groupe d'option sélectionné -->
+          <div v-if="parentGroupTeachers.length > 0" class="mt-2 flex flex-wrap gap-1 items-center">
+            <span class="text-xs text-gray-500 mr-1">Enseignants :</span>
+            <span
+              v-for="teacher in parentGroupTeachers"
+              :key="teacher.id"
+              class="bg-violet-50 text-violet-700 text-xs px-2 py-0.5 rounded-full"
+            >
+              {{ teacher.name }}
+            </span>
+          </div>
+          <p v-else-if="form.parentGroupId" class="mt-1 text-xs text-gray-400 italic">
+            Aucun enseignant assigné à ce groupe d'option.
+          </p>
         </div>
 
         <!-- Promotion associée (OPTION uniquement) -->
@@ -318,9 +318,19 @@ function regenerateName() {
 watch(
   [() => form.categoryId, () => form.customCategoryName, () => form.promotionId],
   () => {
-    if (!isOption.value || editId.value) return
-    const generated = buildOptionName()
-    if (generated) { form.name = generated; nameAutoFilled.value = true }
+    if (editId.value) return
+    if (isOption.value) {
+      const generated = buildOptionName()
+      if (generated) { form.name = generated; nameAutoFilled.value = true }
+    } else {
+      // PROJECT : le nom = la catégorie sélectionnée
+      if (useCustomCategory.value) {
+        form.name = form.customCategoryName
+      } else {
+        const cat = categories.value.find(c => c.id === form.categoryId)
+        if (cat) form.name = cat.name
+      }
+    }
   }
 )
 
@@ -338,6 +348,13 @@ watch(() => form.promotionId, (newPromoId) => {
 // Pour PROJECT : vider la sélection quand le groupe d'option change
 watch(() => form.parentGroupId, () => {
   if (!isOption.value) form.memberIds = []
+})
+
+// Enseignants du groupe d'option parent (PROJECT uniquement)
+const parentGroupTeachers = computed(() => {
+  if (isOption.value || !form.parentGroupId) return []
+  const og = optionGroups.value.find(g => g.id === form.parentGroupId)
+  return og?.teachers ?? []
 })
 
 // Étudiants déjà dans un groupe du même type (exclus de la sélection)
@@ -455,7 +472,7 @@ async function handleSubmit() {
     } else {
       await api('/groups', { method: 'POST', body })
     }
-    router.push('/groups')
+    router.push('/groups?tab=' + type)
   } catch (err) {
     submitError.value = err?.data?.error ?? err?.data?.message ?? 'Une erreur est survenue lors de la création du groupe.'
   } finally {

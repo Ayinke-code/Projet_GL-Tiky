@@ -57,4 +57,13 @@ public class StudentGroup extends BaseEntity {
     )
     @Builder.Default
     private Set<User> members = new HashSet<>();
+
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "student_group_teachers",
+            joinColumns = @JoinColumn(name = "group_id"),
+            inverseJoinColumns = @JoinColumn(name = "teacher_id")
+    )
+    @Builder.Default
+    private Set<User> teachers = new HashSet<>();
 }

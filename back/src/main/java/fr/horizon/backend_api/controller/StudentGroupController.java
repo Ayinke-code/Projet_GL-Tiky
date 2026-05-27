@@ -64,6 +64,22 @@ public class StudentGroupController {
     }
 
     @PreAuthorize("hasAuthority('TEACHER') or hasAuthority('ADMIN')")
+    @PutMapping("/{id}/teachers/{teacherId}")
+    public ResponseEntity<StudentGroupDto> assignTeacher(
+            @PathVariable Long id,
+            @PathVariable Long teacherId) {
+        return ResponseEntity.ok(studentGroupService.assignTeacher(id, teacherId));
+    }
+
+    @PreAuthorize("hasAuthority('TEACHER') or hasAuthority('ADMIN')")
+    @DeleteMapping("/{id}/teachers/{teacherId}")
+    public ResponseEntity<StudentGroupDto> unassignTeacher(
+            @PathVariable Long id,
+            @PathVariable Long teacherId) {
+        return ResponseEntity.ok(studentGroupService.unassignTeacher(id, teacherId));
+    }
+
+    @PreAuthorize("hasAuthority('TEACHER') or hasAuthority('ADMIN')")
     @PostMapping(value = "/{id}/import-students", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<StudentImportResultDto> importStudents(
             @PathVariable Long id,

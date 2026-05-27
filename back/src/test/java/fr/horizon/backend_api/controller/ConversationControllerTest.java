@@ -2,7 +2,7 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.service.ConversationService;
 import fr.horizon.backend_api.service.JwtToken;
-// Issue WebSocket handler removed from tests
+import fr.horizon.backend_api.websocket.ConversationWebSocketHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -37,7 +37,8 @@ class ConversationControllerTest {
     @MockitoBean
     private JwtToken jwtToken;
 
-    // Issue WebSocket handler removed from tests
+    @MockitoBean
+    private ConversationWebSocketHandler conversationWebSocketHandler;
 
     @Test
     void shouldReturnEmptyConversationWhenNotFound() throws Exception {
@@ -129,6 +130,7 @@ class ConversationControllerTest {
                 .andExpect(jsonPath("$.user.email").value("bob@test.com"));
 
         verify(conversationService).addMessage(44L, Map.of("content", "Salut", "issueId", "77"), "bob@test.com");
+        verify(conversationWebSocketHandler).broadcastToConversation(44L, "{\"type\":\"new_message\"}");
     }
 }
 

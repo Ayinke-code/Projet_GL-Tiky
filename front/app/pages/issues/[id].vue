@@ -13,6 +13,7 @@ const route = useRoute()
 const { ready, user, wsToken } = useAuth()
 const { getIssueById, updateIssueStatus, updateIssuePrivacy } = useIssues()
 const { getIssueMessages, sendIssueMessage, normalizeMessage, initializeConversation } = useConversations()
+const { followIssue, unfollowIssue, isFollowing } = useIssueFollowers()
 
 // ID de l'issue depuis l'URL
 const issueId = Number(route.params.id)
@@ -25,7 +26,67 @@ const messages = ref([])
 const newMessage = ref('')
 const replyingToMessage = ref(null)
 const sending = ref(false)
+const socket = ref(null)
+const conversationId = ref(null)
 
+const showFollowModal = ref(false)
+const alreadyFollowing = ref(false)
+const followSuccess = ref(false)
+
+/**
+ * Callback après suivi réussi
+ */
+const onFollowed = () => {
+  alreadyFollowing.value = true
+  followSuccess.value = true
+  setTimeout(() => followSuccess.value = false, 3000)
+}
+
+/**
+ * Connecte au WebSocket pour les mises à jour en temps réel
+ */
+const connectWebSocket = () => {
+  if (process.server) return
+  if (socket.value) socket.value.close()
+
+  const config = useRuntimeConfig()
+  const apiBase = config.public.apiBase || ''
+
+  const token = wsToken.value || localStorage.getItem('wsToken')
+  if (!token || !conversationId.value) return
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const isRelativeBase = apiBase.startsWith('/')
+  const parsedBase = !isRelativeBase && apiBase ? new URL(apiBase) : null
+  const host = parsedBase?.host || window.location.host
+  const basePath = isRelativeBase
+    ? apiBase.replace(/\/$/, '')
+    : parsedBase?.pathname && parsedBase.pathname !== '/'
+      ? parsedBase.pathname.replace(/\/$/, '')
+      : ''
+  const wsUrl = `${protocol}//${host}${basePath}/ws/conversation?token=${token}&conversationId=${conversationId.value}`
+
+  socket.value = new WebSocket(wsUrl)
+
+  socket.value.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      if (data.type === 'new_message' && data.message) {
+        const normalized = normalizeMessage(data.message)
+        if (!messages.value.find((m) => m.id === normalized.id)) {
+          messages.value.push(normalized)
+        }
+      }
+    } catch (e) {
+      console.error('Erreur WebSocket:', e)
+    }
+  }
+
+  socket.value.onerror = () => {
+    console.error('Erreur WebSocket')
+    socket.value?.close()
+  }
+}
 
 /**
  * Chargement initial de l'issue et des messages
@@ -37,10 +98,13 @@ onMounted(async () => {
     return
   }
 
-    try {
+  try {
     issue.value = await getIssueById(issueId)
-    await initializeConversation(issueId)
+    alreadyFollowing.value = await isFollowing(issueId)
+    const conversation = await initializeConversation(issueId)
+    conversationId.value = conversation?.id ?? null
     messages.value = await getIssueMessages(issueId)
+    connectWebSocket()
   } catch (err) {
     error.value = err?.message || 'Erreur de chargement'
   } finally {
@@ -51,7 +115,9 @@ onMounted(async () => {
 /**
  * Nettoie la connexion WebSocket à la fermeture
  */
-// no-op: real-time WebSocket updates for issues disabled
+onUnmounted(() => {
+  socket.value?.close()
+})
 
 /**
  * Marquer l'issue comme terminée
@@ -145,6 +211,15 @@ const handleSend = async () => {
     error.value = err?.message || 'Erreur lors de l\'envoi du message'
   } finally {
     sending.value = false
+  }
+}
+
+const handleUnfollow = async () => {
+  try {
+    await unfollowIssue(issueId)
+    alreadyFollowing.value = false
+  } catch (err) {
+    console.error(err)
   }
 }
 </script>
@@ -248,20 +323,46 @@ const handleSend = async () => {
                         :class="issue.private
                             ? 'border-blue-300 text-blue-600 bg-white hover:bg-blue-50'
                             : 'border-red-300 text-red-600 bg-white hover:bg-red-50'">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path v-if="issue.private" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                            <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                        {{ issue.private ? 'Rendre Public' : 'Rendre Privé' }}
-                    </button>
-                </div>
-            </div>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor">
+              <path v-if="issue.private" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            {{ issue.private ? 'Rendre Public' : 'Rendre Privé' }}
+          </button>
 
-            <!-- Grid principal -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <!--  Bouton Suivre / badge Suivi -->
+          <button
+            v-if="!alreadyFollowing"
+            @click="showFollowModal = true"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-indigo-300 text-indigo-700 bg-white hover:bg-indigo-50 text-sm font-medium transition-colors cursor-pointer transition-transform duration-200 hover:scale-105">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.437L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            Suivre
+          </button>
+          <button
+            v-else
+            @click="handleUnfollow"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-red-300 text-red-600 bg-white hover:bg-red-50 text-sm font-medium transition-colors cursor-pointer transition-transform duration-200 hover:scale-105">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Ne plus suivre
+          </button>
+
+        </div>
+      </div>
+
+      <!--Message succès après suivi -->
+      <div v-if="followSuccess" class="rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-700">
+        Vous suivez maintenant cette issue !
+      </div>
+
+      <!-- Grid principal -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
                 <!-- ===== COLONNE GAUCHE : CONVERSATION ===== -->
                 <div class="lg:col-span-2 space-y-4">
@@ -372,84 +473,94 @@ const handleSend = async () => {
                     <!-- Slot pour futures fonctionnalités sidebar -->
                     <slot name="sidebar-extra" />
 
-                </div>
-            </div>
         </div>
+      </div>
     </div>
-    <div v-if="isResolveModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-        @click.self="isResolveModalOpen = false">
-        <div
-            class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+  </div>
 
-            <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                <h2 class="text-lg font-bold text-gray-800">Confirmer</h2>
-                <button @click="isResolveModalOpen = false" class="text-gray-400 hover:text-gray-600">
-                    ✕
-                </button>
-            </div>
+  <!-- Modal Résolu -->
+  <div v-if="isResolveModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+       @click.self="isResolveModalOpen = false">
+    <div
+      class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
 
-            <div class="p-6 space-y-4">
-                <p class="text-sm text-gray-600">
-                    Êtes-vous sûr de vouloir marquer ce ticket comme <span
-                        class="font-semibold text-emerald-600">résolu</span> ?
-                </p>
+      <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+        <h2 class="text-lg font-bold text-gray-800">Confirmer</h2>
+        <button @click="isResolveModalOpen = false" class="text-gray-400 hover:text-gray-600">
+          ✕
+        </button>
+      </div>
 
-                <div class="flex justify-end gap-2">
-                    <button @click="isResolveModalOpen = false"
-                        class="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">
-                        Annuler
-                    </button>
+      <div class="p-6 space-y-4">
+        <p class="text-sm text-gray-600">
+          Êtes-vous sûr de vouloir marquer ce ticket comme <span
+          class="font-semibold text-emerald-600">résolu</span> ?
+        </p>
 
-                    <button @click="() => { handleMarkResolved(); isResolveModalOpen = false }"
-                        class="px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
-                        Confirmer
-                    </button>
-                </div>
-            </div>
+        <div class="flex justify-end gap-2">
+          <button @click="isResolveModalOpen = false"
+                  class="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">
+            Annuler
+          </button>
 
+          <button @click="() => { handleMarkResolved(); isResolveModalOpen = false }"
+                  class="px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
+            Confirmer
+          </button>
         </div>
+      </div>
+
     </div>
-    <div v-if="isVisibilityModalOpen && canTogglePrivacy" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-        @click.self="isVisibilityModalOpen = false">
-        <div
-            class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+  </div>
+  <div v-if="isVisibilityModalOpen && canTogglePrivacy" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+       @click.self="isVisibilityModalOpen = false">
+    <div
+      class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
 
-            <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                <h2 class="text-lg font-bold text-gray-800">Changer la visibilité</h2>
-                <button @click="isVisibilityModalOpen = false" class="text-gray-400 hover:text-gray-600">
-                    ✕
-                </button>
-            </div>
+      <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+        <h2 class="text-lg font-bold text-gray-800">Changer la visibilité</h2>
+        <button @click="isVisibilityModalOpen = false" class="text-gray-400 hover:text-gray-600">
+          ✕
+        </button>
+      </div>
 
-            <div class="p-6 space-y-4">
-                <p class="text-sm text-gray-600">
-                    Voulez-vous rendre ce ticket
-                    <span class="font-semibold">
+      <div class="p-6 space-y-4">
+        <p class="text-sm text-gray-600">
+          Voulez-vous rendre ce ticket
+          <span class="font-semibold">
                         {{ issue.private ? 'public' : 'privé' }}
                     </span> ?
-                </p>
+        </p>
 
-                <div class="flex justify-end gap-2">
-                    <button @click="isVisibilityModalOpen = false"
-                        class="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">
-                        Annuler
-                    </button>
+        <div class="flex justify-end gap-2">
+          <button @click="isVisibilityModalOpen = false"
+                  class="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">
+            Annuler
+          </button>
 
-                    <button @click="() => { toggleVisibility(); isVisibilityModalOpen = false }"
-                        class="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
-                        Confirmer
-                    </button>
-                </div>
-            </div>
-
+          <button @click="() => { toggleVisibility(); isVisibilityModalOpen = false }"
+                  class="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
+            Confirmer
+          </button>
         </div>
-    </div>
+      </div>
 
-    <!-- Modal de confirmation de réouverture -->
-    <ConfirmModal
-        v-model:open="isReopeningModalOpen"
-        title="Demande de réouverture"
-        description="Voulez-vous vraiment rouvrir cette issue ?"
-        @confirm="handleReopening"
-    />
+    </div>
+  </div>
+
+  <!-- Modale de suivi -->
+  <FollowModal
+    v-model="showFollowModal"
+    :issue-id="issueId"
+    @followed="onFollowed"
+  />
+
+
+  <!-- Modal de confirmation de réouverture -->
+  <ConfirmModal
+      v-model:open="isReopeningModalOpen"
+      title="Demande de réouverture"
+      description="Voulez-vous vraiment rouvrir cette issue ?"
+      @confirm="handleReopening"
+  />
 </template>

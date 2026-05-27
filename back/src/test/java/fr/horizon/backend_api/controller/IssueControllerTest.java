@@ -3,11 +3,16 @@ package fr.horizon.backend_api.controller;
 import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.service.IssueService;
+import fr.horizon.backend_api.model.IssueFollower;
+import fr.horizon.backend_api.service.IssueFollowerService;
+import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.service.JwtToken;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -37,6 +42,9 @@ class IssueControllerTest {
 
     @MockitoBean
     private Authentication authentication;
+
+    @MockitoBean
+    private IssueFollowerService issueFollowerService;
 
     @Test
     void shouldGetAllIssues() throws Exception {
@@ -149,5 +157,61 @@ class IssueControllerTest {
                 .andExpect(status().isOk());
 
         verify(issueService).updatePrivacy(1L, "john@test.com");
+    }
+
+    @Test
+    void shouldFollowIssue() throws Exception {
+        IssueFollower follower = new IssueFollower();
+
+        when(issueFollowerService.getUserByEmail(anyString())).thenReturn(new User());
+        when(issueFollowerService.followIssue(anyLong(), anyString(), any(User.class)))
+                .thenReturn(follower);
+        when(authentication.getName()).thenReturn("user@test.com");
+
+        mockMvc.perform(post("/issues/1/follow")
+                        .param("reason", "INTERESTED")
+                        .principal(authentication))
+                .andExpect(status().isCreated());
+
+        verify(issueFollowerService).followIssue(eq(1L), eq("INTERESTED"), any(User.class));
+    }
+
+    @Test
+    void shouldReturn409WhenAlreadyFollowing() throws Exception {
+        when(issueFollowerService.getUserByEmail(anyString())).thenReturn(new User());
+        when(issueFollowerService.followIssue(anyLong(), anyString(), any(User.class)))
+                .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Vous suivez déjà cette issue"));
+        when(authentication.getName()).thenReturn("user@test.com");
+
+        mockMvc.perform(post("/issues/1/follow")
+                        .param("reason", "INTERESTED")
+                        .principal(authentication))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void shouldGetFollowedIssues() throws Exception {
+        when(issueFollowerService.getUserByEmail(anyString()))
+                .thenReturn(new User());
+        when(issueFollowerService.getFollowedIssues(any(User.class)))
+                .thenReturn(List.of());
+        when(authentication.getName()).thenReturn("user@test.com");
+
+        mockMvc.perform(get("/issues/followed")
+                        .principal(authentication))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldGetFollowStatus() throws Exception {
+        when(issueFollowerService.getUserByEmail(anyString()))
+                .thenReturn(new User());
+        when(issueFollowerService.isFollowing(anyLong(), any(User.class)))
+                .thenReturn(false);
+        when(authentication.getName()).thenReturn("user@test.com");
+
+        mockMvc.perform(get("/issues/1/follow/status")
+                        .principal(authentication))
+                .andExpect(status().isOk());
     }
 }
