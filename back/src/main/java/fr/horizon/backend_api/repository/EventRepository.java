@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -25,5 +26,26 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     List<Event> findByCategoryTypeOrderByCreatedAtDesc(CategoryType type);
     List<Event> findByCreatedByOrderByCreatedAtDesc(User user);
+
+    @Query("SELECT e FROM Event e JOIN e.participants p WHERE p.user.id = :userId AND p.hasAccepted IS NULL")
+    List<Event> findPendingInvitationsByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT COUNT(e) FROM Event e JOIN e.participants p " +
+            "WHERE p.user.id = :userId " +
+            "AND (p.hasAccepted IS NULL OR p.hasAccepted = true) " + // Uniquement les events acceptés ou en attente
+            "AND e.startDate < :endDate " +
+            "AND e.endDate > :startDate " +
+            "AND (:eventId IS NULL OR e.id != :eventId)") // Exclut l'event actuel (gère le cas où l'ID est null lors d'une création)
+    long countConflictingEvents(@Param("userId") Long userId,
+                                @Param("eventId") Long eventId,
+                                @Param("startDate") LocalDateTime startDate,
+                                @Param("endDate") LocalDateTime endDate);
+
+    boolean existsByIssueIdAndStartDateAfterAndValidatedTrue(Long issueId, LocalDateTime date);
+
+    List<Event> findByCreatedByIdOrderByCreatedAtDesc(Long creatorId);
+
+    @Query("SELECT e FROM Event e WHERE e.createdBy.id = :userId OR (e.issue IS NOT NULL AND e.issue.manager.id = :userId) ORDER BY e.createdAt DESC")
+    List<Event> findEventsManagedOrCreatedByUser(@Param("userId") Long userId);
 }
 

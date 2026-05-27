@@ -1,20 +1,19 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
+import fr.horizon.backend_api.exception.EventConflictException;
 import fr.horizon.backend_api.exception.EventNotFoundException;
-import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.Event;
-import fr.horizon.backend_api.model.Role;
-import fr.horizon.backend_api.model.StudentGroup;
-import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.*;
+import fr.horizon.backend_api.model.dto.EventInvitationResponseDto;
 import fr.horizon.backend_api.model.dto.EventRequestDto;
 import fr.horizon.backend_api.model.dto.EventResponseDto;
+import fr.horizon.backend_api.model.dto.FollowersInfoDto;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.model.enums.GroupType;
 import fr.horizon.backend_api.model.enums.TeacherType;
-import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.EventRepository;
-import fr.horizon.backend_api.repository.StudentGroupRepository;
+import fr.horizon.backend_api.repository.*;
+import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -46,6 +45,15 @@ class EventServiceTest {
 
     @Mock
     private StudentGroupRepository studentGroupRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private IssueRepository issueRepository;
+
+    @Mock
+    private IssueFollowerRepository issueFollowerRepository;
 
     @InjectMocks
     private EventService eventService;
@@ -257,7 +265,7 @@ class EventServiceTest {
                 .createdBy(teacher)
                 .build();
 
-        when(eventRepository.findByCategoryTypeWithGroups(CategoryType.AUDIT))
+        when(eventRepository.findByCategoryTypeOrderByCreatedAtDesc(CategoryType.AUDIT))
                 .thenReturn(List.of(event));
 
         List<EventResponseDto> result = eventService.listByType(CategoryType.AUDIT);
@@ -272,7 +280,7 @@ class EventServiceTest {
     @Test
     void listByType_should_return_empty_list_when_no_events() {
 
-        when(eventRepository.findByCategoryTypeWithGroups(CategoryType.DEFENSE))
+        when(eventRepository.findByCategoryTypeOrderByCreatedAtDesc(CategoryType.DEFENSE))
                 .thenReturn(List.of());
 
         List<EventResponseDto> result = eventService.listByType(CategoryType.DEFENSE);
@@ -758,7 +766,7 @@ class EventServiceTest {
                 .projectGroups(Set.of(projectGroup))
                 .build();
 
-        when(eventRepository.findByCategoryTypeWithGroups(CategoryType.AUDIT))
+        when(eventRepository.findByCategoryTypeOrderByCreatedAtDesc(CategoryType.AUDIT))
                 .thenReturn(List.of(event));
 
         List<EventResponseDto> result = eventService.listByType(CategoryType.AUDIT);
@@ -803,4 +811,579 @@ class EventServiceTest {
 
         verify(eventRepository, never()).delete(any());
     }
+
+    // =============================================
+    // Nouvelles méthodes de test pour EventService
+    // =============================================
+
+    @Test
+    @DisplayName("createMeeting : Doit créer un meeting et l'ajouter au participant courant")
+    void createMeeting_success() {
+        User teacher = new User(); teacher.setId(1L); teacher.setRoles(Set.of(new Role("TEACHER")));
+        Issue issue = new Issue(); issue.setId(100L); issue.setCategory(new Category());
+
+        EventRequestDto dto = new EventRequestDto();
+        dto.setName("Réunion");
+        dto.setStartDate(LocalDateTime.now().plusDays(1));
+        dto.setEndDate(LocalDateTime.now().plusDays(1).plusHours(1));
+
+        when(userService.findByEmail(anyString())).thenReturn(teacher);
+        when(issueRepository.findById(100L)).thenReturn(Optional.of(issue));
+        when(eventRepository.save(any(Event.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        EventResponseDto result = eventService.createMeeting(dto, "test@test.fr", 100L);
+
+        assertNotNull(result);
+        verify(eventRepository, times(1)).save(any(Event.class));
+    }
+
+    @Test
+    @DisplayName("inviteUserToMeeting : Doit ajouter un participant si aucun conflit")
+    void inviteUserToMeeting_success() {
+        User user = new User(); user.setId(2L);
+        Category category = new Category();
+        category.setName("Audit");
+
+        Event event = Event.builder()
+                .id(1L)
+                .category(category)
+                .createdBy(new User())
+                .participants(new HashSet<>())
+                .build();
+
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+        when(eventRepository.save(any(Event.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        eventService.inviteUserToMeeting(1L, 2L);
+
+        assertEquals(1, event.getParticipants().size());
+        verify(eventRepository).save(event);
+    }
+
+    @Test
+    @DisplayName("responseToMeetingInvitation : Doit valider l'événement si l'invité accepte")
+    void responseToMeetingInvitation_accept() {
+        User user = new User(); user.setId(2L);
+        Category category = new Category();
+        category.setName("Audit");
+
+        Event event = Event.builder()
+                .id(1L)
+                .category(category)
+                .createdBy(new User())
+                .participants(new HashSet<>())
+                .build();
+        event.addParticipant(user, null);
+
+        when(userService.findByEmail(anyString())).thenReturn(user);
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+        when(eventRepository.save(any(Event.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        eventService.responseToMeetingInvitation(1L, true, "test@test.fr", null);
+
+        assertTrue(event.getParticipants().iterator().next().getHasAccepted());
+        verify(eventRepository).save(event);
+    }
+
+    @Test
+    @DisplayName("getInvitationsToEvent : Doit retourner les invitations en attente")
+    void getInvitationsToEvent_returnsList() {
+        User user = new User(); user.setId(1L);
+        Category category = new Category();
+        category.setName("Audit");
+
+        when(userService.findByEmail(anyString())).thenReturn(user);
+        when(eventRepository.findPendingInvitationsByUserId(1L)).thenReturn(List.of(
+                Event.builder()
+                .name("test")
+                .category(category)
+                .createdBy(user).id(1L)
+                .build()));
+
+
+        List<EventInvitationResponseDto> result = eventService.getInvitationsToEvent("test@test.fr");
+
+        assertEquals(1, result.size());
+        verify(eventRepository).findPendingInvitationsByUserId(1L);
+    }
+
+    @Test
+    @DisplayName("getEventInvitationStatut : Doit échouer si l'utilisateur n'est pas le créateur")
+    void getEventInvitationStatut_denied() {
+        User requester = new User(); requester.setId(99L);
+        Category category = new Category();
+        category.setName("Audit");
+
+        Event event = Event.builder()
+                .id(1L)
+                .category(category)
+                .createdBy(new User())
+                .participants(new HashSet<>())
+                .build();
+
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+        when(userService.findByEmail(anyString())).thenReturn(requester);
+
+        assertThrows(IllegalArgumentException.class, () -> eventService.getEventInvitationStatut(1L, "fake@mail.com"));
+    }
+
+    @Test
+    @DisplayName("cancelEvent : Doit supprimer l'événement après avoir vidé les participants")
+    void cancelEvent_success() {
+        Category category = new Category();
+        category.setName("Audit");
+
+        Event event = Event.builder()
+                .id(1L)
+                .category(category)
+                .createdBy(new User())
+                .participants(new HashSet<>())
+                .build();        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+        eventService.cancelEvent(1L);
+
+        verify(eventRepository).delete(event);
+        verify(eventRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    @DisplayName("updateMeetingDueToChange : Doit réinitialiser les invitations si changement d'horaire")
+    void updateMeetingDueToChange_success() {
+        Category category = new Category();
+        category.setName("Audit");
+
+        Event event = Event.builder()
+                .id(1L)
+                .category(category)
+                .createdBy(new User())
+                .participants(new HashSet<>())
+                .build();
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+        when(eventRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+
+        eventService.updateMeetingDueToChange(1L, LocalDateTime.now().plusDays(2), LocalDateTime.now().plusDays(2).plusHours(1), true);
+
+        verify(eventRepository).save(any(Event.class));
+    }
+
+    @Test
+    @DisplayName("deleteParticipantFromMeeting : Doit retirer un participant")
+    void deleteParticipantFromMeeting_success() {
+        User user = new User(); user.setId(2L);
+        Category category = new Category();
+        category.setName("Audit");
+
+        Event event = Event.builder()
+                .id(1L)
+                .category(category)
+                .createdBy(new User())
+                .participants(new HashSet<>())
+                .build();
+
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+        when(eventRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+
+        eventService.deleteParticipantFromMeeting(1L, 2L);
+
+        verify(eventRepository).save(any(Event.class));
+    }
+
+    // =============================================
+// inviteUserToMeeting() — conflits
+// =============================================
+
+    @Test
+    @DisplayName("inviteUserToMeeting : doit lever une exception si conflit agenda")
+    void inviteUserToMeeting_should_throw_when_conflict() {
+
+        User user = new User();
+        user.setId(2L);
+        user.setName("Jean");
+
+        Event event = Event.builder()
+                .id(1L)
+                .startDate(LocalDateTime.now().plusDays(1))
+                .endDate(LocalDateTime.now().plusDays(1).plusHours(1))
+                .participants(new HashSet<>())
+                .build();
+
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+        when(eventRepository.countConflictingEvents(any(), any(), any(), any()))
+                .thenReturn(1L);
+
+        assertThrows(EventConflictException.class,
+                () -> eventService.inviteUserToMeeting(1L, 2L));
+
+        verify(eventRepository, never()).save(any());
+    }
+
+// =============================================
+// responseToMeetingInvitation() — refus
+// =============================================
+
+    @Test
+    @DisplayName("responseToMeetingInvitation : doit enregistrer la raison du refus")
+    void responseToMeetingInvitation_refuse() {
+
+        User user = new User();
+        user.setId(2L);
+
+        User manager = new User();
+        manager.setId(99L);
+
+        Category category = new Category();
+        category.setName("Audit");
+
+        Issue issue = new Issue();
+        issue.setManager(manager);
+
+        Event event = Event.builder()
+                .id(1L)
+                .category(category)
+                .issue(issue) // ✅ FIX
+                .createdBy(new User())
+                .participants(new HashSet<>())
+                .build();
+
+        event.addParticipant(user, null);
+
+        when(userService.findByEmail(anyString())).thenReturn(user);
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+        when(eventRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+
+        eventService.responseToMeetingInvitation(
+                1L,
+                false,
+                "user@test.fr",
+                "Je ne suis pas disponible"
+        );
+
+        EventParticipant participant = event.getParticipants().stream()
+                .filter(p -> p.getUser().getId().equals(2L))
+                .findFirst()
+                .orElseThrow();
+
+        assertFalse(participant.getHasAccepted());
+        assertEquals("Je ne suis pas disponible", participant.getReason());
+    }
+
+// =============================================
+// updateMeetingDueToChange() — addAll false
+// =============================================
+
+    @Test
+    @DisplayName("updateMeetingDueToChange : doit retirer participants non acceptés")
+    void updateMeetingDueToChange_remove_unaccepted_participants() {
+
+        User creator = new User();
+        creator.setId(1L);
+
+        User invited = new User();
+        invited.setId(2L);
+
+        Category category = new Category();
+        category.setName("Audit");
+
+        Event event = Event.builder()
+                .id(1L)
+                .category(category) // <-- IMPORTANT
+                .createdBy(creator)
+                .participants(new HashSet<>())
+                .build();
+
+        event.addParticipant(creator, true);
+        event.addParticipant(invited, false);
+
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+        when(eventRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+
+        eventService.updateMeetingDueToChange(
+                1L,
+                LocalDateTime.now().plusDays(1),
+                LocalDateTime.now().plusDays(1).plusHours(1),
+                false
+        );
+
+        assertEquals(1, event.getParticipants().size());
+    }
+
+// =============================================
+// askForMeeting()
+// =============================================
+
+    @Test
+    @DisplayName("askForMeeting : doit créer une demande non validée")
+    void askForMeeting_success() {
+
+        User student = new User();
+        student.setId(1L);
+
+        User manager = new User();
+        manager.setId(2L);
+
+        Category category = new Category();
+        category.setName("Backend");
+
+        Issue issue = new Issue();
+        issue.setId(100L);
+        issue.setCategory(category);
+        issue.setManager(manager);
+
+        EventRequestDto dto = new EventRequestDto();
+        dto.setName("Demande réunion");
+        dto.setStartDate(LocalDateTime.now().plusDays(1));
+        dto.setEndDate(LocalDateTime.now().plusDays(1).plusHours(1));
+
+        when(userService.findByEmail(anyString())).thenReturn(student);
+        when(issueRepository.findById(100L)).thenReturn(Optional.of(issue));
+        when(eventRepository.save(any())).thenAnswer(i -> {
+            Event e = i.getArgument(0);
+            e.setId(1L);
+            return e;
+        });
+
+        when(eventRepository.findById(1L))
+                .thenAnswer(i -> Optional.of(
+                        (Event) mock(Event.class, RETURNS_DEEP_STUBS)
+                ));
+
+        // mock simplifié pour éviter conflit
+        Event savedEvent = Event.builder()
+                .id(1L)
+                .category(category)
+                .createdBy(student)
+                .participants(new HashSet<>())
+                .build();
+
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(savedEvent));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(manager));
+
+        EventResponseDto result =
+                eventService.askForMeeting(dto, "student@test.fr", 100L);
+
+        assertNotNull(result);
+
+        verify(eventRepository, atLeastOnce()).save(any());
+    }
+
+// =============================================
+// issueGotMeeting()
+// =============================================
+
+    @Test
+    @DisplayName("issueGotMeeting : retourne true si réunion future existe")
+    void issueGotMeeting_true() {
+
+        when(eventRepository.existsByIssueIdAndStartDateAfterAndValidatedTrue(
+                eq(100L),
+                any(LocalDateTime.class)
+        )).thenReturn(true);
+
+        boolean result = eventService.issueGotMeeting(100L);
+
+        assertTrue(result);
+    }
+
+// =============================================
+// getMyDemandsStatus()
+// =============================================
+
+    @Test
+    @DisplayName("getMyDemandsStatus : retourne les demandes")
+    void getMyDemandsStatus_success() {
+
+        User user = new User();
+        user.setId(1L);
+
+        Issue issue = new Issue();
+        issue.setId(100L);
+
+        Event event = Event.builder()
+                .id(1L)
+                .issue(issue)
+                .validated(true)
+                .build();
+
+        when(userService.findByEmail(anyString())).thenReturn(user);
+
+        when(eventRepository.findByCreatedByIdOrderByCreatedAtDesc(1L))
+                .thenReturn(List.of(event));
+
+        var result = eventService.getMyDemandsStatus("user@test.fr");
+
+        assertEquals(1, result.size());
+        assertEquals(100L, result.get(0).getIssueId());
+        assertTrue(result.get(0).getStatus());
+    }
+
+// =============================================
+// getMyCreatedEvents()
+// =============================================
+
+    @Test
+    @DisplayName("getMyCreatedEvents : retourne les events créés")
+    void getMyCreatedEvents_success() {
+
+        User user = new User();
+        user.setId(1L);
+        user.setName("Teacher");
+
+        Category category = new Category();
+        category.setName("Audit");
+
+        Event event = Event.builder()
+                .id(1L)
+                .name("Meeting")
+                .category(category)
+                .createdBy(user)
+                .participants(new HashSet<>())
+                .build();
+
+        when(userService.findByEmail(anyString())).thenReturn(user);
+
+        when(eventRepository.findEventsManagedOrCreatedByUser(1L))
+                .thenReturn(List.of(event));
+
+        var result = eventService.getMyCreatedEvents("teacher@test.fr");
+
+        assertEquals(1, result.size());
+        assertEquals("Meeting", result.get(0).getName());
+    }
+
+// =============================================
+// getPossibleUserInterested()
+// =============================================
+
+    @Test
+    @DisplayName("getPossibleUserInterested : retourne followers non invités")
+    void getPossibleUserInterested_success() {
+
+        User invited = new User();
+        invited.setId(1L);
+
+        User follower = new User();
+        follower.setId(2L);
+        follower.setName("Follower");
+
+        Issue issue = new Issue();
+        issue.setId(100L);
+
+        Event event = Event.builder()
+                .id(1L)
+                .issue(issue)
+                .participants(new HashSet<>())
+                .build();
+
+        event.addParticipant(invited, true);
+
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+        when(issueFollowerRepository.findUsersByIssueId(100L))
+                .thenReturn(List.of(invited, follower));
+
+        var result = eventService.getPossibleUserInterested(1L);
+
+        assertEquals(1, result.size());
+        assertEquals("Follower", result.get(0).getName());
+    }
+
+    @Test
+    @DisplayName("responseToMeetingInvitation : doit valider l'événement si le manager répond")
+    void responseToMeetingInvitation_manager_accepts_event() {
+
+        User manager = new User();
+        manager.setId(99L);
+
+        User user = new User();
+        user.setId(2L);
+
+        Issue issue = new Issue();
+        issue.setManager(manager);
+        issue.setCategory(new Category());
+
+        Category category = new Category();
+        category.setName("Audit");
+
+        Event event = Event.builder()
+                .id(1L)
+                .issue(issue)
+                .category(category)
+                .createdBy(manager)
+                .participants(new HashSet<>())
+                .build();
+
+        event.addParticipant(manager, null);
+
+        when(userService.findByEmail(anyString())).thenReturn(manager);
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+        when(eventRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+
+        eventService.responseToMeetingInvitation(
+                1L,
+                true,
+                "manager@test.fr",
+                null
+        );
+
+        assertTrue(event.getValidated());
+    }
+
+    @Test
+    @DisplayName("responseToMeetingInvitation : doit lever exception si utilisateur non invité")
+    void responseToMeetingInvitation_user_not_invited() {
+
+        User user = new User();
+        user.setId(2L);
+
+        Issue issue = new Issue();
+        issue.setManager(new User());
+
+        Event event = Event.builder()
+                .id(1L)
+                .issue(issue)
+                .participants(new HashSet<>())
+                .build();
+
+        when(userService.findByEmail(anyString())).thenReturn(user);
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+        assertThrows(EntityNotFoundException.class,
+                () -> eventService.responseToMeetingInvitation(
+                        1L, true, "user@test.fr", null
+                ));
+    }
+
+    @Test
+    @DisplayName("getPossibleUserInterested : retourne liste vide si pas d'issue")
+    void getPossibleUserInterested_no_issue() {
+
+        Event event = Event.builder()
+                .id(1L)
+                .issue(null)
+                .participants(new HashSet<>())
+                .build();
+
+        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
+
+        List<FollowersInfoDto> result =
+                eventService.getPossibleUserInterested(1L);
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    @DisplayName("cancelEvent : doit lever exception si event introuvable")
+    void cancelEvent_not_found() {
+
+        when(eventRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class,
+                () -> eventService.cancelEvent(99L));
+
+        verify(eventRepository, never()).delete(any());
+    }
+
 }
