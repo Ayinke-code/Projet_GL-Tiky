@@ -349,30 +349,6 @@ export const useEvents = () => {
     }
   }
 
-  return {
-    events,
-    myPendingInvitations,
-    error,
-    fetchCategoriesByType,
-    createEvent,
-    createMeeting,
-    fetchEventsByType,
-    deleteEvent,
-    inviteUserToEvent,
-    inviteUsersToEvent,
-    respondToInvitation,
-    fetchEventInvitationStatus,
-    fetchMyInvitations,
-    checkUpcomingMeeting,
-    fetchMyCreatedEvents,
-    updateMeetingDueToChange,
-    cancelEvent,
-    fetchMyDemandsStatus,
-    askForMeeting,
-    removeParticipantFromMeeting,
-    fetchPossibleUsersInterested
-  }
-}
 
   /**
    * Récupère tous les événements consolidés pour le calendrier de l'utilisateur
@@ -397,5 +373,28 @@ export const useEvents = () => {
     }
   }
 
-  return { events, error, fetchCategoriesByType, createEvent, fetchEventsByType, deleteEvent, fetchCalendarEvents }
+  return {
+    fetchEventsByType,
+    deleteEvent,
+    fetchCalendarEvents,
+    events,
+    myPendingInvitations,
+    error,
+    fetchCategoriesByType,
+    createEvent,
+    createMeeting,
+    inviteUserToEvent,
+    inviteUsersToEvent,
+    respondToInvitation,
+    fetchEventInvitationStatus,
+    fetchMyInvitations,
+    checkUpcomingMeeting,
+    fetchMyCreatedEvents,
+    updateMeetingDueToChange,
+    cancelEvent,
+    fetchMyDemandsStatus,
+    askForMeeting,
+    removeParticipantFromMeeting,
+    fetchPossibleUsersInterested
+  }
 }
