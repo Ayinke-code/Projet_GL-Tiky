@@ -215,4 +215,28 @@ class EventControllerTest {
 
         verify(eventService).create(any(), anyString());
     }
+
+    @Test
+    void shouldGetMySessions_returns200() throws Exception {
+
+        EventResponseDto session = EventResponseDto.builder()
+                .id(1L)
+                .name("Audit Sprint 3")
+                .categoryType(CategoryType.AUDIT)
+                .categoryName("UI/UX")
+                .createdBy("Sophie ROUSSEAU")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(eventService.listForStudent(anyString())).thenReturn(List.of(session));
+        when(authentication.getName()).thenReturn("student@student.fr");
+
+        mockMvc.perform(get("/events/my-sessions").principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Audit Sprint 3"))
+                .andExpect(jsonPath("$[0].categoryType").value("AUDIT"));
+
+        verify(eventService).listForStudent("student@student.fr");
+    }
 }

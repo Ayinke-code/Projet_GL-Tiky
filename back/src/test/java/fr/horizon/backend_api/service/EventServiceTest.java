@@ -803,4 +803,65 @@ class EventServiceTest {
 
         verify(eventRepository, never()).delete(any());
     }
+
+    // =============================================
+    // listForStudent()
+    // =============================================
+
+    @Test
+    void listForStudent_should_return_empty_list_when_student_has_no_groups() {
+
+        User student = new User();
+        student.setId(10L);
+        student.setName("Alice DUPONT");
+
+        when(userService.findByEmail("alice@student.fr")).thenReturn(student);
+        when(studentGroupRepository.findAllByMemberId(10L)).thenReturn(List.of());
+
+        List<EventResponseDto> result = eventService.listForStudent("alice@student.fr");
+
+        assertTrue(result.isEmpty());
+        verify(eventRepository, never()).findByProjectGroupIds(any());
+    }
+
+    @Test
+    void listForStudent_should_return_events_for_student_groups() {
+
+        User student = new User();
+        student.setId(10L);
+        student.setName("Alice DUPONT");
+
+        Category cat = new Category();
+        cat.setId(1L);
+        cat.setName("UI/UX");
+        cat.setCategoryType(CategoryType.AUDIT);
+
+        User teacher = new User();
+        teacher.setId(99L);
+        teacher.setName("Sophie ROUSSEAU");
+
+        StudentGroup projectGroup = StudentGroup.builder()
+                .id(5L).name("Projet Alpha").type(GroupType.PROJECT)
+                .category(cat).createdBy(teacher).members(new HashSet<>())
+                .teachers(new HashSet<>()).build();
+
+        Event event = Event.builder()
+                .id(1L).name("Audit Sprint 1")
+                .categoryType(CategoryType.AUDIT)
+                .category(cat)
+                .createdBy(teacher)
+                .projectGroups(new HashSet<>(Set.of(projectGroup)))
+                .build();
+
+        when(userService.findByEmail("alice@student.fr")).thenReturn(student);
+        when(studentGroupRepository.findAllByMemberId(10L)).thenReturn(List.of(projectGroup));
+        when(eventRepository.findByProjectGroupIds(Set.of(5L))).thenReturn(List.of(event));
+
+        List<EventResponseDto> result = eventService.listForStudent("alice@student.fr");
+
+        assertEquals(1, result.size());
+        assertEquals("Audit Sprint 1", result.get(0).getName());
+        assertEquals(CategoryType.AUDIT, result.get(0).getCategoryType());
+        verify(eventRepository).findByProjectGroupIds(Set.of(5L));
+    }
 }
