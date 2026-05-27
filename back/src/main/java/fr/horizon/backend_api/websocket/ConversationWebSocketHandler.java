@@ -20,6 +20,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class ConversationWebSocketHandler extends TextWebSocketHandler {
 
     private static final List<WebSocketSession> sessions = new CopyOnWriteArrayList<>();
+    private static final String USER_NOT_FOUND = "User not found";
+    private static final String TOKEN_PARAM = "token=";
+    private static final String CONVERSATION_ID_PARAM = "conversationId=";
+    private static final int TOKEN_PARAM_LENGTH = 6;
+    private static final int CONVERSATION_ID_PARAM_LENGTH = 15;
 
     @Autowired
     private JwtToken jwtToken;
@@ -41,7 +46,7 @@ public class ConversationWebSocketHandler extends TextWebSocketHandler {
             Claims claims = jwtToken.parseToken(token);
             String email = claims.getSubject();
 
-            userRepository.findByEmail(email).orElseThrow(() -> new IOException("User not found"));
+            userRepository.findByEmail(email).orElseThrow(() -> new IOException(USER_NOT_FOUND));
 
             session.getAttributes().put("userEmail", email);
             session.getAttributes().put("conversationId", conversationId);
@@ -77,11 +82,11 @@ public class ConversationWebSocketHandler extends TextWebSocketHandler {
 
     private String extractTokenFromSession(WebSocketSession session) {
         String query = session.getUri().getQuery();
-        if (query != null && query.contains("token=")) {
+        if (query != null && query.contains(TOKEN_PARAM)) {
             String[] params = query.split("&");
             for (String param : params) {
-                if (param.startsWith("token=")) {
-                    return param.substring(6);
+                if (param.startsWith(TOKEN_PARAM)) {
+                    return param.substring(TOKEN_PARAM_LENGTH);
                 }
             }
         }
@@ -90,12 +95,12 @@ public class ConversationWebSocketHandler extends TextWebSocketHandler {
 
     private Long extractConversationIdFromSession(WebSocketSession session) {
         String query = session.getUri().getQuery();
-        if (query != null && query.contains("conversationId=")) {
+        if (query != null && query.contains(CONVERSATION_ID_PARAM)) {
             String[] params = query.split("&");
             for (String param : params) {
-                if (param.startsWith("conversationId=")) {
+                if (param.startsWith(CONVERSATION_ID_PARAM)) {
                     try {
-                        return Long.parseLong(param.substring(15));
+                        return Long.parseLong(param.substring(CONVERSATION_ID_PARAM_LENGTH));
                     } catch (NumberFormatException e) {
                         return null;
                     }

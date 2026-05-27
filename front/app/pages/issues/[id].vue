@@ -6,7 +6,6 @@
  * - gère les messages et conversations
  */
 
-import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 
 const route = useRoute()

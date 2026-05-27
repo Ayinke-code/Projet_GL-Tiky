@@ -9,14 +9,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
 
 import static org.mockito.Mockito.*;
+
 
 /**
  * Tests unitaires pour le WebSocketHandler des conversations.
@@ -142,27 +141,19 @@ public class ConversationWebSocketHandlerTest {
 
     @Test
     public void testBroadcastToConversationBuildsCorrectPayload() throws Exception {
-        // Setup
-        // Execute - this tests that the method doesn't throw
+        // This tests that the method doesn't throw when broadcasting to a conversation
         handler.broadcastToConversation(CONVERSATION_ID, TEST_MESSAGE);
-
-        // Verify - should complete without throwing
     }
 
     @Test
     public void testAfterConnectionClosedRemovesSession() throws Exception {
-        // Setup
         when(session.getId()).thenReturn(SESSION_ID);
-
-        // Execute
         handler.afterConnectionClosed(session, CloseStatus.NORMAL);
-
-        // Verify - should complete without throwing
     }
 
     @Test
     public void testExtractTokenFromValidQuery() throws Exception {
-        // This is a simpler test that doesn't mock the internal query parsing
+        // This tests that the method successfully parses token and conversation ID from query string
         String queryString = TOKEN_PARAM + VALID_TOKEN + CONVERSATION_ID_PARAM + CONVERSATION_ID_STR;
 
         when(session.getUri()).thenReturn(new URI(WS_BASE_URL + queryString));
@@ -171,7 +162,7 @@ public class ConversationWebSocketHandlerTest {
         when(userRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.of(new fr.horizon.backend_api.model.User()));
         when(session.getAttributes()).thenReturn(new java.util.HashMap<>());
 
-        // Execute - should successfully parse token and conversation ID
+        // Execute
         handler.afterConnectionEstablished(session);
 
         // Verify
