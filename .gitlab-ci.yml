@@ -346,7 +346,7 @@ sonar-dev:
         -Dsonar.token=$SONAR_TOKEN_DEV \
         -Dsonar.projectKey=Team3_2026_DevBranch_Project \
         -Dsonar.projectName=Team3_2026_DevBranch \
-        -Dfailsafe.skip=true
+        -Dmaven.failsafe.skip=true
   
   rules:
     - if: $CI_COMMIT_BRANCH == 'dev'
@@ -367,7 +367,7 @@ sonar-prod:
         -Dsonar.token=$SONAR_TOKEN_PROD \
         -Dsonar.projectKey=Team3_2026_MasterBranch_Project \
         -Dsonar.projectName=Team3_2026_MasterBranch \
-        -Dfailsafe.skip=true
+        -Dmaven.failsafe.skip=true
   
   rules:
     - if: $CI_COMMIT_BRANCH == 'main'
