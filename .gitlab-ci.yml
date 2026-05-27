@@ -276,7 +276,9 @@ selenium-test-dev:
   stage: selenium
   variables:
     FRONT_URL: $FRONT_URL_DEV
-  needs: [deploy_dev]
+  needs:
+    - deploy_dev
+    - build-backend
   before_script:
     # Proxy
     - export http_proxy=http://192.168.4.8:3128
@@ -304,7 +306,9 @@ selenium-test-prod:
   stage: selenium
   variables:
     FRONT_URL: $FRONT_URL_PROD
-  needs: [deploy_prod]
+  needs:
+    - deploy_prod
+    - build-backend
   before_script:
     # Proxy
     - export http_proxy=http://192.168.4.8:3128
