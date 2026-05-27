@@ -4,7 +4,6 @@ import fr.horizon.backend_api.repository.UserRepository;
 import fr.horizon.backend_api.service.JwtToken;
 import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -12,6 +11,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -26,11 +26,13 @@ public class ConversationWebSocketHandler extends TextWebSocketHandler {
     private static final int TOKEN_PARAM_LENGTH = 6;
     private static final int CONVERSATION_ID_PARAM_LENGTH = 15;
 
-    @Autowired
-    private JwtToken jwtToken;
+    private final JwtToken jwtToken;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+    public ConversationWebSocketHandler(JwtToken jwtToken, UserRepository userRepository) {
+        this.jwtToken = jwtToken;
+        this.userRepository = userRepository;
+    }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -81,7 +83,11 @@ public class ConversationWebSocketHandler extends TextWebSocketHandler {
     }
 
     private String extractTokenFromSession(WebSocketSession session) {
-        String query = session.getUri().getQuery();
+        URI uri = session.getUri();
+        if (uri == null) {
+            return null;
+        }
+        String query = uri.getQuery();
         if (query != null && query.contains(TOKEN_PARAM)) {
             String[] params = query.split("&");
             for (String param : params) {
@@ -94,7 +100,11 @@ public class ConversationWebSocketHandler extends TextWebSocketHandler {
     }
 
     private Long extractConversationIdFromSession(WebSocketSession session) {
-        String query = session.getUri().getQuery();
+        URI uri = session.getUri();
+        if (uri == null) {
+            return null;
+        }
+        String query = uri.getQuery();
         if (query != null && query.contains(CONVERSATION_ID_PARAM)) {
             String[] params = query.split("&");
             for (String param : params) {

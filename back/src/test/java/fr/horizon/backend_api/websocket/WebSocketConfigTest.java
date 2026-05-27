@@ -16,7 +16,7 @@ import static org.mockito.Mockito.*;
  * Teste que les handlers WebSocket sont correctement enregistrés
  * sur les bons endpoints et avec les bonnes origines.
  */
-public class WebSocketConfigTest {
+class WebSocketConfigTest {
 
     private static final String CONVERSATION_ENDPOINT = "/ws/conversation";
     private static final String ALLOWED_ORIGIN = "*";
@@ -34,12 +34,12 @@ public class WebSocketConfigTest {
     private WebSocketConfig webSocketConfig;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    public void testRegisterWebSocketHandlers_ConversationHandlerRegistered() {
+    void testRegisterWebSocketHandlers_ConversationHandlerRegistered() {
         // Setup
         when(registry.addHandler(conversationWebSocketHandler, CONVERSATION_ENDPOINT))
                 .thenReturn(registration);
@@ -55,7 +55,7 @@ public class WebSocketConfigTest {
     }
 
     @Test
-    public void testRegisterWebSocketHandlers_OnlyConversationHandlerRegistered() {
+    void testRegisterWebSocketHandlers_OnlyConversationHandlerRegistered() {
         // Setup
         when(registry.addHandler(conversationWebSocketHandler, CONVERSATION_ENDPOINT))
                 .thenReturn(registration);

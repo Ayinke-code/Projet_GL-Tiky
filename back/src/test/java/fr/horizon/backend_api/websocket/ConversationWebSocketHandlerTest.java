@@ -5,7 +5,6 @@ import fr.horizon.backend_api.service.JwtToken;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.web.socket.CloseStatus;
@@ -14,6 +13,7 @@ import org.springframework.web.socket.WebSocketSession;
 import java.net.URI;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 
@@ -27,7 +27,7 @@ import static org.mockito.Mockito.*;
  * - Diffusion de messages sur une conversation spécifique
  * - Gestion des erreurs de transmission
  */
-public class ConversationWebSocketHandlerTest {
+class ConversationWebSocketHandlerTest {
 
     private static final String VALID_TOKEN = "valid-token";
     private static final String INVALID_TOKEN = "invalid-token";
@@ -54,16 +54,16 @@ public class ConversationWebSocketHandlerTest {
     @Mock
     private Claims claims;
 
-    @InjectMocks
     private ConversationWebSocketHandler handler;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
+        handler = new ConversationWebSocketHandler(jwtToken, userRepository);
     }
 
     @Test
-    public void testAfterConnectionEstablished_ValidTokenAndConversationId() throws Exception {
+    void testAfterConnectionEstablished_ValidTokenAndConversationId() throws Exception {
         // Setup
         String queryString = TOKEN_PARAM + VALID_TOKEN + CONVERSATION_ID_PARAM + CONVERSATION_ID;
 
@@ -82,7 +82,7 @@ public class ConversationWebSocketHandlerTest {
     }
 
     @Test
-    public void testAfterConnectionEstablished_MissingToken() throws Exception {
+    void testAfterConnectionEstablished_MissingToken() throws Exception {
         // Setup
         String queryString = CONVERSATION_ID_PARAM + CONVERSATION_ID;
         when(session.getUri()).thenReturn(new URI(WS_BASE_URL + queryString));
@@ -95,7 +95,7 @@ public class ConversationWebSocketHandlerTest {
     }
 
     @Test
-    public void testAfterConnectionEstablished_MissingConversationId() throws Exception {
+    void testAfterConnectionEstablished_MissingConversationId() throws Exception {
         // Setup
         String queryString = TOKEN_PARAM + VALID_TOKEN;
         when(session.getUri()).thenReturn(new URI(WS_BASE_URL + queryString));
@@ -108,7 +108,7 @@ public class ConversationWebSocketHandlerTest {
     }
 
     @Test
-    public void testAfterConnectionEstablished_InvalidToken() throws Exception {
+    void testAfterConnectionEstablished_InvalidToken() throws Exception {
         // Setup
         String queryString = TOKEN_PARAM + INVALID_TOKEN + CONVERSATION_ID_PARAM + CONVERSATION_ID;
 
@@ -123,7 +123,7 @@ public class ConversationWebSocketHandlerTest {
     }
 
     @Test
-    public void testAfterConnectionEstablished_UserNotFound() throws Exception {
+    void testAfterConnectionEstablished_UserNotFound() throws Exception {
         // Setup
         String queryString = TOKEN_PARAM + VALID_TOKEN + CONVERSATION_ID_PARAM + CONVERSATION_ID;
 
@@ -139,20 +139,24 @@ public class ConversationWebSocketHandlerTest {
         verify(session).close(CloseStatus.NOT_ACCEPTABLE);
     }
 
-    @Test
-    public void testBroadcastToConversationBuildsCorrectPayload() throws Exception {
+     @Test
+    void testBroadcastToConversationBuildsCorrectPayload() throws Exception {
         // This tests that the method doesn't throw when broadcasting to a conversation
-        handler.broadcastToConversation(CONVERSATION_ID, TEST_MESSAGE);
+        // Even with no sessions, the method should complete without error
+        assertDoesNotThrow(() -> handler.broadcastToConversation(CONVERSATION_ID, TEST_MESSAGE));
     }
 
     @Test
-    public void testAfterConnectionClosedRemovesSession() throws Exception {
+    void testAfterConnectionClosedRemovesSession() throws Exception {
         when(session.getId()).thenReturn(SESSION_ID);
-        handler.afterConnectionClosed(session, CloseStatus.NORMAL);
+        // Should complete without throwing any exception
+        assertDoesNotThrow(() -> handler.afterConnectionClosed(session, CloseStatus.NORMAL));
+        // Verify that session.getId() was called to log the session ID
+        verify(session).getId();
     }
 
     @Test
-    public void testExtractTokenFromValidQuery() throws Exception {
+    void testExtractTokenFromValidQuery() throws Exception {
         // This tests that the method successfully parses token and conversation ID from query string
         String queryString = TOKEN_PARAM + VALID_TOKEN + CONVERSATION_ID_PARAM + CONVERSATION_ID_STR;
 
