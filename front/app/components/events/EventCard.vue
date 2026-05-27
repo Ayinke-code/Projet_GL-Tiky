@@ -62,17 +62,34 @@
       <p class="text-[9px] uppercase tracking-widest font-semibold text-gray-400 mb-1.5">
         <i class="fa-solid fa-rocket mr-1"></i>Groupes projet
       </p>
-      <div class="flex flex-wrap gap-1.5">
-        <span
-          v-for="g in event.projectGroups"
-          :key="g.id"
-          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium
-                 bg-emerald-50 text-emerald-700 border border-emerald-200"
-        >
-          {{ g.name }}
-          <span v-if="g.categoryName" class="opacity-60">· {{ g.categoryName }}</span>
-          <span v-if="g.parentGroupName" class="opacity-60">· <i class="fa-solid fa-code-branch text-[9px]"></i> {{ g.parentGroupName }}</span>
-        </span>
+      <div class="flex flex-col gap-2">
+        <div v-for="g in event.projectGroups" :key="g.id">
+          <span
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium
+                   bg-emerald-50 text-emerald-700 border border-emerald-200"
+          >
+            {{ g.name }}
+            <span v-if="g.categoryName" class="opacity-60">· {{ g.categoryName }}</span>
+            <span v-if="g.parentGroupName" class="opacity-60">· <i class="fa-solid fa-code-branch text-[9px]"></i> {{ g.parentGroupName }}</span>
+          </span>
+          <!-- Enseignants du groupe -->
+          <div v-if="g.teachers && g.teachers.length" class="mt-1 ml-1">
+            <p class="text-[9px] uppercase tracking-widest font-semibold text-violet-400 mb-1">
+              <i class="fa-solid fa-chalkboard-teacher mr-1"></i>Enseignants
+            </p>
+            <div class="flex flex-wrap gap-1">
+            <span
+              v-for="teacher in g.teachers"
+              :key="teacher"
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]
+                     bg-violet-50 text-violet-700 border border-violet-200"
+            >
+              <i class="fa-solid fa-chalkboard-teacher text-[9px]"></i>
+              {{ teacher }}
+            </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

@@ -34,6 +34,7 @@ public class EventResponseDto {
         private Long id;
         private String name;
         private String categoryName;
-        private String parentGroupName; // groupe OPTION rattaché
+        private String parentGroupName;
+        private Set<String> teachers;
     }
 }

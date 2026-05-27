@@ -21,4 +21,5 @@ public class StudentGroupDto {
     private Integer year;
     private UserRefDto createdBy;
     private Set<UserRefDto> members;
+    private Set<UserRefDto> teachers;
 }

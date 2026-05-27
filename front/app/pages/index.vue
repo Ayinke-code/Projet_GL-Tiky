@@ -85,6 +85,15 @@
 <script setup>
 definePageMeta({ ssr: false })
 
+const { user, ready } = useAuth()
+
+// Si déjà connecté, rediriger vers l'accueil de l'app
+watchEffect(() => {
+  if (ready.value && user.value) {
+    navigateTo('/issues')
+  }
+})
+
 const features = [
   {
     label: 'Ticket & suivi',

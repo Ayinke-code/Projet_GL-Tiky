@@ -338,12 +338,22 @@ public class EventService {
      */
     private EventResponseDto mapToResponse(Event event) {
         List<EventResponseDto.ProjectGroupRefDto> groups = event.getProjectGroups().stream()
-                .map(g -> EventResponseDto.ProjectGroupRefDto.builder()
-                        .id(g.getId())
-                        .name(g.getName())
-                        .categoryName(g.getCategory().getName())
-                        .parentGroupName(g.getParentGroup() != null ? g.getParentGroup().getName() : null)
-                        .build())
+                .map(g -> {
+                    // Enseignants : ceux du groupe parent (OPTION) s'il existe, sinon ceux du groupe lui-même
+                    Set<String> teacherNames = (g.getParentGroup() != null
+                            ? g.getParentGroup().getTeachers()
+                            : g.getTeachers())
+                            .stream()
+                            .map(fr.horizon.backend_api.model.User::getName)
+                            .collect(java.util.stream.Collectors.toSet());
+                    return EventResponseDto.ProjectGroupRefDto.builder()
+                            .id(g.getId())
+                            .name(g.getName())
+                            .categoryName(g.getCategory().getName())
+                            .parentGroupName(g.getParentGroup() != null ? g.getParentGroup().getName() : null)
+                            .teachers(teacherNames)
+                            .build();
+                })
                 .toList();
 
         return EventResponseDto.builder()
