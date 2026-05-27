@@ -105,6 +105,47 @@ public class EventService {
                 .toList();
     }
 
+    /**
+     * Retourne les sessions assignées à l'étudiant connecté.
+     * Inclut les événements liés aux groupes PROJECT, OPTION et PROMOTION
+     * dont l'étudiant est membre (directement ou via la hiérarchie).
+     *
+     * @param email email de l'étudiant extrait du contexte de sécurité
+     * @return liste de DTO triée par date de début croissante
+     */
+    @Transactional(readOnly = true)
+    public List<EventResponseDto> listForStudent(String email) {
+        User student = userService.findByEmail(email);
+
+        // Tous les groupes dont l'étudiant est membre directement
+        List<StudentGroup> directGroups = studentGroupRepository.findAllByMemberId(student.getId());
+
+        Set<Long> groupIds = new HashSet<>();
+        for (StudentGroup g : directGroups) {
+            groupIds.add(g.getId());
+            // Groupe PROJECT → remonter vers l'OPTION parent et la PROMOTION
+            if (g.getParentGroup() != null) {
+                groupIds.add(g.getParentGroup().getId());
+                if (g.getParentGroup().getPromotion() != null) {
+                    groupIds.add(g.getParentGroup().getPromotion().getId());
+                }
+            }
+            // Groupe OPTION → inclure la PROMOTION
+            if (g.getPromotion() != null) {
+                groupIds.add(g.getPromotion().getId());
+            }
+        }
+
+        if (groupIds.isEmpty()) {
+            return List.of();
+        }
+
+        return eventRepository.findByProjectGroupIds(groupIds)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
     @Transactional
     public void deleteById(Long id) {
         Event event = eventRepository.findById(id)
@@ -122,18 +163,21 @@ public class EventService {
         List<EventResponseDto.ProjectGroupRefDto> groups = event.getProjectGroups().stream()
                 .map(g -> {
                     // Enseignants : ceux du groupe parent (OPTION) s'il existe, sinon ceux du groupe lui-même
-                    Set<String> teacherNames = (g.getParentGroup() != null
+                    Set<EventResponseDto.TeacherRefDto> teachers = (g.getParentGroup() != null
                             ? g.getParentGroup().getTeachers()
                             : g.getTeachers())
                             .stream()
-                            .map(fr.horizon.backend_api.model.User::getName)
+                            .map(t -> EventResponseDto.TeacherRefDto.builder()
+                                    .name(t.getName())
+                                    .teacherType(t.getTeacherType() != null ? t.getTeacherType().name() : null)
+                                    .build())
                             .collect(java.util.stream.Collectors.toSet());
                     return EventResponseDto.ProjectGroupRefDto.builder()
                             .id(g.getId())
                             .name(g.getName())
                             .categoryName(g.getCategory().getName())
                             .parentGroupName(g.getParentGroup() != null ? g.getParentGroup().getName() : null)
-                            .teachers(teacherNames)
+                            .teachers(teachers)
                             .build();
                 })
                 .toList();

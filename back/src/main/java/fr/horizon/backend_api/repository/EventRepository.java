@@ -4,11 +4,13 @@ import fr.horizon.backend_api.model.Event;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long> {
@@ -25,5 +27,25 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     List<Event> findByCategoryTypeOrderByCreatedAtDesc(CategoryType type);
     List<Event> findByCreatedByOrderByCreatedAtDesc(User user);
+
+    /**
+     * Retourne les événements liés à l'un des groupes dont l'identifiant est dans {@code groupIds}.
+     * Couvre directement les groupes PROJECT, OPTION et PROMOTION de l'étudiant.
+     */
+    @Query("""
+            SELECT DISTINCT e FROM Event e
+            LEFT JOIN FETCH e.projectGroups pg
+            LEFT JOIN FETCH pg.category
+            LEFT JOIN FETCH pg.parentGroup
+            JOIN e.projectGroups evg
+            WHERE evg.id IN :groupIds
+            ORDER BY e.startDate ASC
+            """)
+    List<Event> findByProjectGroupIds(@Param("groupIds") Set<Long> groupIds);
+
+    /** Supprime toutes les entrées de la table de jointure event_project_groups pour un groupe donné. */
+    @Modifying
+    @Query(value = "DELETE FROM event_project_groups WHERE group_id = :groupId", nativeQuery = true)
+    void removeGroupFromAllEvents(@Param("groupId") Long groupId);
 }
 

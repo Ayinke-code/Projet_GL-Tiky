@@ -18,6 +18,7 @@ import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.model.enums.GroupType;
 import fr.horizon.backend_api.repository.CategoryRepository;
+import fr.horizon.backend_api.repository.EventRepository;
 import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.StudentGroupRepository;
 import fr.horizon.backend_api.repository.UserRepository;
@@ -49,6 +50,7 @@ public class StudentGroupService {
     private final CategoryRepository categoryRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EventRepository eventRepository;
 
     @Transactional
     public StudentGroupDto create(StudentGroupCreateDto dto, String creatorEmail) {
@@ -108,10 +110,50 @@ public class StudentGroupService {
                 .toList();
     }
 
+    /**
+     * Retourne les groupes d'un type donné dont l'étudiant connecté est membre.
+     *
+     * @param email email de l'étudiant
+     * @param type  type de groupe (PROMOTION, OPTION, PROJECT)
+     * @return liste des groupes filtrés
+     */
+    @Transactional(readOnly = true)
+    public List<StudentGroupDto> findMyGroups(String email, GroupType type) {
+        User student = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException(email));
+        return studentGroupRepository.findByMemberIdAndType(student.getId(), type)
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
     @Transactional
     public void deleteById(Long id) {
         StudentGroup group = studentGroupRepository.findById(id)
                 .orElseThrow(() -> new StudentGroupNotFoundException(id));
+        deleteCascade(group);
+    }
+
+    /**
+     * Supprime un groupe et ses enfants en cascade :
+     * PROMOTION → OPTION(s) → PROJECT(s).
+     * Nettoie également la table event_project_groups à chaque niveau.
+     */
+    private void deleteCascade(StudentGroup group) {
+        // Cascade vers les OPTION enfants si c'est une PROMOTION
+        if (group.getType() == GroupType.PROMOTION) {
+            studentGroupRepository.findByPromotion_Id(group.getId())
+                    .forEach(this::deleteCascade);
+        }
+        // Cascade vers les PROJECT enfants si c'est une OPTION
+        else if (group.getType() == GroupType.OPTION) {
+            studentGroupRepository.findByParentGroup_Id(group.getId())
+                    .forEach(this::deleteCascade);
+        }
+
+        // Retirer ce groupe de la table event_project_groups
+        eventRepository.removeGroupFromAllEvents(group.getId());
+
         studentGroupRepository.delete(group);
     }
 
