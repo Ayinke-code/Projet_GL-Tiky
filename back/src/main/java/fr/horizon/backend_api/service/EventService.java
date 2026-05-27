@@ -44,6 +44,10 @@ public class EventService {
     private final StudentGroupRepository studentGroupRepository;
     private final IssueFollowerRepository issueFollowerRepository;
 
+    private static final String USER_NOT_FOUND = "User not found";
+    private static final String ISSUE_NOT_FOUND = "Issue not found";
+    private static final String EVENT_NOT_FOUND = "Event not found";
+
     /**
      * Crée un nouvel événement académique.
      * <p>
@@ -125,7 +129,7 @@ public class EventService {
     public EventResponseDto createMeeting(EventRequestDto meetingRequest, String email, Long issueId){
             User user = userService.findByEmail(email);
         Issue issue = issueRepository.findById(issueId)
-                .orElseThrow(() -> new EntityNotFoundException("Issue not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ISSUE_NOT_FOUND));
 
         boolean hasTeacherRole = user.getRoles().stream()
                 .anyMatch(r -> RoleEnum.TEACHER.value().equals(r.getName()) || RoleEnum.ADMIN.value().equals(r.getName()));
@@ -178,10 +182,10 @@ public class EventService {
      */
     public EventResponseDto inviteUserToMeeting(Long eventId, Long userId){
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND));
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
 
         if (checkConflictWithAnotherEvent(user, event)) {
             throw new EventConflictException("Conflit d'agenda : " + user.getName() + " n'est pas disponible sur ce créneau.");
@@ -208,11 +212,11 @@ public class EventService {
      */
     public EventResponseDto inviteUsersToMeeting(Long eventId, Set<Long> userIds) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND));
 
         for (Long userId : userIds) {
             User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new EntityNotFoundException("User not found with ID: " + userId));
+                    .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND + " with ID: " + userId));
 
             if (checkConflictWithAnotherEvent(user, event)) {
                 throw new EventConflictException("Impossible d'inviter le groupe. Conflit d'agenda pour : " + user.getName());
@@ -241,7 +245,7 @@ public class EventService {
         User user = userService.findByEmail(email);
 
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND));
 
         EventParticipant participantParticipant = event.getParticipants().stream()
                 .filter(p -> p.getUser().getId().equals(user.getId()))
@@ -276,8 +280,6 @@ public class EventService {
         User user = userService.findByEmail(email);
 
         List<Event> events = eventRepository.findPendingInvitationsByUserId(user.getId());
-        System.out.println("DEBUG: Nombre d'événements trouvés pour l'user " + user.getId() + " : " + events.size());
-
         return events.stream()
                 .map(event -> mapToInvitationResponse(event, user))
                 .toList();
@@ -296,7 +298,7 @@ public class EventService {
      */
     public List<StatutInvitationParticipantDto> getEventInvitationStatut(Long eventId, String email) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND));
 
         User currentUser = userService.findByEmail(email);
 
@@ -476,56 +478,122 @@ public class EventService {
      * @return Le DTO de l'événement mis à jour
      */
     @Transactional
-    public EventResponseDto updateMeetingDueToChange(Long eventId, LocalDateTime newStartDate, LocalDateTime newEndDate, boolean addAll) {
-        // 1. Récupération de l'événement
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+    public EventResponseDto updateMeetingDueToChange(
+            Long eventId,
+            LocalDateTime newStartDate,
+            LocalDateTime newEndDate,
+            boolean addAll
+    ) {
 
-        // 2. Validation des nouvelles dates
-        if (newStartDate == null || newEndDate == null) {
-            throw new IllegalArgumentException("Les nouvelles dates de début et de fin sont obligatoires.");
-        }
-        if (!newEndDate.isAfter(newStartDate)) {
-            throw new IllegalArgumentException("La date de fin doit être postérieure à la date de début.");
-        }
+        Event event = getEventOrThrow(eventId);
+
+        validateDates(newStartDate, newEndDate);
 
         event.setStartDate(newStartDate);
         event.setEndDate(newEndDate);
 
-        if (checkConflictWithAnotherEvent(event.getCreatedBy(), event)) {
-            throw new EventConflictException("Conflit d'agenda : L'organisateur n'est pas disponible sur ce nouveau créneau.");
-        }
+        validateOrganizerAvailability(event);
 
         if (addAll) {
-            for (EventParticipant participant : event.getParticipants()) {
-                if (participant.getUser().getId().equals(event.getCreatedBy().getId())) {
-                    participant.setHasAccepted(true);
-                } else {
-                    if (checkConflictWithAnotherEvent(participant.getUser(), event)) {
-                        throw new EventConflictException("Impossible de replanifier. Conflit d'agenda pour : " + participant.getUser().getName());
-                    }
-                    participant.setHasAccepted(null);
-                }
-                participant.setReason(null);
-            }
+            updateParticipantsKeepingAll(event);
         } else {
-            event.getParticipants().removeIf(participant ->
-                    !participant.getUser().getId().equals(event.getCreatedBy().getId()) &&
-                            (!Boolean.TRUE.equals(participant.getHasAccepted()) || checkConflictWithAnotherEvent(participant.getUser(), event))
-            );
-
-            for (EventParticipant participant : event.getParticipants()) {
-                if (participant.getUser().getId().equals(event.getCreatedBy().getId())) {
-                    participant.setHasAccepted(true);
-                } else {
-                    participant.setHasAccepted(null);
-                }
-                participant.setReason(null);
-            }
+            updateParticipantsRemovingUnavailable(event);
         }
 
         Event saved = eventRepository.save(event);
         return mapToResponse(saved);
+    }
+
+    private Event getEventOrThrow(Long eventId) {
+        return eventRepository.findById(eventId)
+                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND));
+    }
+
+    private void validateDates(LocalDateTime start, LocalDateTime end) {
+
+        if (start == null || end == null) {
+            throw new IllegalArgumentException(
+                    "Les nouvelles dates de début et de fin sont obligatoires."
+            );
+        }
+
+        if (!end.isAfter(start)) {
+            throw new IllegalArgumentException(
+                    "La date de fin doit être postérieure à la date de début."
+            );
+        }
+    }
+
+    private void validateOrganizerAvailability(Event event) {
+
+        if (checkConflictWithAnotherEvent(event.getCreatedBy(), event)) {
+            throw new EventConflictException(
+                    "Conflit d'agenda : L'organisateur n'est pas disponible sur ce nouveau créneau."
+            );
+        }
+    }
+
+    private void updateParticipantsKeepingAll(Event event) {
+
+        for (EventParticipant participant : event.getParticipants()) {
+
+            if (isOrganizer(event, participant)) {
+                participant.setHasAccepted(true);
+            } else {
+
+                validateParticipantAvailability(participant, event);
+
+                participant.setHasAccepted(null);
+            }
+
+            resetParticipantReason(participant);
+        }
+    }
+
+    private void updateParticipantsRemovingUnavailable(Event event) {
+
+        event.getParticipants().removeIf(participant ->
+                !isOrganizer(event, participant)
+                        && shouldRemoveParticipant(participant, event)
+        );
+
+        for (EventParticipant participant : event.getParticipants()) {
+
+            participant.setHasAccepted(
+                    isOrganizer(event, participant) ? true : null
+            );
+
+            resetParticipantReason(participant);
+        }
+    }
+
+    private boolean shouldRemoveParticipant(EventParticipant participant, Event event) {
+
+        return !Boolean.TRUE.equals(participant.getHasAccepted())
+                || checkConflictWithAnotherEvent(participant.getUser(), event);
+    }
+
+    private void validateParticipantAvailability(
+            EventParticipant participant,
+            Event event
+    ) {
+
+        if (checkConflictWithAnotherEvent(participant.getUser(), event)) {
+            throw new EventConflictException(
+                    "Impossible de replanifier. Conflit d'agenda pour : "
+                            + participant.getUser().getName()
+            );
+        }
+    }
+
+    private boolean isOrganizer(Event event, EventParticipant participant) {
+
+        return participant.getUser().getId()
+                .equals(event.getCreatedBy().getId());
+    }
+
+    private void resetParticipantReason(EventParticipant participant) {
+        participant.setReason(null);
     }
 
     /**
@@ -537,7 +605,7 @@ public class EventService {
     @Transactional
     public void cancelEvent(Long eventId) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Event not found with ID: " + eventId));
+                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND+" with ID: " + eventId));
 
         // Enlever tous les participants (nettoie la table d'association)
         event.getParticipants().clear();
@@ -560,7 +628,7 @@ public class EventService {
     public EventResponseDto askForMeeting(EventRequestDto meetingRequest, String email, long issueId){
         User user = userService.findByEmail(email);
         Issue issue = issueRepository.findById(issueId)
-                .orElseThrow(() -> new EntityNotFoundException("Issue not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ISSUE_NOT_FOUND));
 
         checkDatesForCreation(meetingRequest);
 
@@ -593,10 +661,10 @@ public class EventService {
     @Transactional
     public EventResponseDto deleteParticipantFromMeeting(Long eventId, Long userId){
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND));
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
 
 
         event.deleteParticipant(user);
@@ -614,7 +682,7 @@ public class EventService {
     @Transactional(readOnly = true)
     public List<FollowersInfoDto> getPossibleUserInterested(Long eventId) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Event not found with ID: " + eventId));
+                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND+" with ID: " + eventId));
 
         if (event.getIssue() == null) {
             return Collections.emptyList();

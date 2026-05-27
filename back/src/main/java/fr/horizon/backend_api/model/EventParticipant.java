@@ -3,8 +3,6 @@ package fr.horizon.backend_api.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Table(
         name = "event_participant",
