@@ -49,10 +49,11 @@
 
         <!-- Nom -->
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">
+          <label for="event-name" class="block text-xs font-medium text-gray-700 mb-1">
             Nom de l'événement <span class="text-red-500">*</span>
           </label>
           <input
+            id="event-name"
             v-model="form.name"
             type="text"
             :placeholder="isAudit ? 'Ex : Audit Sprint 3 — Groupe A' : 'Ex : Soutenance PFE — Promo 2025'"
@@ -64,8 +65,9 @@
 
         <!-- Description -->
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
+          <label for="event-description" class="block text-xs font-medium text-gray-700 mb-1">Description</label>
           <textarea
+            id="event-description"
             v-model="form.description"
             placeholder="Décrivez l'événement…"
             rows="3"
@@ -76,12 +78,13 @@
 
         <!-- Catégorie filtrée par type -->
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">
+          <label for="event-category" class="block text-xs font-medium text-gray-700 mb-1">
             Catégorie <span class="text-red-500">*</span>
           </label>
           <USkeleton v-if="loadingCategories" class="h-10 w-full rounded-lg" />
           <select
             v-else
+            id="event-category"
             v-model="form.categoryId"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
                    focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -97,10 +100,11 @@
         <!-- Plage de dates — obligatoire pour les Audits et Soutenances -->
         <div v-if="requiresDates" class="grid grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">
+            <label for="event-start-date" class="block text-xs font-medium text-gray-700 mb-1">
               Date de début <span class="text-red-500">*</span>
             </label>
             <input
+              id="event-start-date"
               v-model="form.startDate"
               type="datetime-local"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
@@ -109,10 +113,11 @@
             />
           </div>
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">
+            <label for="event-end-date" class="block text-xs font-medium text-gray-700 mb-1">
               Date de fin <span class="text-red-500">*</span>
             </label>
             <input
+              id="event-end-date"
               v-model="form.endDate"
               type="datetime-local"
               :min="form.startDate"
@@ -130,13 +135,14 @@
 
         <!-- Groupes projet (AUDIT et DEFENSE uniquement) -->
         <div v-if="requiresDates">
-          <label class="block text-xs font-medium text-gray-700 mb-1">
+          <label for="group-search" class="block text-xs font-medium text-gray-700 mb-1">
             Groupes projet
             <span class="text-gray-400 font-normal ml-1">({{ form.projectGroupIds.length }} sélectionné(s))</span>
           </label>
 
           <!-- Barre de recherche -->
           <input
+            id="group-search"
             v-model="groupSearch"
             type="text"
             placeholder="Rechercher un groupe projet…"

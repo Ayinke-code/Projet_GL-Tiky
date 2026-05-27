@@ -79,13 +79,16 @@
             </p>
             <div class="flex flex-wrap gap-1">
             <span
-              v-for="teacher in g.teachers"
-              :key="teacher"
-              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]
-                     bg-violet-50 text-violet-700 border border-violet-200"
+              v-for="teacher in [...g.teachers].sort((a, b) => (a.teacherType === 'OPTION_LEADER' ? -1 : b.teacherType === 'OPTION_LEADER' ? 1 : 0))"
+              :key="teacher.name"
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px]"
+              :class="teacher.teacherType === 'OPTION_LEADER'
+                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                : 'bg-violet-50 text-violet-700 border border-violet-200'"
             >
-              <i class="fa-solid fa-chalkboard-teacher text-[9px]"></i>
-              {{ teacher }}
+              <i v-if="teacher.teacherType === 'OPTION_LEADER'" class="fa-solid fa-star text-[8px]"></i>
+              <i v-else class="fa-solid fa-chalkboard-teacher text-[9px]"></i>
+              {{ teacher.name }}
             </span>
             </div>
           </div>
@@ -96,6 +99,7 @@
     <!-- Bouton suppression -->
     <div class="flex justify-end mt-auto pt-3">
       <UButton
+        v-if="ready && (user?.roles?.includes('TEACHER') || user?.roles?.includes('ADMIN'))"
         @click.stop="emit('delete', event)"
         variant="ghost"
         size="xs"
@@ -115,6 +119,8 @@
  * Utilise formatDateTime (déjà présent dans utils/helpers.js).
  */
 import { formatDateTime, formatDate, formatTime } from '~/utils/helpers'
+
+const { user, ready } = useAuth()
 
 defineProps({
   event: { type: Object, required: true }
