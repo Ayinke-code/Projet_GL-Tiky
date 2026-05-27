@@ -21,7 +21,8 @@ public class SmokeTestIT {
     void setUp() {
         frontUrl = System.getenv("FRONT_URL");
         if (frontUrl == null) {
-            frontUrl = Dotenv.load().get("FRONT_URL");
+            Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
+            frontUrl = dotenv.get("FRONT_URL");
         }
         Assertions.assertNotNull(frontUrl);
 
