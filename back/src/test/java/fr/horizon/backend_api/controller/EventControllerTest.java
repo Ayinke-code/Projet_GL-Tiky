@@ -59,7 +59,7 @@ class EventControllerTest {
         when(eventService.create(any(), anyString())).thenReturn(response);
         when(authentication.getName()).thenReturn("teacher@teacher.fr");
 
-        mockMvc.perform(post("/events")
+        mockMvc.perform(post("/events/school")
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -94,7 +94,7 @@ class EventControllerTest {
         when(eventService.create(any(), anyString())).thenReturn(response);
         when(authentication.getName()).thenReturn("admin@admin.fr");
 
-        mockMvc.perform(post("/events")
+        mockMvc.perform(post("/events/school")
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -197,7 +197,7 @@ class EventControllerTest {
         when(eventService.create(any(), anyString())).thenReturn(response);
         when(authentication.getName()).thenReturn("teacher2@teacher.fr");
 
-        mockMvc.perform(post("/events")
+        mockMvc.perform(post("/events/school")
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
