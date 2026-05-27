@@ -15,6 +15,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import org.mockito.ArgumentCaptor;
 
 
 /**
@@ -153,6 +154,89 @@ class ConversationWebSocketHandlerTest {
         assertDoesNotThrow(() -> handler.afterConnectionClosed(session, CloseStatus.NORMAL));
         // Verify that session.getId() was called to log the session ID
         verify(session).getId();
+    }
+
+    @Test
+    void testBroadcastToConversation_sendsMessageToMatchingOpenSession() throws Exception {
+        // Prepare two sessions: one matching conversation and open, one non-matching
+        WebSocketSession matching = mock(WebSocketSession.class);
+        WebSocketSession other = mock(WebSocketSession.class);
+
+        when(matching.isOpen()).thenReturn(true);
+        when(other.isOpen()).thenReturn(true);
+
+        when(matching.getAttributes()).thenReturn(new java.util.HashMap<>());
+        when(other.getAttributes()).thenReturn(new java.util.HashMap<>());
+
+        matching.getAttributes().put("conversationId", CONVERSATION_ID);
+        other.getAttributes().put("conversationId", 999L);
+
+        // Use reflection to access the private static sessions list and populate it
+        java.lang.reflect.Field sessionsField = ConversationWebSocketHandler.class.getDeclaredField("sessions");
+        sessionsField.setAccessible(true);
+        java.util.List<WebSocketSession> sessions = (java.util.List<WebSocketSession>) sessionsField.get(null);
+        sessions.clear();
+        sessions.add(matching);
+        sessions.add(other);
+
+        // Execute
+        handler.broadcastToConversation(CONVERSATION_ID, TEST_MESSAGE);
+
+        // Verify that sendMessage was called on the matching session
+        ArgumentCaptor<org.springframework.web.socket.TextMessage> captor = ArgumentCaptor.forClass(org.springframework.web.socket.TextMessage.class);
+        verify(matching).sendMessage(captor.capture());
+        assertEquals(TEST_MESSAGE, captor.getValue().getPayload());
+
+        // Cleanup
+        sessions.clear();
+    }
+
+    @Test
+    void testBroadcastToConversation_handlesIOExceptionGracefully() throws Exception {
+        WebSocketSession problematic = mock(WebSocketSession.class);
+        when(problematic.isOpen()).thenReturn(true);
+        when(problematic.getAttributes()).thenReturn(new java.util.HashMap<>());
+        problematic.getAttributes().put("conversationId", CONVERSATION_ID);
+
+        doThrow(new java.io.IOException("io error")).when(problematic).sendMessage(any());
+
+        java.lang.reflect.Field sessionsField = ConversationWebSocketHandler.class.getDeclaredField("sessions");
+        sessionsField.setAccessible(true);
+        java.util.List<WebSocketSession> sessions = (java.util.List<WebSocketSession>) sessionsField.get(null);
+        sessions.clear();
+        sessions.add(problematic);
+
+        // Should not throw despite the IOException
+        assertDoesNotThrow(() -> handler.broadcastToConversation(CONVERSATION_ID, TEST_MESSAGE));
+
+        // Cleanup
+        sessions.clear();
+    }
+
+    @Test
+    void testAfterConnectionEstablished_InvalidConversationIdFormat() throws Exception {
+        // Setup: conversationId is non-numeric
+        String badConversationId = "abc";
+        String queryString = TOKEN_PARAM + VALID_TOKEN + CONVERSATION_ID_PARAM + badConversationId;
+
+        when(session.getUri()).thenReturn(new URI(WS_BASE_URL + queryString));
+        when(jwtToken.parseToken(VALID_TOKEN)).thenReturn(claims);
+        when(claims.getSubject()).thenReturn(TEST_EMAIL);
+
+        // Execute
+        handler.afterConnectionEstablished(session);
+
+        // Verify - session should be closed with BAD_DATA because conversation id parsing failed
+        verify(session).close(CloseStatus.BAD_DATA);
+    }
+
+    @Test
+    void testAfterConnectionEstablished_NullUriClosesSession() throws Exception {
+        when(session.getUri()).thenReturn(null);
+
+        handler.afterConnectionEstablished(session);
+
+        verify(session).close(CloseStatus.BAD_DATA);
     }
 
     @Test
