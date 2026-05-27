@@ -1,6 +1,4 @@
 package fr.horizon.backend_api.controller;
-
-import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.*;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.service.EventService;
@@ -36,7 +34,7 @@ public class EventController {
      * @param authentication contexte d’authentification Spring Security
      * @return événement créé sous forme de DTO avec statut HTTP 201
      */
-    @PostMapping
+    @PostMapping("/school")
     public ResponseEntity<EventResponseDto> create(@RequestBody EventRequestDto request, Authentication authentication) {
         String email = authentication.getName();
         EventResponseDto response = eventService.create(request, email);
@@ -61,9 +59,9 @@ public class EventController {
     @PostMapping("/{eventId}/invitations")
     public ResponseEntity<EventResponseDto> inviteUserToEvent(
             @PathVariable Long eventId,
-            @RequestBody Long userId) {
+            @RequestBody InvitationRequestDto invitationRequestDto) {
 
-        EventResponseDto response = eventService.inviteUserToMeeting(eventId, userId);
+        EventResponseDto response = eventService.inviteUserToMeeting(eventId, invitationRequestDto.getUserId());
         return ResponseEntity.ok(response);
     }
 
@@ -126,6 +124,127 @@ public class EventController {
     @DeleteMapping("/{id}")
     public void deleteEvent(@PathVariable Long id) {
         eventService.deleteById(id);
+    }
+
+    /**
+     * Crée un nouvel événement académique.
+     * <p>
+     * L’email de l’utilisateur connecté est extrait du contexte
+     * d’authentification Spring Security et transmis au service.
+     *
+     * @param request        données de création (nom, description, categoryId)
+     * @param authentication contexte d’authentification Spring Security
+     * @return événement créé sous forme de DTO avec statut HTTP 201
+     */
+    @PostMapping("/meeting/{issueId}")
+    public ResponseEntity<EventResponseDto> createMeeting(@RequestBody EventRequestDto request, Authentication authentication, @PathVariable Long issueId) {
+        String email = authentication.getName();
+        EventResponseDto response = eventService.createMeeting(request, email, issueId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Vérifie si une issue possède une réunion à venir.
+     * GET /events/meeting/{issueId}/upcoming
+     *
+     * @param issueId l'identifiant du ticket
+     * @return true si une réunion est prévue, false sinon
+     */
+    @GetMapping("/meeting/{issueId}/upcoming")
+    public ResponseEntity<Boolean> checkUpcomingMeeting(@PathVariable Long issueId) {
+        boolean hasMeeting = eventService.issueGotMeeting(issueId);
+        return ResponseEntity.ok(hasMeeting);
+    }
+
+    /**
+     * Récupère la liste de tous les événements créés par l'utilisateur connecté.
+     */
+    @GetMapping("/me/created")
+    public ResponseEntity<List<EventResponseDto>> getMyCreatedEvents(Authentication authentication) {
+        List<EventResponseDto> response = eventService.getMyCreatedEvents(authentication.getName());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Met à jour l'horaire d'un meeting suite à un refus/changement et gère les réinvitations.
+     * PUT /events/{eventId}/reschedule?addAll=true
+     */
+    @PutMapping("/{eventId}/reschedule")
+    public ResponseEntity<EventResponseDto> updateMeetingDueToChange(
+            @PathVariable Long eventId,
+            @RequestParam boolean addAll,
+            @RequestBody UpdateMeetingDatesRequestDto datesRequest) {
+
+        EventResponseDto response = eventService.updateMeetingDueToChange(
+                eventId,
+                datesRequest.getStartDate(),
+                datesRequest.getEndDate(),
+                addAll
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Annule un événement académique (réservé au créateur ou admin selon tes règles).
+     * DELETE /events/{eventId}/cancel
+     */
+    @DeleteMapping("/{eventId}/cancel")
+    public ResponseEntity<Void> cancelEvent(@PathVariable Long eventId) {
+        eventService.cancelEvent(eventId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Soumet une demande de réunion pour un ticket (initiée par un étudiant).
+     * POST /events/meeting/ask/{issueId}
+     */
+    @PostMapping("/meeting/ask/{issueId}")
+    public ResponseEntity<EventResponseDto> askForMeeting(
+            @RequestBody EventRequestDto request,
+            Authentication authentication,
+            @PathVariable Long issueId) {
+
+        String email = authentication.getName();
+        EventResponseDto response = eventService.askForMeeting(request, email, issueId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Récupère le statut de toutes les demandes de réunions initiées par l'utilisateur connecté.
+     * GET /events/me/demands
+     */
+    @GetMapping("/me/demands")
+    public ResponseEntity<List<MeetingDemandeDto>> getMyDemandsStatus(Authentication authentication) {
+        List<MeetingDemandeDto> response = eventService.getMyDemandsStatus(authentication.getName());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Retire un participant spécifique d'une réunion.
+     * DELETE /events/{eventId}/participants/{userId}
+     *
+     * @param eventId l'identifiant de la réunion
+     * @param userId l'identifiant de l'utilisateur à retirer
+     * @return le DTO de l'événement mis à jour
+     */
+    @DeleteMapping("/{eventId}/participants/{userId}")
+    public ResponseEntity<EventResponseDto> deleteParticipantFromMeeting(
+            @PathVariable Long eventId,
+            @PathVariable Long userId) {
+
+        EventResponseDto response = eventService.deleteParticipantFromMeeting(eventId, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Récupère tous les abonnés du ticket lié à un événement qui ne sont pas invités.
+     * GET /events/{eventId}/issue-followers
+     */
+    @GetMapping("/{eventId}/possible-participants")
+    public ResponseEntity<List<FollowersInfoDto>> getPossibleUserInterested(@PathVariable Long eventId) {
+        List<FollowersInfoDto> followers = eventService.getPossibleUserInterested(eventId);
+        return ResponseEntity.ok(followers);
     }
 }
 

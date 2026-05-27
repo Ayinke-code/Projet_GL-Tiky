@@ -27,7 +27,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     List<Event> findByCategoryTypeOrderByCreatedAtDesc(CategoryType type);
     List<Event> findByCreatedByOrderByCreatedAtDesc(User user);
 
-    @Query("SELECT e FROM Event e JOIN e.participants p WHERE p.user.id = :userId AND p.hasAccepted = false")
+    @Query("SELECT e FROM Event e JOIN e.participants p WHERE p.user.id = :userId AND p.hasAccepted IS NULL")
     List<Event> findPendingInvitationsByUserId(@Param("userId") Long userId);
 
     @Query("SELECT COUNT(e) FROM Event e JOIN e.participants p " +
@@ -40,5 +40,12 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                                 @Param("eventId") Long eventId,
                                 @Param("startDate") LocalDateTime startDate,
                                 @Param("endDate") LocalDateTime endDate);
+
+    boolean existsByIssueIdAndStartDateAfterAndValidatedTrue(Long issueId, LocalDateTime date);
+
+    List<Event> findByCreatedByIdOrderByCreatedAtDesc(Long creatorId);
+
+    @Query("SELECT e FROM Event e WHERE e.createdBy.id = :userId OR (e.issue IS NOT NULL AND e.issue.manager.id = :userId) ORDER BY e.createdAt DESC")
+    List<Event> findEventsManagedOrCreatedByUser(@Param("userId") Long userId);
 }
 

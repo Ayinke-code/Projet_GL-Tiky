@@ -41,9 +41,33 @@ export const useEvents = () => {
       return
     }
     try {
-      return await api('/events', { method: 'POST', body: payload })
+      return await api('/events/school', { method: 'POST', body: payload })
     } catch (e) {
       error.value = e?.data?.message || 'CREATE_EVENT_ERROR'
+      throw e
+    }
+  }
+
+  /**
+   * Crée un nouvel événement académique (réunion) lié à un ticket.
+   * Fait appel au endpoint POST /meeting/{issueId}.
+   *
+   * @param payload - { name, description, categoryId }
+   * @param issueId - L'ID du ticket/issue associé
+   */
+  const createMeeting = async (payload, issueId) => {
+    error.value = null
+    if (!user?.value?.id) {
+      await navigateTo('/login')
+      return
+    }
+    try {
+      return await api(`/events/meeting/${issueId}`, {
+        method: 'POST',
+        body: payload
+      })
+    } catch (e) {
+      error.value = e?.data?.message || 'CREATE_MEETING_ERROR'
       throw e
     }
   }
@@ -100,7 +124,7 @@ export const useEvents = () => {
     try {
       return await api(`/events/${eventId}/invitations/bulk`, {
         method: 'POST',
-        body: { userIds }
+        body:  userIds
       })
     } catch (e) {
       error.value = e?.data?.message || 'INVITE_USERS_BULK_ERROR'
@@ -154,10 +178,173 @@ export const useEvents = () => {
     error.value = null
     try {
       const data = await api(`/events/invitations/me`)
-      myPendingInvitations.value = data
-      return data
+      myPendingInvitations.value = Array.isArray(data) ? data : []
+      return myPendingInvitations.value
     } catch (e) {
       error.value = e?.data?.message || 'FETCH_MY_INVITATIONS_ERROR'
+      myPendingInvitations.value = []
+      return []
+    }
+  }
+
+  /**
+   * Vérifie si un ticket possède déjà une réunion à venir.
+   *
+   * @param {number} issueId - L'ID du ticket associé
+   * @returns {Promise<boolean>} true si une réunion est prévue, false sinon
+   */
+  const checkUpcomingMeeting = async (issueId) => {
+    error.value = null
+    try {
+      return await api(`/events/meeting/${issueId}/upcoming`)
+    } catch (e) {
+      error.value = e?.data?.message || 'CHECK_MEETING_ERROR'
+      return false
+    }
+  }
+
+  /**
+   * Récupère la liste des événements créés par l'utilisateur connecté.
+   */
+  const fetchMyCreatedEvents = async () => {
+    error.value = null
+    try {
+      const data = await api(`/events/me/created`)
+      // Tu peux soit retourner la donnée, soit la stocker dans un state si besoin
+      events.value = data
+      return data
+    } catch (e) {
+      error.value = e?.data?.message || 'FETCH_MY_CREATED_EVENTS_ERROR'
+      return []
+    }
+  }
+
+  /**
+   * Reprogramme une réunion suite à un refus et met à jour les invitations.
+   *
+   * @param {number} eventId - L'ID de l'événement
+   * @param {boolean} addAll - true pour réinviter tout le monde, false pour composer sans les absents
+   * @param {Object} datesPayload - { startDate: 'yyyymmddTHHMM', endDate: 'yyyymmddTHHMM' }
+   */
+  const updateMeetingDueToChange = async (eventId, addAll, datesPayload) => {
+    error.value = null
+    try {
+      const result = await api(`/events/${eventId}/reschedule`, {
+        method: 'PUT',
+        params: { addAll },
+        body: datesPayload
+      })
+
+      // Optionnel : Rafraîchir la liste locale des événements après modification
+      await fetchMyCreatedEvents()
+
+      return result
+    } catch (e) {
+      error.value = e?.data?.message || 'RESCHEDULE_MEETING_ERROR'
+      throw e
+    }
+  }
+
+  /**
+   * Annule un événement et met à jour la liste locale.
+   *
+   * @param {number} eventId - L'ID de l'événement à annuler
+   */
+  const cancelEvent = async (eventId) => {
+    error.value = null
+    try {
+      await api(`/events/${eventId}/cancel`, {
+        method: 'DELETE'
+      })
+
+      // Mise à jour de l'état local pour retirer l'événement de l'affichage
+      events.value = events.value.filter(e => e.id !== eventId)
+    } catch (e) {
+      error.value = e?.data?.message || 'CANCEL_EVENT_ERROR'
+      throw e
+    }
+  }
+
+  /**
+   * Crée une demande d'événement (réunion) lié à un ticket (soumis à validation).
+   * Fait appel au endpoint POST /events/meeting/ask/{issueId}.
+   *
+   * @param {Object} payload - { name, description, categoryId, startDate, endDate }
+   * @param {number} issueId - L'ID du ticket associé
+   */
+  const askForMeeting = async (payload, issueId) => {
+    error.value = null
+    if (!user?.value?.id) {
+      await navigateTo('/login')
+      return
+    }
+    try {
+      return await api(`/events/meeting/ask/${issueId}`, {
+        method: 'POST',
+        body: payload
+      })
+    } catch (e) {
+      error.value = e?.data?.message || 'ASK_MEETING_ERROR'
+      throw e
+    }
+  }
+
+  /**
+   * Récupère la liste et le statut des demandes de réunions initiées par l'utilisateur connecté.
+   * Fait appel au endpoint GET /events/me/demands.
+   *
+   * @returns {Promise<Array>} Liste de MeetingDemandeDto [{ issueId, status }]
+   */
+  const fetchMyDemandsStatus = async () => {
+    error.value = null
+    try {
+      return await api('/events/me/demands')
+    } catch (e) {
+      error.value = e?.data?.message || 'FETCH_DEMANDS_STATUS_ERROR'
+      return []
+    }
+  }
+
+  /**
+   * Retire un participant spécifique d'une réunion.
+   * Fait appel au endpoint DELETE /events/{eventId}/participants/{userId}.
+   *
+   * @param {number} eventId - L'ID de l'événement
+   * @param {number} userId - L'ID de l'utilisateur à retirer
+   * @returns {Promise<Object>} Le DTO de l'événement mis à jour
+   */
+  const removeParticipantFromMeeting = async (eventId, userId) => {
+    error.value = null
+    try {
+      const result = await api(`/events/${eventId}/participants/${userId}`, {
+        method: 'DELETE'
+      })
+
+      // Optionnel : Si tu affiches la liste détaillée des statuts juste après,
+      // tu peux re-fetcher les statuts ici
+      // await fetchEventInvitationStatus(eventId)
+
+      return result
+    } catch (e) {
+      error.value = e?.data?.message || 'REMOVE_PARTICIPANT_ERROR'
+      throw e
+    }
+  }
+
+  /**
+   * Récupère la liste des abonnés du ticket rattaché qui ne sont pas encore invités.
+   * Fait appel au endpoint GET /events/{eventId}/possible-participants.
+   *
+   * @param {number} eventId - L'ID de l'événement
+   * @returns {Promise<Array>} Liste des FollowersInfoDto
+   */
+  const fetchPossibleUsersInterested = async (eventId) => {
+    error.value = null
+    try {
+      const data = await api(`/events/${eventId}/possible-participants`)
+      return Array.isArray(data) ? data : []
+    } catch (e) {
+      error.value = e?.data?.message || 'FETCH_POSSIBLE_USERS_ERROR'
       return []
     }
   }
@@ -168,12 +355,21 @@ export const useEvents = () => {
     error,
     fetchCategoriesByType,
     createEvent,
+    createMeeting,
     fetchEventsByType,
     deleteEvent,
     inviteUserToEvent,
     inviteUsersToEvent,
     respondToInvitation,
     fetchEventInvitationStatus,
-    fetchMyInvitations
+    fetchMyInvitations,
+    checkUpcomingMeeting,
+    fetchMyCreatedEvents,
+    updateMeetingDueToChange,
+    cancelEvent,
+    fetchMyDemandsStatus,
+    askForMeeting,
+    removeParticipantFromMeeting,
+    fetchPossibleUsersInterested
   }
 }

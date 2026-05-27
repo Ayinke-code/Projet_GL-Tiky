@@ -42,11 +42,18 @@ public class Event extends BaseEntity {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "issue_id", nullable = true)
+    private Issue issue;
+
     @Column
     private LocalDateTime startDate;
 
     @Column
     private LocalDateTime endDate;
+
+    @Column
+    private Boolean validated = true;
 
     /** Groupes projet affectés à cet événement (AUDIT ou DEFENSE) */
     @ManyToMany(fetch = FetchType.LAZY)
@@ -73,6 +80,20 @@ public class Event extends BaseEntity {
                 .hasAccepted(hasAccepted)
                 .build();
         this.participants.add(participation);
+    }
+
+    public void deleteParticipant(User user) {
+        if (user == null || this.participants == null) {
+            return;
+        }
+
+        this.participants.removeIf(participant -> {
+            boolean match = participant.getUser().getId().equals(user.getId());
+            if (match) {
+                participant.setEvent(null);
+            }
+            return match;
+        });
     }
 
 }

@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StatutInvitationParticipantDto {
+    private Long participantId;
     private String participantName;
     private String participantRole;
     private Boolean isPresent;

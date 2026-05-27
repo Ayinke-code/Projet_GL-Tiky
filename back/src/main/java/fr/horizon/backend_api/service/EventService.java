@@ -2,22 +2,15 @@ package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.EventConflictException;
 import fr.horizon.backend_api.model.*;
-import fr.horizon.backend_api.model.dto.EventInvitationResponseDto;
-import fr.horizon.backend_api.model.dto.EventRequestDto;
-import fr.horizon.backend_api.model.dto.EventResponseDto;
-import fr.horizon.backend_api.model.dto.StatutInvitationParticipantDto;
+import fr.horizon.backend_api.model.dto.*;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Event;
 import fr.horizon.backend_api.model.StudentGroup;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.model.enums.RoleEnum;
-import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.EventRepository;
-import fr.horizon.backend_api.repository.StudentGroupRepository;
+import fr.horizon.backend_api.repository.*;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
-import fr.horizon.backend_api.repository.IssueRepository;
-import fr.horizon.backend_api.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import fr.horizon.backend_api.exception.EventNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +19,8 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import org.springframework.transaction.annotation.Transactional;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.Set;
 
@@ -46,10 +37,12 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class EventService {
     private final EventRepository eventRepository;
+    private final IssueRepository issueRepository;
     private final CategoryRepository categoryRepository;
     private final UserService userService;
     private final UserRepository userRepository;
     private final StudentGroupRepository studentGroupRepository;
+    private final IssueFollowerRepository issueFollowerRepository;
 
     /**
      * Crée un nouvel événement académique.
@@ -116,6 +109,59 @@ public class EventService {
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    /**
+     * Crée un nouvel événement lié à une issue.
+     * <p>
+     * Vérifie que l’utilisateur possède le rôle requis avant la persistance.
+     *
+     * @param meetingRequest données de création de l’événement
+     * @param email   email de l’utilisateur créateur, extrait du contexte de sécurité
+     * @return événement créé sous forme de DTO
+     * @throws AccessDeniedException si l’utilisateur n’a pas le rôle TEACHER ou ADMIN
+     * @throws CategoryNotFoundException si la catégorie n’existe pas
+     */
+    public EventResponseDto createMeeting(EventRequestDto meetingRequest, String email, Long issueId){
+            User user = userService.findByEmail(email);
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new EntityNotFoundException("Issue not found"));
+
+        boolean hasTeacherRole = user.getRoles().stream()
+                .anyMatch(r -> RoleEnum.TEACHER.value().equals(r.getName()) || RoleEnum.ADMIN.value().equals(r.getName()));
+        if (!hasTeacherRole) {
+            throw new AccessDeniedException("Seuls les enseignants peuvent faire une demande de meeting");
+        }
+        checkDatesForCreation(meetingRequest);
+
+        Event event = Event.builder()
+                .name(meetingRequest.getName())
+                .description(meetingRequest.getDescription())
+                .categoryType(CategoryType.ISSUE)
+                .category(issue.getCategory())
+                .createdBy(user)
+                .validated(true)
+                .issue(issue)
+                .startDate(meetingRequest.getStartDate())
+                .endDate(meetingRequest.getEndDate())
+                .build();
+
+        // dire qu'il est présent
+        event.addParticipant(user, true);
+        Event saved = eventRepository.save(event);
+        return mapToResponse(saved);
+    }
+
+    private void checkDatesForCreation(EventRequestDto meetingRequest) {
+        if (meetingRequest.getStartDate() == null || meetingRequest.getEndDate() == null) {
+            throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires pour un événement de ce type.");
+        }
+        if(meetingRequest.getStartDate().isBefore(LocalDateTime.now())){
+            throw new IllegalArgumentException("La date de début doit être antérieur à la date courante.");
+        }
+        if (!meetingRequest.getEndDate().isAfter(meetingRequest.getStartDate())) {
+            throw new IllegalArgumentException("La date de fin doit être postérieure à la date de début.");
+        }
     }
 
     /**
@@ -205,6 +251,10 @@ public class EventService {
         participantParticipant.setHasAccepted(response);
         participantParticipant.setReason(!response ? raison : null);
 
+        if(response || Objects.equals(event.getIssue().getManager().getId(), user.getId())){
+            event.setValidated(true);
+        }
+
         // Si la personne refuse, on enregistre la raison.
         // Si elle accepte, on s'assure que la raison reste nulle.
         if (!response) {
@@ -226,6 +276,7 @@ public class EventService {
         User user = userService.findByEmail(email);
 
         List<Event> events = eventRepository.findPendingInvitationsByUserId(user.getId());
+        System.out.println("DEBUG: Nombre d'événements trouvés pour l'user " + user.getId() + " : " + events.size());
 
         return events.stream()
                 .map(event -> mapToInvitationResponse(event, user))
@@ -247,18 +298,21 @@ public class EventService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Event not found"));
 
-        User creator = userService.findByEmail(email);
+        User currentUser = userService.findByEmail(email);
 
-        if (event.getCreatedBy().getId() != creator.getId()) {
-            throw new IllegalArgumentException("Pas le créateur de l'évènement");
+        boolean isCreator = Objects.equals(event.getCreatedBy().getId(), currentUser.getId());
+        boolean isManager = event.getIssue() != null && Objects.equals(event.getIssue().getManager().getId(), currentUser.getId());
+
+        if (!isCreator && !isManager) {
+            throw new IllegalArgumentException("Non autorisé à consulter les statuts");
         }
-
 
         return event.getParticipants().stream()
                 .map(participant -> {
                     User user = participant.getUser();
 
                     return StatutInvitationParticipantDto.builder()
+                            .participantId(user.getId())
                             .participantName(user.getName())
                             .participantRole(user.getDisplayRole())
                             .isPresent(participant.getHasAccepted())
@@ -354,4 +408,231 @@ public class EventService {
         );
         return conflits > 0;
     }
+
+    /**
+     * Vérifie si un ticket possède au moins une réunion prévue dans le futur.
+     *
+     * @param issueId l'ID du ticket
+     * @return true s'il y a une réunion à venir, false sinon
+     */
+    public boolean issueGotMeeting(Long issueId) {
+        return eventRepository.existsByIssueIdAndStartDateAfterAndValidatedTrue(issueId, LocalDateTime.now());
+    }
+
+    /**
+     * Récupère le statut des demandes de réunions initiées par un utilisateur (ex: étudiant).
+     * * @param email l'adresse email de l'utilisateur initiateur de la demande.
+     * @return Une liste de MeetingDemandeDto contenant l'ID de l'issue et le statut de validation.
+     */
+    public List<MeetingDemandeDto> getMyDemandsStatus(String email) {
+        User user = userService.findByEmail(email);
+
+        List<Event> myEvents = eventRepository.findByCreatedByIdOrderByCreatedAtDesc(user.getId());
+
+        return myEvents.stream()
+                .filter(event -> event.getIssue() != null)
+                .map(event -> {
+                    MeetingDemandeDto dto = new MeetingDemandeDto();
+                    dto.setIssueId(event.getIssue().getId());
+                    dto.setStatus(event.getValidated());
+                    return dto;
+                })
+                .toList();
+    }
+
+    /**
+     * Récupère la liste de tous les événements créés par l'utilisateur connecté.
+     *
+     * @param email l'adresse email de l'utilisateur connecté (extrait du token).
+     * @return une liste de DTOs représentant les événements créés par l'utilisateur.
+     */
+    public List<EventResponseDto> getMyCreatedEvents(String email) {
+        User user = userService.findByEmail(email);
+
+        List<Event> myEvents = eventRepository.findEventsManagedOrCreatedByUser(user.getId());
+
+        return myEvents.stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    /**
+     * Met à jour l'horaire d'une réunion suite à un refus/changement et gère la réinvitation des participants.
+     * en vérifiant les conflits d'agenda pour chaque participant concerné.
+     * @param eventId      L'identifiant de l'événement à modifier
+     * @param newStartDate Le nouvel horaire de début
+     * @param newEndDate   Le nouvel horaire de fin
+     * @param addAll       true pour réinviter tout le monde, false pour ne garder que ceux qui avaient accepté
+     * @return Le DTO de l'événement mis à jour
+     */
+    @Transactional
+    public EventResponseDto updateMeetingDueToChange(Long eventId, LocalDateTime newStartDate, LocalDateTime newEndDate, boolean addAll) {
+        // 1. Récupération de l'événement
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+
+        // 2. Validation des nouvelles dates
+        if (newStartDate == null || newEndDate == null) {
+            throw new IllegalArgumentException("Les nouvelles dates de début et de fin sont obligatoires.");
+        }
+        if (!newEndDate.isAfter(newStartDate)) {
+            throw new IllegalArgumentException("La date de fin doit être postérieure à la date de début.");
+        }
+
+        event.setStartDate(newStartDate);
+        event.setEndDate(newEndDate);
+
+        if (checkConflictWithAnotherEvent(event.getCreatedBy(), event)) {
+            throw new EventConflictException("Conflit d'agenda : L'organisateur n'est pas disponible sur ce nouveau créneau.");
+        }
+
+        if (addAll) {
+            for (EventParticipant participant : event.getParticipants()) {
+                if (participant.getUser().getId().equals(event.getCreatedBy().getId())) {
+                    participant.setHasAccepted(true);
+                } else {
+                    if (checkConflictWithAnotherEvent(participant.getUser(), event)) {
+                        throw new EventConflictException("Impossible de replanifier. Conflit d'agenda pour : " + participant.getUser().getName());
+                    }
+                    participant.setHasAccepted(null);
+                }
+                participant.setReason(null);
+            }
+        } else {
+            event.getParticipants().removeIf(participant ->
+                    !participant.getUser().getId().equals(event.getCreatedBy().getId()) &&
+                            (!Boolean.TRUE.equals(participant.getHasAccepted()) || checkConflictWithAnotherEvent(participant.getUser(), event))
+            );
+
+            for (EventParticipant participant : event.getParticipants()) {
+                if (participant.getUser().getId().equals(event.getCreatedBy().getId())) {
+                    participant.setHasAccepted(true);
+                } else {
+                    participant.setHasAccepted(null);
+                }
+                participant.setReason(null);
+            }
+        }
+
+        Event saved = eventRepository.save(event);
+        return mapToResponse(saved);
+    }
+
+    /**
+     * Annule un événement en supprimant d'abord tous ses participants
+     * puis en supprimant l'événement lui-même.
+     *
+     * @param eventId L'identifiant de l'événement à annuler
+     */
+    @Transactional
+    public void cancelEvent(Long eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new EntityNotFoundException("Event not found with ID: " + eventId));
+
+        // Enlever tous les participants (nettoie la table d'association)
+        event.getParticipants().clear();
+
+        // Supprimer définitivement l'événement
+        eventRepository.delete(event);
+    }
+
+    /**
+     * Crée une demande d'événement lié à une issue.
+     * <p>
+     * Vérifie que l’utilisateur possède le rôle requis avant la persistance.
+     *
+     * @param meetingRequest données de création de l’événement
+     * @param email   email de l’utilisateur créateur, extrait du contexte de sécurité
+     * @return événement créé sous forme de DTO
+     * @throws AccessDeniedException si l’utilisateur n’a pas le rôle TEACHER ou ADMIN
+     * @throws CategoryNotFoundException si la catégorie n’existe pas
+     */
+    public EventResponseDto askForMeeting(EventRequestDto meetingRequest, String email, long issueId){
+        User user = userService.findByEmail(email);
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new EntityNotFoundException("Issue not found"));
+
+        checkDatesForCreation(meetingRequest);
+
+        Event event = Event.builder()
+                .name(meetingRequest.getName())
+                .description(meetingRequest.getDescription())
+                .categoryType(CategoryType.ISSUE)
+                .category(issue.getCategory())
+                .createdBy(user)
+                .issue(issue)
+                .validated(false)
+                .startDate(meetingRequest.getStartDate())
+                .endDate(meetingRequest.getEndDate())
+                .build();
+
+        event.addParticipant(user, true);
+        Event saved = eventRepository.save(event);
+
+        return inviteUserToMeeting(saved.getId(), issue.getManager().getId());
+
+    }
+
+    /**
+     * Retire un participant d'un event
+     *
+     * @param eventId L'identifiant de l'événement
+     * @param userId L'identifiant de l'utilisateur a retirer
+     * @return l'event DTO mis a jour
+     */
+    @Transactional
+    public EventResponseDto deleteParticipantFromMeeting(Long eventId, Long userId){
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new EntityNotFoundException("Event not found"));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+
+        event.deleteParticipant(user);
+
+        Event saved = eventRepository.save(event);
+        return mapToResponse(saved);
+    }
+
+    /**
+     * Récupère la liste complète des abonnés (followers) du ticket auquel l'événement est rattaché.
+     *
+     * @param eventId L'identifiant de l'événement
+     * @return La liste des utilisateurs abonnés au ticket
+     */
+    @Transactional(readOnly = true)
+    public List<FollowersInfoDto> getPossibleUserInterested(Long eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new EntityNotFoundException("Event not found with ID: " + eventId));
+
+        if (event.getIssue() == null) {
+            return Collections.emptyList();
+        }
+
+        Set<Long> alreadyInvitedIds = event.getParticipants().stream()
+                .map(participant -> participant.getUser().getId())
+                .collect(Collectors.toSet());
+
+        List<User> followers = issueFollowerRepository.findUsersByIssueId(event.getIssue().getId());
+
+        return followers.stream()
+                .filter(follower -> !alreadyInvitedIds.contains(follower.getId()))
+                .map(this::toFollowerInfoDto)
+                .toList();
+    }
+
+    private FollowersInfoDto toFollowerInfoDto(User user) {
+        if (user == null) {
+            return null;
+        }
+
+        return FollowersInfoDto.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .role(user.getDisplayRole())
+                .build();
+    }
+
+
 }

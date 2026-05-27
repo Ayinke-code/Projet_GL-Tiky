@@ -4,6 +4,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import fr.horizon.backend_api.model.IssueFollower;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -36,4 +39,7 @@ public interface IssueFollowerRepository extends JpaRepository<IssueFollower, Lo
      * @return liste des abonnements
      */
     List<IssueFollower> findByUser(User user);
+
+    @Query("SELECT f.user FROM IssueFollower f WHERE f.issue.id = :issueId")
+    List<User> findUsersByIssueId(@Param("issueId") Long issueId);
 }

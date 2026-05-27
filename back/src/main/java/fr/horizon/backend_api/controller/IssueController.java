@@ -319,4 +319,11 @@ public class IssueController {
         User user = issueFollowerService.getUserByEmail(auth.getName());
         return ResponseEntity.ok(issueFollowerService.isFollowing(id, user));
     }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/{issueId}/followers")
+    public ResponseEntity<List<FollowersInfoDto>> getIssueFollowers(@PathVariable Long issueId){
+        return  ResponseEntity.ok(issueFollowerService.getFollowers(issueId));
+    }
+
 }
