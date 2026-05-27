@@ -9,7 +9,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
 
-public class SmokeTestIT extends BaseSeleniumIT {
+class SmokeTestIT extends BaseSeleniumIT {
 
     @Test
     void shouldOpenFrontend() {

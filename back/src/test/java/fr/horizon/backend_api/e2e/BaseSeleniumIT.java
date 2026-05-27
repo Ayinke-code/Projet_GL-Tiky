@@ -8,7 +8,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
-public abstract class BaseSeleniumIT {
+abstract class BaseSeleniumIT {
 
     protected WebDriver driver;
     protected String frontUrl;
