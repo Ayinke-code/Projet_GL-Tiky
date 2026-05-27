@@ -140,14 +140,14 @@ class ConversationWebSocketHandlerTest {
     }
 
      @Test
-    void testBroadcastToConversationBuildsCorrectPayload() throws Exception {
+    void testBroadcastToConversationBuildsCorrectPayload() {
         // This tests that the method doesn't throw when broadcasting to a conversation
         // Even with no sessions, the method should complete without error
         assertDoesNotThrow(() -> handler.broadcastToConversation(CONVERSATION_ID, TEST_MESSAGE));
     }
 
     @Test
-    void testAfterConnectionClosedRemovesSession() throws Exception {
+    void testAfterConnectionClosedRemovesSession() {
         when(session.getId()).thenReturn(SESSION_ID);
         // Should complete without throwing any exception
         assertDoesNotThrow(() -> handler.afterConnectionClosed(session, CloseStatus.NORMAL));
