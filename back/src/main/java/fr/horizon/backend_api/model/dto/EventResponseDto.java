@@ -23,6 +23,7 @@ public class EventResponseDto {
     private LocalDateTime createdAt;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
+    private Set<String> participantNames;
     private List<ProjectGroupRefDto> projectGroups;
 
     @Data

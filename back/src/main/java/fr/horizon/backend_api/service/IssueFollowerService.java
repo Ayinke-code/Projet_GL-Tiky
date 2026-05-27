@@ -3,6 +3,7 @@ package fr.horizon.backend_api.service;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.IssueFollower;
 import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.dto.FollowersInfoDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.FollowedReason;
 import fr.horizon.backend_api.repository.IssueFollowerRepository;
@@ -137,5 +138,25 @@ public class IssueFollowerService {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, USER_NOT_FOUND));
+    }
+
+    public List<FollowersInfoDto> getFollowers(Long issueId) {
+        List<User> followers = issueFollowerRepository.findUsersByIssueId(issueId);
+
+        return followers.stream()
+                .map(this::toFollowerInfoDto)
+                .toList();
+    }
+
+    private FollowersInfoDto toFollowerInfoDto(User user) {
+        if (user == null) {
+            return null;
+        }
+
+        return FollowersInfoDto.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .role(user.getDisplayRole())
+                .build();
     }
 }
