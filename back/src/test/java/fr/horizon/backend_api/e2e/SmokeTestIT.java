@@ -37,7 +37,8 @@ public class SmokeTestIT {
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
                 "--remote-debugging-port=0",
-                "--window-size=1920,1080"
+                "--window-size=1920,1080",
+                "--ignore-certificate-errors"  // ← ajouter
         );
         driver = new ChromeDriver(options);
     }
