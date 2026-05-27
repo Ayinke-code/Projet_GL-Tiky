@@ -19,7 +19,7 @@ export const useIssues = () => {
     /**
    * Statuts autorisés (aligné backend)
    */
-    const VALID_STATUSES = ['OUVERT', 'COMPLET', 'INCOMPLET', 'TERMINE']
+    const VALID_STATUSES = ['OUVERT', 'EN_ATTENTE', 'INCOMPLET', 'TERMINE']
 
     /**
    * Récupère toutes les issues
