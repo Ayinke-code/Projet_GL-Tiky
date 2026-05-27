@@ -102,10 +102,10 @@ public class IssueController {
      *
      * @param id identifiant de l'issue
      */
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}")
-    public void deleteIssue(@PathVariable Long id) {
-        issueService.deleteById(id);
+    public void deleteIssue(@PathVariable Long id, Authentication authentication) {
+        issueService.deleteById(id, authentication.getName());
     }
 
     /**

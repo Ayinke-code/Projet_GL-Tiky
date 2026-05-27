@@ -189,9 +189,16 @@ public class IssueService {
      * @throws IssueNotFoundException si l'issue n'existe pas
      */
     @Transactional
-    public void deleteById(Long id) {
+    public void deleteById(Long id, String email) {
         Issue issue = issueRepository.findById(id)
                 .orElseThrow(() -> new IssueNotFoundException(id));
+
+        User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+
+        if (!canDeleteIssue(issue, currentUser)) {
+            throw new AccessDeniedException("Vous n'avez pas l'autorisation de supprimer cette issue");
+        }
 
         issueRepository.delete(issue);
     }
@@ -295,6 +302,21 @@ public class IssueService {
 
         return currentUserId != null && (
                 currentUserId.equals(categoryOwnerId)
+                        || currentUserId.equals(categoryManagerId)
+        );
+    }
+
+    private boolean canDeleteIssue(Issue issue, User user) {
+        Long currentUserId = user.getId();
+        Long creatorId = issue.getCreatedBy() != null ? issue.getCreatedBy().getId() : null;
+        Long categoryOwnerId = issue.getCategory() != null && issue.getCategory().getOwner() != null
+                ? issue.getCategory().getOwner().getId()
+                : null;
+        Long categoryManagerId = issue.getManager() != null ? issue.getManager().getId() : null;
+
+        return currentUserId != null && (
+                currentUserId.equals(creatorId)
+                        || currentUserId.equals(categoryOwnerId)
                         || currentUserId.equals(categoryManagerId)
         );
     }

@@ -111,10 +111,12 @@ class IssueControllerTest {
     @Test
     void shouldDeleteIssue() throws Exception {
 
-        mockMvc.perform(delete("/issues/1"))
+        when(authentication.getName()).thenReturn("john@test.com");
+
+        mockMvc.perform(delete("/issues/1").principal(authentication))
                 .andExpect(status().isOk());
 
-        verify(issueService).deleteById(1L);
+        verify(issueService).deleteById(1L, "john@test.com");
     }
 
     @Test

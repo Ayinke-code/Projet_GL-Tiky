@@ -64,6 +64,7 @@
                             <div class="overflow-visible p-2">
                                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <IssuesCard v-for="issue in group.issues" :key="issue.id" :issue="issue"
+                                        :show-delete="canDeleteIssue(issue)"
                                         @delete="deleteValidation" />
                                 </div>
                             </div>
@@ -81,7 +82,8 @@
             <!-- Les autres issues -->
             <h2 v-if="otherIssues.length > 0" class="text-xl font-bold text-black mb-3">Autres</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 overflow-visible">
-                <IssuesCard v-for="issue in otherIssues" :key="issue.id" :issue="issue" @delete="deleteValidation" />
+                <IssuesCard v-for="issue in otherIssues" :key="issue.id" :issue="issue"
+                    :show-delete="canDeleteIssue(issue)" @delete="deleteValidation" />
             </div>
         </template>
 
@@ -181,6 +183,15 @@ const otherIssues = computed(() => {
         issue => issue.categoryOwnerId !== user.value.id
     )
 })
+
+const canDeleteIssue = (issue) => {
+    const currentUserId = user.value?.id
+    if (!currentUserId || !issue) return false
+
+    return currentUserId === issue.createdId
+        || currentUserId === issue.categoryOwnerId
+        || currentUserId === issue.categoryManagerId
+}
 
 /**
  * Ouvre modal suppression

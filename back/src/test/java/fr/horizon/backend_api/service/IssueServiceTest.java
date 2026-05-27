@@ -200,13 +200,20 @@ class IssueServiceTest {
     @Test
     void deleteById_should_delete_issue_when_exists() {
 
+        User currentUser = new User();
+        currentUser.setId(1L);
+        currentUser.setEmail("john@test.com");
+
         Issue issue = new Issue();
         issue.setId(1L);
+        issue.setCreatedBy(currentUser);
 
         when(issueRepository.findById(1L))
                 .thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("john@test.com"))
+                .thenReturn(Optional.of(currentUser));
 
-        issueService.deleteById(1L);
+        issueService.deleteById(1L, "john@test.com");
 
         verify(issueRepository).delete(issue);
     }
@@ -218,7 +225,31 @@ class IssueServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(IssueNotFoundException.class,
-                () -> issueService.deleteById(1L));
+                () -> issueService.deleteById(1L, "john@test.com"));
+    }
+
+    @Test
+    void deleteById_should_throw_when_user_not_allowed() {
+
+        User currentUser = new User();
+        currentUser.setId(2L);
+        currentUser.setEmail("other@test.com");
+
+        User creator = new User();
+        creator.setId(1L);
+        creator.setEmail("john@test.com");
+
+        Issue issue = new Issue();
+        issue.setId(1L);
+        issue.setCreatedBy(creator);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("other@test.com")).thenReturn(Optional.of(currentUser));
+
+        assertThrows(AccessDeniedException.class,
+                () -> issueService.deleteById(1L, "other@test.com"));
+
+        verify(issueRepository, never()).delete(any());
     }
 
     @Test
