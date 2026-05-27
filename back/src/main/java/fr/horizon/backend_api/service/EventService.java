@@ -113,6 +113,23 @@ public class EventService {
     }
 
     /**
+     * Récupère tous les événements consolidés pour le calendrier de l'utilisateur.
+     *
+     * @param email L'email de l'utilisateur connecté
+     * @return Une liste de EventResponseDto formatée pour le frontend
+     */
+    @Transactional(readOnly = true)
+    public List<EventResponseDto> getMyCalendarEvents(String email) {
+        User user = userService.findByEmail(email);
+
+        List<Event> events = eventRepository.findCalendarEventsForUser(user.getId());
+
+        return events.stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    /**
      * Convertit une entité {@link Event} en DTO de réponse.
      *
      * @param event entité événement à convertir

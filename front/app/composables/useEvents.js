@@ -69,5 +69,28 @@ export const useEvents = () => {
     events.value = events.value.filter(e => e.id !== id)
   }
 
-  return { events, error, fetchCategoriesByType, createEvent, fetchEventsByType, deleteEvent }
+  /**
+   * Récupère tous les événements consolidés pour le calendrier de l'utilisateur
+   * (Créateur, Invité, ou Membre d'un groupe assigné).
+   * Fait appel au endpoint GET /events/calendar.
+   *
+   * @returns {Promise<Array>} Liste des EventResponseDto
+   */
+  const fetchCalendarEvents = async () => {
+    error.value = null
+    try {
+      const data = await api('/events/calendar')
+
+      // On met à jour l'état global "events" pour que le calendrier réagisse
+      events.value = Array.isArray(data) ? data : []
+
+      return events.value
+    } catch (e) {
+      error.value = e?.data?.message || 'FETCH_CALENDAR_EVENTS_ERROR'
+      events.value = []
+      return []
+    }
+  }
+
+  return { events, error, fetchCategoriesByType, createEvent, fetchEventsByType, deleteEvent, fetchCalendarEvents }
 }

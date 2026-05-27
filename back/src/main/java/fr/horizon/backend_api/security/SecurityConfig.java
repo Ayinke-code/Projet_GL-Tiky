@@ -42,6 +42,7 @@ public class SecurityConfig {
 
                         .requestMatchers("/auth/login").permitAll()
                         .requestMatchers("/auth/logout").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/events/calendar").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/events/**", "/groups/**")
                         .hasAnyAuthority(RoleEnum.ADMIN.value(), RoleEnum.TEACHER.value())
                         .requestMatchers("/auth/me", "/categories/**", "/groups/**").authenticated()
