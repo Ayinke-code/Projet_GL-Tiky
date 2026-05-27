@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @RestController
 @RequestMapping("/conversations")
 @RequiredArgsConstructor
@@ -23,6 +26,7 @@ public class ConversationController {
 
     private final ConversationService conversationService;
     private final ConversationWebSocketHandler conversationWebSocketHandler;
+    private static final Logger log = LoggerFactory.getLogger(ConversationController.class);
 
     /**
      * Récupère la conversation associée à une issue.
@@ -64,9 +68,13 @@ public class ConversationController {
             Authentication auth) {
 
         ConversationService.MessageDispatchResult result = conversationService.addMessage(conversationId, payload, auth.getName());
-        // Broadcast message via WebSocket to all connected clients on this conversation
-        conversationWebSocketHandler.broadcastToConversation(conversationId, result.broadcastPayload());
+        // Broadcast message via WebSocket to all connected clients on this conversation.
+        // Do not fail the HTTP request if broadcasting fails; log and continue.
+        try {
+            conversationWebSocketHandler.broadcastToConversation(conversationId, result.broadcastPayload());
+        } catch (Exception e) {
+            log.warn("Failed to broadcast message to conversation {}: {}", conversationId, e.getMessage());
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(result.message());
     }
 }
-
