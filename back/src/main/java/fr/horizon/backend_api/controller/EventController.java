@@ -246,5 +246,7 @@ public class EventController {
         List<FollowersInfoDto> followers = eventService.getPossibleUserInterested(eventId);
         return ResponseEntity.ok(followers);
     }
+
+
 }
 

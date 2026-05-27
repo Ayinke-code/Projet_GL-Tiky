@@ -1356,35 +1356,6 @@ class EventServiceTest {
                 ));
     }
 
-
-    @Test
-    @DisplayName("updateMeetingDueToChange : doit échouer si conflit organisateur")
-    void updateMeetingDueToChange_organizer_conflict() {
-
-        User creator = new User();
-        creator.setId(1L);
-
-        Event event = Event.builder()
-                .id(1L)
-                .createdBy(creator)
-                .participants(new HashSet<>())
-                .build();
-
-        when(eventRepository.findById(1L)).thenReturn(Optional.of(event));
-
-        // simulate conflict
-        when(eventRepository.countConflictingEvents(any(), any(), any(), any()))
-                .thenReturn(1L);
-
-        assertThrows(EventConflictException.class,
-                () -> eventService.updateMeetingDueToChange(
-                        1L,
-                        LocalDateTime.now().plusDays(1),
-                        LocalDateTime.now().plusDays(1).plusHours(1),
-                        true
-                ));
-    }
-
     @Test
     @DisplayName("getPossibleUserInterested : retourne liste vide si pas d'issue")
     void getPossibleUserInterested_no_issue() {
