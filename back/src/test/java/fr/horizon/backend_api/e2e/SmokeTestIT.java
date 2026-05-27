@@ -11,6 +11,10 @@ import org.openqa.selenium.chrome.ChromeDriver;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+
+import java.time.Duration;
 
 public class SmokeTestIT {
 
@@ -46,7 +50,10 @@ public class SmokeTestIT {
     @Test
     void shouldOpenFrontend() {
         driver.get(frontUrl);
-        WebElement brand = driver.findElement(By.cssSelector("span.text-indigo-400"));
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        WebElement brand = wait.until(
+                ExpectedConditions.visibilityOfElementLocated(By.cssSelector("span.text-indigo-400"))
+        );
         Assertions.assertEquals("tk.", brand.getText());
     }
 }
