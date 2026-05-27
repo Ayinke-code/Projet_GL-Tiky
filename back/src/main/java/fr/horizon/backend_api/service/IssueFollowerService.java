@@ -4,7 +4,6 @@ import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.IssueFollower;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.FollowersInfoDto;
-import fr.horizon.backend_api.model.dto.UserDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.FollowedReason;
 import fr.horizon.backend_api.repository.IssueFollowerRepository;
@@ -16,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Service gérant l'abonnement des utilisateurs aux issues.

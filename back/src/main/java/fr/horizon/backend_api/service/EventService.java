@@ -47,6 +47,7 @@ public class EventService {
     private static final String USER_NOT_FOUND = "User not found";
     private static final String ISSUE_NOT_FOUND = "Issue not found";
     private static final String EVENT_NOT_FOUND = "Event not found";
+    private static final String WITH_ID = " with Id: ";
 
     /**
      * Crée un nouvel événement académique.
@@ -216,7 +217,7 @@ public class EventService {
 
         for (Long userId : userIds) {
             User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND + " with ID: " + userId));
+                    .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND + WITH_ID + userId));
 
             if (checkConflictWithAnotherEvent(user, event)) {
                 throw new EventConflictException("Impossible d'inviter le groupe. Conflit d'agenda pour : " + user.getName());
@@ -605,7 +606,7 @@ public class EventService {
     @Transactional
     public void cancelEvent(Long eventId) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND+" with ID: " + eventId));
+                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND+WITH_ID + eventId));
 
         // Enlever tous les participants (nettoie la table d'association)
         event.getParticipants().clear();
@@ -682,7 +683,7 @@ public class EventService {
     @Transactional(readOnly = true)
     public List<FollowersInfoDto> getPossibleUserInterested(Long eventId) {
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND+" with ID: " + eventId));
+                .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND+WITH_ID + eventId));
 
         if (event.getIssue() == null) {
             return Collections.emptyList();
