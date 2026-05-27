@@ -7,6 +7,9 @@
  */
 
 import { computed, ref, onMounted, onUnmounted } from 'vue'
+import ConfirmModal from '~/components/ui/ConfirmModal.vue'
+import IssueMeetingProposal from "~/components/issues/meeting/IssueMeetingProposal.vue";
+import IssueMeetingDemand from "~/components/issues/meeting/IssueMeetingDemand.vue";
 
 const route = useRoute()
 const { ready, user, wsToken } = useAuth()
@@ -419,58 +422,19 @@ const handleUnfollow = async () => {
                         </div>
                     </div>
 
-                    <!-- Carte RDV -->
-                    <div v-if="false" class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                        <div class="px-5 py-3 border-b border-gray-100">
-                            <div class="flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-500" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <h2 class="text-sm font-semibold text-gray-800">Besoin d'un RDV ?</h2>
-                            </div>
-                        </div>
-
-                        <div class="px-5 py-4">
-                            <!-- Proposition active -->
-                            <div v-if="rdvProposal?.active" class="space-y-3">
-                                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
-                                    <p class="text-xs font-bold text-amber-700 uppercase tracking-wide">Nouvelle demande
-                                    </p>
-                                    <p class="text-sm text-gray-600">
-                                        <span class="font-medium">{{ rdvProposal.auteur }}</span> propose un point le :
-                                    </p>
-                                    <p
-                                        class="text-center font-mono text-sm font-semibold text-gray-800 bg-white border border-amber-200 rounded py-2 px-3">
-                                        {{ rdvProposal.date }}
-                                    </p>
-                                </div>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <button @click="handleRdvValider"
-                                        class="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium transition-colors transition-transform duration-200 hover:scale-105">
-                                        Valider
-                                    </button>
-                                    <button @click="handleRdvRefuser"
-                                        class="w-full py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-sm font-medium transition-colors transition-transform duration-200 hover:scale-105">
-                                        Refuser
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Aucune proposition -->
-                            <div v-else class="text-center space-y-3 py-2">
-                                <p class="text-sm text-gray-400">Aucune demande de rendez-vous en cours.</p>
-                                <button disabled
-                                    class="w-full py-2 rounded-lg bg-gray-100 text-gray-400 text-sm font-medium cursor-not-allowed">
-                                    Proposer un créneau
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                  <!-- Visible uniquement si l'utilisateur est le manager de l'issue -->
+                  <IssueMeetingProposal
+                    v-if="user?.id === issue?.categoryManagerId && user?.id !== null"
+                    :issue="issue"
+                  />
+                  <!-- Visible pour tout les utilisatuer sauf le manager de l'issue -->
+                  <IssueMeetingDemand
+                    v-if="user?.id !== issue?.categoryManagerId && user?.id !== null"
+                    :issue="issue"
+                  />
 
                     <!-- Slot pour futures fonctionnalités sidebar -->
-                    <slot name="sidebar-extra" />
+                  <slot name="sidebar-extra" />
 
         </div>
       </div>
