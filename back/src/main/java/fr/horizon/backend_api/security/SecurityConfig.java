@@ -42,9 +42,20 @@ public class SecurityConfig {
 
                         .requestMatchers("/auth/login").permitAll()
                         .requestMatchers("/auth/logout").authenticated()
+
+                        .requestMatchers(HttpMethod.DELETE, "/events/*/cancel").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/events/*/participants/*").authenticated()
+
+                        .requestMatchers(HttpMethod.GET, "/events/invitations/me", "/events/*/invitations/status").authenticated()
+
+                        .requestMatchers(HttpMethod.PUT, "/events/*/invitations/respond").authenticated()
+
+                        .requestMatchers(HttpMethod.POST, "/events/*/invitations/").authenticated()
+
                         .requestMatchers(HttpMethod.GET, "/events/calendar").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/events/**", "/groups/**")
-                        .hasAnyAuthority(RoleEnum.ADMIN.value(), RoleEnum.TEACHER.value())
+                            .hasAnyAuthority(RoleEnum.ADMIN.value(), RoleEnum.TEACHER.value())
+
                         .requestMatchers("/auth/me", "/categories/**", "/groups/**").authenticated()
 
                         .requestMatchers("/admin/**")

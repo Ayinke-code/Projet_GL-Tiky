@@ -72,11 +72,28 @@ export const useIssueFollowers = () => {
     }
   }
 
+  /**
+   * Récupère la liste des abonnés (followers) pour une issue spécifique.
+   * @param {number} issueId - identifiant de l'issue
+   * @returns {Promise<Array>} liste des FollowersInfoDto (id, name, role)
+   */
+  const getIssueFollowers = async (issueId) => {
+    const api = useApi()
+    error.value = null
+    try {
+      return await api(`/issues/${issueId}/followers`)
+    } catch (e) {
+      error.value = e?.data?.message || 'GET_ISSUE_FOLLOWERS_ERROR'
+      throw e
+    }
+  }
+
   return {
     followIssue,
     unfollowIssue,
     getFollowedIssues,
     isFollowing,
+    getIssueFollowers,
     error
   }
 }
