@@ -295,6 +295,7 @@ selenium-test:
     - export WDM_CHROMEDRIVER_PATH=/usr/bin/chromedriver
   script:
     - cd back
+    - curl -vk https://172.24.1.16 || echo "FRONTEND INACCESSIBLE"
     - mvn $MAVEN_CLI_OPTS test-compile failsafe:integration-test failsafe:verify
         -Dwebdriver.chrome.driver=/usr/bin/chromedriver
   artifacts:
