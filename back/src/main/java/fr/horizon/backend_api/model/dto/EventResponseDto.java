@@ -34,6 +34,15 @@ public class EventResponseDto {
         private String name;
         private String categoryName;
         private String parentGroupName;
-        private Set<String> teachers;
+        private Set<TeacherRefDto> teachers;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TeacherRefDto {
+        private String name;
+        private String teacherType;
     }
 }

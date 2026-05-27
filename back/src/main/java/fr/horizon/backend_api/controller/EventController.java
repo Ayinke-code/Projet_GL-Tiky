@@ -7,6 +7,7 @@ import fr.horizon.backend_api.service.EventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -54,9 +55,23 @@ public class EventController {
         return ResponseEntity.ok(events);
     }
 
+    @PreAuthorize("hasAuthority('TEACHER') or hasAuthority('ADMIN')")
     @DeleteMapping("/{id}")
     public void deleteEvent(@PathVariable Long id) {
         eventService.deleteById(id);
+    }
+
+    /**
+     * Retourne les sessions assignées à l'étudiant connecté.
+     * Accessible par STUDENT, TEACHER et ADMIN.
+     *
+     * @param authentication contexte de sécurité Spring
+     * @return liste des événements dont le groupe contient l'étudiant, triés par date
+     */
+    @GetMapping("/my-sessions")
+    public ResponseEntity<List<EventResponseDto>> mySessions(Authentication authentication) {
+        String email = authentication.getName();
+        return ResponseEntity.ok(eventService.listForStudent(email));
     }
 }
 
