@@ -19,7 +19,7 @@ export const useIssues = () => {
     /**
    * Statuts autorisés (aligné backend)
    */
-    const VALID_STATUSES = ['OUVERT', 'COMPLET', 'INCOMPLET', 'TERMINE']
+    const VALID_STATUSES = ['OUVERT', 'EN_ATTENTE', 'INCOMPLET', 'TERMINE']
 
     /**
    * Récupère tous les tickets
@@ -63,7 +63,8 @@ export const useIssues = () => {
                 body: {
                     title: payload.title,
                     description: payload.description,
-                    categoryId: payload.categoryId
+                    categoryId: payload.categoryId,
+                    pendingCase: payload.pendingCase
                 }
             })
 

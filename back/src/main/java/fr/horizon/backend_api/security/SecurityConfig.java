@@ -3,6 +3,7 @@ package fr.horizon.backend_api.security;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -24,7 +25,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    public final JwtAuthenticationFilter jwtAuthFilter;
+    private final JwtAuthenticationFilter jwtAuthFilter;
 
     @Value("#{'${cors.allowed-origins}'.split(',')}")
     private List<String> allowedOrigins;
@@ -41,7 +42,21 @@ public class SecurityConfig {
 
                         .requestMatchers("/auth/login").permitAll()
                         .requestMatchers("/auth/logout").authenticated()
-                        .requestMatchers("/auth/me", "/categories/**").authenticated()
+
+                        .requestMatchers(HttpMethod.DELETE, "/events/*/cancel").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/events/*/participants/*").authenticated()
+
+                        .requestMatchers(HttpMethod.GET, "/events/invitations/me", "/events/*/invitations/status").authenticated()
+
+                        .requestMatchers(HttpMethod.PUT, "/events/*/invitations/respond").authenticated()
+
+                        .requestMatchers(HttpMethod.POST, "/events/*/invitations/").authenticated()
+
+                        .requestMatchers(HttpMethod.GET, "/events/calendar").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/events/**", "/groups/**")
+                            .hasAnyAuthority(RoleEnum.ADMIN.value(), RoleEnum.TEACHER.value())
+
+                        .requestMatchers("/auth/me", "/categories/**", "/groups/**").authenticated()
 
                         .requestMatchers("/admin/**")
                         .hasAuthority(RoleEnum.ADMIN.value())

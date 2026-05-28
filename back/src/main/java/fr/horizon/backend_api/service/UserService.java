@@ -3,15 +3,19 @@ package fr.horizon.backend_api.service;
 import fr.horizon.backend_api.exception.EmailAlreadyUsedException;
 import fr.horizon.backend_api.exception.InvalidUserRolesException;
 import fr.horizon.backend_api.exception.RoleNotFoundException;
+import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.UserDto;
+import fr.horizon.backend_api.model.dto.UserFollowerDto;
 import fr.horizon.backend_api.model.dto.UserRefDto;
 import fr.horizon.backend_api.model.dto.UserRequestDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
+import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -39,6 +43,7 @@ public class UserService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final IssueRepository issueRepository;
+    private final CategoryRepository categoryRepository;
     private final JwtToken jwtToken;
 
     /**
@@ -71,6 +76,7 @@ public class UserService {
                 .email(dto.getEmail())
                 .password(passwordEncoder.encode(dto.getPassword()))
                 .roles(roles)
+                .teacherType(dto.getTeacherType())
                 .build();
 
         userRepository.save(user);
@@ -123,7 +129,7 @@ public class UserService {
      */
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
     }
 
     /**
@@ -168,6 +174,7 @@ public class UserService {
                                 .collect(Collectors.toSet())
                 )
                 .isContributor(hasOpenIssues)
+                .teacherType(user.getTeacherType())
                 .wsToken(wsToken)
                 .build();
     }
@@ -188,6 +195,39 @@ public class UserService {
                                 .map(Role::getName)
                                 .collect(Collectors.toSet())
                 )
+                .teacherType(user.getTeacherType())
                 .build();
+    }
+
+    private UserFollowerDto toUserFollowerDto(User user){
+        return UserFollowerDto.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .build();
+    }
+
+
+    public List<UserFollowerDto> getAllTeachersWithCategoryDetail(Long categoryId){
+        Role teacherRole = roleRepository.findByName("TEACHER")
+                .orElseThrow(() -> new EntityNotFoundException("Rôle TEACHER non trouvé en base"));
+
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new EntityNotFoundException("Catégorie introuvable"));
+
+        List<User> teachers = userRepository.getAllByRoles(Set.of(teacherRole));
+
+        // Récupère tous les followers de la catégorie
+        Set<User> categoryFollowers = category.getFollowers();
+
+        return teachers.stream()
+                .map(teacher -> {
+                    UserFollowerDto dto = this.toUserFollowerDto(teacher);
+
+                    // Vérifie si ce professeur est dans le Set des followers et met à jour le booléen
+                    dto.setFollower(categoryFollowers.contains(teacher));
+
+                    return dto;
+                })
+                .toList();
     }
 }

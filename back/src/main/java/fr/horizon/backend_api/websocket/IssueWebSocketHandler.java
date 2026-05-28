@@ -5,11 +5,11 @@ import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.repository.UserRepository;
 import fr.horizon.backend_api.service.ConversationService;
 import fr.horizon.backend_api.service.JwtToken;
+import fr.horizon.backend_api.util.MapKeys;
 import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.json.JSONArray;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -26,14 +26,15 @@ public class IssueWebSocketHandler extends TextWebSocketHandler {
 
     private static final List<WebSocketSession> sessions = new CopyOnWriteArrayList<>();
 
-    @Autowired
-    private JwtToken jwtToken;
+    private final JwtToken jwtToken;
+    private final UserRepository userRepository;
+    private final ConversationService conversationService;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private ConversationService conversationService;
+    public IssueWebSocketHandler(JwtToken jwtToken, UserRepository userRepository, ConversationService conversationService) {
+        this.jwtToken = jwtToken;
+        this.userRepository = userRepository;
+        this.conversationService = conversationService;
+    }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -55,9 +56,9 @@ public class IssueWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
 
-            session.getAttributes().put("userEmail", email);
-            session.getAttributes().put("issueId", issueId);
-            session.getAttributes().put("userId", user.getId());
+            session.getAttributes().put(MapKeys.USER_EMAIL, email);
+            session.getAttributes().put(MapKeys.ISSUE_ID, issueId);
+            session.getAttributes().put(MapKeys.USER_ID, user.getId());
 
             sessions.add(session);
             log.info("WebSocket connection established for user {} on issue {}", email, issueId);
@@ -72,18 +73,21 @@ public class IssueWebSocketHandler extends TextWebSocketHandler {
         String payload = textMessage.getPayload();
         JSONObject json = new JSONObject(payload);
 
-        String type = json.optString("type");
+        String type = json.optString(MapKeys.TYPE);
 
-        if ("message".equals(type)) {
+        if ("message".equals(type) || MapKeys.NEW_MESSAGE.equals(type)) {
             handleNewMessage(session, json);
         }
     }
 
-    private void handleNewMessage(WebSocketSession session, JSONObject json) throws IOException {
-        String content = json.optString("content");
+    private void handleNewMessage(WebSocketSession session, JSONObject json) {
+        String content = json.optString(MapKeys.CONTENT);
         Long conversationId = json.optLong("conversationId");
-        Long issueId = (Long) session.getAttributes().get("issueId");
-        String email = (String) session.getAttributes().get("userEmail");
+        Long issueId = (Long) session.getAttributes().get(MapKeys.ISSUE_ID);
+        String email = (String) session.getAttributes().get(MapKeys.USER_EMAIL);
+        Long replyToMessageId = json.has(MapKeys.REPLY_TO_MESSAGE_ID) && !json.isNull(MapKeys.REPLY_TO_MESSAGE_ID)
+                ? json.optLong(MapKeys.REPLY_TO_MESSAGE_ID)
+                : null;
 
         if (content == null || content.isEmpty() || conversationId == 0) {
             return;
@@ -93,31 +97,8 @@ public class IssueWebSocketHandler extends TextWebSocketHandler {
         if (user == null) return;
 
         // Persist message
-        Message message = conversationService.addMessageToConversation(conversationId, content, user, issueId);
-
-        // Broadcast to all sessions interested in this issue
-        JSONObject response = new JSONObject();
-        response.put("type", "new_message");
-
-        JSONObject userMap = new JSONObject();
-        userMap.put("id", user.getId());
-        userMap.put("name", user.getName());
-        userMap.put("email", user.getEmail());
-        userMap.put("displayRole", user.getDisplayRole());
-        JSONArray roles = new JSONArray();
-        user.getRoleNames().forEach(roles::put);
-        userMap.put("roles", roles);
-
-        JSONObject msgMap = new JSONObject();
-        msgMap.put("id", message.getId());
-        msgMap.put("content", message.getContent());
-        msgMap.put("user", userMap);
-        msgMap.put("createdAt", message.getCreatedAt());
-
-        response.put("message", msgMap);
-        response.put("issueId", issueId);
-
-        broadcastToIssue(issueId, response.toString());
+        Message message = conversationService.addMessageToConversation(conversationId, content, user, issueId, replyToMessageId);
+        broadcastToIssue(issueId, conversationService.buildBroadcastPayload(message, issueId));
     }
 
     @Override
@@ -129,7 +110,7 @@ public class IssueWebSocketHandler extends TextWebSocketHandler {
     public void broadcastToIssue(Long issueId, String message) {
         for (WebSocketSession session : sessions) {
             if (session.isOpen()) {
-                Long sessionIssueId = (Long) session.getAttributes().get("issueId");
+                Long sessionIssueId = (Long) session.getAttributes().get(MapKeys.ISSUE_ID);
                 if (issueId.equals(sessionIssueId)) {
                     try {
                         session.sendMessage(new TextMessage(message));
@@ -142,7 +123,10 @@ public class IssueWebSocketHandler extends TextWebSocketHandler {
     }
 
     private String extractTokenFromSession(WebSocketSession session) {
-        String query = session.getUri().getQuery();
+        if (session == null) return null;
+        java.net.URI uri = session.getUri();
+        if (uri == null) return null;
+        String query = uri.getQuery();
         if (query != null && query.contains("token=")) {
             String[] params = query.split("&");
             for (String param : params) {
@@ -155,7 +139,10 @@ public class IssueWebSocketHandler extends TextWebSocketHandler {
     }
 
     private Long extractIssueIdFromSession(WebSocketSession session) {
-        String query = session.getUri().getQuery();
+        if (session == null) return null;
+        java.net.URI uri = session.getUri();
+        if (uri == null) return null;
+        String query = uri.getQuery();
         if (query != null && query.contains("issueId=")) {
             String[] params = query.split("&");
             for (String param : params) {

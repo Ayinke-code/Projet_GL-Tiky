@@ -34,6 +34,18 @@ export const useCategories = () => {
   }
 
   /**
+   * Récupère les catégories filtrées par type (AUDIT, DEFENSE, ISSUE…).
+   *
+   * @param type type de catégorie
+   * @return liste des catégories correspondant au type
+   */
+  const fetchCategoriesByType = async (type) => {
+    const data = await api(`/categories/type/${type}`)
+    categories.value = data
+    return data
+  }
+
+  /**
  * Récupère une catégorie par son ID
  */
   const fetchCategoryById = async (id) => {
@@ -130,6 +142,7 @@ export const useCategories = () => {
     categories,
     category,
     fetchCategories,
+    fetchCategoriesByType,
     fetchCategoryById,
     createCategory,
     deleteCategory,
