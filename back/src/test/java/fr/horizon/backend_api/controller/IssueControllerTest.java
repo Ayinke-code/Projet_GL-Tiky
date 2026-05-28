@@ -2,11 +2,17 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
-import fr.horizon.backend_api.service.IssueService;
-import fr.horizon.backend_api.model.IssueFollower;
-import fr.horizon.backend_api.service.IssueFollowerService;
+import fr.horizon.backend_api.model.Issue;
+import fr.horizon.backend_api.model.Conversation;
 import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.IssueFollower;
+import fr.horizon.backend_api.service.IssueService;
+import fr.horizon.backend_api.service.IssueFollowerService;
 import fr.horizon.backend_api.service.JwtToken;
+import fr.horizon.backend_api.service.ConversationService;
+import fr.horizon.backend_api.websocket.ConversationWebSocketHandler;
+import java.util.Optional;
+import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -45,6 +51,12 @@ class IssueControllerTest {
 
     @MockitoBean
     private IssueFollowerService issueFollowerService;
+
+    @MockitoBean
+    private ConversationService conversationService;
+
+    @MockitoBean
+    private ConversationWebSocketHandler conversationWebSocketHandler;
 
     @Test
     void shouldGetAllIssues() throws Exception {
@@ -152,20 +164,34 @@ class IssueControllerTest {
 
     @Test
     void shouldToggleIssuePrivacy() throws Exception {
+        Long issueId = 1L;
+        String email = "john@test.com";
+        User user = User.builder().id(1L).email(email).build();
+        Conversation conversation = Conversation.builder().id(10L).build();
 
-        when(authentication.getName()).thenReturn("john@test.com");
+        when(authentication.getName()).thenReturn(email);
+        when(issueFollowerService.getUserByEmail(email)).thenReturn(user);
+        when(conversationService.getConversationByIssueId(issueId)).thenReturn(Optional.of(conversation));
+        when(issueFollowerService.getFollowedIssues(user)).thenReturn(List.of());
 
         mockMvc.perform(post("/issues/1/update-private").principal(authentication))
                 .andExpect(status().isOk());
 
-        verify(issueService).updatePrivacy(1L, "john@test.com");
+        verify(issueService).updatePrivacy(issueId, email);
+        verify(conversationWebSocketHandler).broadcastToConversation(eq(10L), contains("privacy_update"));
+        verify(issueFollowerService).getFollowedIssues(user);
     }
 
     @Test
     void shouldFollowIssue() throws Exception {
-        IssueFollower follower = new IssueFollower();
+        Issue issue = Issue.builder().id(1L).build();
+        User user = User.builder().id(2L).name("Test User").build();
+        IssueFollower follower = IssueFollower.builder()
+                .issue(issue)
+                .user(user)
+                .build();
 
-        when(issueFollowerService.getUserByEmail(anyString())).thenReturn(new User());
+        when(issueFollowerService.getUserByEmail(anyString())).thenReturn(user);
         when(issueFollowerService.followIssue(anyLong(), anyString(), any(User.class)))
                 .thenReturn(follower);
         when(authentication.getName()).thenReturn("user@test.com");

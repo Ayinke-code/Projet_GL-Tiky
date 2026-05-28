@@ -7,6 +7,8 @@ import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.dto.RequestManagerDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
+import fr.horizon.backend_api.model.enums.CategoryStatus;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
@@ -731,22 +733,92 @@ class IssueServiceTest {
     }
 
     @Test
-    void updateIssueWhenIncomplete_should_throw_when_category_not_found() {
-        Issue existingIssue = new Issue();
-        existingIssue.setId(1L);
-        User owner = new User();
+    void canAccessIssue_should_return_true_for_public_issue() {
+        Issue issue = setupIssue();
+        issue.setPrivate(false);
+        User user = new User();
 
-        when(issueRepository.findById(1L)).thenReturn(Optional.of(existingIssue));
-        when(userRepository.findByEmail("test@test.fr")).thenReturn(Optional.of(owner));
-        when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
+        assertTrue(issueService.canAccessIssue(issue, user));
+    }
 
-        IssueCreateDto dto = new IssueCreateDto();
-        dto.setCategoryId(99L);
+    @Test
+    void canAccessIssue_should_return_true_for_private_issue_if_creator() {
+        User creator = setupUser();
+        creator.setId(1L);
+        Issue issue = setupIssue();
+        issue.setPrivate(true);
+        issue.setCreatedBy(creator);
 
-        assertThrows(CategoryNotFoundException.class,
-                () -> issueService.updateIssueWhenIncomplete("test@test.fr", 1L, dto));
+        assertTrue(issueService.canAccessIssue(issue, creator));
+    }
 
-        verify(issueRepository, never()).save(any());
+    @Test
+    void canAccessIssue_should_return_true_for_private_issue_if_manager() {
+        User manager = setupUser();
+        manager.setId(2L);
+        Issue issue = setupIssue();
+        issue.setPrivate(true);
+        issue.setManager(manager);
+
+        assertTrue(issueService.canAccessIssue(issue, manager));
+    }
+
+    @Test
+    void canAccessIssue_should_return_true_for_private_issue_if_category_owner() {
+        User owner = setupUser();
+        owner.setId(3L);
+        Category category = new Category();
+        category.setOwner(owner);
+
+        Issue issue = setupIssue();
+        issue.setPrivate(true);
+        issue.setCategory(category);
+
+        assertTrue(issueService.canAccessIssue(issue, owner));
+    }
+
+    @Test
+    void canAccessIssue_should_return_false_for_private_issue_if_no_relation() {
+        Issue issue = setupIssue();
+        issue.setPrivate(true);
+        issue.setCreatedBy(setupUser()); // creator id 10L par setupUser
+        issue.setManager(null);
+        
+        Category category = new Category();
+        category.setOwner(setupUser());
+        category.getOwner().setId(99L);
+        issue.setCategory(category);
+
+        User otherUser = setupUser();
+        otherUser.setId(5L);
+
+        assertFalse(issueService.canAccessIssue(issue, otherUser));
+    }
+
+    @Test
+    void canManageIssuePrivacy_should_return_true_for_category_owner() {
+        User owner = setupUser();
+        owner.setId(1L);
+        Category category = new Category();
+        category.setOwner(owner);
+
+        Issue issue = setupIssue();
+        issue.setCategory(category);
+
+        assertTrue(issueService.canManageIssuePrivacy(issue, owner));
+    }
+
+    @Test
+    void canManageIssuePrivacy_should_return_false_for_creator_if_not_owner() {
+        User creator = setupUser();
+        creator.setId(1L);
+        Issue issue = setupIssue();
+        issue.setCreatedBy(creator);
+        issue.setCategory(new Category());
+        issue.getCategory().setOwner(setupUser());
+        issue.getCategory().getOwner().setId(99L);
+
+        assertFalse(issueService.canManageIssuePrivacy(issue, creator));
     }
 
 

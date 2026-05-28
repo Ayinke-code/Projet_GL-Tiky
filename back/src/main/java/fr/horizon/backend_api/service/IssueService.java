@@ -284,7 +284,7 @@ public class IssueService {
                 .build();
     }
 
-    private boolean canAccessIssue(Issue issue, User user) {
+    public boolean canAccessIssue(Issue issue, User user) {
         if (!issue.isPrivate()) {
             return true;
         }
@@ -303,7 +303,7 @@ public class IssueService {
         );
     }
 
-    private boolean canManageIssuePrivacy(Issue issue, User user) {
+    public boolean canManageIssuePrivacy(Issue issue, User user) {
         Long currentUserId = user.getId();
         Long categoryOwnerId = issue.getCategory() != null && issue.getCategory().getOwner() != null
                 ? issue.getCategory().getOwner().getId()
