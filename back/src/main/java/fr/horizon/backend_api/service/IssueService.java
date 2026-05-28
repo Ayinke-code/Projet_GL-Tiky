@@ -44,6 +44,7 @@ public class IssueService {
     private final CategoryRepository categoryRepository;
     private final ConversationService conversationService;
     private final RequestManagerRepository requestManagerRepository;
+    private final IssueFollowerService issueFollowerService;
 
     // Common exception messages
     private static final String USER_NOT_FOUND = "User not found";
@@ -162,10 +163,12 @@ public class IssueService {
      * Inverse la visibilité privée d'une issue.
      * <p>
      * Passe une issue de privé à public ou inversement.
+     * Si l'issue devient privée, nettoie les followers qui n'ont plus accès.
      *
      * @param id identifiant de l'issue
      * @throws IssueNotFoundException si l'issue n'existe pas
      */
+    @Transactional
     public void updatePrivacy(Long id, String email){
         Issue issue = issueRepository.findById(id)
                 .orElseThrow(() -> new IssueNotFoundException(id));
@@ -177,9 +180,16 @@ public class IssueService {
             throw new AccessDeniedException("Seul le category owner ou l'issue manager peut modifier la visibilité");
         }
 
+        // Nettoyer les followers AVANT de rendre l'issue privée
+        boolean willBecomePrivate = !issue.isPrivate();
+        
         issue.setPrivate(!issue.isPrivate());
+        issueRepository.saveAndFlush(issue);
 
-        issueRepository.save(issue);
+        // Nettoyer les followers qui n'ont plus accès si l'issue vient de devenir privée
+        if (willBecomePrivate) {
+            issueFollowerService.cleanupFollowersWithoutAccess(id);
+        }
     }
 
     /**
@@ -403,7 +413,11 @@ public class IssueService {
             createRequestManager(requestManager.getIssue());
         }
 
-        issueRepository.save(requestManager.getIssue());
+        issueRepository.saveAndFlush(requestManager.getIssue());
+
+        // Nettoyer les followers qui n'ont plus accès suite au changement de manager
+        issueFollowerService.cleanupFollowersWithoutAccess(requestManager.getIssue().getId());
+
         return toDto(requestManager);
     }
 

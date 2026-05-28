@@ -86,16 +86,51 @@ public class IssueController {
         issueService.updateStatus(status, id);
     }
 
-    /**
-     * Inverse la visibilité privée d'une issue.
-     *
-     * @param id identifiant de l'issue
-     */
-    @PreAuthorize("isAuthenticated()")
-    @PostMapping("/{id}/update-private")
-    public void updatePrivacy(@PathVariable Long id, Authentication authentication) {
-        issueService.updatePrivacy(id, authentication.getName());
-    }
+     /**
+      * Inverse la visibilité privée d'une issue.
+      * Après la mise à jour, retourne la liste des issues suivies mises à jour
+      * pour éviter de devoir refresh la page.
+      *
+      * @param id identifiant de l'issue
+      * @param authentication contexte d'authentification Spring Security
+      * @return liste des issues suivies mises à jour
+      */
+     @PreAuthorize("isAuthenticated()")
+     @PostMapping("/{id}/update-private")
+     public ResponseEntity<List<IssueDto>> updatePrivacy(@PathVariable Long id, Authentication authentication) {
+         issueService.updatePrivacy(id, authentication.getName());
+         User user = issueFollowerService.getUserByEmail(authentication.getName());
+         List<IssueDto> updatedFollowedIssues = issueFollowerService.getFollowedIssues(user)
+                 .stream()
+                 .map(this::convertToDto)
+                 .toList();
+         return ResponseEntity.ok(updatedFollowedIssues);
+     }
+     
+     /**
+      * Convertit une Issue en IssueDto.
+      * Utilitaire pour éviter la dépendance circulaire.
+      */
+     private IssueDto convertToDto(fr.horizon.backend_api.model.Issue issue) {
+         User manager = issue.getManager();
+         return IssueDto.builder()
+                 .id(issue.getId())
+                 .title(issue.getTitle())
+                 .description(issue.getDescription())
+                 .status(issue.getStatus())
+                 .isPrivate(issue.isPrivate())
+                 .categoryId(issue.getCategory().getId())
+                 .categoryName(issue.getCategory().getName())
+                 .categoryOwnerId(issue.getCategory().getOwner().getId())
+                 .categoryOwnerName(issue.getCategory().getOwner().getName())
+                 .categoryManagerId(manager != null ? manager.getId() : null)
+                 .categoryManagerName(manager != null ? manager.getName() : null)
+                 .createdId(issue.getCreatedBy().getId())
+                 .createdName(issue.getCreatedBy().getName())
+                 .createdAt(issue.getCreatedAt())
+                 .updatedAt(issue.getUpdatedAt())
+                 .build();
+     }
 
     /**
      * Supprime une issue par son identifiant.

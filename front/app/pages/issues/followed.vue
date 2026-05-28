@@ -13,7 +13,7 @@
       <USkeleton class="h-20 w-full" />
     </div>
 
-    <div v-else-if="issues.length === 0" class="text-center py-12">
+    <div v-else-if="followedIssues.length === 0" class="text-center py-12">
       <p class="text-gray-500 text-lg">Vous ne suivez aucune issue pour le moment</p>
       <UButton to="/issues" variant="outline" class="mt-4">
         Voir toutes les issues
@@ -22,7 +22,7 @@
 
     <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       <div
-        v-for="issue in issues"
+        v-for="issue in followedIssues"
         :key="issue.id"
         class="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition cursor-pointer"
         @click="navigateTo(`/issues/${issue.id}`)">
@@ -41,18 +41,19 @@
 <script setup lang="js">
 /**
  * Page listant les issues suivies par l'utilisateur courant.
- * - charge les issues via GET /issues/followed
- * - affiche uniquement les issues avec statut OUVERT
- * - redirige vers /login si non connecté
+ * - Charge les issues via GET /issues/followed
+ * - Affiche uniquement les issues avec statut OUVERT
+ * - Redirige vers /login si non connecté
+ * - Utilise un state global pour rester synchronisé avec les autres pages
  */
 
 import IssuesCard from '~/components/issues/IssuesCard.vue'
 
 const { ready, user } = useAuth()
-const { getFollowedIssues, error } = useIssueFollowers()
+const { followedIssues, refreshFollowedIssues, error: stateError } = useFollowedIssuesState()
 
-const issues = ref([])
 const loading = ref(true)
+const error = computed(() => stateError.value)
 
 onMounted(async () => {
   if (ready && !user?.value?.id) {
@@ -61,9 +62,9 @@ onMounted(async () => {
   }
 
   try {
-    issues.value = await getFollowedIssues()
+    await refreshFollowedIssues()
   } catch (err) {
-    error.value = err?.message || 'Erreur lors du chargement'
+    console.error('Erreur au chargement des issues suivies:', err)
   } finally {
     loading.value = false
   }

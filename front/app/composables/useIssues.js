@@ -92,30 +92,38 @@ export const useIssues = () => {
      /**
     * Mise à jour statut issue
     */
-    const updateIssueStatus = async (id, newValue) => {
-        if (!VALID_STATUSES.includes(newValue)) {
-            error.value = 'INVALID_STATUS'
-            return
-        }
+     const updateIssueStatus = async (id, newValue) => {
+         if (!VALID_STATUSES.includes(newValue)) {
+             error.value = 'INVALID_STATUS'
+             return
+         }
 
-        await api(`/issues/${id}/update-status`, {
-            method: 'POST',
-            body: newValue
-        })
+         await api(`/issues/${id}/update-status`, {
+             method: 'POST',
+             body: newValue
+         })
 
-        return newValue
-    }
+         return newValue
+     }
 
-     /**
-    * Toggle visibilité issue (private/public)
-    */
-    const updateIssuePrivacy = async (id) => {
-        await api(`/issues/${id}/update-private`, {
-            method: 'POST'
-        })
+      /**
+     * Toggle visibilité issue (private/public)
+     * Met à jour automatiquement la liste des issues suivies
+     */
+     const updateIssuePrivacy = async (id) => {
+         const response = await api(`/issues/${id}/update-private`, {
+             method: 'POST'
+         })
 
-        return true
-    }
+         // Mettre à jour le state global des issues suivies avec la réponse du backend
+         // qui contient la liste filtrée des issues auxquelles l'utilisateur a toujours accès
+         if (response && Array.isArray(response)) {
+             const { setFollowedIssues } = useFollowedIssuesState()
+             setFollowedIssues(response)
+         }
+
+         return true
+     }
 
     return {
         issues,

@@ -46,6 +46,9 @@ class IssueServiceTest {
     @Mock
     private ConversationService conversationService;
 
+    @Mock
+    private IssueFollowerService issueFollowerService;
+
     @InjectMocks
     private IssueService issueService;
 
@@ -400,7 +403,8 @@ class IssueServiceTest {
         issueService.updatePrivacy(1L, "owner@test.com");
 
         assertTrue(issue.isPrivate());
-        verify(issueRepository).save(issue);
+        verify(issueRepository).saveAndFlush(issue);
+        verify(issueFollowerService).cleanupFollowersWithoutAccess(1L);
     }
 
     @Test
@@ -426,7 +430,8 @@ class IssueServiceTest {
         issueService.updatePrivacy(1L, "manager@test.com");
 
         assertFalse(issue.isPrivate());
-        verify(issueRepository).save(issue);
+        verify(issueRepository).saveAndFlush(issue);
+        verify(issueFollowerService, never()).cleanupFollowersWithoutAccess(1L);
     }
 
     @Test
