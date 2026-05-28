@@ -18,23 +18,23 @@ function onSubmit(event) {
     <div class="space-y-4">
         <UForm ref="form" :state="state" class="space-y-4" @submit="onSubmit">
             <!-- Name -->
-            <UFormField label="Nom" name="name">
+            <UFormField id="categorie-name-student" label="Nom" name="name">
                 <UInput v-model="state.name" required />
             </UFormField>
 
             <!-- Subject -->
-            <UFormField label="Sujet" name="subject">
+            <UFormField id="categorie-subject-student" label="Sujet" name="subject">
                 <UInput v-model="state.subject" required />
             </UFormField>
 
             <!-- Name -->
-            <UFormField label="Description (optionnel)" name="description">
+            <UFormField id="categorie-description-student" label="Description (optionnel)" name="description">
                 <UInput v-model="state.description" />
             </UFormField>
         </UForm>
 
         <div class="flex justify-center">
-            <UButton @click="form?.submit()" color="secondary" variant="soft" class="cursor-pointer">
+            <UButton id="validate-categorie" @click="form?.submit()" color="secondary" variant="soft" class="cursor-pointer">
                 Envoyer
             </UButton>
         </div>

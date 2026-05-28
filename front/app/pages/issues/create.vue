@@ -12,7 +12,7 @@
         <!-- Titre -->
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">Titre *</label>
-          <input v-model="form.title" type="text" placeholder="Entrez le titre du ticket"
+          <input v-model="form.title" id= "input-issue-title" type="text" placeholder="Entrez le titre du ticket"
                  class="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
                  required />
         </div>
@@ -20,7 +20,7 @@
         <!-- Description -->
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">Description *</label>
-          <UTextarea v-model="form.description" placeholder="Décrivez le ticket en détail..." :rows="6"
+          <UTextarea v-model="form.description" id="input-issue-description" placeholder="Décrivez le ticket en détail..." :rows="6"
                      class="w-full" required />
         </div>
 
@@ -28,6 +28,7 @@
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">Catégorie *</label>
           <select v-model="form.categoryId"
+                  id="selector-issue-categorie"
                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
                   required>
             <option disabled value="">Sélectionnez une catégorie</option>
@@ -39,7 +40,7 @@
 
         <!-- Option de mise en attente -->
         <div class="pt-2">
-          <UCheckbox v-model="form.isPending" label="Marquer ce ticket incomplet, vous pourrez le compléter plus tard" />
+          <UCheckbox v-model="form.isPending" id="checkbox-issue-incomplet" label="Marquer ce ticket incomplet, vous pourrez le compléter plus tard" />
         </div>
 
         <!-- Erreur -->
@@ -50,10 +51,10 @@
 
         <!-- Boutons -->
         <div class="flex gap-2 justify-end pt-4 border-t">
-          <UButton to="/issues" variant="outline" icon="i-lucide-x">
+          <UButton to="/issues" id="btn-issue-cancel" variant="outline" icon="i-lucide-x">
             Annuler
           </UButton>
-          <UButton type="submit" icon="i-lucide-check" :loading="submitting" class="cursor-pointer">
+          <UButton type="submit" id= "btn-issue-create" icon="i-lucide-check" :loading="submitting" class="cursor-pointer">
             Créer
           </UButton>
         </div>

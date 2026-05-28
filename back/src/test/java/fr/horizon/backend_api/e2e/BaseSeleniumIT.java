@@ -7,10 +7,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.safari.SafariDriver;
+import org.openqa.selenium.support.ui.WebDriverWait;
+
+import java.time.Duration;
 
 abstract class BaseSeleniumIT {
 
     protected WebDriver driver;
+    protected WebDriverWait wait;
     protected String frontUrl;
 
     @BeforeEach
@@ -33,6 +38,7 @@ abstract class BaseSeleniumIT {
                 "--ignore-certificate-errors"
         );
         driver = new ChromeDriver(options);
+        wait = new WebDriverWait(driver, Duration.ofSeconds(5));
     }
 
     @AfterEach

@@ -2,7 +2,7 @@
     <div class="p-8">
         <div class="flex justify-between items-center mb-8">
             <h1 class="text-3xl font-bold text-black">Issues</h1>
-            <UButton to="/issues/create" icon="i-lucide-plus" size="lg">
+            <UButton id= "btn-create-issue" to="/issues/create" icon="i-lucide-plus" size="lg">
                 Créer une issue
             </UButton>
         </div>
