@@ -37,7 +37,7 @@ export const useConversations = () => {
   }
 
   /**
-   * Récupère les messages d'une issue.
+   * Récupère les messages d'un ticket.
    */
   const getIssueMessages = async (issueId) => {
     try {
@@ -55,7 +55,7 @@ export const useConversations = () => {
   }
 
   /**
-   * Initialise une conversation pour une issue (crée si nécessaire).
+   * Initialise une conversation pour un ticket (crée si nécessaire).
    */
   const initializeConversation = async (issueId) => {
     try {

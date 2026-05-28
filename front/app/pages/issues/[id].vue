@@ -1,7 +1,7 @@
 <script setup lang="js">
 /**
- * Page détail d'une issue
- * - charge une issue par ID
+ * Page détail d'un ticket
+ * - charge un ticket par ID
  * - permet mise à jour status + visibilité
  * - gère les messages et conversations
  */
@@ -13,7 +13,7 @@ const { ready, user, wsToken } = useAuth()
 const { getIssueById, updateIssueStatus, updateIssuePrivacy } = useIssues()
 const { getIssueMessages, sendIssueMessage, normalizeMessage, initializeConversation } = useConversations()
 
-// ID de l'issue depuis l'URL
+// ID du ticket depuis l'URL
 const issueId = Number(route.params.id)
 
 // state local
@@ -65,7 +65,7 @@ const connectWebSocket = () => {
 }
 
 /**
- * Chargement initial de l'issue et des messages
+ * Chargement initial du ticket et des messages
  */
 onMounted(async () => {
   // redirection si non connecté
@@ -94,7 +94,7 @@ onUnmounted(() => {
 })
 
 /**
- * Marquer l'issue comme terminée
+ * Marquer le ticket comme terminé
  */
 const handleMarkResolved = async () => {
   try {

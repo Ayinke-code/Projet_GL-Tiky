@@ -4,7 +4,7 @@
     <textarea
       v-model="value"
       rows="4"
-      maxlength="4000"
+      maxlength="4000"issue
       class="w-full rounded-xl border border-gray-200 p-3 text-sm outline-none transition focus:border-indigo-600"
       placeholder="Écrivez votre message..."
       @keydown.ctrl.enter.prevent="emitSend"

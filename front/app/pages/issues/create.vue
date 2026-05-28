@@ -59,10 +59,10 @@
 
 <script setup lang="js">
 /**
- * Page création d'issue
+ * Page création d'un ticket
  * - charge catégories
  * - valide formulaire
- * - crée une issue
+ * - crée un ticket
  */
 
 const { ready, user } = useAuth()
@@ -86,7 +86,7 @@ const form = reactive({
 })
 
 /**
- * Création d'une issue
+ * Création d'un ticket
  */
 const handleCreateIssue = async () => {
     error.value = null

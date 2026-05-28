@@ -12,7 +12,7 @@ export const useIssues = () => {
     const { user } = useAuth()
 
     /**
-   * État global des erreurs liées aux issues.
+   * État global des erreurs liées aux tickets.
    */
     const error = ref(null)
 
@@ -22,7 +22,7 @@ export const useIssues = () => {
     const VALID_STATUSES = ['OUVERT', 'COMPLET', 'INCOMPLET', 'TERMINE']
 
     /**
-   * Récupère toutes les issues
+   * Récupère tous les tickets
    */
     const fetchIssues = async () => {
         try {
@@ -36,14 +36,14 @@ export const useIssues = () => {
     }
 
      /**
-    * Récupère une issue par ID
+    * Récupère un ticket par ID
     */
     const getIssueById = async (id) => {
         return await api(`/issues/${id}`)
     }
 
      /**
-    * Création d'une issue
+    * Création d'un ticket
     */
     const createIssue = async (payload) => {
         error.value = null
@@ -78,7 +78,7 @@ export const useIssues = () => {
     }
 
      /**
-    * Suppression d'une issue
+    * Suppression d'un ticket
     */
     const deleteIssue = async (id) => {
         await api(`/issues/${id}`, {
@@ -89,7 +89,7 @@ export const useIssues = () => {
     }
 
      /**
-    * Mise à jour statut issue
+    * Mise à jour statut ticket
     */
     const updateIssueStatus = async (id, newValue) => {
         if (!VALID_STATUSES.includes(newValue)) {
@@ -106,7 +106,7 @@ export const useIssues = () => {
     }
 
      /**
-    * Toggle visibilité issue (private/public)
+    * Toggle visibilité ticket (private/public)
     */
     const updateIssuePrivacy = async (id) => {
         await api(`/issues/${id}/update-private`, {

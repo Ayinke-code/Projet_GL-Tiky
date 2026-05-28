@@ -14,9 +14,9 @@
         </div>
 
         <div v-else-if="issues.length === 0" class="text-center py-12">
-            <p class="text-gray-500 text-lg">Aucune issue pour le moment</p>
+            <p class="text-gray-500 text-lg">Aucun ticket pour le moment</p>
             <UButton to="/issues/create" variant="outline" class="mt-4">
-                Créer la première issue
+                Créer le premier ticket
             </UButton>
         </div>
 
@@ -30,14 +30,14 @@
         </UAlert>
     </div>
 
-    <!-- Modal de suppression d'issue -->
+    <!-- Modal de suppression de ticket -->
     <ConfirmModal v-model:open="isDeleteValidateModalOpen" title="Suppression"
-        :description="`Voulez-vous vraiment supprimer l'issue : ${deletingIssue?.title}`" @confirm="handleDelete" />
+        :description="`Voulez-vous vraiment supprimer le ticket : ${deletingIssue?.title}`" @confirm="handleDelete" />
 </template>
 
 <script setup lang="js">
 /**
- * Page liste des issues
+ * Page liste des tickets
  * - affichage liste
  * - suppression avec modal de confirmation
  */
@@ -55,7 +55,7 @@ const loading = ref(true)
 const updatingStatusId = ref(null)
 
 /**
- * Issue en cours de suppression (null = aucune)
+ * Ticket en cours de suppression (null = aucune)
  */
 const deletingIssue = ref(null)
 
@@ -92,7 +92,7 @@ const deleteValidation = (issue) => {
 }
 
 /**
- * Confirme suppression issue
+ * Confirme suppression ticket
  */
 const handleDelete = async () => {
     if (!deletingIssue.value) return
