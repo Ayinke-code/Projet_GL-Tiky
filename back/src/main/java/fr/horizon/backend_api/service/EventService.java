@@ -87,6 +87,7 @@ public class EventService {
                 .description(request.getDescription())
                 .categoryType(category.getCategoryType())
                 .category(category)
+                .validated(true)
                 .createdBy(user)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())

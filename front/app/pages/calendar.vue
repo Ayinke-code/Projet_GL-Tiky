@@ -61,37 +61,60 @@ const { events, fetchCalendarEvents } = useEvents()
 const isDetailOpen = ref(false)
 const selectedEvent = ref(null)
 
-// Position initiale de la fenêtre flottante
 const windowPos = ref({ x: 100, y: 150 })
 let dragOffset = { x: 0, y: 0 }
 
-// --- Logique du Drag & Drop ---
 const startDrag = (e) => {
-  dragOffset.x = e.clientX - windowPos.value.x
-  dragOffset.y = e.clientY - windowPos.value.y
-  window.addEventListener('mousemove', onDrag)
-  window.addEventListener('mouseup', stopDrag)
+  const isTouch = e.type.includes('touch')
+  const clientX = isTouch ? e.touches[0].clientX : e.clientX
+  const clientY = isTouch ? e.touches[0].clientY : e.clientY
+
+  dragOffset.x = clientX - windowPos.value.x
+  dragOffset.y = clientY - windowPos.value.y
+
+  if (isTouch) {
+    window.addEventListener('touchmove', onDrag, { passive: false })
+    window.addEventListener('touchend', stopDrag)
+  } else {
+    window.addEventListener('mousemove', onDrag)
+    window.addEventListener('mouseup', stopDrag)
+  }
 }
 
 const onDrag = (e) => {
+  const isTouch = e.type.includes('touch')
+  if (isTouch) e.preventDefault()
+
+  const clientX = isTouch ? e.touches[0].clientX : e.clientX
+  const clientY = isTouch ? e.touches[0].clientY : e.clientY
+
+  let newX = clientX - dragOffset.x
+  let newY = clientY - dragOffset.y
+
+  const maxX = window.innerWidth - 384
+  const maxY = window.innerHeight - 80
+
   windowPos.value = {
-    x: e.clientX - dragOffset.x,
-    y: e.clientY - dragOffset.y
+    x: Math.max(0, Math.min(newX, maxX)),
+    y: Math.max(0, Math.min(newY, maxY))
   }
 }
 
 const stopDrag = () => {
   window.removeEventListener('mousemove', onDrag)
   window.removeEventListener('mouseup', stopDrag)
+  window.removeEventListener('touchmove', onDrag)
+  window.removeEventListener('touchend', stopDrag)
 }
 
-// Code couleur propre et distinct sur le calendrier
 const mappedEvents = computed(() => {
   return events.value.map(evt => {
-    let color = '#4f46e5' // Indigo par défaut
-    if (evt.categoryType === 'DEFENSE') color = '#ef4444' // Rouge soutenance
-    if (evt.categoryType === 'AUDIT') color = '#f59e0b' // Orange Audit
-    if (evt.categoryType === 'MEETING' || evt.categoryType === 'ISSUE') color = '#0ea5e9' // Bleu ciel pour les Tickets
+    let color = '#64748b' // slate-500 par défaut
+
+    if (evt.categoryType === 'AUDIT') color = '#6366f1'   // indigo-500
+    if (evt.categoryType === 'DEFENSE') color = '#10b981' // emerald-500
+    if (evt.categoryType === 'MEETING') color = '#f59e0b' // amber-500
+    if (evt.categoryType === 'ISSUE') color = '#f43f5e'   // rose-500
 
     return {
       id: String(evt.id),
@@ -118,15 +141,10 @@ const calendarOptions = reactive({
   allDaySlot: false,
   slotMinTime: '06:00:00',
   slotMaxTime: '22:00:00',
-  // échelle de temps
   slotDuration: '02:00:00',
-
   contentHeight: 'auto',
-
   eventDisplay: 'block',
-
   displayEventTime: false,
-
   headerToolbar: {
     left: 'prev,next today',
     center: 'title',
