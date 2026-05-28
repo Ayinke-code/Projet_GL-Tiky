@@ -248,5 +248,17 @@ public class EventController {
     }
 
 
+
+    /**
+     * Endpoint pour peupler le FullCalendar côté Front-end.
+     * Retourne tous les événements où l'utilisateur est impliqué.
+     * GET /events/calendar
+     */
+    @GetMapping("/calendar")
+    public ResponseEntity<List<EventResponseDto>> getMyCalendarEvents(Authentication authentication) {
+        String email = authentication.getName();
+        List<EventResponseDto> calendarEvents = eventService.getMyCalendarEvents(email);
+        return ResponseEntity.ok(calendarEvents);
+    }
 }
 
