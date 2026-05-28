@@ -10,3 +10,15 @@ export const ROLE_PRIORITY = Object.freeze([
   ROLE.STUDENT
 ])
 
+export const translateRole = (role) => {
+  switch (role) {
+    case ROLE.ADMIN:
+      return "Admin"
+    case ROLE.TEACHER:
+      return "Professeur"
+    case ROLE.STUDENT:
+      return "Étudiant"
+    default:
+      return role
+  }
+}

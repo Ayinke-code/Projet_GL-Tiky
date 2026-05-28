@@ -35,7 +35,7 @@
 
           <!-- Propriétaire -->
           <p class="text-sm text-gray-500 mt-1">
-            Owner : {{ category?.category?.ownerName }}
+            Propriétaire : {{ category?.category?.ownerName }}
           </p>
         </div>
 
