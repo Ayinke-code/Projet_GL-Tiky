@@ -92,7 +92,7 @@
 
             <!-- Owner -->
             <div class="text-sm text-gray-500 mb-6">
-                Owner : {{ categoryRequest.requesterName }}
+                Propriétaire : {{ categoryRequest.requesterName }}
             </div>
         </div>
     </Modal>

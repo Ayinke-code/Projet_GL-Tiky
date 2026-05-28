@@ -78,7 +78,7 @@
 
                 <!-- Owner -->
                 <div class="text-sm text-gray-500 mb-6">
-                    Owner : {{ selectedCat.ownerName }}
+                    Propriétaire : {{ selectedCat.ownerName }}
                 </div>
 
                 <!-- Actions -->
