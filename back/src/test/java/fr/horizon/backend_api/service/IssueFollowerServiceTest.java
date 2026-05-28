@@ -263,10 +263,10 @@ class IssueFollowerServiceTest {
 
     @Test
     void getFollowers_returnsInfoList() {
-        User user = new User();
-        user.setId(1L);
-        user.setName("John");
-        when(issueFollowerRepository.findUsersByIssueId(1L)).thenReturn(List.of(user));
+        User followerUser = new User();
+        followerUser.setId(1L);
+        followerUser.setName("John");
+        when(issueFollowerRepository.findUsersByIssueId(1L)).thenReturn(List.of(followerUser));
 
         var result = issueFollowerService.getFollowers(1L);
 
