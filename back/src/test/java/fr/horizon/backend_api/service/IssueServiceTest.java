@@ -819,7 +819,91 @@ class IssueServiceTest {
         assertFalse(issueService.canManageIssuePrivacy(issue, creator));
     }
 
+    @Test
+    void respondManagerRequest_should_accept_and_assign_manager() {
+        User teacher = setupUser();
+        teacher.setId(1L);
+        Issue issue = setupIssue();
+        RequestManager rm = new RequestManager();
+        rm.setIssue(issue);
+        rm.setTargetTeacher(teacher);
+        rm.setStatus(RequestManagerStatus.PENDING);
 
+        when(requestManagerRepository.findById(anyLong())).thenReturn(Optional.of(rm));
+        when(issueRepository.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
 
+        RequestManagerDto result = issueService.respondManagerRequest(true, 10L, 1L);
 
+        assertEquals(RequestManagerStatus.ACCEPTED.name(), result.getStatus());
+        assertEquals(teacher.getId(), issue.getManager().getId());
+        verify(issueRepository).saveAndFlush(issue);
+    }
+
+    @Test
+    void respondManagerRequest_should_deny_request() {
+        User teacher = setupUser();
+        teacher.setId(1L);
+        Issue issue = setupIssue();
+        issue.setCategory(new Category());
+        issue.getCategory().setOwner(new User());
+
+        RequestManager rm = new RequestManager();
+        rm.setIssue(issue);
+        rm.setTargetTeacher(teacher);
+        rm.setStatus(RequestManagerStatus.PENDING);
+
+        when(requestManagerRepository.findById(anyLong())).thenReturn(Optional.of(rm));
+        when(requestManagerRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        RequestManagerDto result = issueService.respondManagerRequest(false, 10L, 1L);
+
+        assertEquals(RequestManagerStatus.DENIED.name(), result.getStatus());
+        verify(requestManagerRepository).save(any(RequestManager.class));
+        verify(issueRepository).saveAndFlush(issue);
+    }
+
+    @Test
+    void respondManagerRequest_should_throw_when_wrong_user() {
+        User teacher = setupUser();
+        teacher.setId(1L);
+        RequestManager rm = new RequestManager();
+        rm.setTargetTeacher(teacher);
+
+        when(requestManagerRepository.findById(anyLong())).thenReturn(Optional.of(rm));
+
+        assertThrows(IllegalStateException.class, () -> issueService.respondManagerRequest(true, 10L, 2L));
+    }
+
+    @Test
+    void findById_should_throw_when_not_accessible() {
+        User user = setupUser();
+        user.setEmail("other@test.fr");
+        Issue issue = setupIssue();
+        issue.setPrivate(true);
+        issue.setCreatedBy(new User());
+        issue.getCreatedBy().setId(99L);
+        issue.setCategory(new Category());
+        issue.getCategory().setOwner(new User());
+        issue.getCategory().getOwner().setId(88L);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("other@test.fr")).thenReturn(Optional.of(user));
+
+        assertThrows(AccessDeniedException.class, () -> issueService.findById(1L, "other@test.fr"));
+    }
+
+    @Test
+    void updatePrivacy_should_throw_when_not_authorized() {
+        User user = setupUser();
+        user.setEmail("not_owner@test.fr");
+        Issue issue = setupIssue();
+        issue.setCategory(new Category());
+        issue.getCategory().setOwner(new User());
+        issue.getCategory().getOwner().setId(99L);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("not_owner@test.fr")).thenReturn(Optional.of(user));
+
+        assertThrows(AccessDeniedException.class, () -> issueService.updatePrivacy(1L, "not_owner@test.fr"));
+    }
 }

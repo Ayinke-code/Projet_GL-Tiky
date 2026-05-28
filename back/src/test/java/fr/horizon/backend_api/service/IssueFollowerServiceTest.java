@@ -242,4 +242,35 @@ class IssueFollowerServiceTest {
         // La purge doit se faire via la requête dédiée
         verify(issueFollowerRepository).deleteInaccessibleFollowedIssuesByIssue(1L, 100L);
     }
+
+    @Test
+    void cleanupFollowersWithoutAccess_issueNotFound_throwsNotFound() {
+        when(issueRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResponseStatusException.class, () -> issueFollowerService.cleanupFollowersWithoutAccess(99L));
+    }
+
+    @Test
+    void cleanupFollowersWithoutAccess_publicIssue_doesNothing() {
+        Issue publicIssue = new Issue();
+        publicIssue.setId(1L);
+        publicIssue.setPrivate(false);
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(publicIssue));
+
+        issueFollowerService.cleanupFollowersWithoutAccess(1L);
+
+        verify(issueFollowerRepository, never()).deleteInaccessibleFollowedIssuesByIssue(anyLong(), anyLong());
+    }
+
+    @Test
+    void getFollowers_returnsInfoList() {
+        User user = new User();
+        user.setId(1L);
+        user.setName("John");
+        when(issueFollowerRepository.findUsersByIssueId(1L)).thenReturn(List.of(user));
+
+        var result = issueFollowerService.getFollowers(1L);
+
+        assertFalse(result.isEmpty());
+        assertEquals("John", result.get(0).getName());
+    }
 }

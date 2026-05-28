@@ -12,6 +12,10 @@ import fr.horizon.backend_api.service.JwtToken;
 import fr.horizon.backend_api.service.ConversationService;
 import fr.horizon.backend_api.websocket.ConversationWebSocketHandler;
 import java.util.Optional;
+import fr.horizon.backend_api.model.dto.RequestManagerDto;
+import fr.horizon.backend_api.model.enums.RequestManagerStatus;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -240,5 +244,39 @@ class IssueControllerTest {
         mockMvc.perform(get("/issues/1/follow/status")
                         .principal(authentication))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldAssignManager() throws Exception {
+        RequestManagerDto dto = RequestManagerDto.builder().id(10L).status(RequestManagerStatus.PENDING.name()).build();
+        when(issueService.assignManagerToIssue(1L, 2L)).thenReturn(dto);
+
+        mockMvc.perform(post("/issues/assign-manager/issue/1/target-user/2"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(10));
+    }
+
+    @Test
+    void shouldRespondToRequest() throws Exception {
+        RequestManagerDto dto = RequestManagerDto.builder().id(10L).status(RequestManagerStatus.ACCEPTED.name()).build();
+        when(issueService.respondManagerRequest(true, 10L, 2L)).thenReturn(dto);
+
+        mockMvc.perform(put("/issues/demandes-manager/10/respond")
+                        .param("accept", "true")
+                        .param("userId", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"));
+    }
+
+    @Test
+    void shouldUnfollowIssue() throws Exception {
+        User user = new User();
+        when(authentication.getName()).thenReturn("user@test.com");
+        when(issueFollowerService.getUserByEmail("user@test.com")).thenReturn(user);
+
+        mockMvc.perform(delete("/issues/1/follow").principal(authentication))
+                .andExpect(status().isNoContent());
+
+        verify(issueFollowerService).unfollowIssue(eq(1L), any(User.class));
     }
 }
