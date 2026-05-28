@@ -1,9 +1,9 @@
 <template>
     <div class="p-8">
         <div class="flex justify-between items-center mb-8">
-            <h1 class="text-3xl font-bold text-black">Issues</h1>
+            <h1 class="text-3xl font-bold text-black">Tickets</h1>
             <UButton to="/issues/create" icon="i-lucide-plus" size="lg">
-                Créer une issue
+                Créer un ticket
             </UButton>
         </div>
 
@@ -38,9 +38,9 @@
       </div>
 
       <div v-else-if="issues.length === 0" class="text-center py-12">
-          <p class="text-gray-500 text-lg">Aucune issue pour le moment</p>
+          <p class="text-gray-500 text-lg">Aucun ticket pour le moment</p>
           <UButton to="/issues/create" variant="outline" class="mt-4">
-              Créer la première issue
+              Créer le premier ticket
           </UButton>
       </div>
 
@@ -74,14 +74,31 @@
             </div>
 
             <!-- Séparateur -->
-            <template v-if="Object.keys(otherIssues).length > 0 && ownedIssues.length > 0">
+            <template v-if="Object.keys(otherIssuesByCategory).length > 0 && Object.keys(ownedIssuesByCategory).length > 0">
                 <Separator class="p-5" />
             </template>
 
-            <!-- Les autres issues -->
-            <h2 v-if="otherIssues.length > 0" class="text-xl font-bold text-black mb-3">Autres</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 overflow-visible">
-                <IssuesCard v-for="issue in otherIssues" :key="issue.id" :issue="issue" @delete="deleteValidation" />
+            <!-- Les autres issues groupées par catégorie -->
+            <div v-if="Object.keys(otherIssuesByCategory).length > 0">
+                <h2 v-if="Object.keys(ownedIssuesByCategory).length === 0" class="text-xl font-bold text-black mb-3">Vos tickets</h2>
+                <h2 v-else class="text-xl font-bold text-black mb-3">Autres</h2>
+
+                <div v-for="(group, categoryId) in otherIssuesByCategory" :key="categoryId" class="mb-4">
+                    <UCollapsible class="w-full">
+                        <UButton class="group justify-between cursor-pointer" color="neutral" variant="subtle"
+                            trailing-icon="i-lucide-chevron-down" :label="group.name" :ui="{
+                                trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200'
+                            }" block />
+                        <template #content>
+                            <div class="overflow-visible p-2">
+                                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                                    <IssuesCard v-for="issue in group.issues" :key="issue.id" :issue="issue"
+                                        @delete="deleteValidation" />
+                                </div>
+                            </div>
+                        </template>
+                    </UCollapsible>
+                </div>
             </div>
         </template>
 
@@ -93,7 +110,7 @@
 
     <!-- Modal de suppression d'issue -->
     <ConfirmModal v-model:open="isDeleteValidateModalOpen" title="Suppression"
-        :description="`Voulez-vous vraiment supprimer l'issue : ${deletingIssue?.title}`" @confirm="handleDelete" />
+        :description="`Voulez-vous vraiment supprimer le ticket : ${deletingIssue?.title}`" @confirm="handleDelete" />
 </template>
 
 <script setup lang="js">
@@ -180,6 +197,26 @@ const otherIssues = computed(() => {
     return issues.value.filter(
         issue => issue.categoryOwnerId !== user.value.id
     )
+})
+
+/*
+ * Regroupement des autres issues par catégorie
+ */
+const otherIssuesByCategory = computed(() => {
+    return otherIssues.value.reduce((groups, issue) => {
+        const key = issue.categoryId
+
+        if (!groups[key]) {
+            groups[key] = {
+                name: issue.categoryName,
+                issues: []
+            }
+        }
+
+        groups[key].issues.push(issue)
+
+        return groups
+    }, {})
 })
 
 /**
