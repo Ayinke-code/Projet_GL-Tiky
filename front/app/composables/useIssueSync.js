@@ -5,7 +5,7 @@ export const useIssueSync = () => {
 
   const syncInterval = ref(null)
 
-  const startSync = (intervalMs = 30000) => {
+  const startSync = (intervalMs = 1000) => {
     if (process.server) return
     if (syncInterval.value) return
 
