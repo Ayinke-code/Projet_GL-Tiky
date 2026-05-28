@@ -201,7 +201,7 @@ const loadingDetail = ref(false)
 const emit = defineEmits(['issue-updated'])
 
 const columns = [
-  { accessorKey: 'issueTitle', header: "Titre de l'Issue" },
+  { accessorKey: 'issueTitle', header: "Titre du ticket" },
   { accessorKey: 'creator', header: 'Créé par' },
   { accessorKey: 'target', header: 'Assigné à' },
   {

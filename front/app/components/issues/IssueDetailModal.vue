@@ -1,5 +1,5 @@
 <template>
-  <UModal v-model:open="isOpen" title="Détail de l'issue">
+  <UModal v-model:open="isOpen" title="Détail du ticket">
     <template #body>
       <div v-if="loading" class="flex justify-center py-8">
         <UIcon name="i-heroicons-arrow-path" class="animate-spin text-gray-400 text-2xl"/>
@@ -28,7 +28,7 @@
       </div>
 
       <div v-else class="text-center py-8 text-gray-400 italic">
-        Impossible de charger les détails de l'issue.
+        Impossible de charger les détails du ticket.
       </div>
     </template>
 
