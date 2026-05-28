@@ -136,7 +136,21 @@ export const useIssues = () => {
          // On peut soit fetch à nouveau, soit trouver l'issue et inverser sa visibilité
          const issueIndex = issues.value.findIndex(i => i.id === id)
          if (issueIndex !== -1) {
-             issues.value[issueIndex].private = !issues.value[issueIndex].private
+             const issue = issues.value[issueIndex]
+             issue.private = !issue.private
+
+             // Si l'issue est devenue privée, on vérifie si l'utilisateur y a toujours accès
+             if (issue.private) {
+                 const canAccess =
+                     issue.createdId === user.value.id ||
+                     issue.categoryManagerId === user.value.id ||
+                     issue.categoryOwnerId === user.value.id
+
+                 if (!canAccess) {
+                     // L'utilisateur n'a plus accès, on la retire de la liste globale
+                     issues.value.splice(issueIndex, 1)
+                 }
+             }
          }
 
          // Mettre à jour le state global des issues suivies avec la réponse du backend

@@ -21,14 +21,11 @@
     </div>
 
     <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-      <div
+      <IssuesCard
         v-for="issue in followedIssues"
         :key="issue.id"
-        class="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition cursor-pointer"
-        @click="navigateTo(`/issues/${issue.id}`)">
-        <h3 class="font-bold text-gray-900">{{ issue.title }}</h3>
-        <span class="text-xs text-gray-500">{{ issue.status }}</span>
-      </div>
+        :issue="issue"
+      />
     </div>
 
     <UAlert v-if="error" color="error" class="mt-4">

@@ -168,8 +168,8 @@ public class IssueFollowerService {
                         HttpStatus.NOT_FOUND, ISSUE_NOT_FOUND));
         if (issue.isPrivate()) {
             issueFollowerRepository.deleteInaccessibleFollowedIssuesByIssue(
-                    issueId,
-                    issue.getCreatedBy().getId()
+                issueId,
+                issue.getCreatedBy() != null ? issue.getCreatedBy().getId() : -1L
             );
         }
     }
