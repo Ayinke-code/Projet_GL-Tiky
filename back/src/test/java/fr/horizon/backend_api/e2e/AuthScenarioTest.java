@@ -10,6 +10,8 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
 
+import java.time.Duration;
+
 
 class AuthScenarioTest extends BaseSeleniumIT{
 
@@ -232,11 +234,13 @@ class AuthScenarioTest extends BaseSeleniumIT{
 
     private void allerPageCategories() {
         WebElement btnCategories = wait.until(
-                ExpectedConditions.elementToBeClickable(By.id("navbar-categories"))
+                ExpectedConditions.elementToBeClickable(By.xpath("//*[@id=\"navbar-categories\"]"))
         );
         btnCategories.click();
 
-        wait.until(ExpectedConditions.urlToBe(frontUrl + "/categories"));
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(3));
+
+        Assertions.assertEquals(frontUrl+"/categories", driver.getCurrentUrl(), "l'url vers la page catégorie n'est pas ");
 
         WebElement titlePage = wait.until(
                 ExpectedConditions.visibilityOfElementLocated(By.xpath("//*[@id=\"__nuxt\"]/div/div/main/div/div[1]/h1"))
