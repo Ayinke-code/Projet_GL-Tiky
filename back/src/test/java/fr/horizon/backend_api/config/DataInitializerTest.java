@@ -3,10 +3,13 @@ package fr.horizon.backend_api.config;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.dto.IssueCreateDto;
+import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.UserRepository;
+import fr.horizon.backend_api.service.IssueService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,6 +43,9 @@ class DataInitializerTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private IssueService issueService;
 
     @InjectMocks
     private DataInitializer dataInitializer;
@@ -87,6 +93,9 @@ class DataInitializerTest {
         when(categoryRepository.findAll())
                 .thenReturn(List.of(category));
 
+        when(issueService.createIssue(any(IssueCreateDto.class), anyString()))
+                .thenReturn(new IssueDto());
+
         // WHEN
         dataInitializer.run();
 
@@ -95,7 +104,8 @@ class DataInitializerTest {
         verify(userRepository, times(66)).save(any());
         verify(categoryRepository, times(37)).save(any());
 
-        verify(issueRepository).save(any());
+        verify(issueService, times(1))
+                .createIssue(any(IssueCreateDto.class), anyString());
     }
 
     @Test
@@ -150,7 +160,7 @@ class DataInitializerTest {
         verify(userRepository, times(66)).save(any());
 
         // Les noms ont bien été mis à jour
-        assertEquals("Richard WOODWARD", existingAdmin.getName());
-        assertEquals("Sophie ROUSSEAU", existingTeacher.getName());
+        assertEquals("Admin ADMIN", existingAdmin.getName());
+        assertEquals("Hugo Dubois", existingTeacher.getName());
     }
 }
