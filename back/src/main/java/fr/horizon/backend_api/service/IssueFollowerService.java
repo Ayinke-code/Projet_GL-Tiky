@@ -112,48 +112,7 @@ public class IssueFollowerService {
         return issueFollowerRepository.findAccessibleFollowedIssues(user.getId(), IssueStatus.OUVERT);
     }
 
-    /**
-     * Vérifie si un utilisateur a accès à une issue.
-     * Règles :
-     * - Si l'issue n'est pas privée : accès accordé
-     * - Si l'issue est privée : accès seulement si l'utilisateur est créateur, manager ou owner de la catégorie
-     *
-     * @param issue issue à vérifier
-     * @param user utilisateur
-     * @return true si l'utilisateur a accès à l'issue
-     */
-    private boolean canAccessIssue(Issue issue, User user) {
-        // Si l'issue n'est pas privée, accès public
-        if (!issue.isPrivate()) {
-            return true;
-        }
 
-        // Pour les issues privées, vérifier les droits
-        Long userId = user.getId();
-        Long creatorId = issue.getCreatedBy() != null ? issue.getCreatedBy().getId() : null;
-        Long managerId = issue.getManager() != null ? issue.getManager().getId() : null;
-        Long categoryOwnerId = issue.getCategory() != null && issue.getCategory().getOwner() != null
-                ? issue.getCategory().getOwner().getId()
-                : null;
-
-        return userId != null && (
-                userId.equals(creatorId)
-                        || userId.equals(managerId)
-                        || userId.equals(categoryOwnerId)
-        );
-    }
-
-    /**
-     * Désabonne un utilisateur d'une issue sans lever d'exception si absent.
-     * Utilisée en interne pour nettoyer les followers sans accès.
-     *
-     * @param issue issue concernée
-     * @param user utilisateur à retirer
-     */
-    private void unfollowIssueInternal(Issue issue, User user) {
-        issueFollowerRepository.findByUserAndIssue(user, issue)
-                .ifPresent(issueFollowerRepository::delete);
-    }
 
     /**
      * Nettoie les followers d'une issue : supprime tous les followers qui n'ont plus accès.
