@@ -29,6 +29,25 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     List<Event> findByCategoryTypeOrderByCreatedAtDesc(CategoryType type);
     List<Event> findByCreatedByOrderByCreatedAtDesc(User user);
 
+
+    // ... tes autres imports
+
+    /**
+     * Récupère les événements pour le calendrier d'un utilisateur donné s'il est :
+     * - Créateur de l'événement
+     * - Participant direct invité
+     * - Membre d'un groupe projet assigné à l'événement
+     */
+    @Query("SELECT DISTINCT e FROM Event e " +
+            "LEFT JOIN e.participants p " +
+            "LEFT JOIN e.projectGroups pg " +
+            "LEFT JOIN pg.members m " +
+            "WHERE (e.createdBy.id = :userId " +
+            "OR p.user.id = :userId " +
+            "OR m.id = :userId) " +
+            "AND e.validated = true")
+    List<Event> findCalendarEventsForUser(@Param("userId") Long userId);
+
     @Query("SELECT e FROM Event e JOIN e.participants p WHERE p.user.id = :userId AND p.hasAccepted IS NULL")
     List<Event> findPendingInvitationsByUserId(@Param("userId") Long userId);
 

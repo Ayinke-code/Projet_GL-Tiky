@@ -87,6 +87,7 @@ public class EventService {
                 .description(request.getDescription())
                 .categoryType(category.getCategoryType())
                 .category(category)
+                .validated(true)
                 .createdBy(user)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
@@ -372,6 +373,23 @@ public class EventService {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new EventNotFoundException(id));
         eventRepository.delete(event);
+    }
+
+    /**
+     * Récupère tous les événements consolidés pour le calendrier de l'utilisateur.
+     *
+     * @param email L'email de l'utilisateur connecté
+     * @return Une liste de EventResponseDto formatée pour le frontend
+     */
+    @Transactional(readOnly = true)
+    public List<EventResponseDto> getMyCalendarEvents(String email) {
+        User user = userService.findByEmail(email);
+
+        List<Event> events = eventRepository.findCalendarEventsForUser(user.getId());
+
+        return events.stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     /**
