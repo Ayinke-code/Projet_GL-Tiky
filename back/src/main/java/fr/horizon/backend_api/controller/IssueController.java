@@ -296,13 +296,24 @@ public class IssueController {
      */
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/follow")
-    public ResponseEntity<IssueFollower> followIssue(
+    public ResponseEntity<FollowerDto> followIssue(
             @PathVariable Long id,
             @RequestParam String reason,
             Authentication auth) {
         User user = issueFollowerService.getUserByEmail(auth.getName());
+        IssueFollower follower = issueFollowerService.followIssue(id, reason, user);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(issueFollowerService.followIssue(id, reason, user));
+                .body(convertToFollowerDto(follower));
+    }
+
+    private FollowerDto convertToFollowerDto(IssueFollower follower) {
+        return FollowerDto.builder()
+                .id(follower.getId())
+                .reason(follower.getReason())
+                .issueId(follower.getIssue().getId())
+                .userId(follower.getUser().getId())
+                .userName(follower.getUser().getName())
+                .build();
     }
 
     /**

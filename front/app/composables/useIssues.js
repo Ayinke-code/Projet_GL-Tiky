@@ -87,6 +87,10 @@ export const useIssues = () => {
         })
 
         issues.value = issues.value.filter(i => i.id !== id)
+
+        // Mettre à jour également le state global des issues suivies si nécessaire
+        const { removeFollowedIssue } = useFollowedIssuesState()
+        removeFollowedIssue(id)
     }
 
      /**
@@ -103,6 +107,19 @@ export const useIssues = () => {
              body: newValue
          })
 
+         // Mettre à jour l'issue dans la liste locale des issues
+         const issueIndex = issues.value.findIndex(i => i.id === id)
+         if (issueIndex !== -1) {
+             issues.value[issueIndex].status = newValue
+         }
+
+         // Si le statut n'est plus OUVERT, on retire l'issue de la liste des suivies
+         // car le backend filtre uniquement sur OUVERT pour les issues suivies.
+         if (newValue !== 'OUVERT') {
+             const { removeFollowedIssue } = useFollowedIssuesState()
+             removeFollowedIssue(id)
+         }
+
          return newValue
      }
 
@@ -115,6 +132,13 @@ export const useIssues = () => {
              method: 'POST'
          })
 
+         // Mettre à jour l'issue dans la liste locale des issues
+         // On peut soit fetch à nouveau, soit trouver l'issue et inverser sa visibilité
+         const issueIndex = issues.value.findIndex(i => i.id === id)
+         if (issueIndex !== -1) {
+             issues.value[issueIndex].private = !issues.value[issueIndex].private
+         }
+
          // Mettre à jour le state global des issues suivies avec la réponse du backend
          // qui contient la liste filtrée des issues auxquelles l'utilisateur a toujours accès
          if (response && Array.isArray(response)) {
@@ -122,7 +146,7 @@ export const useIssues = () => {
              setFollowedIssues(response)
          }
 
-         return true
+         return response
      }
 
     return {

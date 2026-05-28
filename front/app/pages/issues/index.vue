@@ -115,12 +115,30 @@ import IncompleteIssuesList from '~/components/layout/IncompleteIssuesList.vue'
 
 const { ready, user } = useAuth()
 const { issues, fetchIssues, deleteIssue, error } = useIssues()
+const { refreshFollowedIssues } = useFollowedIssuesState()
 
 /**
  * State UI
  */
 const loading = ref(true)
-const updatingStatusId = ref(null)
+
+onMounted(async () => {
+    if (ready && !user?.value?.id) {
+        await navigateTo('/login')
+        return
+    }
+
+    try {
+        await Promise.all([
+            fetchIssues(),
+            refreshFollowedIssues()
+        ])
+    } catch (err) {
+        console.error(err)
+    } finally {
+        loading.value = false
+    }
+})
 
 /**
  * Issue en cours de suppression (null = aucune)
@@ -131,22 +149,6 @@ const deletingIssue = ref(null)
  * ouverture modal suppression
  */
 const isDeleteValidateModalOpen = ref(false)
-
-// TODO: Refaire le popover pour changé de status
-// const handleStatusChange = async (id, newStatus) => {
-//   updatingStatusId.value = id
-//   try {
-//     const updatedIssue = await updateIssueStatus(id, newStatus)
-//     const issueIndex = issues.value.findIndex(i => i.id === id)
-//     if (issueIndex !== -1) {
-//       issues.value[issueIndex].statut = updatedIssue.statut
-//     }
-//   } catch (err) {
-//     error.value = err.message || 'Erreur lors de la mise à jour du statut'
-//   } finally {
-//     updatingStatusId.value = null
-//   }
-// }
 
 // Issues appartenant à l’utilisateur connecté
 // Filtre sur le champ categoryOwnerId

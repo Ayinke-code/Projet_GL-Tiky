@@ -128,10 +128,8 @@ const handleMarkResolved = async () => {
   try {
     await updateIssueStatus(issueId, 'TERMINE')
 
-    // mise à jour locale optimiste
-    if (issue.value) {
-      issue.value.status = 'TERMINE'
-    }
+    // On rafraîchit l'issue locale pour être sûr d'avoir les données à jour
+    issue.value = await getIssueById(issueId)
   } catch (err) {
     console.error(err)
   }
@@ -180,9 +178,8 @@ const toggleVisibility = async () => {
   try {
     await updateIssuePrivacy(issueId)
 
-    if (issue.value) {
-      issue.value.private = !issue.value.private
-    }
+    // On rafraîchit l'issue locale pour être sûr d'avoir les données à jour
+    issue.value = await getIssueById(issueId)
   } catch (err) {
     console.error(err)
   }
