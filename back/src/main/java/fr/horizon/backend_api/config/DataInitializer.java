@@ -1,13 +1,14 @@
 package fr.horizon.backend_api.config;
 
 import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.Issue;
+import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.model.enums.TeacherType;
 import fr.horizon.backend_api.model.enums.RoleEnum;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
+import fr.horizon.backend_api.service.IssueService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -40,6 +41,8 @@ public class DataInitializer implements CommandLineRunner {
     private final IssueRepository issueRepository;
     private final PasswordEncoder passwordEncoder;
 
+    private final IssueService issueService;
+
     @Value("${app.default-password}")
     private String defaultPassword;
 
@@ -59,9 +62,9 @@ public class DataInitializer implements CommandLineRunner {
         Role studentRole = getOrCreateRole(RoleEnum.STUDENT.value());
 
         // User teacher et admin
-        User admin = getOrCreateUser("admin@admin.fr", "Richard WOODWARD", Set.of(adminRole, teacherRole), null);
+        User admin = getOrCreateUser("admin@admin.fr", "Admin ADMIN", Set.of(adminRole, teacherRole), null);
         // User teacher
-        getOrCreateUser("teacher@teacher.fr", "Sophie ROUSSEAU", Set.of(teacherRole), TeacherType.COURSE_LEADER);
+        getOrCreateUser("teacher@teacher.fr", "Hugo Dubois", Set.of(teacherRole), TeacherType.COURSE_LEADER);
         getOrCreateUser("teacher2@teacher.fr", "Paul MARTIN", Set.of(teacherRole), TeacherType.OPTION_LEADER);
         getOrCreateUser("marie.dupont@teacher.fr", "Marie DUPONT", Set.of(teacherRole), TeacherType.COURSE_LEADER);
         getOrCreateUser("luc.bernard@teacher.fr", "Luc BERNARD", Set.of(teacherRole), TeacherType.OPTION_LEADER);
@@ -76,7 +79,7 @@ public class DataInitializer implements CommandLineRunner {
         getOrCreateUser("laura.henry@teacher.fr", "Laura HENRY", Set.of(teacherRole), TeacherType.COURSE_LEADER);
         getOrCreateUser("olivier.lambert@teacher.fr", "Olivier LAMBERT", Set.of(teacherRole), TeacherType.OPTION_LEADER);
         // User students (50 étudiants)
-        User student = getOrCreateUser("student@student.fr", "Raoudate", Set.of(studentRole), null);
+        User student = getOrCreateUser("student@student.fr", "Antoine LEFEVRE", Set.of(studentRole), null);
         getOrCreateUser("alice.martin@student.fr", "Alice MARTIN", Set.of(studentRole), null);
         getOrCreateUser("baptiste.dupont@student.fr", "Baptiste DUPONT", Set.of(studentRole), null);
         getOrCreateUser("camille.leroy@student.fr", "Camille LEROY", Set.of(studentRole), null);
@@ -193,8 +196,16 @@ public class DataInitializer implements CommandLineRunner {
         // ISSUE TEST
         // =========================
         if (issueRepository.count() == 0) {
+            // Récupère la première catégorie de la liste
             Category first = categoryRepository.findAll().get(0);
-            createIssue("Climatisation en panne", "La climatisation de l'amphithéâtre A ne fonctionne plus depuis lundi", student, first);
+            // Créer le dto
+            IssueCreateDto dto = new IssueCreateDto();
+            dto.setTitle("Climatisation en panne");
+            dto.setDescription("La climatisation de l'amphithéâtre A ne fonctionne plus depuis lundi");
+            dto.setCategoryId(first.getId());
+            dto.setPendingCase(false);
+            // Utilise la fonction de création du service
+            issueService.createIssue(dto, student.getEmail());
         }
     }
 
@@ -267,24 +278,5 @@ public class DataInitializer implements CommandLineRunner {
         if (!categoryRepository.existsByNameIgnoreCase(name)) {
             createCategory(name, subject, categoryType, owner);
         }
-    }
-
-    /**
-     * Crée et persiste un incident de démonstration.
-     *
-     * @param title       titre de l’incident
-     * @param description description détaillée
-     * @param createdBy   utilisateur ayant signalé l’incident
-     * @param category    catégorie rattachée
-     */
-    private void createIssue(String title, String description, User createdBy, Category category) {
-        issueRepository.save(
-                Issue.builder()
-                        .title(title)
-                        .description(description)
-                        .createdBy(createdBy)
-                        .category(category)
-                        .build()
-        );
     }
 }
