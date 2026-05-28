@@ -5,6 +5,8 @@ import fr.horizon.backend_api.service.IssueService;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.IssueFollower;
 import fr.horizon.backend_api.service.IssueFollowerService;
+import fr.horizon.backend_api.service.ConversationService;
+import fr.horizon.backend_api.websocket.ConversationWebSocketHandler;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -33,6 +35,12 @@ public class IssueController {
 
     /** Service métier des abonnements aux issues. */
     private final IssueFollowerService issueFollowerService;
+
+    /** Service des conversations. */
+    private final ConversationService conversationService;
+
+    /** Handler WebSocket pour les notifications. */
+    private final ConversationWebSocketHandler conversationWebSocketHandler;
 
     /**
      * Récupère toutes les issues.
@@ -99,6 +107,13 @@ public class IssueController {
      @PostMapping("/{id}/update-private")
      public ResponseEntity<List<IssueDto>> updatePrivacy(@PathVariable Long id, Authentication authentication) {
          issueService.updatePrivacy(id, authentication.getName());
+
+         // Diffusion d'une notification via WebSocket pour forcer le refresh/redirection chez les clients
+         conversationService.getConversationByIssueId(id).ifPresent(conv -> {
+             String payload = "{\"type\":\"privacy_update\",\"issueId\":" + id + "}";
+             conversationWebSocketHandler.broadcastToConversation(conv.getId(), payload);
+         });
+
          User user = issueFollowerService.getUserByEmail(authentication.getName());
          List<IssueDto> updatedFollowedIssues = issueFollowerService.getFollowedIssues(user)
                  .stream()

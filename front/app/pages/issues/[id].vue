@@ -78,6 +78,10 @@ const connectWebSocket = () => {
         if (!messages.value.find((m) => m.id === normalized.id)) {
           messages.value.push(normalized)
         }
+      } else if (data.type === 'privacy_update' && Number(data.issueId) === issueId) {
+        // Déclencher un check immédiat de l'accès
+        console.log('[WebSocket] Notification de changement de visibilité reçue')
+        checkAccess()
       }
     } catch (e) {
       console.error('Erreur WebSocket:', e)
@@ -107,6 +111,17 @@ onMounted(async () => {
     conversationId.value = conversation?.id ?? null
     messages.value = await getIssueMessages(issueId)
     connectWebSocket()
+
+    // Écouter les événements de synchronisation pour vérifier l'accès
+    if (process.client) {
+      window.addEventListener('issue-sync', checkAccess)
+    }
+
+    // Premier check d'accès au montage pour éviter de rester sur une page interdite
+    // si on y accède directement via l'URL
+    if (issue.value?.private) {
+      await checkAccess()
+    }
   } catch (err) {
     error.value = err?.message || 'Erreur de chargement'
   } finally {
@@ -115,10 +130,52 @@ onMounted(async () => {
 })
 
 /**
+ * Vérifie si l'utilisateur a toujours accès à l'issue
+ */
+const checkAccess = async () => {
+  // Si on est déjà en train de changer la visibilité, on évite le double check
+  // ou on attend que l'action en cours se termine.
+  // Mais ici, getIssueById est rapide.
+  try {
+    const updatedIssue = await getIssueById(issueId)
+
+    // Si l'issue est privée, on vérifie les droits
+    if (updatedIssue.private) {
+      const currentUserId = user?.value?.id
+      const hasAccess =
+        currentUserId === updatedIssue.createdId ||
+        currentUserId === updatedIssue.categoryManagerId ||
+        currentUserId === updatedIssue.categoryOwnerId
+
+      if (!hasAccess) {
+        console.warn('[Issue Detail] Accès révoqué, redirection...')
+        // On force un message d'erreur pour que l'utilisateur comprenne pourquoi il est redirigé
+        error.value = 'Vous n\'avez plus accès à ce ticket (passé en privé).'
+        setTimeout(async () => {
+          await navigateTo('/issues', { replace: true })
+        }, 2000)
+        return
+      }
+    }
+
+    // Mettre à jour l'issue locale si elle a changé (ex: statut changé par admin)
+    // Cela permet d'avoir l'UI à jour sans refresh
+    issue.value = updatedIssue
+  } catch (err) {
+    // Si l'API renvoie une erreur (403/404), on redirige
+    console.error('[Issue Detail] Erreur lors de la vérification d\'accès:', err)
+    await navigateTo('/issues', { replace: true })
+  }
+}
+
+/**
  * Nettoie la connexion WebSocket à la fermeture
  */
 onUnmounted(() => {
   socket.value?.close()
+  if (process.client) {
+    window.removeEventListener('issue-sync', checkAccess)
+  }
 })
 
 /**

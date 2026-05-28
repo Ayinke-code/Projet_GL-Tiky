@@ -5,7 +5,7 @@ export const useIssueSync = () => {
 
   const syncInterval = ref(null)
 
-  const startSync = (intervalMs = 1000) => {
+  const startSync = (intervalMs = 10000) => {
     if (process.server) return
     if (syncInterval.value) return
 
@@ -18,6 +18,10 @@ export const useIssueSync = () => {
             fetchIssues(),
             refreshFollowedIssues()
           ])
+
+          // On émet un événement personnalisé après le fetch réussi
+          // pour que les pages puissent réagir aux nouvelles données
+          window.dispatchEvent(new CustomEvent('issue-sync'))
         } catch (err) {
           console.error('[useIssueSync] Erreur lors de la synchronisation:', err)
         }
