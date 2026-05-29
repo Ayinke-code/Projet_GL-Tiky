@@ -87,35 +87,81 @@ export const useIssues = () => {
         })
 
         issues.value = issues.value.filter(i => i.id !== id)
+
+        // Mettre à jour également le state global des issues suivies si nécessaire
+        const { removeFollowedIssue } = useFollowedIssuesState()
+        removeFollowedIssue(id)
     }
 
      /**
     * Mise à jour statut issue
     */
-    const updateIssueStatus = async (id, newValue) => {
-        if (!VALID_STATUSES.includes(newValue)) {
-            error.value = 'INVALID_STATUS'
-            return
-        }
+     const updateIssueStatus = async (id, newValue) => {
+         if (!VALID_STATUSES.includes(newValue)) {
+             error.value = 'INVALID_STATUS'
+             return
+         }
 
-        await api(`/issues/${id}/update-status`, {
-            method: 'POST',
-            body: newValue
-        })
+         await api(`/issues/${id}/update-status`, {
+             method: 'POST',
+             body: newValue
+         })
 
-        return newValue
-    }
+         // Mettre à jour l'issue dans la liste locale des issues
+         const issueIndex = issues.value.findIndex(i => i.id === id)
+         if (issueIndex !== -1) {
+             issues.value[issueIndex].status = newValue
+         }
 
-     /**
-    * Toggle visibilité issue (private/public)
-    */
-    const updateIssuePrivacy = async (id) => {
-        await api(`/issues/${id}/update-private`, {
-            method: 'POST'
-        })
+         // Si le statut n'est plus OUVERT, on retire l'issue de la liste des suivies
+         // car le backend filtre uniquement sur OUVERT pour les issues suivies.
+         if (newValue !== 'OUVERT') {
+             const { removeFollowedIssue } = useFollowedIssuesState()
+             removeFollowedIssue(id)
+         }
 
-        return true
-    }
+         return newValue
+     }
+
+      /**
+     * Toggle visibilité issue (private/public)
+     * Met à jour automatiquement la liste des issues suivies
+     */
+     const updateIssuePrivacy = async (id) => {
+         const response = await api(`/issues/${id}/update-private`, {
+             method: 'POST'
+         })
+
+         // Mettre à jour l'issue dans la liste locale des issues
+         // On peut soit fetch à nouveau, soit trouver l'issue et inverser sa visibilité
+         const issueIndex = issues.value.findIndex(i => i.id === id)
+         if (issueIndex !== -1) {
+             const issue = issues.value[issueIndex]
+             issue.private = !issue.private
+
+             // Si l'issue est devenue privée, on vérifie si l'utilisateur y a toujours accès
+             if (issue.private) {
+                 const canAccess =
+                     issue.createdId === user.value.id ||
+                     issue.categoryManagerId === user.value.id ||
+                     issue.categoryOwnerId === user.value.id
+
+                 if (!canAccess) {
+                     // L'utilisateur n'a plus accès, on la retire de la liste globale
+                     issues.value.splice(issueIndex, 1)
+                 }
+             }
+         }
+
+         // Mettre à jour le state global des issues suivies avec la réponse du backend
+         // qui contient la liste filtrée des issues auxquelles l'utilisateur a toujours accès
+         if (response && Array.isArray(response)) {
+             const { setFollowedIssues } = useFollowedIssuesState()
+             setFollowedIssues(response)
+         }
+
+         return response
+     }
 
     return {
         issues,

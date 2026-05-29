@@ -35,7 +35,7 @@
     </div>
 
     <!-- FOOTER -->
-      <div class="flex justify-end">
+      <div v-if="showDelete" class="flex justify-end">
         <UButton
           @click.stop="emit('delete', issue)"
           variant="ghost"
@@ -51,7 +51,8 @@
 <script setup>
 const props = defineProps({
   issue: Object,
-  updatingStatusId: Number
+  updatingStatusId: Number,
+  showDelete: { type: Boolean, default: false }
 })
 
 /**
