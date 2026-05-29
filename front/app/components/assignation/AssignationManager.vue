@@ -40,6 +40,7 @@
             <!-- Actions : droite -->
             <div class="flex items-center justify-end gap-3 w-1/3">
               <USelectMenu
+                id="selector-assignation-teacher"
                 v-model="selectedTeachers[req.id]"
                 :items="formattedTeachers"
                 placeholder="Assigner à..."
@@ -59,6 +60,7 @@
               <div class="flex flex-col gap-1.5">
                 <UButton
                   label="Assigner"
+                  id="btn-affecter-manager"
                   icon="i-heroicons-paper-airplane"
                   :disabled="!selectedTeachers[req.id] || loadingIds.has(req.id)"
                   :loading="loadingIds.has(req.id)"
@@ -84,7 +86,7 @@
       </div>
 
       <!-- Sinon, message vide -->
-      <div v-else class="text-center py-8 text-gray-400 italic bg-gray-50/30 rounded-lg border border-dashed mt-4">
+      <div id="empty-assignation" v-else class="text-center py-8 text-gray-400 italic bg-gray-50/30 rounded-lg border border-dashed mt-4">
         Aucune demande d'affectation à compléter.
       </div>
     </UCard>
@@ -120,7 +122,7 @@
       <template #footer>
         <div class="flex justify-end gap-3">
           <UButton color="neutral" variant="ghost" label="Annuler" @click="isConfirmOpen = false"/>
-          <UButton color="primary" label="Confirmer l'envoi" @click="confirmAssignation"/>
+          <UButton id="btn-confirm-assignation" color="primary" label="Confirmer l'envoi" @click="confirmAssignation"/>
         </div>
       </template>
     </UModal>

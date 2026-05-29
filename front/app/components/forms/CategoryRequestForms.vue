@@ -2,41 +2,42 @@
 const emit = defineEmits(['submit', 'cancel'])
 
 const state = reactive({
-    name: undefined,
-    subject: undefined,
-    description: undefined // optionnel
+  name: undefined,
+  subject: undefined,
+  description: undefined // facultatif
 })
 
 const form = useTemplateRef('form')
 
-function onSubmit(event) {
-    emit('submit', event.data)
+function onSubmit() {
+  emit('submit', {
+    name: state.name,
+    subject: state.subject,
+    description: state.description
+  })
 }
 </script>
 
 <template>
-    <div class="space-y-4">
-        <UForm ref="form" :state="state" class="space-y-4" @submit="onSubmit">
-            <!-- Name -->
-            <UFormField id="categorie-name-student" label="Nom" name="name">
-                <UInput v-model="state.name" required />
-            </UFormField>
+  <div class="space-y-4">
+    <UForm ref="form" :state="state" class="space-y-4" @submit="onSubmit">
+      <UFormField label="Nom" name="name">
+        <UInput id="categorie-name-student" v-model="state.name" required />
+      </UFormField>
 
-            <!-- Subject -->
-            <UFormField id="categorie-subject-student" label="Sujet" name="subject">
-                <UInput v-model="state.subject" required />
-            </UFormField>
+      <UFormField label="Sujet" name="subject">
+        <UInput id="categorie-subject-student" v-model="state.subject" required />
+      </UFormField>
 
-            <!-- Name -->
-            <UFormField id="categorie-description-student" label="Description (optionnel)" name="description">
-                <UInput v-model="state.description" />
-            </UFormField>
-        </UForm>
+      <UFormField label="Description (optionnel)" name="description">
+        <UInput id="categorie-description-student" v-model="state.description" />
+      </UFormField>
+    </UForm>
 
-        <div class="flex justify-center">
-            <UButton id="validate-categorie" @click="form?.submit()" color="secondary" variant="soft" class="cursor-pointer">
-                Envoyer
-            </UButton>
-        </div>
+    <div class="flex justify-center">
+      <UButton id="validate-categorie" @click="form?.submit()" color="secondary" variant="soft" class="cursor-pointer">
+        Envoyer
+      </UButton>
     </div>
+  </div>
 </template>

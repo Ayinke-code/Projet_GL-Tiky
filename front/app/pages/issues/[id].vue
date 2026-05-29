@@ -246,7 +246,7 @@ const handleUnfollow = async () => {
             <!-- Header : titre + actions -->
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div class="space-y-2">
-                    <h1 class="text-2xl font-bold text-gray-900">{{ issue.title }}</h1>
+                    <h1 id="issue-title" class="text-2xl font-bold text-gray-900">{{ issue.title }}</h1>
                     <div class="flex flex-wrap items-center gap-2">
                         <!-- Catégorie -->
                         <span v-if="issue?.categoryId && issue?.categoryName"
