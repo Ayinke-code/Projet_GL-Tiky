@@ -10,10 +10,6 @@
         <div v-if="user" class="mb-4 rounded-xl border border-slate-800 bg-slate-950/60 p-4">
           <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Mon espace</p>
           <p class="text-sm font-semibold text-white">{{ user?.name || 'Utilisateur' }}</p>
-          <div class="mt-3 flex flex-wrap gap-2 text-[10px] font-bold uppercase tracking-wide">
-            <span v-for="role in user.roles" :key="role" class="rounded-full bg-slate-800 px-2.5 py-1 text-slate-300">{{ role }}</span>
-            <span v-if="user?.contributor" class="rounded-full bg-emerald-500/20 px-2.5 py-1 text-emerald-300">Issue Creator</span>
-          </div>
         </div>
 
         <p v-if="user?.id" class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">
@@ -130,6 +126,7 @@
 <script setup>
 const route = useRoute()
 const { user, ready, logout } = useAuth()
+import { translateRole } from '@/utils/roles'
 const isActive = (path) => route.path.startsWith(path)
 
 // Redirection vers la page de connexion
