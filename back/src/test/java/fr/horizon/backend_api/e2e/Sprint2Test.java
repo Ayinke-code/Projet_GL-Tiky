@@ -18,12 +18,9 @@ import java.util.List;
 
 class Sprint2Test extends BaseSeleniumIT{
 
-    static final Dotenv dotenv = Dotenv.load();
 
     static final String EMAIL_TEACHER_TEST = "admin@admin.fr";
     static final String EMAIL_STUDENT_TEST = "student@student.fr";
-
-    static final String PASSWORD_TEST = dotenv.get("DEFAULT_PASSWORD");
 
     private static final String URL_ERROR = "l'URL ne correspond pas";
     private static final String ISSUE_PAGE_TITLE = "Tickets";
@@ -147,7 +144,7 @@ class Sprint2Test extends BaseSeleniumIT{
         );
         // action
         inputEmail.sendKeys(email);
-        inputPassword.sendKeys(PASSWORD_TEST);
+        inputPassword.sendKeys(password);
         WebElement btnConnexion = wait.until(
                 ExpectedConditions.elementToBeClickable(By.id("btn-connexion"))
         );

@@ -21,13 +21,16 @@ abstract class BaseSeleniumIT {
     protected WebDriver driver;
     protected WebDriverWait wait;
     protected String frontUrl;
+    protected String password;
 
     @BeforeEach
     void setUp() {
         frontUrl = System.getenv("FRONT_URL");
+        password = System.getenv("DEFAULT_PASSWORD");
         if (frontUrl == null) {
             Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
             frontUrl = dotenv.get("FRONT_URL");
+            password = dotenv.get("DEFAULT_PASSWORD");
         }
         Assertions.assertNotNull(frontUrl);
 
