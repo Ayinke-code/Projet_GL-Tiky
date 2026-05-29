@@ -48,7 +48,7 @@
         </div>
 
         <!-- ACTIONS POUR LES PROFESSEURS -->
-        <div v-if="ready && user?.roles?.includes('TEACHER') && categoryRequest.requesterId !== user?.id"
+        <div v-if="ready && user?.roles?.includes(ROLE.TEACHER) && categoryRequest.requesterId !== user?.id"
             class="flex gap-2 mt-auto">
 
             <button @click.stop="handleAcceptCategoryRequest"
@@ -90,7 +90,7 @@
 
             <!-- Owner -->
             <div class="text-sm text-gray-500 mb-6">
-                Owner : {{ categoryRequest.requesterName }}
+                Propriétaire : {{ categoryRequest.requesterName }}
             </div>
         </div>
     </Modal>
@@ -99,6 +99,7 @@
 <script setup>
 import Modal from '../ui/Modal.vue'
 import { formatDateTime } from '#imports'
+import { ROLE } from '~/utils/roles'
 
 const props = defineProps({
     categoryRequest: {

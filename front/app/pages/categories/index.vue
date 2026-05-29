@@ -6,10 +6,10 @@
             <h1 class="text-2xl font-bold text-gray-800">Gestion des Catégories</h1>
 
             <!-- Bouton ouverture modal création pour les professeur -->
-            <Button v-if="ready && user?.roles?.includes('TEACHER')" @click="isCreateModalOpen = true"
+            <Button v-if="ready && user?.roles?.includes(ROLE.TEACHER)" @click="isCreateModalOpen = true"
                 icon="i-lucide-plus" label="Créer une catégorie" color="secondary" size="lg" variant="solid" rounded />
             <!-- Bouton ouverture modal demande de création pour les étudiants -->
-            <Button v-else-if="ready && user?.roles?.includes('STUDENT')" @click="isRequestCreateModalOpen = true"
+            <Button v-else-if="ready && user?.roles?.includes(ROLE.STUDENT)" @click="isRequestCreateModalOpen = true"
                 icon="i-lucide-plus" label="Demande de catégorie" color="secondary" size="lg" variant="solid" rounded />
         </div>
 
@@ -78,7 +78,7 @@
 
                 <!-- Owner -->
                 <div class="text-sm text-gray-500 mb-6">
-                    Owner : {{ selectedCat.ownerName }}
+                    Propriétaire : {{ selectedCat.ownerName }}
                 </div>
 
                 <!-- Actions -->
@@ -107,13 +107,14 @@ import CategoryRequestCard from '~/components/categories/CategoryRequestCard.vue
 import { ref, onMounted } from 'vue'
 import { useCategories } from '~/composables/useCategories'
 import Button from '~/components/ui/Button.vue'
+import { ROLE } from '~/utils/roles'
 
 /**
  * Composable de gestion des catégories.
  */
 const {
     categories,
-    fetchCategories,
+    fetchCategoriesByType,
     createCategory,
     deleteCategory,
     error: categoriesError
@@ -163,7 +164,7 @@ const isDetailOpen = ref(false)
  * Chargement initial des catégories au montage de la page.
  */
 onMounted(async () => {
-    await fetchCategories()
+    await fetchCategoriesByType('ISSUE')
     await fetchCategoryRequests()
 })
 
@@ -175,10 +176,16 @@ onMounted(async () => {
  * @param {Object} cat - catégorie sélectionnée
  */
 const handleClick = (cat) => {
-  if (ready && !user?.value?.roles?.includes('TEACHER')) return
+  if (!ready || !user?.value) return
 
-  selectedCat.value = cat
-  isDetailOpen.value = true
+  const isTeacher = user.value.roles?.includes(ROLE.TEACHER)
+  const isOwner = user.value.name === cat.ownerName
+
+  if (!isOwner) return
+
+  if (isTeacher && cat?.id) {
+    navigateTo(`/categories/${cat.id}`)
+  }
 }
 
 /**
@@ -193,7 +200,7 @@ const handleCreate = async (data) => {
 
     if (!res) return
 
-    await fetchCategories()
+    await fetchCategoriesByType('ISSUE')
     isCreateModalOpen.value = false
 }
 
@@ -216,7 +223,7 @@ const handleDelete = async (id) => {
     selectedCat.value = null
 
     // refresh liste
-    await fetchCategories();
+    await fetchCategoriesByType('ISSUE');
 }
 
 /**
@@ -251,7 +258,7 @@ const handleAcceptCategoryRequest = async (data) => {
     const res = await acceptCategoryRequest(data.id)
     if (!res) return
 
-    await fetchCategories()
+    await fetchCategoriesByType('ISSUE')
     await fetchCategoryRequests()
 }
 </script>

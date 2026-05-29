@@ -16,6 +16,15 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * Service de gestion des demandes de création de catégories.
+ * <p>
+ * Fournit les opérations métier relatives aux demandes :
+ * création, récupération, suppression, validation et conversion en DTO.
+ * <p>
+ * La validation d’une demande crée automatiquement la catégorie correspondante
+ * et met à jour le statut de la demande à {@code APPROVED}.
+ */
 @Service
 @RequiredArgsConstructor
 public class CategoryRequestService {
@@ -26,6 +35,8 @@ public class CategoryRequestService {
 
     /**
      * Récupère toutes les demandes de catégories.
+     *
+     * @return liste de DTO de toutes les demandes
      */
     public List<CategoryRequestDto> findAll() {
         return categoryRequestRepository.findAll()
@@ -36,6 +47,10 @@ public class CategoryRequestService {
 
     /**
      * Crée une nouvelle demande de catégorie.
+     *
+     * @param dto données de création (nom, sujet, description, identifiant du demandeur)
+     * @return demande créée sous forme de DTO
+     * @throws EntityNotFoundException si le demandeur n’existe pas
      */
     public CategoryRequestDto create(CategoryRequestCreateDto dto) {
 
@@ -56,14 +71,23 @@ public class CategoryRequestService {
     }
 
     /**
-     * Supprime une demande par ID.
+     * Supprime une demande de catégorie par identifiant.
+     *
+     * @param id identifiant de la demande
      */
     public void deleteById(Long id) {
         categoryRequestRepository.deleteById(id);
     }
 
     /**
-     * Valide une demande de catégorie.
+     * Valide une demande de catégorie et crée la catégorie correspondante.
+     * <p>
+     * Met à jour le statut de la demande à {@code APPROVED},
+     * associe le validateur et lie la catégorie créée.
+     *
+     * @param id            identifiant de la demande à valider
+     * @param validatorName email de l’utilisateur validant la demande
+     * @throws EntityNotFoundException si la demande ou le validateur n’existe pas
      */
     @Transactional
     public void accept(Long id, String validatorName) {
@@ -92,7 +116,10 @@ public class CategoryRequestService {
     }
 
     /**
-     * Convertit entité → DTO.
+     * Convertit une entité {@link CategoryRequest} en DTO.
+     *
+     * @param request entité demande de catégorie à convertir
+     * @return DTO contenant les informations publiques de la demande
      */
     private CategoryRequestDto toDto(CategoryRequest request) {
         return CategoryRequestDto.builder()

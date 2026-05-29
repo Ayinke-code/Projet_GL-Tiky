@@ -23,6 +23,15 @@ import Header from '~/components/layout/Header.vue'
 import Sidebar from '~/components/layout/Sidebar.vue'
 
 const route = useRoute()
+const { startSync, stopSync } = useIssueSync()
 
-const isAuthPage = computed(() => route.path === '/login')
+onMounted(() => {
+  startSync()
+})
+
+onUnmounted(() => {
+  stopSync()
+})
+
+const isAuthPage = computed(() => route.path === '/login' || route.path === '/')
 </script>
