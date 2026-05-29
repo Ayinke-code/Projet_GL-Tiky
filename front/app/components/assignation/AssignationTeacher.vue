@@ -63,7 +63,7 @@
       Aucune affectation en attente de réponse.
     </div>
 
-    <!-- Modale détails des issues -->
+    <!-- Modale détails des tickets -->
     <IssueDetailModal
       v-model:open="isDetailOpen"
       :issue-detail="issueDetail"
@@ -95,7 +95,7 @@ const openDetail = async (task) => {
   try {
     issueDetail.value = await getIssueDtoById(task.issueId)
   } catch (e) {
-    console.error("Erreur lors du chargement de l'issue :", e)
+    console.error("Erreur lors du chargement du ticket :", e)
   } finally {
     loadingDetail.value = false
   }

@@ -53,7 +53,7 @@ export const useEvents = () => {
    * Fait appel au endpoint POST /meeting/{issueId}.
    *
    * @param payload - { name, description, categoryId }
-   * @param issueId - L'ID du ticket/issue associé
+   * @param issueId - L'ID du ticket/ticket associé
    */
   const createMeeting = async (payload, issueId) => {
     error.value = null
@@ -291,7 +291,7 @@ export const useEvents = () => {
 
   /**
    * Récupère la liste et le statut des demandes de réunions initiées par l'utilisateur connecté.
-   * Fait appel au endpoint GET /events/me/demands.
+   * Fait appel à l'endpoint GET /events/me/demands.
    *
    * @returns {Promise<Array>} Liste de MeetingDemandeDto [{ issueId, status }]
    */

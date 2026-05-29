@@ -342,7 +342,7 @@ const handleUnfollow = async () => {
 
       <!--Message succès après suivi -->
       <div v-if="followSuccess" class="rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-700">
-        Vous suivez maintenant cette issue !
+        Vous suivez maintenant ce ticket !
       </div>
 
       <!-- Grid principal -->
@@ -404,12 +404,12 @@ const handleUnfollow = async () => {
                         </div>
                     </div>
 
-                  <!-- Visible uniquement si l'utilisateur est le manager de l'issue -->
+                  <!-- Visible uniquement si l'utilisateur est le manager du ticket -->
                   <IssueMeetingProposal
                     v-if="user?.id === issue?.categoryManagerId && user?.id !== null"
                     :issue="issue"
                   />
-                  <!-- Visible pour tout les utilisatuer sauf le manager de l'issue -->
+                  <!-- Visible pour tout les utilisatuer sauf le manager du ticket -->
                   <IssueMeetingDemand
                     v-if="user?.id !== issue?.categoryManagerId && user?.id !== null"
                     :issue="issue"
@@ -505,7 +505,7 @@ const handleUnfollow = async () => {
   <ConfirmModal
       v-model:open="isReopeningModalOpen"
       title="Demande de réouverture"
-      description="Voulez-vous vraiment rouvrir cette issue ?"
+      description="Voulez-vous vraiment rouvrir ce ticket ?"
       @confirm="handleReopening"
   />
 </template>

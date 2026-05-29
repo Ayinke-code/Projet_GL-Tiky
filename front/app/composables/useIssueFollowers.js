@@ -6,8 +6,8 @@ export const useIssueFollowers = () => {
   const error = ref(null)
 
   /**
-   * Abonne l'utilisateur courant à une issue avec une raison.
-   * @param {number} issueId - identifiant de l'issue
+   * Abonne l'utilisateur courant à un ticket avec une raison.
+   * @param {number} issueId - identifiant du ticket
    * @param {string} reason - INTERESTED | ABLE_TO_HELP | IMPACTED
    * @returns l'abonnement créé
    */
@@ -25,8 +25,8 @@ export const useIssueFollowers = () => {
   }
 
   /**
-   * Désabonne l'utilisateur courant d'une issue.
-   * @param {number} issueId - identifiant de l'issue
+   * Désabonne l'utilisateur courant d'un ticket.
+   * @param {number} issueId - identifiant du ticket
    */
   const unfollowIssue = async (issueId) => {
     const api = useApi()
@@ -42,8 +42,8 @@ export const useIssueFollowers = () => {
   }
 
   /**
-   * Récupère la liste des issues suivies par l'utilisateur courant.
-   * @returns liste des issues suivies
+   * Récupère la liste des tickets suivis par l'utilisateur courant.
+   * @returns liste des tockets suivis
    */
   const getFollowedIssues = async () => {
     const api = useApi()
@@ -57,8 +57,8 @@ export const useIssueFollowers = () => {
   }
 
   /**
-   * Vérifie si l'utilisateur courant suit une issue.
-   * @param {number} issueId - identifiant de l'issue
+   * Vérifie si l'utilisateur courant suit un ticket.
+   * @param {number} issueId - identifiant du ticket
    * @returns {boolean}
    */
   const isFollowing = async (issueId) => {
@@ -73,8 +73,8 @@ export const useIssueFollowers = () => {
   }
 
   /**
-   * Récupère la liste des abonnés (followers) pour une issue spécifique.
-   * @param {number} issueId - identifiant de l'issue
+   * Récupère la liste des abonnés (followers) pour un ticket spécifique.
+   * @param {number} issueId - identifiant du ticket
    * @returns {Promise<Array>} liste des FollowersInfoDto (id, name, role)
    */
   const getIssueFollowers = async (issueId) => {

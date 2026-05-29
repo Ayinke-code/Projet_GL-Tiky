@@ -2,7 +2,7 @@ export const useIssues = () => {
     const api = useApi()
 
     /**
-   * État global des issues.
+   * État global des tickets.
    */
     const issues = useState('issues', () => [])
 

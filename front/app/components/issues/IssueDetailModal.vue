@@ -28,7 +28,7 @@
       </div>
 
       <div v-else class="text-center py-8 text-gray-400 italic">
-        Impossible de charger les détails de l'issue.
+        Impossible de charger les détails du ticket.
       </div>
     </template>
 

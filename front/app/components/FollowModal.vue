@@ -1,7 +1,7 @@
 <template>
-  <Modal v-model:open="isOpen" title="Suivre cette issue">
+  <Modal v-model:open="isOpen" title="Suivre ce ticket">
 
-    <p class="text-gray-600 mb-4">Pourquoi voulez-vous suivre cette issue ?</p>
+    <p class="text-gray-600 mb-4">Pourquoi voulez-vous suivre ce ticket ?</p>
 
     <div class="flex flex-col gap-3">
       <button
@@ -43,7 +43,7 @@
 
 <script setup lang="js">
 /**
- * Modale de suivi d'une issue.
+ * Modale de suivi d'un ticket.
  * - propose trois raisons exclusives : INTERESTED, ABLE_TO_HELP, IMPACTED
  * - appelle POST /issues/{id}/follow avec la raison choisie
  * - émet l'événement 'followed' après succès

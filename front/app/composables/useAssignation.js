@@ -27,7 +27,7 @@ export const useAssignation = () => {
         params: { accept, userId }
       }),
 
-    // Récupère la liste des issues incomplètes pour un utilisateur (pour renvoi)
+    // Récupère la liste des tickets incomplets pour un utilisateur (pour renvoi)
     // A utiliser au chargement pour l'user afin de récupérer ses demandes qu'il doit completer
     getIncompleteIssues: (userId) =>
       api(`issues/incomplete/${userId}`, {
@@ -39,7 +39,7 @@ export const useAssignation = () => {
         method: 'GET'
       }),
 
-    // Marque une issue comme incomplète et refuse la demande associée
+    // Marque un ticket comme incomplet et refuse la demande associée
     markIssueAsIncomplete: (issueId, commentaire, raison) =>
       api(`issues/${issueId}/mark-incomplete`, {
         method: 'PUT',
@@ -52,7 +52,7 @@ export const useAssignation = () => {
         })
       }),
 
-    // Mise a jour d'une issue suite a un sigalement comme incomplet
+    // Mise a jour d'un ticket suite a un sigalement comme incomplet
     updateIssueWhenIncomplete: (id, issueData) =>
       api(`issues/update/incomplete/${id}`, {
         method: 'POST',

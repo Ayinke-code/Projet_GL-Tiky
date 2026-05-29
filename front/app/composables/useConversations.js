@@ -105,7 +105,7 @@ export const useConversations = () => {
   }
 
   /**
-   * Envoie un message sur une issue.
+   * Envoie un message sur un ticket.
    */
   const sendIssueMessage = async (issueId, content, replyToMessageId = null) => {
     try {

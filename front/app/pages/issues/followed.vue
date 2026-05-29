@@ -1,9 +1,9 @@
 <template>
   <div class="p-8">
     <div class="flex justify-between items-center mb-8">
-      <h1 class="text-3xl font-bold text-black">Issues suivies</h1>
+      <h1 class="text-3xl font-bold text-black">Tickets suivis</h1>
       <UButton to="/issues" variant="outline" icon="i-lucide-arrow-left">
-        Retour aux issues
+        Retour aux tickets
       </UButton>
     </div>
 
@@ -14,9 +14,9 @@
     </div>
 
     <div v-else-if="issues.length === 0" class="text-center py-12">
-      <p class="text-gray-500 text-lg">Vous ne suivez aucune issue pour le moment</p>
+      <p class="text-gray-500 text-lg">Vous ne suivez aucun ticket pour le moment</p>
       <UButton to="/issues" variant="outline" class="mt-4">
-        Voir toutes les issues
+        Voir tous les tickets
       </UButton>
     </div>
 
@@ -40,9 +40,9 @@
 
 <script setup lang="js">
 /**
- * Page listant les issues suivies par l'utilisateur courant.
- * - charge les issues via GET /issues/followed
- * - affiche uniquement les issues avec statut OUVERT
+ * Page listant les tickets suivis par l'utilisateur courant.
+ * - charge les tickets via GET /issues/followed
+ * - affiche uniquement les tickets avec statut OUVERT
  * - redirige vers /login si non connecté
  */
 

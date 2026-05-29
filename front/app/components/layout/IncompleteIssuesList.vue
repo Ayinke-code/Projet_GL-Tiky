@@ -13,12 +13,12 @@
       <UIcon name="i-heroicons-arrow-path" class="animate-spin text-gray-400 text-3xl" />
     </div>
 
-    <!-- État vide : Aucune issue incomplète -->
+    <!-- État vide : Aucun ticket incomplet -->
     <div v-else-if="issues.length === 0" class="text-center py-8 text-gray-500 italic bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
       Vous n'avez aucune demande nécessitant des corrections ou en attente.
     </div>
 
-    <!-- Liste des issues incomplètes (Limitée) -->
+    <!-- Liste des tickets incomplets (Limitée) -->
     <div v-else class="space-y-4">
       <UCard
         v-for="issue in displayedIssues"
@@ -101,7 +101,7 @@
 
           <!-- Formulaire -->
           <UFormField label="Titre" required>
-            <UInput v-model="formData.title" placeholder="Titre de l'issue" class="w-full" />
+            <UInput v-model="formData.title" placeholder="Titre du ticket" class="w-full" />
           </UFormField>
 
           <UFormField label="Description" required>
@@ -167,12 +167,12 @@ const loading = ref(true)
 // ---  LOGIQUE DE LIMITATION ---
 const MAX_DISPLAYED = 3
 
-// Calcule les 3 premières issues à afficher
+// Calcule les 3 premiers tickets à afficher
 const displayedIssues = computed(() => {
   return issues.value.slice(0, MAX_DISPLAYED)
 })
 
-// Calcule combien d'issues ne sont pas affichées
+// Calcule combien de tickets ne sont pas affichés
 const remainingIssuesCount = computed(() => {
   return Math.max(0, issues.value.length - MAX_DISPLAYED)
 })
@@ -204,7 +204,7 @@ const fetchIssues = async () => {
 
     emit('has-issues', issues.value.length > 0)
   } catch (error) {
-    console.error("Erreur lors de la récupération des issues incomplètes :", error)
+    console.error("Erreur lors de la récupération des tickets incomplets :", error)
     emit('has-issues', false)
   } finally {
     loading.value = false

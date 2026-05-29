@@ -1,16 +1,14 @@
 <template>
-  <!-- Conteneur principal (Mode sombre d'origine restauré) -->
-  <div class="p-8 bg-gray-950 min-h-screen text-white">
-
+  <div class="p-8 bg-gray-50 min-h-screen">
     <!-- En-tête de la page -->
     <div class="flex justify-between items-center mb-8">
-      <h1 class="text-3xl font-bold text-white">Issues</h1>
+      <h1 class="text-3xl font-bold text-gray-800">Tickets</h1>
       <UButton to="/issues/create" icon="i-lucide-plus" size="lg">
-        Créer une issue
+        Créer un ticket
       </UButton>
     </div>
 
-    <!-- Rubrique des affectations (Uniquement Admin/Teacher, condensée et pleine largeur) -->
+    <!-- Rubrique des affectations -->
     <div v-if="isTeacher" class="py-4 flex flex-col gap-4 w-full">
       <section class="w-full">
         <AssignationManager :userId="user.id" @issue-updated="fetchIssues"/>
@@ -28,14 +26,14 @@
 
     <!-- États de chargement -->
     <div v-if="loading" class="text-center py-8">
-      <USkeleton class="h-20 w-full mb-4 bg-gray-800" />
-      <USkeleton class="h-20 w-full mb-4 bg-gray-800" />
-      <USkeleton class="h-20 w-full bg-gray-800" />
+      <USkeleton class="h-20 w-full mb-4" />
+      <USkeleton class="h-20 w-full mb-4" />
+      <USkeleton class="h-20 w-full" />
     </div>
 
     <!-- État vide -->
     <div v-else-if="issues.length === 0" class="text-center py-12">
-      <p class="text-gray-400 text-lg">Aucune issue pour le moment</p>
+      <p class="text-gray-400 text-lg">Aucun ticket pour le moment</p>
       <UButton to="/issues/create" variant="outline" class="mt-4">
         Créer le premier ticket
       </UButton>

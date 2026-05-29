@@ -71,8 +71,9 @@ public class IssueService {
     /**
      * Retourne la liste des issues filtrées selon le rôle de l'utilisateur connecté.
      * <p>
-     * Les enseignants ont un accès total à toutes les issues via une requête globale.
-     * Les étudiants bénéficient d'un filtrage ciblé directement au niveau de la base de données.
+     * Les enseignants et administrateurs ont un accès total à toutes les issues.
+     * Les étudiants voient uniquement les issues au statut OUVERT qui sont publiques,
+     * ainsi que les issues qu'ils ont eux-mêmes créées.
      *
      * @param email email de l'utilisateur connecté
      * @return liste de DTO issues filtrées selon les permissions
@@ -82,17 +83,15 @@ public class IssueService {
         User currentUser = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        // Si c'est un enseignant (ou admin), on récupère tout
-        if (currentUser.isTeacher()) {
-            return issueRepository.findAll()
-                    .stream()
-                    .map(this::toDto)
-                    .toList();
-        }
+        // Vérification des accès : l'enseignant (ou admin) voit tout.
+        // Note : Si vous possédez une méthode distincte "currentUser.isAdmin()", vous pouvez l'ajouter ici.
+        boolean hasFullAccess = currentUser.isTeacher();
 
-        // Si c'est un étudiant, on utilise la requête optimisée du repository
-        return issueRepository.findIssuesForStudent(currentUser.getId())
+        return issueRepository.findAll()
                 .stream()
+                .filter(issue -> hasFullAccess
+                        || (issue.getStatus() == IssueStatus.OUVERT && !issue.isPrivate())
+                        || issue.getCreatedBy().getId().equals(currentUser.getId()))
                 .map(this::toDto)
                 .toList();
     }

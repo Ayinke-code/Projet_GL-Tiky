@@ -160,7 +160,7 @@
       </template>
     </UModal>
 
-    <!-- Modale : Détail de l'issue -->
+    <!-- Modale : Détail du ticket -->
     <IssueDetailModal
       v-model:open="isDetailOpen"
       :issue-detail="issueDetail"
@@ -201,7 +201,7 @@ const loadingDetail = ref(false)
 const emit = defineEmits(['issue-updated'])
 
 const columns = [
-  { accessorKey: 'issueTitle', header: "Titre de l'Issue" },
+  { accessorKey: 'issueTitle', header: "Titre du ticket" },
   { accessorKey: 'creator', header: 'Créé par' },
   { accessorKey: 'target', header: 'Assigné à' },
   {
@@ -344,7 +344,7 @@ const openDetail = async (req) => {
   try {
     issueDetail.value = await getIssueDtoById(req.issueId)
   } catch (e) {
-    console.error("Erreur lors du chargement de l'issue :", e)
+    console.error("Erreur lors du chargement du ticket :", e)
   } finally {
     loadingDetail.value = false
   }
