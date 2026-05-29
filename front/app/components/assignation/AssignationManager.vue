@@ -40,7 +40,7 @@
             <!-- Actions : droite -->
             <div class="flex items-center justify-end gap-3 w-1/3">
               <USelectMenu
-                id="selector-assignation-teacher"
+                :id="'selector-assignation-teacher-' + req.id"
                 v-model="selectedTeachers[req.id]"
                 :items="formattedTeachers"
                 placeholder="Assigner à..."
@@ -60,7 +60,7 @@
               <div class="flex flex-col gap-1.5">
                 <UButton
                   label="Assigner"
-                  id="btn-affecter-manager"
+                  :id="'btn-affecter-manager-' + req.id"
                   icon="i-heroicons-paper-airplane"
                   :disabled="!selectedTeachers[req.id] || loadingIds.has(req.id)"
                   :loading="loadingIds.has(req.id)"

@@ -1,16 +1,13 @@
 package fr.horizon.backend_api.e2e;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
 import java.util.List;
+import java.util.UUID;
 
 
 class Sprint2Test extends BaseSeleniumIT{
@@ -22,7 +19,7 @@ class Sprint2Test extends BaseSeleniumIT{
     private static final String URL_ERROR = "l'URL ne correspond pas";
     private static final String ISSUE_PAGE_TITLE = "Tickets";
 
-    private static final String TITRE_TICKET= "titre-test";
+    private String ticketTitle= "titre-test";
     private static final String DESCRIPTION = "description-test";
 
     private static final String STATUT_TICKET_EN_ATTENTE = "En attente";
@@ -34,6 +31,12 @@ class Sprint2Test extends BaseSeleniumIT{
 
     private static final String MESSAGE = "MESSAGE TEST";
     private static final String EMPTY_ASSIGNATION = "Aucune demande d'affectation à compléter.";
+
+    @BeforeEach
+    void initTitreUnique() {
+        // Ex: titre-test-a1b2c3
+        this.ticketTitle = "titre-test-" + UUID.randomUUID().toString().substring(0, 6);
+    }
 
     @Test
     @DisplayName("Scénario 1.1 Connexion")
@@ -79,7 +82,6 @@ class Sprint2Test extends BaseSeleniumIT{
     }
 
     @Test
-    @Disabled("Test en échec à cause de clic fantôme")
     @DisplayName("Scénario 1.5.2 proposer une catégorie")
     void proposeCategorieAsStudentTest(){
         //précondition
@@ -183,7 +185,7 @@ class Sprint2Test extends BaseSeleniumIT{
 
         WebElement issueBtnCreate = driver.findElement(By.id("btn-issue-create"));
 
-        issueTitle.sendKeys(TITRE_TICKET);
+        issueTitle.sendKeys(ticketTitle);
         issueDescription.sendKeys(DESCRIPTION);
         menuCategory.selectByIndex(1);
         if(cocherCase){
@@ -196,7 +198,7 @@ class Sprint2Test extends BaseSeleniumIT{
 
         WebElement nouveauTicket = wait.until(
                 ExpectedConditions.visibilityOfElementLocated(
-                        By.xpath("//*[contains(normalize-space(.), '" + TITRE_TICKET + "')]")
+                        By.xpath("//*[contains(normalize-space(.), '" + ticketTitle + "')]")
                 )
         );
 
@@ -208,7 +210,7 @@ class Sprint2Test extends BaseSeleniumIT{
 
 
         WebElement statutNouveauTicket = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(By.id("issue-card-statut-" + TITRE_TICKET))
+                ExpectedConditions.visibilityOfElementLocated(By.id("issue-card-statut-" + ticketTitle))
         );
 
         if(cocherCase){
@@ -232,31 +234,36 @@ class Sprint2Test extends BaseSeleniumIT{
         WebElement btnCreeCategorie = wait.until(
                 ExpectedConditions.elementToBeClickable(By.id(idBtnCreation))
         );
-        Actions actions = new Actions(driver);
-        actions.moveToElement(btnCreeCategorie).click().perform();
+
+        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", btnCreeCategorie);
 
         WebElement inputCategorieName = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(By.id(idInputName))
+                ExpectedConditions.elementToBeClickable(By.id(idInputName))
         );
 
-        WebElement inputCategorieSubject = driver.findElement(By.id(idInputSubject));
+        WebElement inputCategorieSubject = wait.until(
+                ExpectedConditions.elementToBeClickable(By.id(idInputSubject))
+        );
+
         inputCategorieSubject.sendKeys(SUBJECT_CATEGORIE);
 
         inputCategorieName.sendKeys(TITRE_CATEGORIE);
 
         if (!isTeacher) {
-            WebElement inputCategorieDescription = driver.findElement(By.id(idInputDesc));
+            WebElement inputCategorieDescription = wait.until(
+                    ExpectedConditions.elementToBeClickable(By.id(idInputDesc))
+            );
             inputCategorieDescription.sendKeys(DESCRIPTION);
         }
 
         WebElement btnValidate = wait.until(
                 ExpectedConditions.elementToBeClickable(By.id("validate-categorie"))
         );
-        btnValidate.click();
+        ((JavascriptExecutor) driver).executeScript("arguments[0].click();", btnValidate);
 
         WebElement nouvelleCategorie = wait.until(
                 ExpectedConditions.visibilityOfElementLocated(
-                        By.xpath("//*[contains(text(), '" + TITRE_CATEGORIE + "')]")
+                        By.xpath("//*[contains(text(), '" + SUBJECT_CATEGORIE + "')]")
                 )
         );
         Assertions.assertTrue(nouvelleCategorie.isDisplayed(), "La nouvelle catégorie n'apparaît pas dans la liste !");
@@ -286,7 +293,7 @@ class Sprint2Test extends BaseSeleniumIT{
 
     private void allerDansMessage(){
         WebElement statutNouveauTicket = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(By.id("issue-card-statut-" + TITRE_TICKET))
+                ExpectedConditions.visibilityOfElementLocated(By.id("issue-card-statut-" + ticketTitle))
         );
 
         statutNouveauTicket.click();
@@ -294,7 +301,7 @@ class Sprint2Test extends BaseSeleniumIT{
         WebElement title = wait.until(
                 ExpectedConditions.visibilityOfElementLocated(By.id("issue-title"))
         );
-        Assertions.assertEquals(TITRE_TICKET, title.getText().trim(), "tu es pas sur la page de message");
+        Assertions.assertEquals(ticketTitle, title.getText().trim(), "tu es pas sur la page de message");
     }
 
     private void envoyerMessage(){
@@ -315,7 +322,7 @@ class Sprint2Test extends BaseSeleniumIT{
         int choix = self ? 1 : 2;
 
         WebElement selectorTeacher = wait.until(
-                ExpectedConditions.elementToBeClickable(By.id("selector-assignation-teacher"))
+                ExpectedConditions.elementToBeClickable(By.cssSelector("[id^='selector-assignation-teacher-']"))
         );
         selectorTeacher.click();
 
@@ -324,7 +331,7 @@ class Sprint2Test extends BaseSeleniumIT{
         );
         options.get(choix).click();
 
-        WebElement btnAffecterManager = driver.findElement(By.id("btn-affecter-manager"));
+        WebElement btnAffecterManager = driver.findElement(By.cssSelector("[id^='btn-affecter-manager-']"));
         btnAffecterManager.click();
 
         WebElement btnConfirmAssignation = wait.until(
@@ -332,12 +339,11 @@ class Sprint2Test extends BaseSeleniumIT{
         );
         btnConfirmAssignation.click();
 
-        wait.until(ExpectedConditions.invisibilityOf(btnAffecterManager));
+        wait.until(ExpectedConditions.invisibilityOf(btnConfirmAssignation));
 
-        WebElement emptyAssignation = wait.until(
-                ExpectedConditions.visibilityOfElementLocated(By.id("empty-assignation"))
-        );
+        boolean isTicketRemoved = wait.until(ExpectedConditions.invisibilityOf(btnAffecterManager));
 
-        Assertions.assertEquals(EMPTY_ASSIGNATION, emptyAssignation.getText().trim(), "il y a encore des assignations");
+        Assertions.assertTrue(isTicketRemoved, "L'affectation n'a pas disparu de la liste après traitement.");
     }
+
 }
