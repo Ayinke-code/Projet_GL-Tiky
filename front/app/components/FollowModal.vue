@@ -1,7 +1,7 @@
 <template>
-  <Modal v-model:open="isOpen" title="Suivre cette issue">
+  <Modal v-model:open="isOpen" title="Suivre ce ticket">
 
-    <p class="text-gray-600 mb-4">Pourquoi voulez-vous suivre cette issue ?</p>
+    <p class="text-gray-600 mb-4">Pourquoi voulez-vous suivre ce ticket ?</p>
 
     <div class="flex flex-col gap-3">
       <button

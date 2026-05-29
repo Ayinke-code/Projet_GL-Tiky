@@ -135,7 +135,7 @@ const handleCreateIssue = async () => {
     await navigateTo('/issues')
 
   } catch (err) {
-    error.value = err?.data?.message || err?.message || 'Erreur création issue'
+    error.value = err?.data?.message || err?.message || 'Erreur création ticket'
   } finally {
     submitting.value = false
   }
