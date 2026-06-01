@@ -44,6 +44,11 @@ public class ConversationService {
     private final IssueRepository issueRepository;
     private final UserRepository userRepository;
 
+    // Constants to avoid magic numbers / strings
+    private static final int MAX_MESSAGE_LENGTH = 4000;
+    private static final String REPLY_TARGET_MUST_SAME_CONV = "Reply target must belong to the same conversation";
+    private static final String MISSING_ISSUE_ID = "Missing issue id in payload";
+
     /**
      * Résultat de l'envoi d'un message : payload REST, payload WebSocket et issue ciblée.
      */
@@ -161,7 +166,7 @@ public class ConversationService {
                     .orElseThrow(() -> new MessageNotFoundException(replyToMessageId));
 
             if (replyTo.getConversation() == null || !conversationId.equals(replyTo.getConversation().getId())) {
-                throw new IllegalArgumentException("Reply target must belong to the same conversation");
+                throw new IllegalArgumentException(REPLY_TARGET_MUST_SAME_CONV);
             }
 
             messageBuilder.replyTo(replyTo);
@@ -187,11 +192,11 @@ public class ConversationService {
                 .orElseThrow(() -> new UserNotFoundException(email));
 
         String content = payload.get(MapKeys.CONTENT);
-        if (content != null && content.length() > 4000) {
-            throw new MessageTooLongException(4000);
+        if (content != null && content.length() > MAX_MESSAGE_LENGTH) {
+            throw new MessageTooLongException(MAX_MESSAGE_LENGTH);
         }
 
-        Long issueId = Long.parseLong(payload.get(MapKeys.ISSUE_ID));
+        Long issueId = parseMandatoryLong(payload.get(MapKeys.ISSUE_ID));
         Long replyToMessageId = parseOptionalLong(payload.get(MapKeys.REPLY_TO_MESSAGE_ID));
         Message message = addMessageToConversation(conversationId, content, user, issueId, replyToMessageId);
 
@@ -308,5 +313,11 @@ public class ConversationService {
         }
         return Long.parseLong(value);
     }
-}
 
+    private Long parseMandatoryLong(String value) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(MISSING_ISSUE_ID);
+        }
+        return Long.parseLong(value);
+    }
+}

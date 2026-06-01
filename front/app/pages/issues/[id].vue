@@ -6,7 +6,7 @@
  * - gère les messages et conversations
  */
 
-import { ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import IssueMeetingProposal from "~/components/issues/meeting/IssueMeetingProposal.vue";
 import IssueMeetingDemand from "~/components/issues/meeting/IssueMeetingDemand.vue";
@@ -29,6 +29,7 @@ const newMessage = ref('')
 const replyingToMessage = ref(null)
 const sending = ref(false)
 const socket = ref(null)
+const conversationId = ref(null)
 
 const showFollowModal = ref(false)
 const alreadyFollowing = ref(false)
@@ -51,14 +52,21 @@ const connectWebSocket = () => {
   if (socket.value) socket.value.close()
 
   const config = useRuntimeConfig()
+  const apiBase = config.public.apiBase || ''
 
   const token = wsToken.value || localStorage.getItem('wsToken')
-  if (!token) return
+  if (!token || !conversationId.value) return
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const apiBase = config.public.apiBase
-  const host = apiBase.startsWith('/') ? window.location.host + apiBase : new URL(apiBase).host + new URL(apiBase).pathname
-  const wsUrl = `${protocol}//${host}/ws/issue?token=${token}&issueId=${issueId}`
+  const isRelativeBase = apiBase.startsWith('/')
+  const parsedBase = !isRelativeBase && apiBase ? new URL(apiBase) : null
+  const host = parsedBase?.host || window.location.host
+  const basePath = isRelativeBase
+    ? apiBase.replace(/\/$/, '')
+    : parsedBase?.pathname && parsedBase.pathname !== '/'
+      ? parsedBase.pathname.replace(/\/$/, '')
+      : ''
+  const wsUrl = `${protocol}//${host}${basePath}/ws/conversation?token=${token}&conversationId=${conversationId.value}`
 
   socket.value = new WebSocket(wsUrl)
 
@@ -70,6 +78,10 @@ const connectWebSocket = () => {
         if (!messages.value.find((m) => m.id === normalized.id)) {
           messages.value.push(normalized)
         }
+      } else if (data.type === 'privacy_update' && Number(data.issueId) === issueId) {
+        // Déclencher un check immédiat de l'accès
+        console.log('[WebSocket] Notification de changement de visibilité reçue')
+        checkAccess()
       }
     } catch (e) {
       console.error('Erreur WebSocket:', e)
@@ -95,9 +107,21 @@ onMounted(async () => {
   try {
     issue.value = await getIssueById(issueId)
     alreadyFollowing.value = await isFollowing(issueId)
-    await initializeConversation(issueId)
+    const conversation = await initializeConversation(issueId)
+    conversationId.value = conversation?.id ?? null
     messages.value = await getIssueMessages(issueId)
     connectWebSocket()
+
+    // Écouter les événements de synchronisation pour vérifier l'accès
+    if (process.client) {
+      window.addEventListener('issue-sync', checkAccess)
+    }
+
+    // Premier check d'accès au montage pour éviter de rester sur une page interdite
+    // si on y accède directement via l'URL
+    if (issue.value?.private) {
+      await checkAccess()
+    }
   } catch (err) {
     error.value = err?.message || 'Erreur de chargement'
   } finally {
@@ -106,10 +130,52 @@ onMounted(async () => {
 })
 
 /**
+ * Vérifie si l'utilisateur a toujours accès à l'issue
+ */
+const checkAccess = async () => {
+  // Si on est déjà en train de changer la visibilité, on évite le double check
+  // ou on attend que l'action en cours se termine.
+  // Mais ici, getIssueById est rapide.
+  try {
+    const updatedIssue = await getIssueById(issueId)
+
+    // Si l'issue est privée, on vérifie les droits
+    if (updatedIssue.private) {
+      const currentUserId = user?.value?.id
+      const hasAccess =
+        currentUserId === updatedIssue.createdId ||
+        currentUserId === updatedIssue.categoryManagerId ||
+        currentUserId === updatedIssue.categoryOwnerId
+
+      if (!hasAccess) {
+        console.warn('[Issue Detail] Accès révoqué, redirection...')
+        // On force un message d'erreur pour que l'utilisateur comprenne pourquoi il est redirigé
+        error.value = 'Vous n\'avez plus accès à ce ticket (passé en privé).'
+        setTimeout(async () => {
+          await navigateTo('/issues', { replace: true })
+        }, 2000)
+        return
+      }
+    }
+
+    // Mettre à jour l'issue locale si elle a changé (ex: statut changé par admin)
+    // Cela permet d'avoir l'UI à jour sans refresh
+    issue.value = updatedIssue
+  } catch (err) {
+    // Si l'API renvoie une erreur (403/404), on redirige
+    console.error('[Issue Detail] Erreur lors de la vérification d\'accès:', err)
+    await navigateTo('/issues', { replace: true })
+  }
+}
+
+/**
  * Nettoie la connexion WebSocket à la fermeture
  */
 onUnmounted(() => {
   socket.value?.close()
+  if (process.client) {
+    window.removeEventListener('issue-sync', checkAccess)
+  }
 })
 
 /**
@@ -119,10 +185,8 @@ const handleMarkResolved = async () => {
   try {
     await updateIssueStatus(issueId, 'TERMINE')
 
-    // mise à jour locale optimiste
-    if (issue.value) {
-      issue.value.status = 'TERMINE'
-    }
+    // On rafraîchit l'issue locale pour être sûr d'avoir les données à jour
+    issue.value = await getIssueById(issueId)
   } catch (err) {
     console.error(err)
   }
@@ -168,16 +232,24 @@ const isResolveModalOpen = ref(false)
 const isReopeningModalOpen = ref(false)
 const isVisibilityModalOpen = ref(false)
 
+const canTogglePrivacy = computed(() => {
+  const currentUserId = user?.value?.id
+  if (!currentUserId || !issue.value) return false
+
+  return currentUserId === issue.value.categoryOwnerId || currentUserId === issue.value.categoryManagerId
+})
+
 /**
  * Toggle visibilité (public / privé)
  */
 const toggleVisibility = async () => {
+  if (!canTogglePrivacy.value) return
+
   try {
     await updateIssuePrivacy(issueId)
 
-    if (issue.value) {
-      issue.value.private = !issue.value.private
-    }
+    // On rafraîchit l'issue locale pour être sûr d'avoir les données à jour
+    issue.value = await getIssueById(issueId)
   } catch (err) {
     console.error(err)
   }
@@ -315,7 +387,7 @@ const handleUnfollow = async () => {
                     <!--  -->
                     <!-- Privé/Public : TODO: Quand on aura les 'Issue Manager', on pourra bloquer ce bouton pour les autres -->
                     <!--  -->
-                    <button @click="isVisibilityModalOpen = true"
+                    <button v-if="canTogglePrivacy" @click="isVisibilityModalOpen = true"
                         class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors transition-transform duration-200 hover:scale-105 cursor-pointer"
                         :class="issue.private
                             ? 'border-blue-300 text-blue-600 bg-white hover:bg-blue-50'
@@ -487,7 +559,7 @@ const handleUnfollow = async () => {
 
     </div>
   </div>
-  <div v-if="isVisibilityModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+  <div v-if="isVisibilityModalOpen && canTogglePrivacy" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
        @click.self="isVisibilityModalOpen = false">
     <div
       class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">

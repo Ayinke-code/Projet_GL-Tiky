@@ -241,7 +241,6 @@ const loadData = async () => {
 
     history.value = Array.isArray(historyData) ? historyData : []
     teachers.value = Array.isArray(teachersData) ? teachersData : []
-    console.log(teachers.value)
 
   } catch (err) {
     console.error("Erreur lors du chargement des données :", err)

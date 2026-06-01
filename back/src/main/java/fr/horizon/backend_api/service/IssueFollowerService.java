@@ -100,17 +100,37 @@ public class IssueFollowerService {
 
     /**
      * Retourne la liste des issues ouvertes suivies par un utilisateur.
-     * Filtre les issues dont le statut n'est pas OUVERT.
+     * Filtre les issues dont le statut n'est pas OUVERT et vérifie les permissions d'accès.
+     * Supprime automatiquement l'utilisateur des followers des issues auxquelles il n'a plus accès.
      *
      * @param user utilisateur dont on veut récupérer les issues suivies
-     * @return liste des issues ouvertes suivies
+     * @return liste des issues ouvertes suivies et accessibles
      */
+    @Transactional
     public List<Issue> getFollowedIssues(User user) {
-        return issueFollowerRepository.findByUser(user)
-                .stream()
-                .map(IssueFollower::getIssue)
-                .filter(issue -> issue.getStatus() == IssueStatus.OUVERT)
-                .toList();
+        issueFollowerRepository.deleteInaccessibleFollowedIssuesByUser(user.getId());
+        return issueFollowerRepository.findAccessibleFollowedIssues(user.getId(), IssueStatus.OUVERT);
+    }
+
+
+
+    /**
+     * Nettoie les followers d'une issue : supprime tous les followers qui n'ont plus accès.
+     * Doit être appelée quand les permissions changent (ex: issue devient privée, manager Change, etc).
+     *
+     * @param issueId identifiant de l'issue
+     */
+    @Transactional
+    public void cleanupFollowersWithoutAccess(Long issueId) {
+        Issue issue = issueRepository.findById(issueId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, ISSUE_NOT_FOUND));
+        if (issue.isPrivate()) {
+            issueFollowerRepository.deleteInaccessibleFollowedIssuesByIssue(
+                issueId,
+                issue.getCreatedBy() != null ? issue.getCreatedBy().getId() : -1L
+            );
+        }
     }
 
     /**

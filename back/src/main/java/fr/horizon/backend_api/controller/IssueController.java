@@ -5,6 +5,8 @@ import fr.horizon.backend_api.service.IssueService;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.IssueFollower;
 import fr.horizon.backend_api.service.IssueFollowerService;
+import fr.horizon.backend_api.service.ConversationService;
+import fr.horizon.backend_api.websocket.ConversationWebSocketHandler;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -34,6 +36,12 @@ public class IssueController {
     /** Service métier des abonnements aux issues. */
     private final IssueFollowerService issueFollowerService;
 
+    /** Service des conversations. */
+    private final ConversationService conversationService;
+
+    /** Handler WebSocket pour les notifications. */
+    private final ConversationWebSocketHandler conversationWebSocketHandler;
+
     /**
      * Récupère toutes les issues.
      *
@@ -41,8 +49,8 @@ public class IssueController {
      */
     @PreAuthorize("isAuthenticated()")
     @GetMapping
-    public List<IssueDto> getAllIssues() {
-        return issueService.findAll();
+    public List<IssueDto> getAllIssues(Authentication authentication) {
+        return issueService.findAll(authentication.getName());
     }
 
     /**
@@ -53,8 +61,8 @@ public class IssueController {
      */
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
-    public IssueDto getIssueById(@PathVariable Long id) {
-        return issueService.findById(id);
+    public IssueDto getIssueById(@PathVariable Long id, Authentication authentication) {
+        return issueService.findById(id, authentication.getName());
     }
 
     /**
@@ -86,26 +94,68 @@ public class IssueController {
         issueService.updateStatus(status, id);
     }
 
-    /**
-     * Inverse la visibilité privée d'une issue.
-     *
-     * @param id identifiant de l'issue
-     */
-    @PreAuthorize("isAuthenticated()")
-    @PostMapping("/{id}/update-private")
-    public void updatePrivacy(@PathVariable Long id) {
-        issueService.updatePrivacy(id);
-    }
+     /**
+      * Inverse la visibilité privée d'une issue.
+      * Après la mise à jour, retourne la liste des issues suivies mises à jour
+      * pour éviter de devoir refresh la page.
+      *
+      * @param id identifiant de l'issue
+      * @param authentication contexte d'authentification Spring Security
+      * @return liste des issues suivies mises à jour
+      */
+     @PreAuthorize("isAuthenticated()")
+     @PostMapping("/{id}/update-private")
+     public ResponseEntity<List<IssueDto>> updatePrivacy(@PathVariable Long id, Authentication authentication) {
+         issueService.updatePrivacy(id, authentication.getName());
+
+         // Diffusion d'une notification via WebSocket pour forcer le refresh/redirection chez les clients
+         conversationService.getConversationByIssueId(id).ifPresent(conv -> {
+             String payload = "{\"type\":\"privacy_update\",\"issueId\":" + id + "}";
+             conversationWebSocketHandler.broadcastToConversation(conv.getId(), payload);
+         });
+
+         User user = issueFollowerService.getUserByEmail(authentication.getName());
+         List<IssueDto> updatedFollowedIssues = issueFollowerService.getFollowedIssues(user)
+                 .stream()
+                 .map(this::convertToDto)
+                 .toList();
+         return ResponseEntity.ok(updatedFollowedIssues);
+     }
+     
+     /**
+      * Convertit une Issue en IssueDto.
+      * Utilitaire pour éviter la dépendance circulaire.
+      */
+     private IssueDto convertToDto(fr.horizon.backend_api.model.Issue issue) {
+         User manager = issue.getManager();
+         return IssueDto.builder()
+                 .id(issue.getId())
+                 .title(issue.getTitle())
+                 .description(issue.getDescription())
+                 .status(issue.getStatus())
+                 .isPrivate(issue.isPrivate())
+                 .categoryId(issue.getCategory().getId())
+                 .categoryName(issue.getCategory().getName())
+                 .categoryOwnerId(issue.getCategory().getOwner().getId())
+                 .categoryOwnerName(issue.getCategory().getOwner().getName())
+                 .categoryManagerId(manager != null ? manager.getId() : null)
+                 .categoryManagerName(manager != null ? manager.getName() : null)
+                 .createdId(issue.getCreatedBy().getId())
+                 .createdName(issue.getCreatedBy().getName())
+                 .createdAt(issue.getCreatedAt())
+                 .updatedAt(issue.getUpdatedAt())
+                 .build();
+     }
 
     /**
      * Supprime une issue par son identifiant.
      *
      * @param id identifiant de l'issue
      */
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}")
-    public void deleteIssue(@PathVariable Long id) {
-        issueService.deleteById(id);
+    public void deleteIssue(@PathVariable Long id, Authentication authentication) {
+        issueService.deleteById(id, authentication.getName());
     }
 
     /**
@@ -226,8 +276,8 @@ public class IssueController {
      * @return l'issue sous forme de DTO
      */
     @GetMapping("dto/{id}")
-    public ResponseEntity<IssueDto> getIssueDTOById(@PathVariable Long id) {
-        return ResponseEntity.ok(issueService.getIssueDTOById(id));
+    public ResponseEntity<IssueDto> getIssueDTOById(@PathVariable Long id, Authentication authentication) {
+        return ResponseEntity.ok(issueService.getIssueDTOById(id, authentication.getName()));
     }
 
     /**
@@ -261,13 +311,24 @@ public class IssueController {
      */
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/follow")
-    public ResponseEntity<IssueFollower> followIssue(
+    public ResponseEntity<FollowerDto> followIssue(
             @PathVariable Long id,
             @RequestParam String reason,
             Authentication auth) {
         User user = issueFollowerService.getUserByEmail(auth.getName());
+        IssueFollower follower = issueFollowerService.followIssue(id, reason, user);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(issueFollowerService.followIssue(id, reason, user));
+                .body(convertToFollowerDto(follower));
+    }
+
+    private FollowerDto convertToFollowerDto(IssueFollower follower) {
+        return FollowerDto.builder()
+                .id(follower.getId())
+                .reason(follower.getReason())
+                .issueId(follower.getIssue().getId())
+                .userId(follower.getUser().getId())
+                .userName(follower.getUser().getName())
+                .build();
     }
 
     /**

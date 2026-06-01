@@ -2,7 +2,7 @@
     <div class="p-8">
         <div class="flex justify-between items-center mb-8">
             <h1 class="text-3xl font-bold text-black">Tickets</h1>
-            <UButton id= "btn-create-issue" to="/issues/create" icon="i-lucide-plus" size="lg">
+            <UButton to="/issues/create" icon="i-lucide-plus" size="lg">
                 Créer un ticket
             </UButton>
         </div>
@@ -71,6 +71,7 @@
                             <div class="overflow-visible p-2">
                                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                     <IssuesCard v-for="issue in group.issues" :key="issue.id" :issue="issue"
+                                        :show-delete="canDeleteIssue(issue)"
                                         @delete="deleteValidation" />
                                 </div>
                             </div>
@@ -136,13 +137,31 @@ import AssignationTeacher from '~/components/assignation/AssignationTeacher.vue'
 import IncompleteIssuesList from '~/components/layout/IncompleteIssuesList.vue'
 
 const { ready, user } = useAuth()
-const { issues,getDisplayableIssues ,fetchIssues, deleteIssue, error } = useIssues()
+const { issues, getDisplayableIssues, fetchIssues, deleteIssue, error } = useIssues()
+const { refreshFollowedIssues } = useFollowedIssuesState()
 
 /**
  * State UI
  */
 const loading = ref(true)
-const updatingStatusId = ref(null)
+
+onMounted(async () => {
+    if (ready && !user?.value?.id) {
+        await navigateTo('/login')
+        return
+    }
+
+    try {
+        await Promise.all([
+            fetchIssues(),
+            refreshFollowedIssues()
+        ])
+    } catch (err) {
+        console.error(err)
+    } finally {
+        loading.value = false
+    }
+})
 
 /**
  * Issue en cours de suppression (null = aucune)
@@ -153,22 +172,6 @@ const deletingIssue = ref(null)
  * ouverture modal suppression
  */
 const isDeleteValidateModalOpen = ref(false)
-
-// TODO: Refaire le popover pour changé de status
-// const handleStatusChange = async (id, newStatus) => {
-//   updatingStatusId.value = id
-//   try {
-//     const updatedIssue = await updateIssueStatus(id, newStatus)
-//     const issueIndex = issues.value.findIndex(i => i.id === id)
-//     if (issueIndex !== -1) {
-//       issues.value[issueIndex].statut = updatedIssue.statut
-//     }
-//   } catch (err) {
-//     error.value = err.message || 'Erreur lors de la mise à jour du statut'
-//   } finally {
-//     updatingStatusId.value = null
-//   }
-// }
 
 // Issues appartenant à l’utilisateur connecté
 // Filtre sur le champ categoryOwnerId
@@ -225,6 +228,15 @@ const otherIssuesByCategory = computed(() => {
         return groups
     }, {})
 })
+
+const canDeleteIssue = (issue) => {
+    const currentUserId = user.value?.id
+    if (!currentUserId || !issue) return false
+
+    return currentUserId === issue.createdId
+        || currentUserId === issue.categoryOwnerId
+        || currentUserId === issue.categoryManagerId
+}
 
 /**
  * Ouvre modal suppression
