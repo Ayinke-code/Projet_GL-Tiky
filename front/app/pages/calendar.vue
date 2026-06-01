@@ -1,242 +1,271 @@
 <template>
-    <div class="p-4 relative">
-        <ClientOnly>
-            <!-- Calendrier -->
-        <FullCalendar 
-                :key="mappedEvents.length" 
-                :options="calendarOptions" 
-            />
-        </ClientOnly>
+  <div class="p-6 bg-gray-50 min-h-screen relative overflow-x-hidden">
 
-        <!-- POPUP FLOTTANT (Glassmorphism & Draggable) -->
-        <transition name="pop">
-            <div 
-                v-if="selectedEvent" 
-                ref="popupRef"
-                :style="style"
-                class="fixed z-50 w-[400px] rounded-2xl bg-white/70 backdrop-blur-xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden flex flex-col"
-            >
-                <!-- Zone de déplacement (En-tête du popup) -->
-                <div class="px-6 py-4 border-b border-white/40 cursor-move flex justify-between items-center bg-white/30 hover:bg-white/40 transition-colors">
-                    <h2 class="text-xl font-bold text-gray-800 select-none truncate pr-4">
-                        {{ selectedEvent.title }}
-                    </h2>
-                    
-                    <!-- Bouton fermer -->
-                    <UButton
-                        color="gray"
-                        variant="ghost"
-                        icon="i-heroicons-x-mark-20-solid"
-                        class="cursor-pointer pointer-events-auto shrink-0"
-                        @click="selectedEvent = null"
-                    />
-                </div>
-                
-                <!-- Contenu du popup -->
-                <div class="p-6 space-y-5">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <span class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Statut</span>
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {{ selectedEvent.statut || 'N/A' }}
-                            </span>
-                        </div>
-                    </div>
+    <div
+      v-if="isDetailOpen"
+      class="fixed z-50 select-none shadow-2xl rounded-xl border border-slate-200 bg-white w-96 transition-shadow dynamic-window"
+      :style="{ left: windowPos.x + 'px', top: windowPos.y + 'px' }"
+    >
+      <div
+        @mousedown="startDrag"
+        class="bg-slate-50 border-b border-slate-100 px-4 py-3 cursor-move flex justify-between items-center rounded-t-xl drag-handle"
+      >
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+          <span class="i-lucide-move w-3.5 h-3.5 text-slate-400"></span>
+          Détails de l'événement
+        </span>
+        <button
+          @click="isDetailOpen = false"
+          class="text-slate-400 hover:text-slate-600 transition-colors"
+        >
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
 
-                    <div>
-                        <span class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Description</span>
-                        <p class="text-sm text-gray-600 leading-relaxed">{{ selectedEvent.description || 'Aucune description fournie.' }}</p>
-                    </div>
-
-                    <div class="pt-4 border-t border-gray-200/50 space-y-3">
-                        <div class="flex items-center space-x-3">
-                            <UIcon name="i-heroicons-calendar" class="text-gray-400 w-5 h-5" />
-                            <div>
-                                <span class="block text-[10px] font-bold uppercase text-gray-400">Début</span>
-                                <p class="text-sm text-gray-700 font-medium">{{ formatDate(selectedEvent.start) }}</p>
-                            </div>
-                        </div>
-
-                        <div v-if="selectedEvent.end" class="flex items-center space-x-3">
-                            <UIcon name="i-heroicons-clock" class="text-gray-400 w-5 h-5" />
-                            <div>
-                                <span class="block text-[10px] font-bold uppercase text-gray-400">Fin</span>
-                                <p class="text-sm text-gray-700 font-medium">{{ formatDate(selectedEvent.end) }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </transition>
+      <EventCardCalendar
+        :event="selectedEvent"
+        @close="isDetailOpen = false"
+      />
     </div>
+
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Mon Calendrier</h1>
+      <p class="text-slate-500 italic">Retrouvez vos soutenances, audits et rendez-vous ticket.</p>
+    </div>
+
+    <ClientOnly>
+      <div class="calendar-wrapper shadow-sm border border-slate-200 rounded-xl overflow-hidden bg-white">
+        <FullCalendar
+          :key="mappedEvents.length"
+          :options="calendarOptions"
+        />
+      </div>
+    </ClientOnly>
+  </div>
 </template>
 
 <script setup>
-/**
- * @file Composant de Calendrier Interactif
- * @description Affiche un calendrier via FullCalendar avec un système de popup 
- * flottante et déplaçable (Drag & Drop) pour afficher les détails des événements.
- */
+import { ref, computed, onMounted, reactive } from 'vue'
+import EventCardCalendar from "~/components/events/EventCardCalendar.vue"
 
-import { computed, onMounted, reactive, ref } from 'vue' 
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
-import multiMonthPlugin from '@fullcalendar/multimonth'
+import frLocale from '@fullcalendar/core/locales/fr'
 import { useEvents } from '../composables/useEvents'
-import { useDraggable } from '@vueuse/core'
 
-/**
- * Extraction de l'état et des méthodes depuis le composable `useEvents`.
- * @type {Object}
- * @property {import('vue').Ref<Array>} events - Liste brute des événements récupérés.
- * @property {Function} fetchEvents - Méthode pour charger les événements depuis l'API.
- */
-const { events, fetchEvents } = useEvents()
+const { events, fetchCalendarEvents } = useEvents()
 
-/**
- * L'événement actuellement sélectionné pour affichage dans la popup.
- * @type {import('vue').Ref<Object|null>}
- */
+const isDetailOpen = ref(false)
 const selectedEvent = ref(null)
 
-/**
- * Référence au conteneur DOM de la popup pour la fonctionnalité de glisser-déposer.
- * @type {import('vue').Ref<HTMLElement|null>}
- */
-const popupRef = ref(null)
+const windowPos = ref({ x: 100, y: 150 })
+let dragOffset = { x: 0, y: 0 }
 
-/**
- * Configuration du glisser-déposer de la popup via VueUse.
- * @type {Object}
- * @property {import('vue').Ref<number>} x - Coordonnée X de la popup.
- * @property {import('vue').Ref<number>} y - Coordonnée Y de la popup.
- * @property {import('vue').ComputedRef<string>} style - Objet de style CSS généré automatiquement (left, top).
- */
-const { x, y, style } = useDraggable(popupRef, {
-  initialValue: { x: 0, y: 0 },
-  preventWindowScroll: true
-})
+const startDrag = (e) => {
+  const isTouch = e.type.includes('touch')
+  const clientX = isTouch ? e.touches[0].clientX : e.clientX
+  const clientY = isTouch ? e.touches[0].clientY : e.clientY
 
-/**
- * Formate une date en chaîne de caractères lisible en français.
- * @param {string|Date} date - La date à formater.
- * @returns {string} La date formatée (ex: "15 janvier 2024 à 10:00") ou une chaîne vide si aucune date n'est fournie.
- */
-const formatDate = (date) => {
-    if (!date) return ''
-    return new Date(date).toLocaleString('fr-FR', {
-        dateStyle: 'long',
-        timeStyle: 'short'
-    })
+  dragOffset.x = clientX - windowPos.value.x
+  dragOffset.y = clientY - windowPos.value.y
+
+  if (isTouch) {
+    window.addEventListener('touchmove', onDrag, { passive: false })
+    window.addEventListener('touchend', stopDrag)
+  } else {
+    window.addEventListener('mousemove', onDrag)
+    window.addEventListener('mouseup', stopDrag)
+  }
 }
 
-/**
- * Propriété calculée transformant les événements bruts au format requis par FullCalendar.
- * Assure notamment le bon formatage des dates et l'injection des données étendues (extendedProps).
- * @type {import('vue').ComputedRef<Array<Object>>}
- */
+const onDrag = (e) => {
+  const isTouch = e.type.includes('touch')
+  if (isTouch) e.preventDefault()
+
+  const clientX = isTouch ? e.touches[0].clientX : e.clientX
+  const clientY = isTouch ? e.touches[0].clientY : e.clientY
+
+  let newX = clientX - dragOffset.x
+  let newY = clientY - dragOffset.y
+
+  const maxX = window.innerWidth - 384
+  const maxY = window.innerHeight - 80
+
+  windowPos.value = {
+    x: Math.max(0, Math.min(newX, maxX)),
+    y: Math.max(0, Math.min(newY, maxY))
+  }
+}
+
+const stopDrag = () => {
+  window.removeEventListener('mousemove', onDrag)
+  window.removeEventListener('mouseup', stopDrag)
+  window.removeEventListener('touchmove', onDrag)
+  window.removeEventListener('touchend', stopDrag)
+}
+
 const mappedEvents = computed(() => {
-    return events.value.map(evt => {
-        /**
-         * Formate la chaîne de date pour être compatible avec la norme ISO 8601 attendue par FullCalendar.
-         * @param {string} dateStr - Chaîne de date brute (ex: "2024-01-01 10:00:00.000").
-         * @returns {string|null} Chaîne formatée (ex: "2024-01-01T10:00:00").
-         */
-        const formatPath = (dateStr) => {
-            if (!dateStr) return null;
-            return dateStr.replace(' ', 'T').split('.')[0];
-        };
+  return events.value.map(evt => {
+    let color = '#64748b' // slate-500 par défaut
 
-        return {
-            id: String(evt.id), // evt.id au lieu de evt.id_evt
-            title: evt.name,    // evt.name au lieu de evt.title
-            start: evt.startDate, // direct si format ISO (sinon garde ton formatPath)
-            end: evt.endDate,     // evt.endDate au lieu de evt.end
-            color: colors[evt.categoryType] || '#3b82f6',
-            extendedProps: {
-                description: evt.description,
-                statut: evt.statut
-            }
-        };
-    });
-});
+    if (evt.categoryType === 'AUDIT') color = '#6366f1'   // indigo-500
+    if (evt.categoryType === 'DEFENSE') color = '#10b981' // emerald-500
+    if (evt.categoryType === 'MEETING') color = '#f59e0b' // amber-500
+    if (evt.categoryType === 'ISSUE') color = '#f43f5e'   // rose-500
 
-/**
- * Configuration réactive de l'instance FullCalendar.
- * Contient les plugins chargés, les vues, les données et les écouteurs d'événements.
- * @type {Object}
- */
-const calendarOptions = reactive({
-    plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin, multiMonthPlugin],
-    events: mappedEvents, 
-    initialView: 'dayGridMonth',
-    headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,listWeek'
-    },
-    
-    /**
-     * Déclencheur lors du clic sur un événement dans le calendrier.
-     * Positionne dynamiquement la popup à côté du curseur de la souris et hydrate ses données.
-     * @param {Object} info - Objet natif FullCalendar contenant les informations de l'événement cliqué.
-     */
-    eventClick: (info) => {
-        x.value = info.jsEvent.clientX + 20
-        y.value = info.jsEvent.clientY + 20
-
-        selectedEvent.value = {
-            title: info.event.title,
-            start: info.event.start,
-            end: info.event.end,
-            ...info.event.extendedProps
-        }
+    return {
+      id: String(evt.id),
+      title: evt.name,
+      start: evt.startDate?.replace(' ', 'T'),
+      end: evt.endDate?.replace(' ', 'T'),
+      backgroundColor: color,
+      borderColor: 'transparent',
+      extendedProps: {
+        description: evt.description,
+        type: evt.categoryType,
+        creator: evt.createdBy,
+        groups: evt.projectGroups
+      }
     }
+  })
 })
 
-/**
- * Hook du cycle de vie déclenché au montage du composant.
- * Appelle l'API pour récupérer la liste initiale des événements.
- */
-onMounted(async () => {
-    try { 
-        await fetchEvents() 
-    } catch (e) { 
-        console.error("Erreur lors de la récupération des événements du calendrier :", e) 
+const calendarOptions = reactive({
+  plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
+  initialView: 'dayGridMonth',
+  locale: frLocale,
+  events: mappedEvents,
+  allDaySlot: false,
+  slotMinTime: '06:00:00',
+  slotMaxTime: '22:00:00',
+  slotDuration: '02:00:00',
+  contentHeight: 'auto',
+  eventDisplay: 'block',
+  displayEventTime: false,
+  headerToolbar: {
+    left: 'prev,next today',
+    center: 'title',
+    right: 'dayGridMonth,timeGridWeek,listWeek'
+  },
+  buttonText: {
+    today: "Aujourd'hui",
+    month: "Mois",
+    week: "Semaine",
+    list: "Planning"
+  },
+  eventClick: (info) => {
+    selectedEvent.value = info.event
+    if (typeof window !== 'undefined') {
+      windowPos.value = {
+        x: (window.innerWidth / 2) - (384 / 2),
+        y: (window.innerHeight / 2) - 200
+      }
     }
+    isDetailOpen.value = true
+  },
+  editable: false,
+  selectable: true,
+  dayMaxEvents: true,
+})
+
+onMounted(async () => {
+  await fetchCalendarEvents()
 })
 </script>
 
 <style scoped>
-/* Styles de FullCalendar et animations du composant omis pour des raisons de concision mais identiques à l'original */
-.fc {
-    max-width: 1100px;
-    margin: 0 auto;
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    color: black;
+.calendar-wrapper {
+  background: #ffffff;
+  margin: 0 auto;
 }
 
-/* Animation d'apparition chic façon "Pop" */
-.pop-enter-active, .pop-leave-active {
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+/* On s'assure que la fenêtre dynamique possède une ombre marquée pour ressortir du blanc */
+.dynamic-window {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
-.pop-enter-from, .pop-leave-to {
-    opacity: 0;
-    transform: scale(0.9) translateY(10px);
+
+:deep(.fc) {
+  --fc-border-color: #e2e8f0;
+  --fc-daygrid-event-dot-width: 8px;
+  --fc-today-bg-color: #eef2ff;
+  background: #ffffff;
+  color: #334155;
+  font-family: inherit;
+  padding: 1.5rem;
+}
+
+:deep(.fc-header-toolbar) {
+  margin-bottom: 2rem !important;
+}
+
+:deep(.fc-toolbar-title) {
+  font-size: 1.25rem !important;
+  font-weight: 700;
+  color: #0f172a;
+  text-transform: capitalize;
+}
+
+:deep(.fc-button) {
+  background-color: #ffffff !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1 !important;
+  font-weight: 600 !important;
+  text-transform: capitalize !important;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+:deep(.fc-button-active) {
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+  border-color: #4f46e5 !important;
+}
+
+:deep(.fc-button:hover:not(.fc-button-active)) {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+:deep(.fc-col-header-cell) {
+  padding: 12px 0 !important;
+  background: #f8fafc;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+:deep(.fc-daygrid-day-number) {
+  color: #475569 !important;
+  padding: 8px !important;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+:deep(.fc-day-today .fc-daygrid-day-number) {
+  color: #4f46e5 !important;
+  font-weight: 800;
 }
 
 :deep(.fc-event) {
-    border: none !important;
-    cursor: pointer;
-    transition: filter 0.2s;
+  border-radius: 6px !important;
+  padding: 2px 6px !important;
+  font-size: 0.8rem !important;
+  border: none !important;
+  cursor: pointer;
 }
 
-:deep(.fc-event:hover) {
-    filter: brightness(90%);
+:deep(.fc-list-day-cushion) {
+  background: #f8fafc !important;
+  color: #334155 !important;
+  font-weight: 600 !important;
+}
+
+:deep(.fc-timegrid-slot) {
+  height: 50px !important;
 }
 </style>
