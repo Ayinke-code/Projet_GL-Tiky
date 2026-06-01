@@ -36,7 +36,7 @@
     </div>
 
     <!-- FOOTER -->
-      <div class="flex justify-end">
+      <div v-if="showDelete" class="flex justify-end">
         <UButton
           v-if="
             user?.id === issue?.createdId ||
@@ -57,7 +57,8 @@
 <script setup>
 const props = defineProps({
   issue: Object,
-  updatingStatusId: Number
+  updatingStatusId: Number,
+  showDelete: { type: Boolean, default: false }
 })
 
 const { user } = useAuth()

@@ -4,6 +4,7 @@ import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.IssueFollower;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.enums.FollowedReason;
 import fr.horizon.backend_api.repository.IssueFollowerRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
@@ -170,14 +171,106 @@ class IssueFollowerServiceTest {
     /** Vérifie que getFollowedIssues retourne bien la liste des issues suivies */
     @Test
     void getFollowedIssues_returnsList() {
-        IssueFollower follower = new IssueFollower();
-        follower.setIssue(issue);
-
-        when(issueFollowerRepository.findByUser(user)).thenReturn(List.of(follower));
+        when(issueFollowerRepository.deleteInaccessibleFollowedIssuesByUser(1L))
+                .thenReturn(0);
+        when(issueFollowerRepository.findAccessibleFollowedIssues(1L, IssueStatus.OUVERT))
+                .thenReturn(List.of(issue));
 
         List<Issue> result = issueFollowerService.getFollowedIssues(user);
 
         assertEquals(1, result.size());
         assertEquals(issue, result.get(0));
+    }
+
+    /** Vérifie que getFollowedIssues retire automatiquement les followers sans accès à une issue privée */
+    @Test
+    void getFollowedIssues_removeFollowerWithoutAccessToPrivateIssue() {
+        // Setup issue with category
+        Category category = new Category();
+        User otherUser = new User();
+        otherUser.setId(999L);
+        otherUser.setName("Other User");
+
+        // Issue privée
+        issue.setPrivate(true);
+        issue.setCreatedBy(otherUser);
+        issue.setManager(otherUser);
+        category.setOwner(otherUser);
+        issue.setCategory(category);
+
+        // L'utilisateur courant (user) ne l'a pas créée et n'est pas manager
+            when(issueFollowerRepository.deleteInaccessibleFollowedIssuesByUser(1L))
+                .thenReturn(1);
+        when(issueFollowerRepository.findAccessibleFollowedIssues(1L, IssueStatus.OUVERT))
+                .thenReturn(List.of());
+
+        List<Issue> result = issueFollowerService.getFollowedIssues(user);
+
+        // L'issue ne doit pas être retournée
+        assertTrue(result.isEmpty());
+        // Le follower doit être supprimé via la requête de purge
+        verify(issueFollowerRepository).deleteInaccessibleFollowedIssuesByUser(1L);
+    }
+
+    /** Vérifie que cleanupFollowersWithoutAccess supprime bien les followers sans droits */
+    @Test
+    void cleanupFollowersWithoutAccess_removeRestrictedFollowers() {
+        // Setup
+        Category category = new Category();
+        User creator = new User();
+        creator.setId(100L);
+        User manager = new User();
+        manager.setId(200L);
+        User categoryOwner = new User();
+        categoryOwner.setId(300L);
+        User otherUser = new User();
+        otherUser.setId(999L);
+
+        // Issue privée
+        issue.setPrivate(true);
+        issue.setCreatedBy(creator);
+        issue.setManager(manager);
+        category.setOwner(categoryOwner);
+        issue.setCategory(category);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(issueFollowerRepository.deleteInaccessibleFollowedIssuesByIssue(1L, 100L))
+                .thenReturn(1);
+
+        issueFollowerService.cleanupFollowersWithoutAccess(1L);
+
+        // La purge doit se faire via la requête dédiée
+        verify(issueFollowerRepository).deleteInaccessibleFollowedIssuesByIssue(1L, 100L);
+    }
+
+    @Test
+    void cleanupFollowersWithoutAccess_issueNotFound_throwsNotFound() {
+        when(issueRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResponseStatusException.class, () -> issueFollowerService.cleanupFollowersWithoutAccess(99L));
+    }
+
+    @Test
+    void cleanupFollowersWithoutAccess_publicIssue_doesNothing() {
+        Issue publicIssue = new Issue();
+        publicIssue.setId(1L);
+        publicIssue.setPrivate(false);
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(publicIssue));
+
+        issueFollowerService.cleanupFollowersWithoutAccess(1L);
+
+        verify(issueFollowerRepository, never()).deleteInaccessibleFollowedIssuesByIssue(anyLong(), anyLong());
+    }
+
+    @Test
+    void getFollowers_returnsInfoList() {
+        User followerUser = new User();
+        followerUser.setId(1L);
+        followerUser.setName("John");
+        when(issueFollowerRepository.findUsersByIssueId(1L)).thenReturn(List.of(followerUser));
+
+        var result = issueFollowerService.getFollowers(1L);
+
+        assertFalse(result.isEmpty());
+        assertEquals("John", result.get(0).getName());
     }
 }

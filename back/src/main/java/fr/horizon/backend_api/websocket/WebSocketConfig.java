@@ -9,15 +9,15 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @EnableWebSocket
 public class WebSocketConfig implements WebSocketConfigurer {
 
-    private final IssueWebSocketHandler issueWebSocketHandler;
+    private final ConversationWebSocketHandler conversationWebSocketHandler;
 
-    public WebSocketConfig(IssueWebSocketHandler issueWebSocketHandler) {
-        this.issueWebSocketHandler = issueWebSocketHandler;
+    public WebSocketConfig(ConversationWebSocketHandler conversationWebSocketHandler) {
+        this.conversationWebSocketHandler = conversationWebSocketHandler;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(issueWebSocketHandler, "/ws/issue")
+        registry.addHandler(conversationWebSocketHandler, "/ws/conversation")
                 .setAllowedOrigins("*");
     }
 }
