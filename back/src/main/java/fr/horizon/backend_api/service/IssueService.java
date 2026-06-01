@@ -2,10 +2,7 @@ package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.exception.IssueNotFoundException;
-import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.Issue;
-import fr.horizon.backend_api.model.RequestManager;
-import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.dto.RequestManagerDto;
@@ -43,10 +40,7 @@ public class IssueService {
     private final RequestManagerRepository requestManagerRepository;
     private final IssueFollowerRepository issueFollowerRepository;
 
-    private final IssueFollowerService issueFollowerService;
-
-    static final String IS_MANAGER = String.valueOf(FollowedReason.valueOf("IS_MANAGER"));
-
+    private static final String OWNER_NF = "Owner not found";
     /**
      * Retourne la liste de toutes les issues.
      *
@@ -88,7 +82,7 @@ public class IssueService {
     public IssueDto createIssue(IssueCreateDto dto, String email) {
 
         User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
+                .orElseThrow(() -> new EntityNotFoundException(OWNER_NF));
 
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));
@@ -190,7 +184,7 @@ public class IssueService {
                 .orElseThrow(() -> new IssueNotFoundException(id));
 
         User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
+                .orElseThrow(() -> new EntityNotFoundException(OWNER_NF));
 
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));
@@ -295,7 +289,16 @@ public class IssueService {
 
         if (targetedUser.getId().equals(issue.getCategory().getOwner().getId())) {
             issue.setManager(targetedUser);
-            issueFollowerService.followIssue(requestManager.getIssue().getId(), IS_MANAGER, requestManager.getTargetTeacher());
+
+            if (!issueFollowerRepository.existsByUserAndIssue(targetedUser, issue)) {
+                IssueFollower follower = IssueFollower.builder()
+                        .issue(issue)
+                        .user(targetedUser)
+                        .reason(FollowedReason.IS_MANAGER)
+                        .build();
+                issueFollowerRepository.save(follower);
+            }
+
             requestManager.setProcessingDate(LocalDateTime.now());
             initialStatus = RequestManagerStatus.ACCEPTED;
             issue.setStatus(IssueStatus.OUVERT);
@@ -323,19 +326,32 @@ public class IssueService {
             throw new IllegalStateException("Vous n'êtes pas autorisé à répondre à cette demande");
         }
 
+        Issue issue = requestManager.getIssue();
+        User teacher = requestManager.getTargetTeacher();
+
         requestManager.setProcessingDate(LocalDateTime.now());
 
         if (response) {
             requestManager.setStatus(RequestManagerStatus.ACCEPTED);
-            requestManager.getIssue().setManager(requestManager.getTargetTeacher());
-            issueFollowerService.followIssue(requestManager.getIssue().getId(), IS_MANAGER, requestManager.getTargetTeacher());
-            requestManager.getIssue().setStatus(IssueStatus.OUVERT);
+            issue.setManager(teacher);
+            issue.setStatus(IssueStatus.OUVERT);
+
+            if (!issueFollowerRepository.existsByUserAndIssue(teacher, issue)) {
+                IssueFollower follower = IssueFollower.builder()
+                        .issue(issue)
+                        .user(teacher)
+                        .reason(FollowedReason.IS_MANAGER)
+                        .build();
+                issueFollowerRepository.save(follower);
+            }
+
         } else {
             requestManager.setStatus(RequestManagerStatus.DENIED);
-            createRequestManager(requestManager.getIssue());
+            createRequestManager(issue);
         }
 
-        issueRepository.save(requestManager.getIssue());
+        issueRepository.save(issue);
+        requestManagerRepository.save(requestManager);
         return toDto(requestManager);
     }
 
@@ -456,7 +472,7 @@ public class IssueService {
      */
     public List<IssueDto> getAllDisplayableIssue(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
+                .orElseThrow(() -> new EntityNotFoundException(OWNER_NF));
 
         List<IssueStatus> openStatuses = List.of(IssueStatus.OUVERT);
 

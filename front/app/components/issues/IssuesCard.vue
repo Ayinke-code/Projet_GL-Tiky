@@ -38,6 +38,11 @@
     <!-- FOOTER -->
       <div class="flex justify-end">
         <UButton
+          v-if="
+            user?.id === issue?.createdId ||
+            user?.id === issue?.categoryOwnerId ||
+            user?.id === issue?.categoryManagerId
+          "
           @click.stop="emit('delete', issue)"
           variant="ghost"
           size="xs"
@@ -54,6 +59,8 @@ const props = defineProps({
   issue: Object,
   updatingStatusId: Number
 })
+
+const { user } = useAuth()
 
 /**
  * Labels statuts
