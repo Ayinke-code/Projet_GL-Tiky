@@ -1,4 +1,5 @@
 package fr.horizon.backend_api.controller;
+
 import fr.horizon.backend_api.model.dto.*;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.service.EventService;
@@ -7,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 import java.util.Set;
 
@@ -16,64 +18,12 @@ import java.util.Set;
 /**
  * Contrôleur REST de gestion des événements académiques.
  * <p>
- * Expose les endpoints permettant de créer un événement et de
- * lister les événements par type (AUDIT ou DEFENSE).
- * <p>
  * La création est réservée aux utilisateurs ayant le rôle TEACHER ou ADMIN.
  */
 public class EventController {
+
     private final EventService eventService;
 
-    @Autowired
-    private EventRepository repository;
-
-    // Récupérer tous les événements (ou filtrer par mois idéalement)
-    @GetMapping
-    public List<Event> getAllEvents() {
-        return repository.findAll();
-    }
-
-    // Ajouter un événement
-    /**
-     * Crée un nouvel événement académique.
-     * <p>
-     * L’email de l’utilisateur connecté est extrait du contexte
-     * d’authentification Spring Security et transmis au service.
-     *
-     * @param request        données de création (nom, description, categoryId)
-     * @param authentication contexte d’authentification Spring Security
-     * @return événement créé sous forme de DTO avec statut HTTP 201
-     */
-// 1. Endpoint pour la création d'un événement standard
-    @PostMapping
-    public ResponseEntity<EventResponseDto> create(
-            @RequestBody EventRequestDto request,
-            Authentication authentication) {
-
-        String email = authentication.getName();
-        EventResponseDto response = eventService.create(request, email);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    // 2. Endpoint spécifique pour la création d'un événement lié à une école
-    @PostMapping("/school")
-    public ResponseEntity<EventResponseDto> createSchoolEvent(
-            @RequestBody EventRequestDto request,
-            Authentication authentication) {
-
-        String email = authentication.getName();
-        // Si la logique de création pour "school" diffère, vous pouvez appeler
-        // une méthode dédiée dans votre service, par exemple : eventService.createSchoolEvent(...)
-        EventResponseDto response = eventService.createSchoolEvent(request, email);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    /**
-     * Récupère la liste des événements filtrés par type.
-     *
-     * @param type type d’événement ({@code AUDIT} ou {@code DEFENSE})
-     * @return liste des événements correspondants, triés par date décroissante
-     */
     /**
      * Récupère la liste de tous les événements, tous types confondus.
      * Utilisé par le Calendrier pour afficher l'ensemble des événements.
@@ -86,6 +36,30 @@ public class EventController {
         return ResponseEntity.ok(events);
     }
 
+    /**
+     * Crée un nouvel événement académique standard.
+     *
+     * @param request        données de création (nom, description, categoryId)
+     * @param authentication contexte d’authentification Spring Security
+     * @return événement créé sous forme de DTO avec statut HTTP 201
+     */
+    @PostMapping({ "", "/school" })
+    public ResponseEntity<EventResponseDto> create(
+            @RequestBody EventRequestDto request,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+        // Les deux chemins appellent la même méthode du service
+        EventResponseDto response = eventService.create(request, email);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Récupère la liste des événements filtrés par type.
+     *
+     * @param type type d’événement (AUDIT ou DEFENSE)
+     * @return liste des événements correspondants, triés par date décroissante
+     */
     @GetMapping("/type/{type}")
     public ResponseEntity<List<EventResponseDto>> listByType(@PathVariable CategoryType type) {
         List<EventResponseDto> events = eventService.listByType(type);
@@ -129,8 +103,7 @@ public class EventController {
                 eventId,
                 request.getResponse(),
                 authentication.getName(),
-                request.getRaison()
-        );
+                request.getRaison());
 
         return ResponseEntity.ok(response);
     }
@@ -145,14 +118,14 @@ public class EventController {
 
         List<StatutInvitationParticipantDto> statusList = eventService.getEventInvitationStatut(
                 eventId,
-                authentication.getName()
-        );
+                authentication.getName());
 
         return ResponseEntity.ok(statusList);
     }
 
     /**
-     * Récupère la liste de toutes les invitations en attente de l'utilisateur connecté.
+     * Récupère la liste de toutes les invitations en attente de l'utilisateur
+     * connecté.
      */
     @GetMapping("/invitations/me")
     public ResponseEntity<List<EventInvitationResponseDto>> getMyInvitations(Authentication authentication) {
@@ -166,17 +139,13 @@ public class EventController {
     }
 
     /**
-     * Crée un nouvel événement académique.
-     * <p>
-     * L’email de l’utilisateur connecté est extrait du contexte
-     * d’authentification Spring Security et transmis au service.
-     *
-     * @param request        données de création (nom, description, categoryId)
-     * @param authentication contexte d’authentification Spring Security
-     * @return événement créé sous forme de DTO avec statut HTTP 201
+     * Crée une réunion liée à une issue.
      */
     @PostMapping("/meeting/{issueId}")
-    public ResponseEntity<EventResponseDto> createMeeting(@RequestBody EventRequestDto request, Authentication authentication, @PathVariable Long issueId) {
+    public ResponseEntity<EventResponseDto> createMeeting(
+            @RequestBody EventRequestDto request,
+            Authentication authentication,
+            @PathVariable Long issueId) {
         String email = authentication.getName();
         EventResponseDto response = eventService.createMeeting(request, email, issueId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -184,10 +153,6 @@ public class EventController {
 
     /**
      * Vérifie si une issue possède une réunion à venir.
-     * GET /events/meeting/{issueId}/upcoming
-     *
-     * @param issueId l'identifiant du ticket
-     * @return true si une réunion est prévue, false sinon
      */
     @GetMapping("/meeting/{issueId}/upcoming")
     public ResponseEntity<Boolean> checkUpcomingMeeting(@PathVariable Long issueId) {
@@ -205,8 +170,7 @@ public class EventController {
     }
 
     /**
-     * Met à jour l'horaire d'un meeting suite à un refus/changement et gère les réinvitations.
-     * PUT /events/{eventId}/reschedule?addAll=true
+     * Met à jour l'horaire d'un meeting suite à un refus/changement.
      */
     @PutMapping("/{eventId}/reschedule")
     public ResponseEntity<EventResponseDto> updateMeetingDueToChange(
@@ -218,15 +182,13 @@ public class EventController {
                 eventId,
                 datesRequest.getStartDate(),
                 datesRequest.getEndDate(),
-                addAll
-        );
+                addAll);
 
         return ResponseEntity.ok(response);
     }
 
     /**
-     * Annule un événement académique (réservé au créateur ou admin selon tes règles).
-     * DELETE /events/{eventId}/cancel
+     * Annule un événement académique.
      */
     @DeleteMapping("/{eventId}/cancel")
     public ResponseEntity<Void> cancelEvent(@PathVariable Long eventId) {
@@ -236,7 +198,6 @@ public class EventController {
 
     /**
      * Soumet une demande de réunion pour un ticket (initiée par un étudiant).
-     * POST /events/meeting/ask/{issueId}
      */
     @PostMapping("/meeting/ask/{issueId}")
     public ResponseEntity<EventResponseDto> askForMeeting(
@@ -250,8 +211,8 @@ public class EventController {
     }
 
     /**
-     * Récupère le statut de toutes les demandes de réunions initiées par l'utilisateur connecté.
-     * GET /events/me/demands
+     * Récupère le statut de toutes les demandes de réunions initiées par
+     * l'utilisateur connecté.
      */
     @GetMapping("/me/demands")
     public ResponseEntity<List<MeetingDemandeDto>> getMyDemandsStatus(Authentication authentication) {
@@ -261,11 +222,6 @@ public class EventController {
 
     /**
      * Retire un participant spécifique d'une réunion.
-     * DELETE /events/{eventId}/participants/{userId}
-     *
-     * @param eventId l'identifiant de la réunion
-     * @param userId l'identifiant de l'utilisateur à retirer
-     * @return le DTO de l'événement mis à jour
      */
     @DeleteMapping("/{eventId}/participants/{userId}")
     public ResponseEntity<EventResponseDto> deleteParticipantFromMeeting(
@@ -277,8 +233,8 @@ public class EventController {
     }
 
     /**
-     * Récupère tous les abonnés du ticket lié à un événement qui ne sont pas invités.
-     * GET /events/{eventId}/issue-followers
+     * Récupère tous les abonnés du ticket lié à un événement qui ne sont pas
+     * invités.
      */
     @GetMapping("/{eventId}/possible-participants")
     public ResponseEntity<List<FollowersInfoDto>> getPossibleUserInterested(@PathVariable Long eventId) {

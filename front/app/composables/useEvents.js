@@ -31,9 +31,11 @@ export const useEvents = () => {
     const data = await api('/events')
     events.value = data
     return data
+    }
   const fetchCategoriesByType = async (type) => {
     return await api(`/categories/type/${type}`)
   }
+
 
   /**
    * Crée un nouvel événement.
@@ -42,14 +44,14 @@ export const useEvents = () => {
    *
    * @param payload - { name, description, categoryId }
    */
-  const createEvents = async (payload) => {
-
-  const createEvent = async (payload) => {
+  const createEvent = async (payload, isSchool = false) => {
     error.value = null
     if (!user?.value?.id) {
       await navigateTo('/login')
       return
     }
+
+    const endpoint = isSchool ? '/events/school' : '/events'
     try {
       return await api(endpoint, { method: 'POST', body: payload })
     } catch (e) {
@@ -108,12 +110,6 @@ export const useEvents = () => {
    *
    * @param id identifiant de la catégorie
    */
-  const deleteEvents = async (id) => {
-    await api(`/events/${id}`, {
-      method: 'DELETE'
-    })
-
-    events.value = events.value.filter(c => c.id !== id)
   const deleteEvent = async (id) => {
     await api(`/events/${id}`, { method: 'DELETE' })
     events.value = events.value.filter(e => e.id !== id)
@@ -149,7 +145,7 @@ export const useEvents = () => {
     try {
       return await api(`/events/${eventId}/invitations/bulk`, {
         method: 'POST',
-        body:  userIds
+        body: userIds
       })
     } catch (e) {
       error.value = e?.data?.message || 'INVITE_USERS_BULK_ERROR'
@@ -341,15 +337,9 @@ export const useEvents = () => {
   const removeParticipantFromMeeting = async (eventId, userId) => {
     error.value = null
     try {
-      const result = await api(`/events/${eventId}/participants/${userId}`, {
+      return await api(`/events/${eventId}/participants/${userId}`, {
         method: 'DELETE'
       })
-
-      // Optionnel : Si tu affiches la liste détaillée des statuts juste après,
-      // tu peux re-fetcher les statuts ici
-      // await fetchEventInvitationStatus(eventId)
-
-      return result
     } catch (e) {
       error.value = e?.data?.message || 'REMOVE_PARTICIPANT_ERROR'
       throw e
@@ -399,15 +389,15 @@ export const useEvents = () => {
   }
 
   return {
-    fetchEventsByType,
-    deleteEvent,
     fetchCalendarEvents,
     events,
     myPendingInvitations,
     error,
-    fetchCategoriesByType,
-    createEvent,
+    fetchEvents,
     createMeeting,
+    fetchEventsByType,
+    fetchAllEvents,
+    deleteEvent,
     inviteUserToEvent,
     inviteUsersToEvent,
     respondToInvitation,
@@ -417,8 +407,8 @@ export const useEvents = () => {
     fetchMyCreatedEvents,
     updateMeetingDueToChange,
     cancelEvent,
-    fetchMyDemandsStatus,
     askForMeeting,
+    fetchMyDemandsStatus,
     removeParticipantFromMeeting,
     fetchPossibleUsersInterested
   }

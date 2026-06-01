@@ -44,8 +44,6 @@ public class EventService {
     private final CategoryRepository categoryRepository;
     private final UserService userService;
     private final UserRepository userRepository;
-    private final IssueRepository issueRepository;
-    private final UserRepository userRepository;
     private final StudentGroupRepository studentGroupRepository;
     private final IssueFollowerRepository issueFollowerRepository;
 

@@ -11,7 +11,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -23,9 +22,6 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 public class Event extends BaseEntity {
-@Table(name = "events")
-
-public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -34,12 +30,7 @@ public class Event {
     private String name;
 
     @Column(columnDefinition = "TEXT")
-    private Long id_evt;
     private String title;
-    @JsonProperty("start") // Sera envoyé comme "start" au front
-    private LocalDateTime start_date;
-    @JsonProperty("end") // Sera envoyé comme "end" au front
-    private LocalDateTime end_date;
     private String description;
     private String statut;
     private String color; // Pour le style du calendrier
@@ -60,12 +51,12 @@ public class Event {
     @JoinColumn(name = "issue_id", nullable = true)
     private Issue issue;
 
-    @Column
+
+    @Column(name = "start_date")
     private LocalDateTime startDate;
 
-    @Column
+    @Column(name = "end_date")
     private LocalDateTime endDate;
-
     @Column
     private Boolean validated = true;
 
@@ -82,10 +73,6 @@ public class Event {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id")
     private User teacher;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "issue_id")
-    private Issue issue;
 
     @Builder.Default
     @OneToMany(
