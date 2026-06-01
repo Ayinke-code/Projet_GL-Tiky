@@ -2,7 +2,7 @@
     <div class="p-4 relative">
         <ClientOnly>
             <!-- Calendrier -->
-            <FullCalendar 
+        <FullCalendar 
                 :key="mappedEvents.length" 
                 :options="calendarOptions" 
             />

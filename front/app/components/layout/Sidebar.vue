@@ -56,18 +56,7 @@
           </template>
         </UCollapsible>
 
-      <NuxtLink v-if="user" to="/categories"
-        class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
-        :class="isActive('/categories') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
-        <i class="fa-solid fa-folder w-6"></i>
-        <span class="font-medium">Mes catégories</span>
-      </NuxtLink>
 
-      <NuxtLink v-if="user" to="/calendar" class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
-        :class="isActive('/calendar') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
-        <i class="fa-solid fa-calendar w-6"></i>
-        <span class="font-medium">Mon calendrier</span>
-      </NuxtLink>
         <NuxtLink v-if="user" to="/categories"
                   class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
                   :class="isActive('/categories') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
