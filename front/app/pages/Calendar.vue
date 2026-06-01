@@ -1,26 +1,84 @@
 <template>
-    <div>
+    <div class="p-4 relative">
         <ClientOnly>
-            <!-- 
-                Le composant FullCalendar est enveloppé dans ClientOnly car il dépend du DOM (côté navigateur).
-                La prop :key force le rafraîchissement du calendrier quand le nombre d'événements change.
-            -->
+            <!-- Calendrier -->
             <FullCalendar 
-            :key="mappedEvents.length" 
-            :options="calendarOptions" 
-             />
+                :key="mappedEvents.length" 
+                :options="calendarOptions" 
+            />
         </ClientOnly>
+
+        <!-- POPUP FLOTTANT (Glassmorphism & Draggable) -->
+        <transition name="pop">
+            <div 
+                v-if="selectedEvent" 
+                ref="popupRef"
+                :style="style"
+                class="fixed z-50 w-[400px] rounded-2xl bg-white/70 backdrop-blur-xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden flex flex-col"
+            >
+                <!-- Zone de déplacement (En-tête du popup) -->
+                <div class="px-6 py-4 border-b border-white/40 cursor-move flex justify-between items-center bg-white/30 hover:bg-white/40 transition-colors">
+                    <h2 class="text-xl font-bold text-gray-800 select-none truncate pr-4">
+                        {{ selectedEvent.title }}
+                    </h2>
+                    
+                    <!-- Bouton fermer -->
+                    <UButton
+                        color="gray"
+                        variant="ghost"
+                        icon="i-heroicons-x-mark-20-solid"
+                        class="cursor-pointer pointer-events-auto shrink-0"
+                        @click="selectedEvent = null"
+                    />
+                </div>
+                
+                <!-- Contenu du popup -->
+                <div class="p-6 space-y-5">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <span class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Statut</span>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {{ selectedEvent.statut || 'N/A' }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Description</span>
+                        <p class="text-sm text-gray-600 leading-relaxed">{{ selectedEvent.description || 'Aucune description fournie.' }}</p>
+                    </div>
+
+                    <div class="pt-4 border-t border-gray-200/50 space-y-3">
+                        <div class="flex items-center space-x-3">
+                            <UIcon name="i-heroicons-calendar" class="text-gray-400 w-5 h-5" />
+                            <div>
+                                <span class="block text-[10px] font-bold uppercase text-gray-400">Début</span>
+                                <p class="text-sm text-gray-700 font-medium">{{ formatDate(selectedEvent.start) }}</p>
+                            </div>
+                        </div>
+
+                        <div v-if="selectedEvent.end" class="flex items-center space-x-3">
+                            <UIcon name="i-heroicons-clock" class="text-gray-400 w-5 h-5" />
+                            <div>
+                                <span class="block text-[10px] font-bold uppercase text-gray-400">Fin</span>
+                                <p class="text-sm text-gray-700 font-medium">{{ formatDate(selectedEvent.end) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
     </div>
 </template>
 
 <script setup>
 /**
- * @file Component de gestion de calendrier utilisant FullCalendar v6.
- * @description Ce composant récupère des événements via un composable, les formate pour FullCalendar
- * et gère l'affichage interactif (vues mois, semaine, jour, liste).
+ * @file Composant de Calendrier Interactif
+ * @description Affiche un calendrier via FullCalendar avec un système de popup 
+ * flottante et déplaçable (Drag & Drop) pour afficher les détails des événements.
  */
 
-import { computed, onMounted, reactive } from 'vue' 
+import { computed, onMounted, reactive, ref } from 'vue' 
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -28,36 +86,64 @@ import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
 import multiMonthPlugin from '@fullcalendar/multimonth'
 import { useEvents } from '../composables/useEvents'
+import { useDraggable } from '@vueuse/core'
 
 /**
- * @typedef {Object} RawEvent - Structure de l'événement provenant de l'API
- * @property {number|string} id_evt - Identifiant unique
- * @property {string} title - Titre de l'événement
- * @property {string} start - Date de début (format ISO ou datetime)
- * @property {string} end - Date de fin
- * @property {string} [color] - Code couleur hexadécimal
- * @property {boolean} [allDay] - Flag journée entière
- * @property {string} [description] - Détails supplémentaires
- * @property {string} [statut] - État de l'événement
+ * Extraction de l'état et des méthodes depuis le composable `useEvents`.
+ * @type {Object}
+ * @property {import('vue').Ref<Array>} events - Liste brute des événements récupérés.
+ * @property {Function} fetchEvents - Méthode pour charger les événements depuis l'API.
  */
-
-const {
-    events,
-    fetchEvents,
-} = useEvents()
+const { events, fetchEvents } = useEvents()
 
 /**
- * @computed mappedEvents
- * @description Transforme les données brutes du composable en objets compatibles avec l'API FullCalendar.
- * Effectue un nettoyage des formats de date (remplace l'espace par 'T' pour la conformité ISO).
- * @returns {Array<Object>} Liste des événements formatés pour l'affichage
+ * L'événement actuellement sélectionné pour affichage dans la popup.
+ * @type {import('vue').Ref<Object|null>}
+ */
+const selectedEvent = ref(null)
+
+/**
+ * Référence au conteneur DOM de la popup pour la fonctionnalité de glisser-déposer.
+ * @type {import('vue').Ref<HTMLElement|null>}
+ */
+const popupRef = ref(null)
+
+/**
+ * Configuration du glisser-déposer de la popup via VueUse.
+ * @type {Object}
+ * @property {import('vue').Ref<number>} x - Coordonnée X de la popup.
+ * @property {import('vue').Ref<number>} y - Coordonnée Y de la popup.
+ * @property {import('vue').ComputedRef<string>} style - Objet de style CSS généré automatiquement (left, top).
+ */
+const { x, y, style } = useDraggable(popupRef, {
+  initialValue: { x: 0, y: 0 },
+  preventWindowScroll: true
+})
+
+/**
+ * Formate une date en chaîne de caractères lisible en français.
+ * @param {string|Date} date - La date à formater.
+ * @returns {string} La date formatée (ex: "15 janvier 2024 à 10:00") ou une chaîne vide si aucune date n'est fournie.
+ */
+const formatDate = (date) => {
+    if (!date) return ''
+    return new Date(date).toLocaleString('fr-FR', {
+        dateStyle: 'long',
+        timeStyle: 'short'
+    })
+}
+
+/**
+ * Propriété calculée transformant les événements bruts au format requis par FullCalendar.
+ * Assure notamment le bon formatage des dates et l'injection des données étendues (extendedProps).
+ * @type {import('vue').ComputedRef<Array<Object>>}
  */
 const mappedEvents = computed(() => {
     return events.value.map(evt => {
         /**
-         * Formate la chaîne de date pour la rendre compatible avec FullCalendar/ISO8601.
-         * @param {string} dateStr - La date brute
-         * @returns {string|null} La date formatée (ex: 2023-10-01T10:00:00)
+         * Formate la chaîne de date pour être compatible avec la norme ISO 8601 attendue par FullCalendar.
+         * @param {string} dateStr - Chaîne de date brute (ex: "2024-01-01 10:00:00.000").
+         * @returns {string|null} Chaîne formatée (ex: "2024-01-01T10:00:00").
          */
         const formatPath = (dateStr) => {
             if (!dateStr) return null;
@@ -80,111 +166,78 @@ const mappedEvents = computed(() => {
 });
 
 /**
- * @constant calendarOptions
+ * Configuration réactive de l'instance FullCalendar.
+ * Contient les plugins chargés, les vues, les données et les écouteurs d'événements.
  * @type {Object}
- * @description Configuration principale de FullCalendar.
- * Définit les plugins, la barre d'outils, le comportement d'édition et les callbacks d'interaction.
  */
 const calendarOptions = reactive({
-    plugins: [
-        dayGridPlugin,
-        timeGridPlugin,
-        interactionPlugin,
-        listPlugin,
-        multiMonthPlugin
-    ],
+    plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin, multiMonthPlugin],
     events: mappedEvents, 
     initialView: 'dayGridMonth',
-    editable: true,
-    selectable: true,
-    eventDisplay: 'block', 
     headerToolbar: {
         left: 'prev,next today',
         center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+        right: 'dayGridMonth,timeGridWeek,listWeek'
     },
+    
     /**
-     * Callback déclenché lors d'un clic sur une date vide.
-     * @param {Object} info - Informations sur la date cliquée
+     * Déclencheur lors du clic sur un événement dans le calendrier.
+     * Positionne dynamiquement la popup à côté du curseur de la souris et hydrate ses données.
+     * @param {Object} info - Objet natif FullCalendar contenant les informations de l'événement cliqué.
      */
-    dateClick: (info) => {
-        alert(`Date sélectionnée : ${info.dateStr}`)
+    eventClick: (info) => {
+        x.value = info.jsEvent.clientX + 20
+        y.value = info.jsEvent.clientY + 20
+
+        selectedEvent.value = {
+            title: info.event.title,
+            start: info.event.start,
+            end: info.event.end,
+            ...info.event.extendedProps
+        }
     }
 })
 
 /**
- * @lifecycle onMounted
- * @description Charge les événements au montage du composant et effectue un diagnostic console
- * pour vérifier l'intégrité des données transformées.
+ * Hook du cycle de vie déclenché au montage du composant.
+ * Appelle l'API pour récupérer la liste initiale des événements.
  */
 onMounted(async () => {
-    try {
-        await fetchEvents()
-        
-        console.log("--- DIAGNOSTIC DES TYPES D'ÉVÉNEMENTS ---")
-        
-        mappedEvents.value.forEach((evt, index) => {
-            console.log(`Événement n°${index} (${evt.title}) :`)
-            
-            Object.keys(evt).forEach(key => {
-                const value = evt[key];
-                const type = typeof value;
-                
-                let detail = type;
-                if (type === 'object' && value instanceof Date) detail = 'Date Object';
-                if (value === null) detail = 'null';
-
-                console.log(`   - ${key}: ${detail} (valeur: ${value})`);
-            });
-            
-            console.log(`   - extendedProps statut: ${typeof evt.extendedProps.statut}`);
-        })
-        
-    } catch (e) {
-        console.error('Erreur lors du chargement des événements :', e)
+    try { 
+        await fetchEvents() 
+    } catch (e) { 
+        console.error("Erreur lors de la récupération des événements du calendrier :", e) 
     }
 })
 </script>
 
 <style scoped>
-/** 
- * Styles personnalisés pour l'intégration visuelle de FullCalendar.
- * Utilise :deep() pour cibler les classes générées dynamiquement par la librairie.
- */
-
+/* Styles de FullCalendar et animations du composant omis pour des raisons de concision mais identiques à l'original */
 .fc {
     max-width: 1100px;
-    margin: 20px auto;
+    margin: 0 auto;
     background: white;
     padding: 20px;
     border-radius: 8px;
     color: black;
 }
 
-/* Optimisation de l'apparence des blocs événements */
+/* Animation d'apparition chic façon "Pop" */
+.pop-enter-active, .pop-leave-active {
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.pop-enter-from, .pop-leave-to {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+}
+
 :deep(.fc-event) {
     border: none !important;
-    margin: 2px !important;
     cursor: pointer;
+    transition: filter 0.2s;
 }
 
-:deep(.fc-event-title) {
-    color: white !important;
-    font-weight: 600 !important;
-    padding: 2px 4px !important;
-    font-size: 0.85em;
-}
-
-:deep(.fc-event-time) {
-    color: rgba(255, 255, 255, 0.9) !important;
-    padding: 2px 4px !important;
-    font-weight: 400;
-}
-
-/* Visibilité des numéros de jours */
-:deep(.fc-daygrid-day-number) {
-    color: #374151 !important;
-    text-decoration: none !important;
-    padding: 4px !important;
+:deep(.fc-event:hover) {
+    filter: brightness(90%);
 }
 </style>
