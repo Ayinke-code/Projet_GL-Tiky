@@ -31,7 +31,7 @@ export const useEvents = () => {
     const data = await api('/events')
     events.value = data
     return data
-    }
+  }
   const fetchCategoriesByType = async (type) => {
     return await api(`/categories/type/${type}`)
   }
@@ -53,7 +53,7 @@ export const useEvents = () => {
 
     const endpoint = isSchool ? '/events/school' : '/events'
     try {
-      return await api(endpoint, { method: 'POST', body: payload })
+      return await api(endpoint, {method: 'POST', body: payload})
     } catch (e) {
       error.value = e?.data?.message || 'CREATE_EVENT_ERROR'
       throw e
@@ -101,32 +101,32 @@ export const useEvents = () => {
   }
 
   const listAll = async () => {
-  return await api('/events')
-}
+    return await api('/events')
+  }
 
-  return { events, error, fetchCategoriesByType, createEvent, fetchEventsByType, fetchAllEvents }
+  return {events, error, fetchCategoriesByType, createEvent, fetchEventsByType, fetchAllEvents}
   /**
    * Supprime une catégorie.
    *
    * @param id identifiant de la catégorie
    */
   const deleteEvent = async (id) => {
-    await api(`/events/${id}`, { method: 'DELETE' })
+    await api(`/events/${id}`, {method: 'DELETE'})
     events.value = events.value.filter(e => e.id !== id)
   }
 
-/**
-* Invite un utilisateur spécifique à un événement.
-  *
-  * @param eventId - L'ID de l'événement
-  * @param userId - L'ID de l'utilisateur à inviter
-  */
+  /**
+   * Invite un utilisateur spécifique à un événement.
+   *
+   * @param eventId - L'ID de l'événement
+   * @param userId - L'ID de l'utilisateur à inviter
+   */
   const inviteUserToEvent = async (eventId, userId) => {
     error.value = null
     try {
       return await api(`/events/${eventId}/invitations`, {
         method: 'POST',
-        body: { userId }
+        body: {userId}
       })
     } catch (e) {
       error.value = e?.data?.message || 'INVITE_USER_ERROR'
@@ -165,7 +165,7 @@ export const useEvents = () => {
     try {
       const result = await api(`/events/${eventId}/invitations/respond`, {
         method: 'PUT',
-        body: { response, raison }
+        body: {response, raison}
       })
       // Rafraîchir la liste des invitations après avoir répondu
       await fetchMyInvitations()
@@ -252,7 +252,7 @@ export const useEvents = () => {
     try {
       const result = await api(`/events/${eventId}/reschedule`, {
         method: 'PUT',
-        params: { addAll },
+        params: {addAll},
         body: datesPayload
       })
 
