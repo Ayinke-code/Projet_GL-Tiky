@@ -117,6 +117,28 @@ export const useIssues = () => {
         return true
     }
 
+  /**
+   * Récupère uniquement les issues affichables pour l'utilisateur connecté :
+   * - Créées par lui
+   * - Ouvertes et publiques
+   * - Suivies par lui
+   */
+  const getDisplayableIssues = async () => {
+    try {
+      // Appel à la nouvelle route backend
+      // Note: Si votre backend attend l'email en paramètre plutôt que via le token (Principal),
+      // vous pouvez faire : api('/issues/displayable', { query: { email: user.value.email } })
+      const data = await api('/issues/displayable')
+
+      // Mise à jour de l'état global avec les issues filtrées
+      issues.value = data
+      return data
+    } catch (e) {
+      error.value = e?.data?.message || 'FETCH_DISPLAYABLE_ISSUES_ERROR'
+      return []
+    }
+  }
+
     return {
         issues,
         fetchIssues,
@@ -125,6 +147,7 @@ export const useIssues = () => {
         updateIssuePrivacy,
         updateIssueStatus,
         deleteIssue,
+        getDisplayableIssues,
         error
     }
 }

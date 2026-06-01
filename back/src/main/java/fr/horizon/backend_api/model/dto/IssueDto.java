@@ -34,4 +34,8 @@ public class IssueDto {
     private String createdName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    //teacher manager
+    private String teacherManagerName;
+    //follower
+    private int followersCount;
 }

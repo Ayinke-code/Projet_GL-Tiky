@@ -138,14 +138,27 @@ const handleReopening = async () => {
 /**
  * Couleurs des statuts (aligné backend)
  */
-const statutColor = (statut) => {
-  const map = {
-    'En cours': 'bg-blue-100 text-blue-700',
-    'résolu': 'bg-green-100 text-green-700',
-    'Ouvert': 'bg-yellow-100 text-yellow-700',
-    'Fermé': 'bg-gray-100 text-gray-600',
+const getStatusBadgeClass = (status) => {
+  const classes = {
+    'OUVERT':'bg-yellow-100 text-yellow-800 border border-yellow-300',
+    'EN_ATTENTE': 'bg-gray-100 text-gray-800 border border-gray-300',
+    'INCOMPLET': 'bg-orange-100 text-orange-800 border border-orange-300',
+    'TERMINE': 'bg-green-100 text-green-800 border border-green-300'
   }
-  return map[statut] || 'bg-gray-100 text-gray-600'
+  return classes[status] || 'bg-gray-100 text-gray-800 border border-gray-300'
+}
+
+/**
+ * Labels statuts
+ */
+const getStatusLabel = (status) => {
+  const labels = {
+    'OUVERT': 'Ouvert',
+    'EN_ATTENTE': 'En attente',
+    'INCOMPLET': 'Incomplet',
+    'TERMINE': 'Terminé'
+  }
+  return labels[status] || status
 }
 
 /**
@@ -255,8 +268,8 @@ const handleUnfollow = async () => {
                         </span>
                         <!-- Statut -->
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
-                            :class="statutColor(issue.status)">
-                            {{ issue.status }}
+                            :class="getStatusBadgeClass(issue.status)">
+                            {{getStatusLabel(issue.status) }}
                         </span>
                         <!-- Visibilité -->
                         <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
@@ -386,22 +399,39 @@ const handleUnfollow = async () => {
                         <div class="px-5 py-3 border-b border-gray-100">
                             <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Informations</h2>
                         </div>
-                        <div class="px-5 py-4 space-y-3 text-sm">
-                            <div class="flex justify-between items-center">
-                                <span class="text-gray-500">Auteur</span>
-                                <span class="font-medium text-gray-900">{{ issue.createdName || 'Inconnu' }}</span>
-                            </div>
-                            <!-- TODO -->
-                            <div v-if="false" class="flex justify-between items-center">
-                                <span class="text-gray-500">Enseignant en charge</span>
-                                <span class="font-semibold text-gray-900">{{ issue.professeur || 'Non défini' }}</span>
-                            </div>
-                            <!-- TODO -->
-                            <div v-if="false" class="flex justify-between items-center">
-                                <span class="text-gray-500">Abonnés</span>
-                                <span class="font-medium text-gray-900">{{ issue.abonnes || 0 }}</span>
-                            </div>
+
+                      <div class="px-5 py-4 space-y-3 text-sm">
+
+                        <div v-if="issue?.categoryManagerId && issue?.categoryManagerId === issue?.createdId" class="flex justify-between items-center">
+                          <span class="text-gray-500">Auteur & Manager</span>
+                          <span class="font-medium text-gray-900">
+                            {{ issue.createdId === user?.id ? 'Moi' : (issue.createdName || 'Inconnu') }}
+                          </span>
                         </div>
+
+                        <template v-else>
+                          <div class="flex justify-between items-center">
+                            <span class="text-gray-500">Auteur</span>
+                            <span class="font-medium text-gray-900">
+                              {{ issue.createdId === user?.id ? 'Moi' : (issue.createdName || 'Inconnu') }}
+                            </span>
+                          </div>
+
+                          <div class="flex justify-between items-center">
+                            <span class="text-gray-500">Manager en charge</span>
+                            <span class="font-medium text-gray-900">
+                              {{ issue?.categoryManagerId === user?.id ? 'Moi' : (issue?.teacherManagerName || issue?.categoryManagerName || 'Non défini') }}
+                            </span>
+                          </div>
+                        </template>
+
+                        <div class="flex justify-between items-center">
+                          <span class="text-gray-500">Abonnés</span>
+                          <span class="font-medium text-gray-900">{{ issue.followersCount || 0 }}</span>
+                        </div>
+
+                      </div>
+
                     </div>
 
                   <!-- Visible uniquement si l'utilisateur est le manager de l'issue -->

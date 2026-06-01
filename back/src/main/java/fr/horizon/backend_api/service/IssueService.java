@@ -9,12 +9,10 @@ import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.dto.RequestManagerDto;
+import fr.horizon.backend_api.model.enums.FollowedReason;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
-import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.IssueRepository;
-import fr.horizon.backend_api.repository.RequestManagerRepository;
-import fr.horizon.backend_api.repository.UserRepository;
+import fr.horizon.backend_api.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -43,6 +41,11 @@ public class IssueService {
     private final CategoryRepository categoryRepository;
     private final ConversationService conversationService;
     private final RequestManagerRepository requestManagerRepository;
+    private final IssueFollowerRepository issueFollowerRepository;
+
+    private final IssueFollowerService issueFollowerService;
+
+    static final String IS_MANAGER = String.valueOf(FollowedReason.valueOf("IS_MANAGER"));
 
     /**
      * Retourne la liste de toutes les issues.
@@ -241,6 +244,10 @@ public class IssueService {
                 .createdName(issue.getCreatedBy().getName())
                 .createdAt(issue.getCreatedAt())
                 .updatedAt(issue.getUpdatedAt())
+                //manager
+                .teacherManagerName(manager != null ? manager.getName() : null)
+                //follower
+                .followersCount(countFollower(issue))
                 .build();
     }
 
@@ -288,6 +295,7 @@ public class IssueService {
 
         if (targetedUser.getId().equals(issue.getCategory().getOwner().getId())) {
             issue.setManager(targetedUser);
+            issueFollowerService.followIssue(requestManager.getIssue().getId(), IS_MANAGER, requestManager.getTargetTeacher());
             requestManager.setProcessingDate(LocalDateTime.now());
             initialStatus = RequestManagerStatus.ACCEPTED;
             issue.setStatus(IssueStatus.OUVERT);
@@ -320,6 +328,7 @@ public class IssueService {
         if (response) {
             requestManager.setStatus(RequestManagerStatus.ACCEPTED);
             requestManager.getIssue().setManager(requestManager.getTargetTeacher());
+            issueFollowerService.followIssue(requestManager.getIssue().getId(), IS_MANAGER, requestManager.getTargetTeacher());
             requestManager.getIssue().setStatus(IssueStatus.OUVERT);
         } else {
             requestManager.setStatus(RequestManagerStatus.DENIED);
@@ -438,6 +447,38 @@ public class IssueService {
                 .map(this::toDto)
                 .toList();
     }
+
+
+    /**
+     * récupérer la liste des issues à afficher dans la page index des issues
+     * @param email mail de l'utilisateur
+     * @return la liste des DTO des issues à afficher
+     */
+    public List<IssueDto> getAllDisplayableIssue(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
+
+        List<IssueStatus> openStatuses = List.of(IssueStatus.OUVERT);
+
+        List<Issue> displayableIssues = issueRepository.findDisplayableIssues(user, openStatuses);
+
+        return displayableIssues.stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    /**
+     * Compte le nombre d'abonnés pour un ticket donné.
+     * * @param issue l'entité ticket
+     * @return le nombre total d'abonnés
+     */
+    private int countFollower(Issue issue) {
+        if (issue == null || issue.getId() == null) {
+            return 0;
+        }
+        return (int) issueFollowerRepository.countByIssue(issue);
+    }
+
 
 
 

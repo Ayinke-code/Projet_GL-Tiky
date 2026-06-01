@@ -43,7 +43,7 @@
                 :id="'selector-assignation-teacher-' + req.id"
                 v-model="selectedTeachers[req.id]"
                 :items="formattedTeachers"
-                placeholder="Assigner à..."
+                placeholder="Affecter à..."
                 value-key="value"
                 label-key="label"
                 class="w-56">
@@ -59,7 +59,7 @@
 
               <div class="flex flex-col gap-1.5">
                 <UButton
-                  label="Assigner"
+                  label="Affecter"
                   :id="'btn-affecter-manager-' + req.id"
                   icon="i-heroicons-paper-airplane"
                   :disabled="!selectedTeachers[req.id] || loadingIds.has(req.id)"
@@ -111,7 +111,7 @@
     <UModal v-model:open="isConfirmOpen" title="Confirmer l'assignation">
       <template #body>
         <p class="text-gray-600">
-          Voulez-vous vraiment assigner
+          Voulez-vous vraiment affecter
           <strong class="text-gray-900">{{ getSelectedTeacherName }}</strong>
           pour traiter le ticket :
         </p>
