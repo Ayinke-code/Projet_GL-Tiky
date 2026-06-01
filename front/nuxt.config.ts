@@ -14,6 +14,20 @@ export default defineNuxtConfig({
     }
   },
 
+    // Transpile FullCalendar packages for SSR compatibility
+    build: {
+    transpile: [
+      '@fullcalendar/vue3',
+      '@fullcalendar/core',
+      '@fullcalendar/daygrid',
+      '@fullcalendar/interaction',
+      '@fullcalendar/timegrid',
+      '@fullcalendar/list',
+      '@fullcalendar/multimonth',
+      '@fullcalendar/scrollgrid'
+    ]
+  },
+
   devtools: {
     enabled: true
   },

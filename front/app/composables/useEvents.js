@@ -14,6 +14,9 @@ export const useEvents = () => {
   // État global partagé entre toutes les instances du composable
   const events = useState('events', () => [])
   const myPendingInvitations = useState('myPendingInvitations', () => [])
+    /**
+   * État global des erreurs liées aux catégories.
+   */
   const error = ref(null)
 
   /**
@@ -23,6 +26,10 @@ export const useEvents = () => {
    * @param type - 'AUDIT' | 'DEFENSE'
    * @returns liste de CategoryDto avec eventType correspondant
    */
+  const fetchEvents = async () => {
+    const data = await api('/events')
+    events.value = data
+    return data
   const fetchCategoriesByType = async (type) => {
     return await api(`/categories/type/${type}`)
   }
@@ -41,33 +48,9 @@ export const useEvents = () => {
       return
     }
     try {
-      return await api('/events/school', { method: 'POST', body: payload })
+      return await api(endpoint, { method: 'POST', body: payload })
     } catch (e) {
       error.value = e?.data?.message || 'CREATE_EVENT_ERROR'
-      throw e
-    }
-  }
-
-  /**
-   * Crée un nouvel événement académique (réunion) lié à un ticket.
-   * Fait appel au endpoint POST /meeting/{issueId}.
-   *
-   * @param payload - { name, description, categoryId }
-   * @param issueId - L'ID du ticket/issue associé
-   */
-  const createMeeting = async (payload, issueId) => {
-    error.value = null
-    if (!user?.value?.id) {
-      await navigateTo('/login')
-      return
-    }
-    try {
-      return await api(`/events/meeting/${issueId}`, {
-        method: 'POST',
-        body: payload
-      })
-    } catch (e) {
-      error.value = e?.data?.message || 'CREATE_MEETING_ERROR'
       throw e
     }
   }
@@ -80,6 +63,15 @@ export const useEvents = () => {
    */
   const fetchEventsByType = async (type) => {
     try {
+      const created = await api('/events', {
+        method: 'POST',
+        body: payload
+      })
+
+      // refresh local state
+      await fetchEvents()
+
+      return created
       const data = await api(`/events/type/${type}`)
       events.value = data
       return data

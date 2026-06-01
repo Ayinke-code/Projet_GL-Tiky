@@ -1,271 +1,190 @@
 <template>
-  <div class="p-6 bg-gray-50 min-h-screen relative overflow-x-hidden">
-
-    <div
-      v-if="isDetailOpen"
-      class="fixed z-50 select-none shadow-2xl rounded-xl border border-slate-200 bg-white w-96 transition-shadow dynamic-window"
-      :style="{ left: windowPos.x + 'px', top: windowPos.y + 'px' }"
-    >
-      <div
-        @mousedown="startDrag"
-        class="bg-slate-50 border-b border-slate-100 px-4 py-3 cursor-move flex justify-between items-center rounded-t-xl drag-handle"
-      >
-        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-          <span class="i-lucide-move w-3.5 h-3.5 text-slate-400"></span>
-          Détails de l'événement
-        </span>
-        <button
-          @click="isDetailOpen = false"
-          class="text-slate-400 hover:text-slate-600 transition-colors"
-        >
-          <i class="fa-solid fa-xmark text-sm"></i>
-        </button>
-      </div>
-
-      <EventCardCalendar
-        :event="selectedEvent"
-        @close="isDetailOpen = false"
-      />
+    <div>
+        <ClientOnly>
+            <!-- 
+                Le composant FullCalendar est enveloppé dans ClientOnly car il dépend du DOM (côté navigateur).
+                La prop :key force le rafraîchissement du calendrier quand le nombre d'événements change.
+            -->
+            <FullCalendar 
+            :key="mappedEvents.length" 
+            :options="calendarOptions" 
+             />
+        </ClientOnly>
     </div>
-
-    <div class="mb-8">
-      <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Mon Calendrier</h1>
-      <p class="text-slate-500 italic">Retrouvez vos soutenances, audits et rendez-vous ticket.</p>
-    </div>
-
-    <ClientOnly>
-      <div class="calendar-wrapper shadow-sm border border-slate-200 rounded-xl overflow-hidden bg-white">
-        <FullCalendar
-          :key="mappedEvents.length"
-          :options="calendarOptions"
-        />
-      </div>
-    </ClientOnly>
-  </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue'
-import EventCardCalendar from "~/components/events/EventCardCalendar.vue"
+/**
+ * @file Component de gestion de calendrier utilisant FullCalendar v6.
+ * @description Ce composant récupère des événements via un composable, les formate pour FullCalendar
+ * et gère l'affichage interactif (vues mois, semaine, jour, liste).
+ */
 
+import { computed, onMounted, reactive } from 'vue' 
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
-import frLocale from '@fullcalendar/core/locales/fr'
+import multiMonthPlugin from '@fullcalendar/multimonth'
 import { useEvents } from '../composables/useEvents'
 
-const { events, fetchCalendarEvents } = useEvents()
+/**
+ * @typedef {Object} RawEvent - Structure de l'événement provenant de l'API
+ * @property {number|string} id_evt - Identifiant unique
+ * @property {string} title - Titre de l'événement
+ * @property {string} start - Date de début (format ISO ou datetime)
+ * @property {string} end - Date de fin
+ * @property {string} [color] - Code couleur hexadécimal
+ * @property {boolean} [allDay] - Flag journée entière
+ * @property {string} [description] - Détails supplémentaires
+ * @property {string} [statut] - État de l'événement
+ */
 
-const isDetailOpen = ref(false)
-const selectedEvent = ref(null)
+const {
+    events,
+    fetchEvents,
+} = useEvents()
 
-const windowPos = ref({ x: 100, y: 150 })
-let dragOffset = { x: 0, y: 0 }
-
-const startDrag = (e) => {
-  const isTouch = e.type.includes('touch')
-  const clientX = isTouch ? e.touches[0].clientX : e.clientX
-  const clientY = isTouch ? e.touches[0].clientY : e.clientY
-
-  dragOffset.x = clientX - windowPos.value.x
-  dragOffset.y = clientY - windowPos.value.y
-
-  if (isTouch) {
-    window.addEventListener('touchmove', onDrag, { passive: false })
-    window.addEventListener('touchend', stopDrag)
-  } else {
-    window.addEventListener('mousemove', onDrag)
-    window.addEventListener('mouseup', stopDrag)
-  }
-}
-
-const onDrag = (e) => {
-  const isTouch = e.type.includes('touch')
-  if (isTouch) e.preventDefault()
-
-  const clientX = isTouch ? e.touches[0].clientX : e.clientX
-  const clientY = isTouch ? e.touches[0].clientY : e.clientY
-
-  let newX = clientX - dragOffset.x
-  let newY = clientY - dragOffset.y
-
-  const maxX = window.innerWidth - 384
-  const maxY = window.innerHeight - 80
-
-  windowPos.value = {
-    x: Math.max(0, Math.min(newX, maxX)),
-    y: Math.max(0, Math.min(newY, maxY))
-  }
-}
-
-const stopDrag = () => {
-  window.removeEventListener('mousemove', onDrag)
-  window.removeEventListener('mouseup', stopDrag)
-  window.removeEventListener('touchmove', onDrag)
-  window.removeEventListener('touchend', stopDrag)
-}
-
+/**
+ * @computed mappedEvents
+ * @description Transforme les données brutes du composable en objets compatibles avec l'API FullCalendar.
+ * Effectue un nettoyage des formats de date (remplace l'espace par 'T' pour la conformité ISO).
+ * @returns {Array<Object>} Liste des événements formatés pour l'affichage
+ */
 const mappedEvents = computed(() => {
-  return events.value.map(evt => {
-    let color = '#64748b' // slate-500 par défaut
+    return events.value.map(evt => {
+        /**
+         * Formate la chaîne de date pour la rendre compatible avec FullCalendar/ISO8601.
+         * @param {string} dateStr - La date brute
+         * @returns {string|null} La date formatée (ex: 2023-10-01T10:00:00)
+         */
+        const formatPath = (dateStr) => {
+            if (!dateStr) return null;
+            return dateStr.replace(' ', 'T').split('.')[0];
+        };
 
-    if (evt.categoryType === 'AUDIT') color = '#6366f1'   // indigo-500
-    if (evt.categoryType === 'DEFENSE') color = '#10b981' // emerald-500
-    if (evt.categoryType === 'MEETING') color = '#f59e0b' // amber-500
-    if (evt.categoryType === 'ISSUE') color = '#f43f5e'   // rose-500
+        return {
+            id: String(evt.id_evt),
+            title: evt.title,
+            start: formatPath(evt.start), 
+            end: formatPath(evt.end),
+            color: evt.color || '#3b82f6',
+            allDay: evt.allDay || false, 
+            extendedProps: {
+                description: evt.description,
+                statut: evt.statut
+            }
+        };
+    });
+});
 
-    return {
-      id: String(evt.id),
-      title: evt.name,
-      start: evt.startDate?.replace(' ', 'T'),
-      end: evt.endDate?.replace(' ', 'T'),
-      backgroundColor: color,
-      borderColor: 'transparent',
-      extendedProps: {
-        description: evt.description,
-        type: evt.categoryType,
-        creator: evt.createdBy,
-        groups: evt.projectGroups
-      }
-    }
-  })
-})
-
+/**
+ * @constant calendarOptions
+ * @type {Object}
+ * @description Configuration principale de FullCalendar.
+ * Définit les plugins, la barre d'outils, le comportement d'édition et les callbacks d'interaction.
+ */
 const calendarOptions = reactive({
-  plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin, listPlugin],
-  initialView: 'dayGridMonth',
-  locale: frLocale,
-  events: mappedEvents,
-  allDaySlot: false,
-  slotMinTime: '06:00:00',
-  slotMaxTime: '22:00:00',
-  slotDuration: '02:00:00',
-  contentHeight: 'auto',
-  eventDisplay: 'block',
-  displayEventTime: false,
-  headerToolbar: {
-    left: 'prev,next today',
-    center: 'title',
-    right: 'dayGridMonth,timeGridWeek,listWeek'
-  },
-  buttonText: {
-    today: "Aujourd'hui",
-    month: "Mois",
-    week: "Semaine",
-    list: "Planning"
-  },
-  eventClick: (info) => {
-    selectedEvent.value = info.event
-    if (typeof window !== 'undefined') {
-      windowPos.value = {
-        x: (window.innerWidth / 2) - (384 / 2),
-        y: (window.innerHeight / 2) - 200
-      }
+    plugins: [
+        dayGridPlugin,
+        timeGridPlugin,
+        interactionPlugin,
+        listPlugin,
+        multiMonthPlugin
+    ],
+    events: mappedEvents, 
+    initialView: 'dayGridMonth',
+    editable: true,
+    selectable: true,
+    eventDisplay: 'block', 
+    headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+    },
+    /**
+     * Callback déclenché lors d'un clic sur une date vide.
+     * @param {Object} info - Informations sur la date cliquée
+     */
+    dateClick: (info) => {
+        alert(`Date sélectionnée : ${info.dateStr}`)
     }
-    isDetailOpen.value = true
-  },
-  editable: false,
-  selectable: true,
-  dayMaxEvents: true,
 })
 
+/**
+ * @lifecycle onMounted
+ * @description Charge les événements au montage du composant et effectue un diagnostic console
+ * pour vérifier l'intégrité des données transformées.
+ */
 onMounted(async () => {
-  await fetchCalendarEvents()
+    try {
+        await fetchEvents()
+        
+        console.log("--- DIAGNOSTIC DES TYPES D'ÉVÉNEMENTS ---")
+        
+        mappedEvents.value.forEach((evt, index) => {
+            console.log(`Événement n°${index} (${evt.title}) :`)
+            
+            Object.keys(evt).forEach(key => {
+                const value = evt[key];
+                const type = typeof value;
+                
+                let detail = type;
+                if (type === 'object' && value instanceof Date) detail = 'Date Object';
+                if (value === null) detail = 'null';
+
+                console.log(`   - ${key}: ${detail} (valeur: ${value})`);
+            });
+            
+            console.log(`   - extendedProps statut: ${typeof evt.extendedProps.statut}`);
+        })
+        
+    } catch (e) {
+        console.error('Erreur lors du chargement des événements :', e)
+    }
 })
 </script>
 
 <style scoped>
-.calendar-wrapper {
-  background: #ffffff;
-  margin: 0 auto;
+/** 
+ * Styles personnalisés pour l'intégration visuelle de FullCalendar.
+ * Utilise :deep() pour cibler les classes générées dynamiquement par la librairie.
+ */
+
+.fc {
+    max-width: 1100px;
+    margin: 20px auto;
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    color: black;
 }
 
-/* On s'assure que la fenêtre dynamique possède une ombre marquée pour ressortir du blanc */
-.dynamic-window {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-:deep(.fc) {
-  --fc-border-color: #e2e8f0;
-  --fc-daygrid-event-dot-width: 8px;
-  --fc-today-bg-color: #eef2ff;
-  background: #ffffff;
-  color: #334155;
-  font-family: inherit;
-  padding: 1.5rem;
-}
-
-:deep(.fc-header-toolbar) {
-  margin-bottom: 2rem !important;
-}
-
-:deep(.fc-toolbar-title) {
-  font-size: 1.25rem !important;
-  font-weight: 700;
-  color: #0f172a;
-  text-transform: capitalize;
-}
-
-:deep(.fc-button) {
-  background-color: #ffffff !important;
-  color: #475569 !important;
-  border: 1px solid #cbd5e1 !important;
-  font-weight: 600 !important;
-  text-transform: capitalize !important;
-  transition: all 0.2s;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-
-:deep(.fc-button-active) {
-  background-color: #4f46e5 !important;
-  color: #ffffff !important;
-  border-color: #4f46e5 !important;
-}
-
-:deep(.fc-button:hover:not(.fc-button-active)) {
-  background-color: #f8fafc !important;
-  color: #0f172a !important;
-}
-
-:deep(.fc-col-header-cell) {
-  padding: 12px 0 !important;
-  background: #f8fafc;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #64748b;
-  border-bottom: 1px solid #e2e8f0 !important;
-}
-
-:deep(.fc-daygrid-day-number) {
-  color: #475569 !important;
-  padding: 8px !important;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-:deep(.fc-day-today .fc-daygrid-day-number) {
-  color: #4f46e5 !important;
-  font-weight: 800;
-}
-
+/* Optimisation de l'apparence des blocs événements */
 :deep(.fc-event) {
-  border-radius: 6px !important;
-  padding: 2px 6px !important;
-  font-size: 0.8rem !important;
-  border: none !important;
-  cursor: pointer;
+    border: none !important;
+    margin: 2px !important;
+    cursor: pointer;
 }
 
-:deep(.fc-list-day-cushion) {
-  background: #f8fafc !important;
-  color: #334155 !important;
-  font-weight: 600 !important;
+:deep(.fc-event-title) {
+    color: white !important;
+    font-weight: 600 !important;
+    padding: 2px 4px !important;
+    font-size: 0.85em;
 }
 
-:deep(.fc-timegrid-slot) {
-  height: 50px !important;
+:deep(.fc-event-time) {
+    color: rgba(255, 255, 255, 0.9) !important;
+    padding: 2px 4px !important;
+    font-weight: 400;
+}
+
+/* Visibilité des numéros de jours */
+:deep(.fc-daygrid-day-number) {
+    color: #374151 !important;
+    text-decoration: none !important;
+    padding: 4px !important;
 }
 </style>

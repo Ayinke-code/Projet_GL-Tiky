@@ -1,6 +1,9 @@
 package fr.horizon.backend_api.model;
 
 import fr.horizon.backend_api.model.enums.CategoryType;
+import java.time.LocalDateTime;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +23,9 @@ import java.util.Set;
 @AllArgsConstructor
 @Builder
 public class Event extends BaseEntity {
+@Table(name = "events")
+
+public class Event {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -30,8 +36,10 @@ public class Event extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private Long id_evt;
     private String title;
-    private LocalDate start_date;
-    private LocalDate end_date;
+    @JsonProperty("start") // Sera envoyé comme "start" au front
+    private LocalDateTime start_date;
+    @JsonProperty("end") // Sera envoyé comme "end" au front
+    private LocalDateTime end_date;
     private String description;
     private String statut;
     private String color; // Pour le style du calendrier
