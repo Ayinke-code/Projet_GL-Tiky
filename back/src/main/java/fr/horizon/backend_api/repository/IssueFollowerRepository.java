@@ -91,4 +91,6 @@ public interface IssueFollowerRepository extends JpaRepository<IssueFollower, Lo
 
     @Query("SELECT f.user FROM IssueFollower f WHERE f.issue.id = :issueId")
     List<User> findUsersByIssueId(@Param("issueId") Long issueId);
+
+    long countByIssue(Issue issue);
 }
