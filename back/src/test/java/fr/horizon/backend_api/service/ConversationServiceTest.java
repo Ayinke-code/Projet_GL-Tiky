@@ -342,5 +342,197 @@ class ConversationServiceTest {
 
         assertEquals("Le message dépasse la limite de 4000 caractères", ex.getMessage());
     }
-}
 
+    @Test
+    void addMessage_should_throw_when_issueId_is_missing() {
+        User user = new User();
+        user.setId(5L);
+        user.setEmail("bob@test.com");
+
+        when(userRepository.findByEmail("bob@test.com")).thenReturn(Optional.of(user));
+
+        Map<String, String> payload = Map.of("content", "Test message");
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> conversationService.addMessage(44L, payload, "bob@test.com"));
+
+        assertEquals("Missing issue id in payload", ex.getMessage());
+    }
+
+    @Test
+    void addMessage_should_throw_when_issueId_is_blank() {
+        User user = new User();
+        user.setId(5L);
+        user.setEmail("bob@test.com");
+
+        when(userRepository.findByEmail("bob@test.com")).thenReturn(Optional.of(user));
+
+        Map<String, String> payload = Map.of("content", "Test message", "issueId", "  ");
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> conversationService.addMessage(44L, payload, "bob@test.com"));
+
+        assertEquals("Missing issue id in payload", ex.getMessage());
+    }
+
+    @Test
+    void addMessage_should_throw_when_issueId_is_invalid() {
+        User user = new User();
+        user.setId(5L);
+        user.setEmail("bob@test.com");
+
+        when(userRepository.findByEmail("bob@test.com")).thenReturn(Optional.of(user));
+
+        Map<String, String> payload = Map.of("content", "Test message", "issueId", "invalid-number");
+        NumberFormatException ex = assertThrows(NumberFormatException.class,
+                () -> conversationService.addMessage(44L, payload, "bob@test.com"));
+
+        assertNotNull(ex);
+    }
+
+    @Test
+    void addMessageToConversation_should_throw_when_reply_target_not_in_same_conversation() {
+        Conversation conversation = Conversation.builder().id(44L).build();
+        Conversation otherConversation = Conversation.builder().id(99L).build();
+        Issue issue = new Issue();
+        issue.setId(77L);
+        User user = new User();
+        user.setId(5L);
+
+        Message replyTo = Message.builder()
+                .id(55L)
+                .content("Message initial")
+                .conversation(otherConversation)
+                .issue(issue)
+                .user(user)
+                .build();
+
+        when(conversationRepository.findById(44L)).thenReturn(Optional.of(conversation));
+        when(issueRepository.findById(77L)).thenReturn(Optional.of(issue));
+        when(messageRepository.findById(55L)).thenReturn(Optional.of(replyTo));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> conversationService.addMessageToConversation(44L, "Réponse", user, 77L, 55L));
+
+        assertEquals("Reply target must belong to the same conversation", ex.getMessage());
+    }
+
+    @Test
+    void addMessageToConversation_should_throw_when_reply_to_has_null_conversation() {
+        Conversation conversation = Conversation.builder().id(44L).build();
+        Issue issue = new Issue();
+        issue.setId(77L);
+        User user = new User();
+        user.setId(5L);
+
+        Message replyTo = Message.builder()
+                .id(55L)
+                .content("Message initial")
+                .conversation(null)
+                .issue(issue)
+                .user(user)
+                .build();
+
+        when(conversationRepository.findById(44L)).thenReturn(Optional.of(conversation));
+        when(issueRepository.findById(77L)).thenReturn(Optional.of(issue));
+        when(messageRepository.findById(55L)).thenReturn(Optional.of(replyTo));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> conversationService.addMessageToConversation(44L, "Réponse", user, 77L, 55L));
+
+        assertEquals("Reply target must belong to the same conversation", ex.getMessage());
+    }
+
+    @Test
+    void getOrCreateConversationForIssue_should_create_conversation_when_missing() {
+        Issue issue = new Issue();
+        issue.setId(5L);
+
+        Conversation newConversation = Conversation.builder().id(100L).issue(issue).build();
+
+        when(conversationRepository.findByIssueId(5L)).thenReturn(Optional.empty());
+        when(issueRepository.findById(5L)).thenReturn(Optional.of(issue));
+        when(conversationRepository.save(org.mockito.ArgumentMatchers.any(Conversation.class))).thenReturn(newConversation);
+        when(conversationRepository.findById(100L)).thenReturn(Optional.of(newConversation));
+        when(messageRepository.findByConversationOrderByCreatedAtAsc(newConversation)).thenReturn(List.of());
+        when(conversationUserRepository.findByConversation(newConversation)).thenReturn(List.of());
+
+        Map<String, Object> result = conversationService.getOrCreateConversationForIssue(5L);
+
+        assertNotNull(result);
+        assertTrue(result.containsKey("conversation"));
+        assertNotNull(result.get("conversation"));
+        assertEquals(100L, ((Map<String, Object>) result.get("conversation")).get("id"));
+    }
+
+    @Test
+    void getOrCreateConversationForIssue_should_throw_when_issue_not_found() {
+        when(conversationRepository.findByIssueId(5L)).thenReturn(Optional.empty());
+        when(issueRepository.findById(5L)).thenReturn(Optional.empty());
+
+        IssueNotFoundException ex = assertThrows(IssueNotFoundException.class,
+                () -> conversationService.getOrCreateConversationForIssue(5L));
+
+        assertEquals("Issue not found with id: 5", ex.getMessage());
+    }
+
+    @Test
+    void addMessage_should_accept_max_length_message() {
+        Conversation conversation = Conversation.builder().id(44L).build();
+        Issue issue = new Issue();
+        issue.setId(77L);
+        User user = new User();
+        user.setId(5L);
+        user.setEmail("bob@test.com");
+        user.setRoles(Set.of());
+
+        // Message with exactly 4000 characters should be accepted
+        String maxContent = "a".repeat(4000);
+        Message message = Message.builder()
+                .id(101L)
+                .content(maxContent)
+                .conversation(conversation)
+                .issue(issue)
+                .user(user)
+                .build();
+
+        when(userRepository.findByEmail("bob@test.com")).thenReturn(Optional.of(user));
+        when(conversationRepository.findById(44L)).thenReturn(Optional.of(conversation));
+        when(issueRepository.findById(77L)).thenReturn(Optional.of(issue));
+        when(messageRepository.save(org.mockito.ArgumentMatchers.any(Message.class))).thenReturn(message);
+
+        ConversationService.MessageDispatchResult result = conversationService.addMessage(44L,
+                Map.of("content", maxContent, "issueId", "77"), "bob@test.com");
+
+        assertNotNull(result);
+        assertEquals(maxContent, result.message().get("content"));
+    }
+
+    @Test
+    void addMessage_should_accept_null_content() {
+        Conversation conversation = Conversation.builder().id(44L).build();
+        Issue issue = new Issue();
+        issue.setId(77L);
+        User user = new User();
+        user.setId(5L);
+        user.setEmail("bob@test.com");
+        user.setRoles(Set.of());
+
+        Message message = Message.builder()
+                .id(101L)
+                .content(null)
+                .conversation(conversation)
+                .issue(issue)
+                .user(user)
+                .build();
+
+        when(userRepository.findByEmail("bob@test.com")).thenReturn(Optional.of(user));
+        when(conversationRepository.findById(44L)).thenReturn(Optional.of(conversation));
+        when(issueRepository.findById(77L)).thenReturn(Optional.of(issue));
+        when(messageRepository.save(org.mockito.ArgumentMatchers.any(Message.class))).thenReturn(message);
+
+        ConversationService.MessageDispatchResult result = conversationService.addMessage(44L,
+                Map.of("issueId", "77"), "bob@test.com");
+
+        assertNotNull(result);
+        assertNull(result.message().get("content"));
+    }
+}

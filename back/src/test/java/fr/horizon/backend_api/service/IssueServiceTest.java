@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,6 +45,9 @@ class IssueServiceTest {
 
     @Mock
     private ConversationService conversationService;
+
+    @Mock
+    private IssueFollowerService issueFollowerService;
 
     @InjectMocks
     private IssueService issueService;
@@ -185,7 +189,10 @@ class IssueServiceTest {
         when(issueRepository.findAll())
                 .thenReturn(List.of(issue));
 
-        List<IssueDto> result = issueService.findAll();
+        when(userRepository.findByEmail("john@test.com"))
+                .thenReturn(Optional.of(user));
+
+        List<IssueDto> result = issueService.findAll("john@test.com");
 
         assertEquals(1, result.size());
         assertEquals("Bug", result.get(0).getTitle());
@@ -196,13 +203,20 @@ class IssueServiceTest {
     @Test
     void deleteById_should_delete_issue_when_exists() {
 
+        User currentUser = new User();
+        currentUser.setId(1L);
+        currentUser.setEmail("john@test.com");
+
         Issue issue = new Issue();
         issue.setId(1L);
+        issue.setCreatedBy(currentUser);
 
         when(issueRepository.findById(1L))
                 .thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("john@test.com"))
+                .thenReturn(Optional.of(currentUser));
 
-        issueService.deleteById(1L);
+        issueService.deleteById(1L, "john@test.com");
 
         verify(issueRepository).delete(issue);
     }
@@ -214,7 +228,31 @@ class IssueServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(IssueNotFoundException.class,
-                () -> issueService.deleteById(1L));
+                () -> issueService.deleteById(1L, "john@test.com"));
+    }
+
+    @Test
+    void deleteById_should_throw_when_user_not_allowed() {
+
+        User currentUser = new User();
+        currentUser.setId(2L);
+        currentUser.setEmail("other@test.com");
+
+        User creator = new User();
+        creator.setId(1L);
+        creator.setEmail("john@test.com");
+
+        Issue issue = new Issue();
+        issue.setId(1L);
+        issue.setCreatedBy(creator);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("other@test.com")).thenReturn(Optional.of(currentUser));
+
+        assertThrows(AccessDeniedException.class,
+                () -> issueService.deleteById(1L, "other@test.com"));
+
+        verify(issueRepository, never()).delete(any());
     }
 
     @Test
@@ -282,7 +320,10 @@ class IssueServiceTest {
         when(issueRepository.findById(1L))
                 .thenReturn(Optional.of(issue));
 
-        IssueDto result = issueService.findById(1L);
+        when(userRepository.findByEmail("john@test.com"))
+                .thenReturn(Optional.of(user));
+
+        IssueDto result = issueService.findById(1L, "john@test.com");
 
         assertNotNull(result);
         assertEquals(1L, result.getId());
@@ -300,7 +341,7 @@ class IssueServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(IssueNotFoundException.class,
-                () -> issueService.findById(1L));
+                () -> issueService.findById(1L, "john@test.com"));
     }
 
     @Test
@@ -339,33 +380,58 @@ class IssueServiceTest {
     @Test
     void updatePrivacy_should_toggle_privacy() {
 
+        User currentUser = new User();
+        currentUser.setId(10L);
+
+        User categoryOwner = new User();
+        categoryOwner.setId(10L);
+
+        Category category = new Category();
+        category.setOwner(categoryOwner);
+
         Issue issue = new Issue();
         issue.setId(1L);
         issue.setPrivate(false);
+        issue.setCategory(category);
 
         when(issueRepository.findById(1L))
                 .thenReturn(Optional.of(issue));
 
-        issueService.updatePrivacy(1L);
+        when(userRepository.findByEmail("owner@test.com"))
+                .thenReturn(Optional.of(currentUser));
+
+        issueService.updatePrivacy(1L, "owner@test.com");
 
         assertTrue(issue.isPrivate());
-        verify(issueRepository).save(issue);
+        verify(issueRepository).saveAndFlush(issue);
+        verify(issueFollowerService).cleanupFollowersWithoutAccess(1L);
     }
 
     @Test
     void updatePrivacy_should_toggle_from_true_to_false() {
 
+        User currentUser = new User();
+        currentUser.setId(42L);
+
+        User manager = new User();
+        manager.setId(42L);
+
         Issue issue = new Issue();
         issue.setId(1L);
         issue.setPrivate(true);
+        issue.setManager(manager);
 
         when(issueRepository.findById(1L))
                 .thenReturn(Optional.of(issue));
 
-        issueService.updatePrivacy(1L);
+        when(userRepository.findByEmail("manager@test.com"))
+                .thenReturn(Optional.of(currentUser));
+
+        issueService.updatePrivacy(1L, "manager@test.com");
 
         assertFalse(issue.isPrivate());
-        verify(issueRepository).save(issue);
+        verify(issueRepository).saveAndFlush(issue);
+        verify(issueFollowerService, never()).cleanupFollowersWithoutAccess(1L);
     }
 
     @Test
@@ -375,7 +441,30 @@ class IssueServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(IssueNotFoundException.class,
-                () -> issueService.updatePrivacy(99L));
+                () -> issueService.updatePrivacy(99L, "owner@test.com"));
+    }
+
+    @Test
+    void updatePrivacy_should_throw_when_user_is_not_category_owner_or_manager() {
+
+        User currentUser = new User();
+        currentUser.setId(100L);
+
+        User categoryOwner = new User();
+        categoryOwner.setId(200L);
+
+        Category category = new Category();
+        category.setOwner(categoryOwner);
+
+        Issue issue = new Issue();
+        issue.setId(1L);
+        issue.setCategory(category);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(currentUser));
+
+        assertThrows(AccessDeniedException.class,
+                () -> issueService.updatePrivacy(1L, "user@test.com"));
     }
 
     @Test
@@ -642,25 +731,179 @@ class IssueServiceTest {
     }
 
     @Test
-    void updateIssueWhenIncomplete_should_throw_when_category_not_found() {
-        Issue existingIssue = new Issue();
-        existingIssue.setId(1L);
-        User owner = new User();
+    void canAccessIssue_should_return_true_for_public_issue() {
+        Issue issue = setupIssue();
+        issue.setPrivate(false);
+        User user = new User();
 
-        when(issueRepository.findById(1L)).thenReturn(Optional.of(existingIssue));
-        when(userRepository.findByEmail("test@test.fr")).thenReturn(Optional.of(owner));
-        when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
-
-        IssueCreateDto dto = new IssueCreateDto();
-        dto.setCategoryId(99L);
-
-        assertThrows(CategoryNotFoundException.class,
-                () -> issueService.updateIssueWhenIncomplete("test@test.fr", 1L, dto));
-
-        verify(issueRepository, never()).save(any());
+        assertTrue(issueService.canAccessIssue(issue, user));
     }
 
+    @Test
+    void canAccessIssue_should_return_true_for_private_issue_if_creator() {
+        User creator = setupUser();
+        creator.setId(1L);
+        Issue issue = setupIssue();
+        issue.setPrivate(true);
+        issue.setCreatedBy(creator);
 
+        assertTrue(issueService.canAccessIssue(issue, creator));
+    }
 
+    @Test
+    void canAccessIssue_should_return_true_for_private_issue_if_manager() {
+        User manager = setupUser();
+        manager.setId(2L);
+        Issue issue = setupIssue();
+        issue.setPrivate(true);
+        issue.setManager(manager);
 
+        assertTrue(issueService.canAccessIssue(issue, manager));
+    }
+
+    @Test
+    void canAccessIssue_should_return_true_for_private_issue_if_category_owner() {
+        User owner = setupUser();
+        owner.setId(3L);
+        Category category = new Category();
+        category.setOwner(owner);
+
+        Issue issue = setupIssue();
+        issue.setPrivate(true);
+        issue.setCategory(category);
+
+        assertTrue(issueService.canAccessIssue(issue, owner));
+    }
+
+    @Test
+    void canAccessIssue_should_return_false_for_private_issue_if_no_relation() {
+        Issue issue = setupIssue();
+        issue.setPrivate(true);
+        issue.setCreatedBy(setupUser()); // creator id 10L par setupUser
+        issue.setManager(null);
+        
+        Category category = new Category();
+        category.setOwner(setupUser());
+        category.getOwner().setId(99L);
+        issue.setCategory(category);
+
+        User otherUser = setupUser();
+        otherUser.setId(5L);
+
+        assertFalse(issueService.canAccessIssue(issue, otherUser));
+    }
+
+    @Test
+    void canManageIssuePrivacy_should_return_true_for_category_owner() {
+        User owner = setupUser();
+        owner.setId(1L);
+        Category category = new Category();
+        category.setOwner(owner);
+
+        Issue issue = setupIssue();
+        issue.setCategory(category);
+
+        assertTrue(issueService.canManageIssuePrivacy(issue, owner));
+    }
+
+    @Test
+    void canManageIssuePrivacy_should_return_false_for_creator_if_not_owner() {
+        User creator = setupUser();
+        creator.setId(1L);
+        Issue issue = setupIssue();
+        issue.setCreatedBy(creator);
+        issue.setCategory(new Category());
+        issue.getCategory().setOwner(setupUser());
+        issue.getCategory().getOwner().setId(99L);
+
+        assertFalse(issueService.canManageIssuePrivacy(issue, creator));
+    }
+
+    @Test
+    void respondManagerRequest_should_accept_and_assign_manager() {
+        User teacher = setupUser();
+        teacher.setId(1L);
+        Issue issue = setupIssue();
+        RequestManager rm = new RequestManager();
+        rm.setIssue(issue);
+        rm.setTargetTeacher(teacher);
+        rm.setStatus(RequestManagerStatus.PENDING);
+
+        when(requestManagerRepository.findById(anyLong())).thenReturn(Optional.of(rm));
+        when(issueRepository.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
+
+        RequestManagerDto result = issueService.respondManagerRequest(true, 10L, 1L);
+
+        assertEquals(RequestManagerStatus.ACCEPTED.name(), result.getStatus());
+        assertEquals(teacher.getId(), issue.getManager().getId());
+        verify(issueRepository).saveAndFlush(issue);
+    }
+
+    @Test
+    void respondManagerRequest_should_deny_request() {
+        User teacher = setupUser();
+        teacher.setId(1L);
+        Issue issue = setupIssue();
+        issue.setCategory(new Category());
+        issue.getCategory().setOwner(new User());
+
+        RequestManager rm = new RequestManager();
+        rm.setIssue(issue);
+        rm.setTargetTeacher(teacher);
+        rm.setStatus(RequestManagerStatus.PENDING);
+
+        when(requestManagerRepository.findById(anyLong())).thenReturn(Optional.of(rm));
+        when(requestManagerRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        RequestManagerDto result = issueService.respondManagerRequest(false, 10L, 1L);
+
+        assertEquals(RequestManagerStatus.DENIED.name(), result.getStatus());
+        verify(requestManagerRepository).save(any(RequestManager.class));
+        verify(issueRepository).saveAndFlush(issue);
+    }
+
+    @Test
+    void respondManagerRequest_should_throw_when_wrong_user() {
+        User teacher = setupUser();
+        teacher.setId(1L);
+        RequestManager rm = new RequestManager();
+        rm.setTargetTeacher(teacher);
+
+        when(requestManagerRepository.findById(anyLong())).thenReturn(Optional.of(rm));
+
+        assertThrows(IllegalStateException.class, () -> issueService.respondManagerRequest(true, 10L, 2L));
+    }
+
+    @Test
+    void findById_should_throw_when_not_accessible() {
+        User user = setupUser();
+        user.setEmail("other@test.fr");
+        Issue issue = setupIssue();
+        issue.setPrivate(true);
+        issue.setCreatedBy(new User());
+        issue.getCreatedBy().setId(99L);
+        issue.setCategory(new Category());
+        issue.getCategory().setOwner(new User());
+        issue.getCategory().getOwner().setId(88L);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("other@test.fr")).thenReturn(Optional.of(user));
+
+        assertThrows(AccessDeniedException.class, () -> issueService.findById(1L, "other@test.fr"));
+    }
+
+    @Test
+    void updatePrivacy_should_throw_when_not_authorized() {
+        User user = setupUser();
+        user.setEmail("not_owner@test.fr");
+        Issue issue = setupIssue();
+        issue.setCategory(new Category());
+        issue.getCategory().setOwner(new User());
+        issue.getCategory().getOwner().setId(99L);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("not_owner@test.fr")).thenReturn(Optional.of(user));
+
+        assertThrows(AccessDeniedException.class, () -> issueService.updatePrivacy(1L, "not_owner@test.fr"));
+    }
 }

@@ -17,6 +17,7 @@ import fr.horizon.backend_api.repository.RequestManagerRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,15 +44,23 @@ public class IssueService {
     private final CategoryRepository categoryRepository;
     private final ConversationService conversationService;
     private final RequestManagerRepository requestManagerRepository;
+    private final IssueFollowerService issueFollowerService;
+
+    // Common exception messages
+    private static final String USER_NOT_FOUND = "User not found";
 
     /**
      * Retourne la liste de toutes les issues.
      *
      * @return liste de DTO issues
      */
-    public List<IssueDto> findAll() {
+    public List<IssueDto> findAll(String email) {
+        User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+
         return issueRepository.findAll()
                 .stream()
+                .filter(issue -> canAccessIssue(issue, currentUser))
                 .map(this::toDto)
                 .toList();
     }
@@ -62,10 +71,18 @@ public class IssueService {
      * @param id id de l'issue à trouver
      * @return DTO de l'issue
      */
-    public IssueDto findById(Long id) {
-        return issueRepository.findById(id)
-                .map(this::toDto)
+    public IssueDto findById(Long id, String email) {
+        Issue issue = issueRepository.findById(id)
                 .orElseThrow(() -> new IssueNotFoundException(id));
+
+        User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+
+        if (!canAccessIssue(issue, currentUser)) {
+            throw new AccessDeniedException("Vous n'avez pas accès à cette issue privée");
+        }
+
+        return toDto(issue);
     }
 
     /**
@@ -146,17 +163,33 @@ public class IssueService {
      * Inverse la visibilité privée d'une issue.
      * <p>
      * Passe une issue de privé à public ou inversement.
+     * Si l'issue devient privée, nettoie les followers qui n'ont plus accès.
      *
      * @param id identifiant de l'issue
      * @throws IssueNotFoundException si l'issue n'existe pas
      */
-    public void updatePrivacy(Long id){
+    @Transactional
+    public void updatePrivacy(Long id, String email){
         Issue issue = issueRepository.findById(id)
                 .orElseThrow(() -> new IssueNotFoundException(id));
 
-        issue.setPrivate(!issue.isPrivate());
+        User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
 
-        issueRepository.save(issue);
+        if (!canManageIssuePrivacy(issue, currentUser)) {
+            throw new AccessDeniedException("Seul le category owner ou l'issue manager peut modifier la visibilité");
+        }
+
+        // Nettoyer les followers AVANT de rendre l'issue privée
+        boolean willBecomePrivate = !issue.isPrivate();
+        
+        issue.setPrivate(!issue.isPrivate());
+        issueRepository.saveAndFlush(issue);
+
+        // Nettoyer les followers qui n'ont plus accès si l'issue vient de devenir privée
+        if (willBecomePrivate) {
+            issueFollowerService.cleanupFollowersWithoutAccess(id);
+        }
     }
 
     /**
@@ -166,9 +199,16 @@ public class IssueService {
      * @throws IssueNotFoundException si l'issue n'existe pas
      */
     @Transactional
-    public void deleteById(Long id) {
+    public void deleteById(Long id, String email) {
         Issue issue = issueRepository.findById(id)
                 .orElseThrow(() -> new IssueNotFoundException(id));
+
+        User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+
+        if (!canDeleteIssue(issue, currentUser)) {
+            throw new AccessDeniedException("Vous n'avez pas l'autorisation de supprimer cette issue");
+        }
 
         issueRepository.delete(issue);
     }
@@ -242,6 +282,53 @@ public class IssueService {
                 .createdAt(issue.getCreatedAt())
                 .updatedAt(issue.getUpdatedAt())
                 .build();
+    }
+
+    public boolean canAccessIssue(Issue issue, User user) {
+        if (!issue.isPrivate()) {
+            return true;
+        }
+
+        Long currentUserId = user.getId();
+        Long creatorId = issue.getCreatedBy() != null ? issue.getCreatedBy().getId() : null;
+        Long categoryOwnerId = issue.getCategory() != null && issue.getCategory().getOwner() != null
+                ? issue.getCategory().getOwner().getId()
+                : null;
+        Long categoryManagerId = issue.getManager() != null ? issue.getManager().getId() : null;
+
+        return currentUserId != null && (
+                currentUserId.equals(creatorId)
+                        || currentUserId.equals(categoryOwnerId)
+                        || currentUserId.equals(categoryManagerId)
+        );
+    }
+
+    public boolean canManageIssuePrivacy(Issue issue, User user) {
+        Long currentUserId = user.getId();
+        Long categoryOwnerId = issue.getCategory() != null && issue.getCategory().getOwner() != null
+                ? issue.getCategory().getOwner().getId()
+                : null;
+        Long categoryManagerId = issue.getManager() != null ? issue.getManager().getId() : null;
+
+        return currentUserId != null && (
+                currentUserId.equals(categoryOwnerId)
+                        || currentUserId.equals(categoryManagerId)
+        );
+    }
+
+    private boolean canDeleteIssue(Issue issue, User user) {
+        Long currentUserId = user.getId();
+        Long creatorId = issue.getCreatedBy() != null ? issue.getCreatedBy().getId() : null;
+        Long categoryOwnerId = issue.getCategory() != null && issue.getCategory().getOwner() != null
+                ? issue.getCategory().getOwner().getId()
+                : null;
+        Long categoryManagerId = issue.getManager() != null ? issue.getManager().getId() : null;
+
+        return currentUserId != null && (
+                currentUserId.equals(creatorId)
+                        || currentUserId.equals(categoryOwnerId)
+                        || currentUserId.equals(categoryManagerId)
+        );
     }
 
 
@@ -326,7 +413,11 @@ public class IssueService {
             createRequestManager(requestManager.getIssue());
         }
 
-        issueRepository.save(requestManager.getIssue());
+        issueRepository.saveAndFlush(requestManager.getIssue());
+
+        // Nettoyer les followers qui n'ont plus accès suite au changement de manager
+        issueFollowerService.cleanupFollowersWithoutAccess(requestManager.getIssue().getId());
+
         return toDto(requestManager);
     }
 
@@ -426,9 +517,18 @@ public class IssueService {
     }
 
 
-    public IssueDto getIssueDTOById(Long id) {
-        return toDto(issueRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Issue non trouvée")));
+    public IssueDto getIssueDTOById(Long id, String email) {
+        Issue issue = issueRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Issue non trouvée"));
+
+        User currentUser = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+
+        if (!canAccessIssue(issue, currentUser)) {
+            throw new AccessDeniedException("Vous n'avez pas accès à cette issue privée");
+        }
+
+        return toDto(issue);
     }
 
     public List<IssueDto> getIncompleteIssuesToResent(Long userId) {
