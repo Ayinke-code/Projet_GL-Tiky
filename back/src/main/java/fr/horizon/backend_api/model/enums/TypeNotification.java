@@ -6,8 +6,6 @@ import lombok.Getter;
 @AllArgsConstructor
 @Getter
 public enum TypeNotification {
-    //TODO: va évoluer en rajoutant d'autre type de notification
-
     // mise a jour d'une issue suivi
     UPDATING_ISSUE,
     // ajout d'un event pour les participant

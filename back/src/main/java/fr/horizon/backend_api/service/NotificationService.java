@@ -1,11 +1,9 @@
 package fr.horizon.backend_api.service;
 
-import fr.horizon.backend_api.model.Event;
-import fr.horizon.backend_api.model.Issue;
+
 import fr.horizon.backend_api.model.Notification;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.NotificationDto;
-import fr.horizon.backend_api.model.enums.TypeNotification;
 import fr.horizon.backend_api.repository.NotificationRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
