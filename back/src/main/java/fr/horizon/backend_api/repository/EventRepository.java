@@ -43,13 +43,20 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             "LEFT JOIN e.projectGroups pg " +
             "LEFT JOIN pg.members m " +
             "WHERE (e.createdBy.id = :userId " +
-            "OR p.user.id = :userId " +
+            "OR (p.user.id = :userId AND p.hasAccepted = true) " +
             "OR m.id = :userId) " +
             "AND e.validated = true")
     List<Event> findCalendarEventsForUser(@Param("userId") Long userId);
 
     @Query("SELECT e FROM Event e JOIN e.participants p WHERE p.user.id = :userId AND p.hasAccepted IS NULL")
     List<Event> findPendingInvitationsByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT e FROM Event e JOIN e.participants p " +
+            "WHERE p.user.id = :userId " +
+            "AND p.hasAccepted = true " +
+            "AND e.createdBy.id != :userId " +
+            "ORDER BY e.startDate ASC")
+    List<Event> findAcceptedParticipationsByUserId(@Param("userId") Long userId);
 
     @Query("SELECT COUNT(e) FROM Event e JOIN e.participants p " +
             "WHERE p.user.id = :userId " +

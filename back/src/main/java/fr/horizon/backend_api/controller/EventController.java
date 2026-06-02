@@ -142,6 +142,19 @@ public class EventController {
     }
 
     /**
+     * Retourne les événements auxquels l'utilisateur connecté participe (invitations acceptées).
+     * Exclut les événements créés par l'utilisateur lui-même.
+     *
+     * @param authentication contexte de sécurité Spring
+     * @return liste des événements acceptés triés par date
+     */
+    @GetMapping("/my-participations")
+    public ResponseEntity<List<EventResponseDto>> myParticipations(Authentication authentication) {
+        String email = authentication.getName();
+        return ResponseEntity.ok(eventService.getMyParticipations(email));
+    }
+
+    /**
      * Crée un nouvel événement académique.
      * <p>
      * L’email de l’utilisateur connecté est extrait du contexte

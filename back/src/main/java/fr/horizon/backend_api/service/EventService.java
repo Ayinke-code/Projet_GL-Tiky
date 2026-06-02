@@ -382,6 +382,15 @@ public class EventService {
      * @return Une liste de EventResponseDto formatée pour le frontend
      */
     @Transactional(readOnly = true)
+    public List<EventResponseDto> getMyParticipations(String email) {
+        User user = userService.findByEmail(email);
+        return eventRepository.findAcceptedParticipationsByUserId(user.getId())
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<EventResponseDto> getMyCalendarEvents(String email) {
         User user = userService.findByEmail(email);
 
