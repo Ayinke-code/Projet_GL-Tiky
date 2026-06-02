@@ -50,6 +50,7 @@ build-backend:
     - if: $CI_COMMIT_BRANCH == "dev"
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "feat/correction-deploy-job-main"
 
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend-dev:
@@ -101,6 +102,7 @@ build-frontend-prod:
     expire_in: 1 days
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "feat/correction-deploy-job-main"
     # - when: never
 
 # Stage 2: Unit Tests
@@ -237,10 +239,7 @@ deploy_prod:
     # Créer structure avec dossier SSL
     - |
       ssh $DEPLOY_USER@$DEPLOY_SERVER_PROD << 'ENDSSH'
-        mkdir -p ~/app/backend
-        mkdir -p ~/app/frontend
-        mkdir -p ~/app/ssl
-        mkdir -p ~/app/logs
+        mkdir -p ~/app/backend ~/app/frontend ~/app/ssl ~/app/logs
       ENDSSH
 
     # Transférer les certificats SSL
@@ -259,6 +258,42 @@ deploy_prod:
 
     # Config Apache
     - scp apache-site-prod.conf $DEPLOY_USER@$DEPLOY_SERVER_PROD:~/app/apache-site.conf
+
+    # 7. Déployer front + redémarrer backend (une fois tous les fichiers transférés)
+    - |
+      ssh $DEPLOY_USER@$DEPLOY_SERVER_PROD << 'ENDSSH'
+        sudo cp ~/app/apache-site.conf /etc/apache2/sites-available/app.conf
+        sudo a2ensite app.conf
+        sudo a2enmod proxy proxy_http ssl headers rewrite
+        sudo systemctl reload apache2
+
+        echo "Déploiement du frontend..."
+        sudo rsync -avz --delete ~/app/frontend/ /var/www/html/
+
+        echo "Arrêt du backend existant..."
+        OLD_PID=$(pgrep -f "app.jar" || true)
+        if [ -n "$OLD_PID" ]; then
+          kill $OLD_PID
+          sleep 2
+          echo "Ancien processus $OLD_PID arrêté"
+        else
+          echo "Aucun backend en cours"
+        fi
+
+        echo "Démarrage du nouveau backend..."
+        cd ~/app/backend
+        nohup java -jar app.jar > ~/app/logs/app.log 2>&1 &
+        NEW_PID=$!
+        sleep 3
+
+        if ps -p $NEW_PID > /dev/null 2>&1; then
+          echo "Backend démarré (PID $NEW_PID)"
+        else
+          echo "Échec du démarrage — dernières lignes de log :"
+          tail -20 ~/app/logs/app.log
+          exit 1
+        fi
+      ENDSSH
     
   environment:
     name: prod
@@ -270,6 +305,7 @@ deploy_prod:
   
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "feat/correction-deploy-job-main"
 
 # Stage 4: Selenium Tests
 selenium-test-dev:
@@ -330,6 +366,7 @@ selenium-test-prod:
     - build-backend
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "feat/correction-deploy-job-main"
 
 # Stage 5: SonarQube Analysis
 sonar-dev:
