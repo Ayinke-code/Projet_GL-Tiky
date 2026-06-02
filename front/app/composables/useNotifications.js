@@ -6,24 +6,31 @@ export const useNotifications = () => {
   const notifications = useState('notifications', () => [])
   const api = useApi()
 
+  const config = useRuntimeConfig()
+
+
 
   const fetchHistory = async (userId) => {
     try {
       const data = await api(`/notifications/user/${userId}`)
       notifications.value = data
     } catch (error) {
-      console.error('Erreur lors de la récupération des notifications', error)
     }
   }
 
   const connectToWebSocket = (userId, token) => {
+    const apiBase = config.public.apiBase
+    const wsBaseUrl = apiBase.replace(/^http/, 'ws')
+
+    const brokerURL = `${wsBaseUrl}/ws/notifications`
     stompClient = new Client({
-      brokerURL: 'ws://localhost:8080/api/ws/notifications',
+
+
+      brokerURL: brokerURL,
       connectHeaders: {
         Authorization: `Bearer ${token}`
       },
       onConnect: () => {
-        console.log('Connecté au WebSocket !')
 
         stompClient.subscribe(`/topic/notifications/user/${userId}`, (message) => {
           const newNotification = JSON.parse(message.body)
@@ -31,7 +38,6 @@ export const useNotifications = () => {
         })
       },
       onStompError: (frame) => {
-        console.error('Erreur STOMP : ', frame.headers['message'])
       }
     })
 
@@ -41,7 +47,6 @@ export const useNotifications = () => {
   const disconnect = () => {
     if (stompClient && stompClient.active) {
       stompClient.deactivate()
-      console.log('WebSocket déconnecté')
     }
     notifications.value = []
   }
