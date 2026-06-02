@@ -39,12 +39,12 @@ public class IssueService {
     private final CategoryRepository categoryRepository;
     private final ConversationService conversationService;
     private final RequestManagerRepository requestManagerRepository;
+    private final IssueFollowerRepository issueFollowerRepository;
     private final IssueFollowerService issueFollowerService;
 
-    // Common exception messages
     private static final String USER_NOT_FOUND = "User not found";
-    private final IssueFollowerRepository issueFollowerRepository;
 
+    private static final String OWNER_NF = "Owner not found";
     /**
      * Retourne la liste de toutes les issues.
      *
@@ -98,7 +98,7 @@ public class IssueService {
     public IssueDto createIssue(IssueCreateDto dto, String email) {
 
         User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+                .orElseThrow(() -> new EntityNotFoundException(OWNER_NF));
 
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));
@@ -178,7 +178,7 @@ public class IssueService {
 
         // Nettoyer les followers AVANT de rendre l'issue privée
         boolean willBecomePrivate = !issue.isPrivate();
-
+        
         issue.setPrivate(!issue.isPrivate());
         issueRepository.saveAndFlush(issue);
 
@@ -223,7 +223,7 @@ public class IssueService {
                 .orElseThrow(() -> new IssueNotFoundException(id));
 
         User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+                .orElseThrow(() -> new EntityNotFoundException(OWNER_NF));
 
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));
@@ -436,13 +436,9 @@ public class IssueService {
             createRequestManager(issue);
         }
 
-        issueRepository.saveAndFlush(requestManager.getIssue());
-
-        // Nettoyer les followers qui n'ont plus accès suite au changement de manager
-        issueFollowerService.cleanupFollowersWithoutAccess(requestManager.getIssue().getId());
-
-        issueRepository.save(issue);
         requestManagerRepository.save(requestManager);
+        issueRepository.saveAndFlush(issue);
+        issueFollowerService.cleanupFollowersWithoutAccess(issue.getId());
         return toDto(requestManager);
     }
 
@@ -572,7 +568,7 @@ public class IssueService {
      */
     public List<IssueDto> getAllDisplayableIssue(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+                .orElseThrow(() -> new EntityNotFoundException(OWNER_NF));
 
         List<IssueStatus> openStatuses = List.of(IssueStatus.OUVERT);
 

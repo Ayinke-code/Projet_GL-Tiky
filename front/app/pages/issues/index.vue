@@ -137,7 +137,7 @@ import AssignationTeacher from '~/components/assignation/AssignationTeacher.vue'
 import IncompleteIssuesList from '~/components/layout/IncompleteIssuesList.vue'
 
 const { ready, user } = useAuth()
-const { issues, getDisplayableIssues, fetchIssues, deleteIssue, error } = useIssues()
+const { issues,getDisplayableIssues ,fetchIssues, deleteIssue, error } = useIssues()
 const { refreshFollowedIssues } = useFollowedIssuesState()
 
 /**
