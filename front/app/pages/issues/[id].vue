@@ -85,10 +85,12 @@ const connectWebSocket = () => {
           // On émet l'événement global pour informer les autres composants (ex: useFollowedIssuesState)
           window.dispatchEvent(new CustomEvent('conversation:new_message', { detail: data.message }))
         }
-      } else if (data.type === 'privacy_update' && Number(data.issueId) === issueId) {
-        // Déclencher un check immédiat de l'accès
-        console.log('[WebSocket] Notification de changement de visibilité reçue')
+      } else if ((data.type === 'privacy_update' || data.type === 'status_update') && Number(data.issueId) === issueId) {
+        // Déclencher un check immédiat de l'accès ou du statut
+        console.log(`[WebSocket] Notification de changement (${data.type}) reçue`)
         checkAccess()
+        // Émettre un événement global pour les autres composants
+        window.dispatchEvent(new CustomEvent('issue:updated', { detail: { issueId: data.issueId, type: data.type } }))
       }
     } catch (e) {
       console.error('Erreur WebSocket:', e)
@@ -288,8 +290,14 @@ const handleSend = async () => {
     }
     newMessage.value = ''
     replyingToMessage.value = null
-    // On marque comme lu
-    acknowledgeFollowedIssueUpdate(issue.value)
+
+    // On rafraîchit l'issue pour avoir le nouveau updatedAt (mis à jour par le backend suite au message)
+    // Cela évite que l'issue repasse en "non lu" au prochain polling car le updatedAt serveur aurait changé
+    const updatedIssue = await getIssueById(issueId)
+    issue.value = updatedIssue
+
+    // On marque comme lu avec la nouvelle date
+    acknowledgeFollowedIssueUpdate(updatedIssue)
   } catch (err) {
     error.value = err?.message || 'Erreur lors de l\'envoi du message'
   } finally {

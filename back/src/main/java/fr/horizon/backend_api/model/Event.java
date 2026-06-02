@@ -52,6 +52,7 @@ public class Event extends BaseEntity {
     @Column
     private LocalDateTime endDate;
 
+    @Builder.Default
     @Column
     private Boolean validated = true;
 

@@ -114,18 +114,25 @@ export const useFollowedIssuesState = () => {
     const authorId = message.userId ?? message.authorId ?? message.createdBy ?? message.user?.id ?? null
     const currentUserId = user?.value?.id ?? null
 
-    // Si c'est l'utilisateur courant qui a envoyé le message, on ne marque pas comme non lu
-    if (authorId !== null && currentUserId !== null && Number(authorId) === Number(currentUserId)) {
-      return
-    }
-
+    // Marquer l'issue comme mise à jour
     markFollowedIssueAsUpdated(issueId)
+  }
+
+  /**
+   * Gère la réception d'une notification de mise à jour globale de l'issue (statut, visibilité).
+   */
+  const handleIssueUpdateNotification = (event) => {
+    const data = event?.detail
+    if (!data || !data.issueId) return
+
+    markFollowedIssueAsUpdated(data.issueId)
   }
 
   // Enregistrement de l'écouteur d'événements
   if (import.meta.client && !conversationNewMessageListenerRegistered) {
     initStorage()
     window.addEventListener('conversation:new_message', handleConversationNewMessage)
+    window.addEventListener('issue:updated', handleIssueUpdateNotification)
     conversationNewMessageListenerRegistered = true
   }
 

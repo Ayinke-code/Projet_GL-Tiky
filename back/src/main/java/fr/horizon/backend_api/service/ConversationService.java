@@ -173,8 +173,13 @@ public class ConversationService {
         }
 
         Message message = messageBuilder.build();
+        Message saved = messageRepository.save(message);
 
-        return messageRepository.save(message);
+        // Mettre à jour la date de modification de l'issue pour notifier les followers
+        issue.setUpdatedAt(java.time.LocalDateTime.now());
+        issueRepository.saveAndFlush(issue);
+
+        return saved;
     }
 
     /**
