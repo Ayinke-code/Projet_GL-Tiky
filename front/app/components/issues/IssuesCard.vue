@@ -16,7 +16,6 @@
           </UBadge>
 
           <span
-            :id="'issue-card-statut-'+issue.title"
             :class="getStatusBadgeClass(issue.status)"
             class="px-2 py-0.5 rounded-full text-xs font-medium"
           >

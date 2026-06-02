@@ -68,7 +68,6 @@
         <!-- CTA -->
         <div class="space-y-3">
           <NuxtLink to="/login"
-            id="btn-go-login"
             class="flex items-center justify-center w-full px-6 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-base transition-colors shadow-md">
             <i class="fa-solid fa-arrow-right-to-bracket mr-2"></i>
             Se connecter

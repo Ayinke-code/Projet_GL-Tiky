@@ -31,7 +31,6 @@
       </time>
     </div>
     <p
-      :id="'issue-message-'+contenu"
       class="whitespace-pre-line text-sm leading-6"
       :class="isMine ? 'text-gray-800' : 'text-gray-700'"
       style="overflow-wrap: anywhere; word-break: break-word; hyphens: auto;"

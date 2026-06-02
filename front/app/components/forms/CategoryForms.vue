@@ -11,7 +11,6 @@
 
           <input
             v-model="formData.name"
-            id="categorie-name-teacher"
             type="text"
             placeholder="Ex: Mathématiques"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -26,7 +25,6 @@
 
           <input
             v-model="formData.subject"
-            id="categorie-subject-teacher"
             type="text"
             placeholder="Ex: Algèbre"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -39,7 +37,6 @@
       <div class="flex gap-3 pt-2">
 
         <button
-          id="validate-categorie"
           type="submit"
           class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-all cursor-pointer"
         >

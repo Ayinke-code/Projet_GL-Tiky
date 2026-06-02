@@ -13,7 +13,6 @@
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-1">Email ou nom d'utilisateur</label>
       <input v-model="form.email" type="text" placeholder="exemple@email.com"
-        id="input-email"
         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
         required />
     </div>
@@ -22,7 +21,6 @@
     <div>
       <label class="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
       <input v-model="form.password" type="password" placeholder="••••••••"
-        id="input-password"
         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
         required />
     </div>
@@ -34,7 +32,6 @@
 
     <!-- Submit Button -->
     <button type="submit" :disabled="!form.email || !form.password"
-      id="btn-connexion"
       class="w-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition duration-200 cursor-pointer">
       Se connecter
     </button>
