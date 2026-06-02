@@ -50,7 +50,6 @@ build-backend:
     - if: $CI_COMMIT_BRANCH == "dev"
     - if: $CI_COMMIT_BRANCH == "main"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == "feat/correction-deploy-job-main"
 
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend-dev:
@@ -102,7 +101,6 @@ build-frontend-prod:
     expire_in: 1 days
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_COMMIT_BRANCH == "feat/correction-deploy-job-main"
     # - when: never
 
 # Stage 2: Unit Tests
@@ -305,7 +303,6 @@ deploy_prod:
   
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_COMMIT_BRANCH == "feat/correction-deploy-job-main"
 
 # Stage 4: Selenium Tests
 selenium-test-dev:
@@ -366,7 +363,6 @@ selenium-test-prod:
     - build-backend
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-    - if: $CI_COMMIT_BRANCH == "feat/correction-deploy-job-main"
 
 # Stage 5: SonarQube Analysis
 sonar-dev:
