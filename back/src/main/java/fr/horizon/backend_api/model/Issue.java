@@ -66,4 +66,5 @@ public class Issue extends BaseEntity {
     private List<RequestManager> requests = new ArrayList<>();
 
 
+
 }

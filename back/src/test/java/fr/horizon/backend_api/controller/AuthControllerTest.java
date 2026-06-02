@@ -5,6 +5,7 @@ import fr.horizon.backend_api.model.dto.LoginResponse;
 import fr.horizon.backend_api.model.dto.UserDto;
 import fr.horizon.backend_api.service.AuthService;
 import fr.horizon.backend_api.service.JwtToken;
+import fr.horizon.backend_api.service.NotificationService;
 import fr.horizon.backend_api.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +41,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private Authentication authentication;
+
+    @MockitoBean
+    private NotificationService notificationService;
 
     @MockitoBean
     private JwtToken jwtToken;
