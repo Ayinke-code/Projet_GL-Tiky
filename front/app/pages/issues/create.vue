@@ -12,7 +12,7 @@
         <!-- Titre -->
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">Titre *</label>
-          <input v-model="form.title" type="text" placeholder="Entrez le titre du ticket"
+          <input v-model="form.title" id= "input-issue-title" type="text" placeholder="Entrez le titre du ticket"
                  class="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
                  required />
         </div>
@@ -53,7 +53,7 @@
           <UButton to="/issues" variant="outline" icon="i-lucide-x">
             Annuler
           </UButton>
-          <UButton type="submit" icon="i-lucide-check" :loading="submitting" class="cursor-pointer">
+          <UButton type="submit" id= "btn-issue-create" icon="i-lucide-check" :loading="submitting" class="cursor-pointer">
             Créer
           </UButton>
         </div>

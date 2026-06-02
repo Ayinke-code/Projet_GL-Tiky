@@ -75,6 +75,8 @@ public class CategoryService {
         Category category = Category.builder()
                 .name(dto.getName())
                 .subject(dto.getSubject())
+                //correction
+                .categoryType(CategoryType.ISSUE)
                 .status(CategoryStatus.ACTIVE)
                 .owner(owner)
                 .build();

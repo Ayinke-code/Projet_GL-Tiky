@@ -387,4 +387,17 @@ public class IssueController {
         return  ResponseEntity.ok(issueFollowerService.getFollowers(issueId));
     }
 
+    /**
+     * Récupère la liste des issues affichage a l'acceuil de la page
+     *
+     * @param auth contexte d'authentification Spring Security
+     * @return liste des issues affichage a l'acceuil
+     */
+    @GetMapping("/displayable")
+    public ResponseEntity<List<IssueDto>> getDisplayableIssues(Authentication auth) {
+        String email = auth.getName();
+        List<IssueDto> displayableIssues = issueService.getAllDisplayableIssue(email);
+        return ResponseEntity.ok(displayableIssues);
+    }
+
 }

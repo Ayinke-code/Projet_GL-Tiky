@@ -22,8 +22,8 @@
             {{ getStatusLabel(issue.status) }}
           </span>
 
-          <UBadge v-if="issue.private" color="warning" variant="soft" size="xs">
-            🔒
+          <UBadge v-if="issue.private" color="warning" variant="soft" size="sm">
+            <UIcon name="i-heroicons-lock-closed" />
           </UBadge>
         </div>
       </div>

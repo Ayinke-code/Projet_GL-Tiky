@@ -8,15 +8,22 @@
         </div>
 
       <!--Rebrique des affectations -->
-      <div v-if="isTeacher" class="py-12">
-        <section><AssignationManager :userId="user.id" @issue-updated="fetchIssues"/></section>
+      <div v-if="isTeacher || isManager" class="py-12">
+        <!-- Visible uniquement par les Managers -->
+        <section v-if="isManager">
+          <AssignationManager :userId="user.id" @issue-updated="fetchIssues"/>
+        </section>
 
-        <div class="relative py-8">
+        <!-- Séparateur visible uniquement si l'utilisateur est à la fois Manager ET Teacher -->
+        <div v-if="isManager && isTeacher" class="relative py-8">
           <div class="absolute inset-0 flex items-center"><span class="w-full border-t border-gray-200"></span></div>
           <div class="relative flex justify-center"><span class="bg-white px-2 text-sm text-gray-400"></span></div>
         </div>
 
-        <section><AssignationTeacher :userId="user.id" @issue-updated="fetchIssues"/></section>
+        <!-- Visible uniquement par les Professeurs -->
+        <section v-if="isTeacher">
+          <AssignationTeacher :userId="user.id" @issue-updated="fetchIssues"/>
+        </section>
       </div>
 
       <div
@@ -130,7 +137,7 @@ import AssignationTeacher from '~/components/assignation/AssignationTeacher.vue'
 import IncompleteIssuesList from '~/components/layout/IncompleteIssuesList.vue'
 
 const { ready, user } = useAuth()
-const { issues, fetchIssues, deleteIssue, error } = useIssues()
+const { issues,getDisplayableIssues ,fetchIssues, deleteIssue, error } = useIssues()
 const { refreshFollowedIssues } = useFollowedIssuesState()
 
 /**
@@ -273,7 +280,7 @@ onMounted(async () => {
     }
 
     try {
-        await fetchIssues()
+        await getDisplayableIssues()
     } catch (err) {
         error.value = err.message || 'Erreur lors du chargement'
     } finally {
@@ -283,6 +290,11 @@ onMounted(async () => {
 
 const isTeacher = computed(() => {
   return user.value?.roles?.includes('TEACHER') || user.value?.roles?.includes('ADMIN') || false
+})
+
+const isManager = computed(() => {
+  // Il est manager s'il possède des catégories ou s'il est admin
+  return Object.keys(ownedIssuesByCategory.value).length > 0 || user.value?.roles?.includes('ADMIN') || false
 })
 
 const afficherSectionIncomplete = ref(false)
