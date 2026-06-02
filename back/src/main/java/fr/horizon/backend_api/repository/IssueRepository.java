@@ -23,6 +23,12 @@ public interface IssueRepository extends JpaRepository<Issue, Long> {
 
     List<Issue> findByStatusAndCreatedBy_Id(IssueStatus status, Long createdById);
 
+    boolean existsByManagerIdAndStatusAndCategoryId(
+            Long managerId,
+            IssueStatus status,
+            Long categoryId
+    );
+
     @Query("SELECT DISTINCT i FROM Issue i " +
             "WHERE i.createdBy = :user " +
             "OR (i.isPrivate = false AND i.status IN :openStatuses) " +
