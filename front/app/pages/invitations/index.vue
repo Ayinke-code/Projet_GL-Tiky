@@ -17,6 +17,51 @@
       @switch="switchTab"
     />
 
+    <div v-if="activeTab === 'sessions'" class="animate-in fade-in duration-300">
+      <div v-if="myParticipations.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div
+          v-for="session in myParticipations"
+          :key="session.id"
+          class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:border-indigo-200 transition-all flex flex-col gap-3"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-600">
+              {{ session.categoryType }}
+            </span>
+            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600">
+              Acceptée
+            </span>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-gray-900">{{ session.name }}</h3>
+            <p v-if="session.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ session.description }}</p>
+          </div>
+          <div v-if="session.startDate" class="rounded-xl bg-indigo-50 px-3 py-2.5 text-xs">
+            <div class="font-semibold mb-1 capitalize">
+              <i class="fa-solid fa-calendar-days mr-1"></i>
+              {{ new Date(session.startDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <span class="uppercase tracking-wide text-[9px] opacity-60">Début</span>
+                <p class="font-medium">{{ new Date(session.startDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) }}</p>
+              </div>
+              <div>
+                <span class="uppercase tracking-wide text-[9px] opacity-60">Fin</span>
+                <p class="font-medium">{{ new Date(session.endDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) }}</p>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400"><i class="fa-solid fa-user mr-1"></i>Organisé par {{ session.createdBy }}</p>
+        </div>
+      </div>
+      <div v-else class="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-dashed border-gray-300 text-gray-500">
+        <span class="i-lucide-calendar-check w-12 h-12 mb-3 text-gray-300"></span>
+        <p class="text-lg font-medium text-gray-700">Aucune session</p>
+        <p class="text-sm">Vous n'avez accepté aucune invitation pour le moment.</p>
+      </div>
+    </div>
+
     <div v-if="activeTab === 'pending'" class="animate-in fade-in duration-300">
       <div v-if="myPendingInvitations && myPendingInvitations.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <InvitationCard
@@ -149,8 +194,11 @@ const {
   cancelEvent,
   inviteUserToEvent,
   removeParticipantFromMeeting,
-  fetchPossibleUsersInterested
+  fetchPossibleUsersInterested,
+  fetchMyParticipations
 } = useEvents()
+
+const myParticipations = ref([])
 
 const activeTab = ref('pending')
 
@@ -215,6 +263,7 @@ const rescheduleForm = ref({
 onMounted(async () => {
   await fetchMyInvitations()
   await fetchMyCreatedEvents()
+  myParticipations.value = await fetchMyParticipations()
 })
 
 const switchTab = (tab) => {
