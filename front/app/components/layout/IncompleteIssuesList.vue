@@ -250,11 +250,24 @@ const submitCorrections = async () => {
   }
 }
 
+const onNotificationReceived = async () => {
+  await fetchIssues()
+}
+
 // Chargement des données au montage
 onMounted(async () => {
+  window.addEventListener('notification:received', onNotificationReceived)
   if (props.userId) {
-    await fetchCategories()
+    try {
+      await fetchCategories()
+    } catch (e) {
+      console.error('Erreur lors du chargement des catégories', e)
+    }
     await fetchIssues()
   }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
 })
 </script>
