@@ -16,7 +16,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import fr.horizon.backend_api.util.MapKeys;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;

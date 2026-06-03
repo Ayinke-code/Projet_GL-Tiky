@@ -102,6 +102,12 @@ const connectWebSocket = () => {
     console.error('Erreur WebSocket')
     socket.value?.close()
   }
+
+  // RECONNEXION AUTOMATIQUE : Évite que le chat soit "mort" après une coupure réseau ou un restart serveur
+  socket.value.onclose = () => {
+    console.warn('[WebSocket] Connexion perdue. Tentative de reconnexion dans 3 secondes...')
+    setTimeout(connectWebSocket, 3000)
+  }
 }
 
 /**
@@ -118,6 +124,13 @@ onMounted(async () => {
     issue.value = await getIssueById(issueId)
     // Marquer l'issue comme lue au chargement de la page
     acknowledgeFollowedIssueUpdate(issue.value)
+
+    // TITRE DE L'ONGLET DYNAMIQUE : Injecte le titre du ticket dans le navigateur
+    if (process.client && issue.value) {
+      useHead({
+        title: `${issue.value.title} - Ticket #${issueId}`
+      })
+    }
 
     alreadyFollowing.value = await isFollowing(issueId)
     const conversation = await initializeConversation(issueId)
@@ -204,6 +217,7 @@ const handleMarkResolved = async () => {
     issue.value = await getIssueById(issueId)
   } catch (err) {
     console.error(err)
+    error.value = err?.message || 'Erreur lors de la mise à jour du statut'
   }
 }
 
@@ -211,7 +225,7 @@ const handleMarkResolved = async () => {
  * Demander la réouverture d'un ticket 'terminé'
  */
 const handleReopening = async () => {
-    // TODO: US-6700: Demande de réouverture
+  // TODO: US-6700: Demande de réouverture
 }
 
 /**
@@ -265,6 +279,7 @@ const toggleVisibility = async () => {
     issue.value = await getIssueById(issueId)
   } catch (err) {
     console.error(err)
+    error.value = err?.message || 'Erreur lors de la modification de la visibilité'
   }
 }
 
@@ -310,107 +325,95 @@ const handleUnfollow = async () => {
     alreadyFollowing.value = false
   } catch (err) {
     console.error(err)
+    error.value = err?.message || 'Erreur lors du désabonnement'
   }
 }
 </script>
 
 <template>
-    <div class="min-h-screen bg-gray-50">
-        <!-- Loader -->
-        <div v-if="loading" class="flex items-center justify-center min-h-[60vh]">
-            <div class="flex flex-col items-center gap-3 text-gray-400">
-                <svg class="animate-spin h-8 w-8" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                </svg>
-                <span class="text-sm">Chargement du ticket...</span>
-            </div>
-        </div>
+  <div class="min-h-screen bg-gray-50">
+    <div v-if="loading" class="flex items-center justify-center min-h-[60vh]">
+      <div class="flex flex-col items-center gap-3 text-gray-400">
+        <svg class="animate-spin h-8 w-8" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+        </svg>
+        <span class="text-sm">Chargement du ticket...</span>
+      </div>
+    </div>
 
-        <!-- Erreur -->
-        <div v-else-if="error" class="p-8">
-            <UAlert color="red" :description="error" />
-        </div>
+    <div v-else-if="error" class="p-8">
+      <UAlert color="red" :description="error" />
+    </div>
 
-        <!-- Contenu principal -->
-        <div v-else class="max-w-7xl mx-auto px-4 py-6 space-y-4">
+    <div v-else class="max-w-7xl mx-auto px-4 py-6 space-y-4">
 
-            <!-- Breadcrumb -->
-            <div class="flex items-center gap-2 text-sm text-gray-500">
-                <NuxtLink to="/issues" class="hover:text-gray-800 flex items-center gap-1 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    Retour aux tickets
-                </NuxtLink>
-                <span class="text-gray-300">/</span>
-                <span class="text-gray-700 font-medium">Ticket #{{ issueId }}</span>
-            </div>
+      <div class="flex items-center gap-2 text-sm text-gray-500">
+        <NuxtLink to="/issues" class="hover:text-gray-800 flex items-center gap-1 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+               stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Retour aux tickets
+        </NuxtLink>
+        <span class="text-gray-300">/</span>
+        <span class="text-gray-700 font-medium">Ticket #{{ issueId }}</span>
+      </div>
 
-            <!-- Header : titre + actions -->
-            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                <div class="space-y-2">
-                    <h1 class="text-2xl font-bold text-gray-900">{{ issue.title }}</h1>
-                    <div class="flex flex-wrap items-center gap-2">
-                        <!-- Catégorie -->
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div class="space-y-2">
+          <h1 class="text-2xl font-bold text-gray-900">{{ issue.title }}</h1>
+          <div class="flex flex-wrap items-center gap-2">
                         <span v-if="issue?.categoryId && issue?.categoryName"
-                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
                             {{ issue.categoryName }}
                         </span>
-                        <!-- Statut -->
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
-                            :class="getStatusBadgeClass(issue.status)">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                  :class="getStatusBadgeClass(issue.status)">
                             {{getStatusLabel(issue.status) }}
                         </span>
-                        <!-- Visibilité -->
-                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
-                            :class="!issue.private ? 'text-blue-600 bg-white' : 'text-red-600 bg-white'">
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                  :class="!issue.private ? 'text-blue-600 bg-white' : 'text-red-600 bg-white'">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
+                                 stroke="currentColor">
                                 <path v-if="!issue.private" stroke-linecap="round" stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                                      stroke-width="2"
+                                      d="M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
                             {{ issue.private ? 'Privé' : 'Public' }}
                         </span>
-                    </div>
-                </div>
+          </div>
+        </div>
 
-                <!-- Boutons d'action -->
-                <div class="flex items-center gap-2 shrink-0">
-                    <!--  -->
-                    <!-- Résolu : TODO: Quand on aura les 'Issue Manager', on pourra bloquer ce bouton pour les autres -->
-                    <!--  -->
-                    <button
-                        v-if="issue.status !== 'TERMINE' && user?.id === issue?.categoryManagerId && user.id !== null"
-                        @click="isResolveModalOpen = true" :disabled="issue.status === 'résolu'"
-                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-transform duration-200 hover:scale-105">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                        Marquer Résolu
-                    </button>
-                    <button
-                        v-else-if="issue.status === 'TERMINE' && user?.id === issue?.createdId && user.id !== null"
-                        @click="isReopeningModalOpen = true" :disabled="issue.status === 'résolu'"
-                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-transform duration-200 hover:scale-105">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                        </svg>
-                        Rouvrir
-                    </button>
-                    <!--  -->
-                    <!-- Privé/Public : TODO: Quand on aura les 'Issue Manager', on pourra bloquer ce bouton pour les autres -->
-                    <!--  -->
-                    <button v-if="canTogglePrivacy" @click="isVisibilityModalOpen = true"
-                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors transition-transform duration-200 hover:scale-105 cursor-pointer"
-                        :class="issue.private
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            v-if="issue.status !== 'TERMINE' && user?.value?.id && user.value.id === issue?.categoryManagerId"
+            @click="isResolveModalOpen = true"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-transform duration-200 hover:scale-105">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Marquer Résolu
+          </button>
+
+          <button
+            v-else-if="issue.status === 'TERMINE' && user?.value?.id && user.value.id === issue?.createdId"
+            @click="isReopeningModalOpen = true"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-transform duration-200 hover:scale-105">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Rouvrir
+          </button>
+
+          <button v-if="canTogglePrivacy" @click="isVisibilityModalOpen = true"
+                  class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors transition-transform duration-200 hover:scale-105 cursor-pointer"
+                  :class="issue.private
                             ? 'border-blue-300 text-blue-600 bg-white hover:bg-blue-50'
                             : 'border-red-300 text-red-600 bg-white hover:bg-red-50'">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
@@ -423,7 +426,6 @@ const handleUnfollow = async () => {
             {{ issue.private ? 'Rendre Public' : 'Rendre Privé' }}
           </button>
 
-          <!--  Bouton Suivre / badge Suivi -->
           <button
             v-if="!alreadyFollowing"
             @click="showFollowModal = true"
@@ -445,126 +447,106 @@ const handleUnfollow = async () => {
         </div>
       </div>
 
-      <!--Message succès après suivi -->
       <div v-if="followSuccess" class="rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-700">
         Vous suivez maintenant ce ticket !
       </div>
 
-      <!-- Grid principal -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-                <!-- ===== COLONNE GAUCHE : CONVERSATION ===== -->
-                <div class="lg:col-span-2 space-y-4">
-                    <!-- Messages -->
-                    <div class="space-y-3">
-                        <IssueMessage
-                            v-for="msg in messages"
-                            :key="msg.id"
-                            :auteur="msg.auteur"
-                            :role="msg.role"
-                            :date="msg.date"
-                            :contenu="msg.contenu"
-                            :is-mine="msg.userId === user?.id"
-                            :reply-to="msg.replyTo"
-                            @reply="replyingToMessage = msg"
-                        />
+        <div class="lg:col-span-2 space-y-4">
+          <div class="space-y-3">
+            <IssueMessage
+              v-for="msg in messages"
+              :key="msg.id"
+              :auteur="msg.auteur"
+              :role="msg.role"
+              :date="msg.date"
+              :contenu="msg.contenu"
+              :is-mine="msg.userId === user?.id"
+              :reply-to="msg.replyTo"
+              @reply="replyingToMessage = msg"
+            />
 
-                        <!-- État vide -->
-                        <IssueEmptyMessages v-if="messages.length === 0" />
-                    </div>
+            <IssueEmptyMessages v-if="messages.length === 0" />
+          </div>
 
-                    <!-- Zone d'envoi de message -->
-                    <MessageInput
-                        v-model="newMessage"
-                        :sending="sending"
-                        :replying-to="replyingToMessage"
-                        @cancel-reply="replyingToMessage = null"
-                        @send="handleSend"
-                    />
+          <MessageInput
+            v-model="newMessage"
+            :sending="sending"
+            :replying-to="replyingToMessage"
+            @cancel-reply="replyingToMessage = null"
+            @send="handleSend"
+          />
+        </div>
+
+        <div class="space-y-4">
+
+          <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div class="px-5 py-3 border-b border-gray-100">
+              <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Informations</h2>
+            </div>
+
+            <div class="px-5 py-4 space-y-3 text-sm">
+              <div v-if="issue?.categoryManagerId && issue?.categoryManagerId === issue?.createdId" class="flex justify-between items-center">
+                <span class="text-gray-500">Auteur & Manager</span>
+                <span class="font-medium text-gray-900">
+                                    {{ issue.createdId === user?.id ? 'Moi' : (issue.createdName || 'Inconnu') }}
+                                </span>
+              </div>
+
+              <template v-else>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-500">Auteur</span>
+                  <span class="font-medium text-gray-900">
+                                        {{ issue.createdId === user?.id ? 'Moi' : (issue.createdName || 'Inconnu') }}
+                                    </span>
                 </div>
 
-                <!-- ===== COLONNE DROITE : SIDEBAR ===== -->
-                <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-500">Manager en charge</span>
+                  <span class="font-medium text-gray-900">
+                                        {{ issue?.categoryManagerId === user?.id ? 'Moi' : (issue?.teacherManagerName || issue?.categoryManagerName || 'Non défini') }}
+                                    </span>
+                </div>
+              </template>
 
-                    <!-- Carte INFORMATIONS -->
-                    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                        <div class="px-5 py-3 border-b border-gray-100">
-                            <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Informations</h2>
-                        </div>
+              <div class="flex justify-between items-center">
+                <span class="text-gray-500">Abonnés</span>
+                <span class="font-medium text-gray-900">{{ issue.followersCount || 0 }}</span>
+              </div>
+            </div>
+          </div>
 
-                      <div class="px-5 py-4 space-y-3 text-sm">
+          <IssueMeetingProposal
+            v-if="user?.value?.id && user.value.id === issue?.categoryManagerId"
+            :issue="issue"
+          />
+          <IssueMeetingDemand
+            v-if="user?.value?.id && user.value.id !== issue?.categoryManagerId"
+            :issue="issue"
+          />
 
-                        <div v-if="issue?.categoryManagerId && issue?.categoryManagerId === issue?.createdId" class="flex justify-between items-center">
-                          <span class="text-gray-500">Auteur & Manager</span>
-                          <span class="font-medium text-gray-900">
-                            {{ issue.createdId === user?.id ? 'Moi' : (issue.createdName || 'Inconnu') }}
-                          </span>
-                        </div>
+          <ClientOnly>
+            <IssueRelationsCard :current-issue-id="issueId" />
+          </ClientOnly>
 
-                        <template v-else>
-                          <div class="flex justify-between items-center">
-                            <span class="text-gray-500">Auteur</span>
-                            <span class="font-medium text-gray-900">
-                              {{ issue.createdId === user?.id ? 'Moi' : (issue.createdName || 'Inconnu') }}
-                            </span>
-                          </div>
-
-                          <div class="flex justify-between items-center">
-                            <span class="text-gray-500">Manager en charge</span>
-                            <span class="font-medium text-gray-900">
-                              {{ issue?.categoryManagerId === user?.id ? 'Moi' : (issue?.teacherManagerName || issue?.categoryManagerName || 'Non défini') }}
-                            </span>
-                          </div>
-                        </template>
-
-                        <div class="flex justify-between items-center">
-                          <span class="text-gray-500">Abonnés</span>
-                          <span class="font-medium text-gray-900">{{ issue.followersCount || 0 }}</span>
-                        </div>
-
-                      </div>
-
-                    </div>
-
-                  <!-- Visible uniquement si l'utilisateur est le manager de l'issue -->
-                  <IssueMeetingProposal
-                    v-if="user?.id === issue?.categoryManagerId && user?.id !== null"
-                    :issue="issue"
-                  />
-                  <!-- Visible pour tout les utilisatuer sauf le manager de l'issue -->
-                  <IssueMeetingDemand
-                    v-if="user?.id !== issue?.categoryManagerId && user?.id !== null"
-                    :issue="issue"
-                  />
-
-                  <ClientOnly>
-                    <IssueRelationsCard :current-issue-id="issueId" />
-                  </ClientOnly>
-                    <!-- Slot pour futures fonctionnalités sidebar -->
-                  <slot name="sidebar-extra" />
-
+          <slot name="sidebar-extra" />
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Modal Résolu -->
   <div v-if="isResolveModalOpen" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
        @click.self="isResolveModalOpen = false">
-    <div
-      class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
       <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
         <h2 class="text-lg font-bold text-gray-800">Confirmer</h2>
-        <button @click="isResolveModalOpen = false" class="text-gray-400 hover:text-gray-600">
-          ✕
-        </button>
+        <button @click="isResolveModalOpen = false" class="text-gray-400 hover:text-gray-600">✕</button>
       </div>
 
       <div class="p-6 space-y-4">
         <p class="text-sm text-gray-600">
-          Êtes-vous sûr de vouloir marquer ce ticket comme <span
-          class="font-semibold text-emerald-600">résolu</span> ?
+          Êtes-vous sûr de vouloir marquer ce ticket comme <span class="font-semibold text-emerald-600">résolu</span> ?
         </p>
 
         <div class="flex justify-end gap-2">
@@ -572,36 +554,26 @@ const handleUnfollow = async () => {
                   class="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">
             Annuler
           </button>
-
           <button @click="() => { handleMarkResolved(); isResolveModalOpen = false }"
                   class="px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
             Confirmer
           </button>
         </div>
       </div>
-
     </div>
   </div>
+
   <div v-if="isVisibilityModalOpen && canTogglePrivacy" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
        @click.self="isVisibilityModalOpen = false">
-    <div
-      class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-
-  <div v-if="isVisibilityModalOpen && canTogglePrivacy" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="isVisibilityModalOpen = false">
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
       <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
         <h2 class="text-lg font-bold text-gray-800">Changer la visibilité</h2>
-        <button @click="isVisibilityModalOpen = false" class="text-gray-400 hover:text-gray-600">
-          ✕
-        </button>
+        <button @click="isVisibilityModalOpen = false" class="text-gray-400 hover:text-gray-600">✕</button>
       </div>
 
       <div class="p-6 space-y-4">
         <p class="text-sm text-gray-600">
-          Voulez-vous rendre ce ticket
-          <span class="font-semibold">
-                        {{ issue.private ? 'public' : 'privé' }}
-                    </span> ?
+          Voulez-vous rendre ce ticket <span class="font-semibold">{{ issue.private ? 'public' : 'privé' }}</span> ?
         </p>
 
         <div class="flex justify-end gap-2">
@@ -609,7 +581,6 @@ const handleUnfollow = async () => {
                   class="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">
             Annuler
           </button>
-
           <button @click="() => { toggleVisibility(); isVisibilityModalOpen = false }"
                   class="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
             Confirmer
@@ -619,19 +590,16 @@ const handleUnfollow = async () => {
     </div>
   </div>
 
-  <!-- Modale de suivi -->
   <FollowModal
     v-model="showFollowModal"
     :issue-id="issueId"
     @followed="onFollowed"
   />
 
-
-  <!-- Modal de confirmation de réouverture -->
   <ConfirmModal
-      v-model:open="isReopeningModalOpen"
-      title="Demande de réouverture"
-      description="Voulez-vous vraiment rouvrir ce ticket ?"
-      @confirm="handleReopening"
+    v-model:open="isReopeningModalOpen"
+    title="Demande de réouverture"
+    description="Voulez-vous vraiment rouvrir ce ticket ?"
+    @confirm="handleReopening"
   />
 </template>

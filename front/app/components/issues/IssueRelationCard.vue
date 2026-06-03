@@ -81,11 +81,9 @@
           </label>
           <USelectMenu
             v-model="selectedTarget"
-            :searchable="(query, options) => options.filter(o => o.label?.toLowerCase().includes(query.toLowerCase()))"
-            searchable-placeholder="Rechercher par titre ou numéro..."
+            :items="searchableIssues"
+            :search-input="{ placeholder: 'Rechercher par titre ou numéro...' }"
             placeholder="Sélectionner un ticket..."
-            :options="searchableIssues"
-            option-attribute="label"
             class="w-full text-xs"
             @update:model-value="localError = null"
           />
