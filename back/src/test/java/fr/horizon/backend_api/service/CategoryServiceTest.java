@@ -220,15 +220,28 @@ class CategoryServiceTest {
     }
 
     @Test
-    void shouldThrowWhenUserIsNotTeacherAddFollower() {
+    void shouldAddFollowerWhenUserIsStudent() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
 
         user.setRoles(Set.of(Role.builder().name("STUDENT").build()));
 
+        categoryService.addFollower(10L, 1L);
+
+        assertThat(category.getFollowers()).contains(user);
+        verify(categoryRepository).save(category);
+    }
+
+    @Test
+    void shouldThrowWhenUserHasInvalidRoleAddFollower() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+
+        user.setRoles(Set.of(Role.builder().name("GUEST").build()));
+
         assertThatThrownBy(() -> categoryService.addFollower(10L, 1L))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Only teachers");
+                .hasMessageContaining("Only teachers or students");
     }
 
     // =============================================
@@ -362,14 +375,29 @@ class CategoryServiceTest {
     }
 
     @Test
-    void shouldThrowWhenUserNotTeacherDeleteFollower() {
+    void shouldDeleteFollowerWhenUserIsStudent() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
 
         user.setRoles(Set.of(Role.builder().name("STUDENT").build()));
+        category.getFollowers().add(user);
+
+        categoryService.deleteFollowerById(10L, 1L);
+
+        assertThat(category.getFollowers()).doesNotContain(user);
+        verify(categoryRepository).save(category);
+    }
+
+    @Test
+    void shouldThrowWhenUserHasInvalidRoleDeleteFollower() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+
+        user.setRoles(Set.of(Role.builder().name("GUEST").build()));
 
         assertThatThrownBy(() -> categoryService.deleteFollowerById(10L, 1L))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Only teachers or students");
     }
 
     @Test
