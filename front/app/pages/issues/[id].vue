@@ -207,7 +207,8 @@ const getStatusBadgeClass = (status) => {
     'OUVERT':'bg-yellow-100 text-yellow-800 border border-yellow-300',
     'EN_ATTENTE': 'bg-gray-100 text-gray-800 border border-gray-300',
     'INCOMPLET': 'bg-orange-100 text-orange-800 border border-orange-300',
-    'TERMINE': 'bg-green-100 text-green-800 border border-green-300'
+    'TERMINE': 'bg-green-100 text-green-800 border border-green-300',
+    'DEMANDE_REOUVERTURE': 'bg-blue-100 text-blue-800 border border-blue-300'
   }
   return classes[status] || 'bg-gray-100 text-gray-800 border border-gray-300'
 }
@@ -220,7 +221,8 @@ const getStatusLabel = (status) => {
     'OUVERT': 'Ouvert',
     'EN_ATTENTE': 'En attente',
     'INCOMPLET': 'Incomplet',
-    'TERMINE': 'Terminé'
+    'TERMINE': 'Terminé',
+    'DEMANDE_REOUVERTURE': 'Demande réouverture'
   }
   return labels[status] || status
 }

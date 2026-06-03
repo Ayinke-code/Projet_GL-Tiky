@@ -70,9 +70,12 @@
                         <template #content>
                             <div class="overflow-visible p-2">
                                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                    <IssuesCard v-for="issue in group.issues" :key="issue.id" :issue="issue"
+                                    <IssuesCard v-if="user" v-for="issue in group.issues" :key="issue.id" :issue="issue" :user="user"
                                         :show-delete="canDeleteIssue(issue)"
-                                        @delete="deleteValidation" />
+                                        @delete="deleteValidation" 
+                                        @requestAReopening="openReopenModal"
+                                        @acceptReopening="openReopenAccessModal"
+                                        />
                                 </div>
                             </div>
                         </template>
@@ -100,8 +103,8 @@
                         <template #content>
                             <div class="overflow-visible p-2">
                                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                    <IssuesCard v-for="issue in group.issues" :key="issue.id" :issue="issue"
-                                        @delete="deleteValidation" />
+                                    <IssuesCard v-if="user" v-for="issue in group.issues" :key="issue.id" :issue="issue" :user="user"
+                                        @delete="deleteValidation" @requestAReopening="openReopenModal" @acceptReopening="openReopenAccessModal"/>
                                 </div>
                             </div>
                         </template>
@@ -119,6 +122,95 @@
     <!-- Modal de suppression d'issue -->
     <ConfirmModal v-model:open="isDeleteValidateModalOpen" title="Suppression"
         :description="`Voulez-vous vraiment supprimer le ticket : ${deletingIssue?.title}`" @confirm="handleDelete" />
+
+    <!-- Modal permettant d'ajouter la description pour la demande de réouverture -->
+    <Modal
+    v-model:open="isRequestReopeningModalOpen"
+    title="Demander la réouverture"
+    >
+        <!-- Texte explicatif et text area pour la description -->
+        <div class="space-y-4 mb-5 text-center">
+            <p class="text-sm text-gray-600">
+                Cette demande sera envoyée à
+                <span class="font-medium">
+                    {{ selectedIssue?.categoryManagerName }}
+                </span>
+            </p>
+            <UTextarea
+                v-model="reopenDescription"
+                class="w-full"
+                color="info"
+                placeholder="Décris pourquoi la résolution ne te convient pas..."
+                :rows="6"
+            />
+        </div>
+
+        <!-- Boutons footer -->
+        <div class="flex justify-end gap-2">
+            <UButton
+                color="neutral"
+                variant="ghost"
+                @click="isRequestReopeningModalOpen = false"
+                class="cursor-pointer"
+            >
+                Annuler
+            </UButton>
+            <UButton
+                color="info"
+                :disabled="!reopenDescription?.trim()"
+                @click="submitReopenRequest"
+                class="cursor-pointer"
+            >
+                Confirmer
+            </UButton>
+        </div>
+    </Modal>
+
+    <!-- Modal permettant d'accepter la demande de réouverture -->
+    <Modal
+    v-model:open="isAcceptRequestReopeningModalOpen"
+    title="Accepter la demander la réouverture"
+    >
+        <!-- Texte explicatif et text area pour la description -->
+        <div class="space-y-4 mb-5 text-center">
+            <p class="text-sm text-gray-600">
+                Demande faite par
+                <span class="font-medium">
+                {{ selectedIssue?.createdName }}
+                </span>
+            </p>
+
+            <!-- Description fournie par l'utilisateur -->
+            <div class="text-left p-3 rounded-lg bg-gray-50 border">
+                <p class="text-xs text-gray-500 mb-1">
+                Motif de la réouverture
+                </p>
+
+                <p class="text-sm">
+                    {{ selectedIssue?.reopeningDescription }}
+                </p>
+            </div>
+        </div>
+
+        <!-- Boutons footer -->
+        <div class="flex justify-end gap-2">
+            <UButton
+                color="neutral"
+                variant="ghost"
+                @click="isAcceptRequestReopeningModalOpen = false"
+                class="cursor-pointer"
+            >
+                Annuler
+            </UButton>
+            <UButton
+                color="info"
+                @click="acceptReopening"
+                class="cursor-pointer"
+            >
+                Confirmer
+            </UButton>
+        </div>
+    </Modal>
 </template>
 
 <script setup lang="js">
@@ -135,9 +227,10 @@ import Separator from '~/components/ui/Separator.vue'
 import AssignationManager from '~/components/assignation/AssignationManager.vue'
 import AssignationTeacher from '~/components/assignation/AssignationTeacher.vue'
 import IncompleteIssuesList from '~/components/layout/IncompleteIssuesList.vue'
+import Modal from '~/components/ui/Modal.vue'
 
 const { ready, user } = useAuth()
-const { issues,getDisplayableIssues ,fetchIssues, deleteIssue, error } = useIssues()
+const { issues, getDisplayableIssues, fetchIssues, deleteIssue, requestOpening, updateIssueStatus, error } = useIssues()
 const { refreshFollowedIssues } = useFollowedIssuesState()
 
 /**
@@ -172,6 +265,70 @@ const deletingIssue = ref(null)
  * ouverture modal suppression
  */
 const isDeleteValidateModalOpen = ref(false)
+
+/**
+ * Ouverture du modal de demande de réouverture
+ */
+const isRequestReopeningModalOpen = ref(false)
+
+/**
+ * Ouverture du modal pour accepter la demande de réouverture
+ */
+const isAcceptRequestReopeningModalOpen = ref(false)
+
+/**
+ * Ticket sélectionné
+ */
+const selectedIssue = ref(null)
+
+/**
+ * Description de la réouverture
+ */
+const reopenDescription = ref(null)
+
+/**
+ * Affiche le modal de description de la demande de réouverture
+ */
+const openReopenModal = (issue) => {
+  selectedIssue.value = issue
+  isRequestReopeningModalOpen.value = true
+}
+
+/**
+ * Modifier le status et envoie la description de réouverture
+ */
+const submitReopenRequest = async () => {
+    isRequestReopeningModalOpen.value = false
+    if(selectedIssue.value?.status !== "TERMINE") return
+
+    try {
+        requestOpening(selectedIssue.value?.id, reopenDescription.value)
+    } catch (err) {
+        error.value = err.message || 'Erreur lors de la suppression'
+    }
+}
+
+/**
+ * Affiche le modal de description de la demande de réouverture
+ */
+const openReopenAccessModal = (issue) => {
+  selectedIssue.value = issue
+  isAcceptRequestReopeningModalOpen.value = true
+}
+
+/**
+ * Accepte la demande de réouverture d'un créateur d'issue
+ */
+const acceptReopening = async () => {
+    isAcceptRequestReopeningModalOpen.value = false
+    if(selectedIssue.value?.status !== "DEMANDE_REOUVERTURE") return
+
+    try {
+        updateIssueStatus(selectedIssue.value?.id, "OUVERT")
+    } catch (err) {
+        error.value = err.message || 'Erreur lors de la suppression'
+    }
+}
 
 // Issues appartenant à l’utilisateur connecté
 // Filtre sur le champ categoryOwnerId

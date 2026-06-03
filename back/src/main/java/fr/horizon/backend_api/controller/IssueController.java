@@ -94,6 +94,18 @@ public class IssueController {
         issueService.updateStatus(status, id);
     }
 
+    /**
+     * Met à jour le statut de l'issue pour DEMANDE_REOUVERTURE.
+     *
+     * @param id     identifiant de l'issue
+     * @param description description de la demande de réouverture
+     */
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/{id}/request-reopening")
+        public void createRequestReopening(@PathVariable Long id, @RequestBody String description) {
+        issueService.requestReopening(description, id);
+    }
+
      /**
       * Inverse la visibilité privée d'une issue.
       * Après la mise à jour, retourne la liste des issues suivies mises à jour

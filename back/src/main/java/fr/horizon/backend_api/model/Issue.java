@@ -43,6 +43,9 @@ public class Issue extends BaseEntity {
     @Column
     private String rejectComment;
 
+    @Column
+    private String reopeningDescription;
+
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
