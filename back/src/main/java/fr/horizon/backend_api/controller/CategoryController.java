@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 import fr.horizon.backend_api.model.enums.CategoryType;
+import org.springframework.security.core.Authentication;
 
 /**
  * Gestion des catégories.
@@ -37,8 +38,8 @@ public class CategoryController {
      */
     @PreAuthorize("isAuthenticated()")
     @GetMapping
-    public List<CategoryDto> getAllCategories() {
-        return categoryService.findAll();
+    public List<CategoryDto> getAllCategories(Authentication authentication) {
+        return categoryService.findAll(authentication.getName());
     }
 
     /**
@@ -59,7 +60,7 @@ public class CategoryController {
      * @param idUser identifiant de l'utilisateur
      * @param idCategory identifiant de la catégorie
      */
-    @PreAuthorize("hasAnyAuthority('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','TEACHER','STUDENT')")
     @DeleteMapping("/followers/{idUser}/{idCategory}")
     public void deleteCategoryFollower(@PathVariable Long idUser, @PathVariable Long idCategory) {
         categoryService.deleteFollowerById(idCategory, idUser);
@@ -72,7 +73,7 @@ public class CategoryController {
      * @param idCategory identifiant de la catégorie
      * @return catégorie mise à jour
      */
-    @PreAuthorize("hasAnyAuthority('ADMIN','TEACHER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','TEACHER','STUDENT')")
     @PostMapping("/followers/{idUser}/{idCategory}")
     public CategoryDetailsDto addCategoryFollower(@PathVariable Long idUser, @PathVariable Long idCategory) {
         categoryService.addFollower(idCategory, idUser);
@@ -96,7 +97,7 @@ public class CategoryController {
      *
      * @param id identifiant de la catégorie
      */
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER', 'STUDENT')")
     @DeleteMapping("/{id}")
     public void deleteCategory(@PathVariable Long id) {
         categoryService.deleteById(id);
@@ -111,7 +112,7 @@ public class CategoryController {
      */
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/type/{type}")
-    public List<CategoryDto> getCategoriesByType(@PathVariable CategoryType type) {
-        return categoryService.findByCategoryType(type);
+    public List<CategoryDto> getCategoriesByType(@PathVariable CategoryType type, Authentication authentication) {
+        return categoryService.findByCategoryType(type, authentication.getName());
     }
 }

@@ -1,101 +1,134 @@
 <template>
-    <div class="p-8 pb-8 min-h-screen bg-gray-50">
+  <div class="p-8 pb-8 min-h-screen bg-gray-50">
 
-        <!-- Header page -->
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-2xl font-bold text-gray-800">Gestion des Catégories</h1>
+    <div class="flex flex-col gap-4 md:flex-row justify-between items-start md:items-center mb-8">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">Gestion des catégories</h1>
+        <p class="text-sm text-gray-600 mt-2">Mes catégories, abonnements, autres catégories et archives.</p>
+      </div>
 
-            <!-- Bouton ouverture modal création pour les professeur -->
-            <Button id = "create-categorie-teacher" v-if="ready && user?.roles?.includes(ROLE.TEACHER)" @click="isCreateModalOpen = true"
-                icon="i-lucide-plus" label="Créer une catégorie" color="secondary" size="lg" variant="solid" rounded />
-            <!-- Bouton ouverture modal demande de création pour les étudiants -->
-            <Button id = "create-categorie-student" v-else-if="ready && user?.roles?.includes(ROLE.STUDENT)" @click="isRequestCreateModalOpen = true"
-                icon="i-lucide-plus" label="Demande de catégorie" color="secondary" size="lg" variant="solid" rounded />
-        </div>
-
-        <!-- MODALE CREATION -->
-        <Modal v-model:open="isCreateModalOpen" title="Création de catégorie">
-
-            <!-- Affichage erreur API -->
-            <Alert v-if="categoriesError" color="error" title="Erreur"
-                description="La catégorie renseigné existe déja !">
-                {{ categoriesError }}
-            </Alert>
-
-            <!-- Formulaire création -->
-            <CategoryForms @submit="handleCreate" @cancel="isCreateModalOpen = false" />
-        </Modal>
-
-        <!-- MODALE DEMANDE DE CREATION -->
-        <Modal v-model:open="isRequestCreateModalOpen" title="Demande de catégorie">
-
-            <!-- Formulaire de demande de création -->
-            <div class="flex justify-center">
-                <CategoryRequestForms @submit="handleRequestCreate" @cancel="isRequestCreateModalOpen = false" />
-            </div>
-        </Modal>
-
-        <!-- LISTE DES CATEGORIES -->
-        <div v-if="categories.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-            <CategoryCard v-for="cat in categories" :key="cat.id" :category="cat"
-                @click="handleClick(cat)" />
-
-        </div>
-
-        <!-- LISTE DES DEMANDES DES ETUDIANTS -->
-        <div v-if="categoryRequests.length > 0 && categoryRequests.some(r => r.status === 'PENDING')">
-            <Separator class="my-8" />
-
-            <!-- Header page -->
-            <div class="flex justify-between items-center mb-8">
-                <h1 class="text-2xl font-bold text-gray-800">Demande des étudiants</h1>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
-                <!-- Affichage des catégories request si pas encore validé -->
-                <CategoryRequestCard v-for="categoryRequest in categoryRequests.filter(r => r.status !== 'APPROVED')" :categoryRequest="categoryRequest"
-                    @accept="handleAcceptCategoryRequest" />
-
-            </div>
-        </div>
-
-        <!-- MODALE DETAIL -->
-        <Modal v-model:open="isDetailOpen" title="Détails de la catégorie">
-
-            <!-- Protection rendu -->
-            <div v-if="selectedCat" class="rounded-xl shadow-2xl w-full max-w-lg p-6">
-
-                <!-- Titre -->
-                <h2 class="text-xl font-bold mb-2">
-                    {{ selectedCat.subject }}
-                </h2>
-
-                <!-- Nom -->
-                <p class="text-indigo-600 text-sm mb-6">
-                    {{ selectedCat.name }}
-                </p>
-
-                <!-- Owner -->
-                <div class="text-sm text-gray-500 mb-6">
-                    Propriétaire : {{ selectedCat.ownerName }}
-                </div>
-
-                <!-- Actions -->
-                <div class="flex justify-end gap-3">
-                    <Button @click="handleDelete(selectedCat.id)" color="error" label="Supprimer" size="lg"
-                        variant="subtle" rounded="true">
-                        Supprimer
-                    </Button>
-                </div>
-
-            </div>
-        </Modal>
-
+      <div class="flex flex-wrap gap-3">
+        <Button id="create-categorie-teacher" v-if="ready && user?.value?.roles?.includes(ROLE.TEACHER)" @click="isCreateModalOpen = true"
+          icon="i-lucide-plus" label="Créer une catégorie" color="secondary" size="lg" variant="solid" rounded />
+        <Button id="create-categorie-student" v-else-if="ready && user?.value?.roles?.includes(ROLE.STUDENT)" @click="isRequestCreateModalOpen = true"
+          icon="i-lucide-plus" label="Demande de catégorie" color="secondary" size="lg" variant="solid" rounded />
+      </div>
     </div>
+
+    <Alert v-if="categoriesError" color="error" title="Erreur" description="Impossible de charger les catégories.">
+      {{ categoriesError }}
+    </Alert>
+
+    <div class="space-y-10">
+      <section>
+        <div class="mb-6">
+          <div class="flex items-center justify-between gap-4 mb-3">
+            <div>
+              <h2 class="text-xl font-semibold text-gray-900">Mes catégories</h2>
+              <p class="text-sm text-gray-600">Catégories dont vous êtes propriétaire.</p>
+            </div>
+          </div>
+          <div v-if="ownedCategories.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <CategoryCard v-for="cat in ownedCategories" :key="cat.id" :category="cat" :isFollowed="cat.followedByCurrentUser"
+              @click="handleClick(cat)" @follow="handleFollow(cat.id)" @unfollow="handleUnfollow(cat.id)" />
+          </div>
+          <div v-else class="rounded-xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
+            Aucune catégorie possédée.
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="mb-6">
+          <div class="flex items-center justify-between gap-4 mb-3">
+            <div>
+              <h2 class="text-xl font-semibold text-gray-900">Abonnements</h2>
+              <p class="text-sm text-gray-600">Catégories que vous suivez.</p>
+            </div>
+          </div>
+          <div v-if="followedCategories.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <CategoryCard v-for="cat in followedCategories" :key="cat.id" :category="cat" :isFollowed="cat.followedByCurrentUser"
+              @click="handleClick(cat)" @follow="handleFollow(cat.id)" @unfollow="handleUnfollow(cat.id)" />
+          </div>
+          <div v-else class="rounded-xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
+            Vous ne suivez aucune catégorie pour le moment.
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="mb-6">
+          <div class="flex items-center justify-between gap-4 mb-3">
+            <div>
+              <h2 class="text-xl font-semibold text-gray-900">Autres catégories</h2>
+              <p class="text-sm text-gray-600">Catégories actives disponibles à suivre.</p>
+            </div>
+          </div>
+          <div v-if="otherCategories.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <CategoryCard v-for="cat in otherCategories" :key="cat.id" :category="cat" :isFollowed="cat.followedByCurrentUser"
+              @click="handleClick(cat)" @follow="handleFollow(cat.id)" @unfollow="handleUnfollow(cat.id)" />
+          </div>
+          <div v-else class="rounded-xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
+            Aucune autre catégorie active.
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="mb-6">
+          <div class="flex items-center justify-between gap-4 mb-3">
+            <div>
+              <h2 class="text-xl font-semibold text-gray-900">Archives</h2>
+              <p class="text-sm text-gray-600">Catégories archivées.</p>
+            </div>
+          </div>
+          <div v-if="archivedCategories.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <CategoryCard v-for="cat in archivedCategories" :key="cat.id" :category="cat" :isFollowed="cat.followedByCurrentUser"
+              @click="handleClick(cat)" @follow="handleFollow(cat.id)" @unfollow="handleUnfollow(cat.id)" />
+          </div>
+          <div v-else class="rounded-xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
+            Pas de catégories archivées.
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div v-if="categoryRequests.length > 0 && categoryRequests.some(r => r.status === 'PENDING')">
+      <Separator class="my-8" />
+      <div class="flex justify-between items-center mb-8">
+        <h2 class="text-2xl font-bold text-gray-800">Demandes des étudiants</h2>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <CategoryRequestCard v-for="categoryRequest in categoryRequests.filter(r => r.status !== 'APPROVED')" :key="categoryRequest.id"
+          :categoryRequest="categoryRequest" @accept="handleAcceptCategoryRequest" />
+      </div>
+    </div>
+
+    <Modal v-model:open="isCreateModalOpen" title="Création de catégorie">
+      <CategoryForms @submit="handleCreate" @cancel="isCreateModalOpen = false" />
+    </Modal>
+
+    <Modal v-model:open="isRequestCreateModalOpen" title="Demande de catégorie">
+      <div class="flex justify-center">
+        <CategoryRequestForms @submit="handleRequestCreate" @cancel="isRequestCreateModalOpen = false" />
+      </div>
+    </Modal>
+
+    <Modal v-model:open="isDetailOpen" title="Détails de la catégorie">
+      <div v-if="selectedCat" class="rounded-xl shadow-2xl w-full max-w-lg p-6">
+        <h2 class="text-xl font-bold mb-2">{{ selectedCat.subject }}</h2>
+        <p class="text-indigo-600 text-sm mb-6">{{ selectedCat.name }}</p>
+        <div class="text-sm text-gray-500 mb-6">Propriétaire : {{ selectedCat.ownerName }}</div>
+        <div class="flex justify-end gap-3">
+          <Button @click="handleDelete(selectedCat.id)" color="error" label="Supprimer" size="lg" variant="subtle" rounded="true" />
+        </div>
+      </div>
+    </Modal>
+  </div>
 </template>
 
 <script setup>
+import { computed, ref, onMounted } from 'vue'
 import CategoryForms from '~/components/forms/CategoryForms.vue'
 import CategoryCard from '~/components/categories/CategoryCard.vue'
 import Modal from '~/components/ui/Modal.vue'
@@ -103,162 +136,98 @@ import Alert from '~/components/ui/Alert.vue'
 import CategoryRequestForms from '~/components/forms/CategoryRequestForms.vue'
 import Separator from '~/components/ui/Separator.vue'
 import CategoryRequestCard from '~/components/categories/CategoryRequestCard.vue'
-
-import { ref, onMounted } from 'vue'
-import { useCategories } from '~/composables/useCategories'
 import Button from '~/components/ui/Button.vue'
 import { ROLE } from '~/utils/roles'
+import { useCategories } from '~/composables/useCategories'
+import { useCategoryRequest } from '~/composables/useCategoryRequests'
+import { useAuth } from '~/composables/useAuth'
+import { useRouter } from 'vue-router'
 
-/**
- * Composable de gestion des catégories.
- */
+const router = useRouter()
+
 const {
-    categories,
-    fetchCategoriesByType,
-    createCategory,
-    deleteCategory,
-    error: categoriesError
+  categories,
+  fetchCategoriesByType,
+  createCategory,
+  deleteCategory,
+  followCategory,
+  unfollowCategory,
+  error: categoriesError
 } = useCategories()
 
-/**
- * Etat utilisateur authentifié.
- */
 const {
-    user,
-    ready
-} = useAuth()
-
-/**
- * Composable de gestion des demandes de catégories.
- */
-const {
-    categoryRequests,
-    fetchCategoryRequests,
-    createCategoryRequest,
-    acceptCategoryRequest,
-    deleteCategoryRequest,
-    error: categoryRequestsError
+  categoryRequests,
+  fetchCategoryRequests,
+  createCategoryRequest,
+  acceptCategoryRequest,
+  error: categoryRequestsError
 } = useCategoryRequest()
 
-/**
- * Catégorie actuellement sélectionnée.
- */
+const { user, ready } = useAuth()
+
 const selectedCat = ref(null)
-
-/**
- * Etat d'ouverture de la modal de création.
- */
 const isCreateModalOpen = ref(false)
-
-/**
- * Etat d'ouverture de la modal de demande de création.
- */
 const isRequestCreateModalOpen = ref(false)
-
-/**
- * Etat d'ouverture de la modal de détail.
- */
 const isDetailOpen = ref(false)
 
-/**
- * Chargement initial des catégories au montage de la page.
- */
-onMounted(async () => {
-    await fetchCategoriesByType('ISSUE')
-    await fetchCategoryRequests()
-})
+const ownedCategories = computed(() => categories.value.filter(cat => cat.status !== 'ARCHIVED' && cat.ownerId === user?.value?.id))
+const followedCategories = computed(() => categories.value.filter(cat => cat.status !== 'ARCHIVED' && cat.ownerId !== user?.value?.id && cat.followedByCurrentUser))
+const otherCategories = computed(() => categories.value.filter(cat => cat.status !== 'ARCHIVED' && cat.ownerId !== user?.value?.id && !cat.followedByCurrentUser))
+const archivedCategories = computed(() => categories.value.filter(cat => cat.status === 'ARCHIVED'))
 
-/**
- * Gestion du clic sur une catégorie.
- *
- * Ouvre la modal de détail uniquement si l'utilisateur est autorisé (TEACHER).
- *
- * @param {Object} cat - catégorie sélectionnée
- */
+const fetchData = async () => {
+  await fetchCategoriesByType('ISSUE')
+  await fetchCategoryRequests()
+}
+
+onMounted(fetchData)
+
 const handleClick = (cat) => {
   if (!ready || !user?.value) return
-
-  const isTeacher = user.value.roles?.includes(ROLE.TEACHER)
-  const isOwner = user.value.name === cat.ownerName
-
+  const isOwner = user.value.id === cat.ownerId
+  const isTeacherRole = user.value.roles?.includes(ROLE.TEACHER)
   if (!isOwner) return
-
-  if (isTeacher && cat?.id) {
-    navigateTo(`/categories/${cat.id}`)
+  if (isTeacherRole && cat?.id) {
+    router.push(`/categories/${cat.id}`)
   }
 }
 
-/**
- * Création d'une nouvelle catégorie.
- *
- * Appelle l'API puis rafraîchit la liste des catégories si succès.
- *
- * @param {Object} data - données du formulaire de création
- */
 const handleCreate = async (data) => {
-    const res = await createCategory(data)
-
-    if (!res) return
-
-    await fetchCategoriesByType('ISSUE')
-    isCreateModalOpen.value = false
+  const res = await createCategory(data)
+  if (!res) return
+  isCreateModalOpen.value = false
+  await fetchCategoriesByType('ISSUE')
 }
 
-/**
- * Suppression d'une catégorie.
- *
- * Ferme la modal de détail, supprime la catégorie côté API,
- * puis recharge la liste des catégories.
- *
- * @param {number} id - identifiant de la catégorie à supprimer
- */
 const handleDelete = async (id) => {
-    // fermeture modal
-    isDetailOpen.value = false
-
-    // suppression API
-    await deleteCategory(id)
-
-    // reset sélection
-    selectedCat.value = null
-
-    // refresh liste
-    await fetchCategoriesByType('ISSUE');
+  isDetailOpen.value = false
+  await deleteCategory(id)
+  selectedCat.value = null
+  await fetchCategoriesByType('ISSUE')
 }
 
-/**
- * Création d'une demande de catégorie.
- *
- * Envoie la demande à l'API puis ferme la modal.
- * Recharge ensuite l'application pour synchroniser les données.
- *
- * @param {Object} data - données du formulaire de demande
- */
 const handleRequestCreate = async (data) => {
-    const res = await createCategoryRequest(data)
-
-    if (!res) return
-
-    // fermeture modal
-    isRequestCreateModalOpen.value = false
-
-    // rechargement application
-    await navigateTo('/categories')
+  const res = await createCategoryRequest(data)
+  if (!res) return
+  isRequestCreateModalOpen.value = false
+  await router.push('/categories')
 }
 
-/**
- * Acceptation d'une demande de catégorie.
- *
- * Valide la demande côté backend, puis rafraîchit les listes
- * des catégories et des demandes.
- *
- * @param {Object} data - demande à valider (contient l'id)
- */
 const handleAcceptCategoryRequest = async (data) => {
-    const res = await acceptCategoryRequest(data.id)
-    if (!res) return
+  const res = await acceptCategoryRequest(data.id)
+  if (!res) return
+  await fetchData()
+}
 
-    await fetchCategoriesByType('ISSUE')
-    await fetchCategoryRequests()
+const handleFollow = async (categoryId) => {
+  if (!categoryId) return
+  await followCategory(categoryId)
+  await fetchCategoriesByType('ISSUE')
+}
+
+const handleUnfollow = async (categoryId) => {
+  if (!categoryId) return
+  await unfollowCategory(categoryId)
+  await fetchCategoriesByType('ISSUE')
 }
 </script>

@@ -40,7 +40,7 @@
 
       <div v-if="category.status !== 'ARCHIVED'" class="flex gap-2">
 
-        <template v-if="category.owner === user?.id">
+            <template v-if="category.ownerId === user?.value?.id">
           <div class="text-[10px] bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-bold border border-amber-200">
             <i class="fa-solid fa-crown mr-1"></i> PROPRIÉTAIRE
           </div>
@@ -54,8 +54,8 @@
             Suivi
           </button>
 
-          <!-- TODO: Remettre pour le Sprint 2 -->
-          <button v-else-if="false" @click.stop="$emit('follow')"
+          <button v-else-if="canFollow"
+            @click.stop="$emit('follow')"
             class="text-[10px] bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-bold hover:bg-indigo-600 hover:text-white">
             <i class="fa-solid fa-plus mr-1"></i>
             Suivre
@@ -73,7 +73,7 @@
         <i class="fa-solid fa-user-tie mr-2 text-indigo-400"></i>
 
         <!-- Si l'utilisateur est propriétaire de la catégorie -->
-        <span v-if="user?.name === category.ownerName">
+        <span v-if="user?.value?.name === category.ownerName">
           <span class="px-2 py-0.5 text-xs font-semibold bg-indigo-100 text-indigo-700 rounded-full">
             Propriétaire
           </span>
@@ -131,6 +131,12 @@ const props = defineProps({
   isFollowed: Boolean
 })
 
+const canFollow = computed(() => {
+  return ready && user?.value?.roles?.some(role =>
+    role === ROLE.TEACHER || role === ROLE.STUDENT
+  )
+})
+
 /**
  * Vérifie si l'utilisateur peut accéder à la catégorie.
  * Autorisé uniquement si :
@@ -141,13 +147,13 @@ const props = defineProps({
 const canAccessCategory = computed(() => {
   if (!ready || !user?.value) return false
 
-  const isTeacher =
+  const isTeacherRole =
     user.value.roles?.includes(ROLE.TEACHER)
 
   const isOwner =
     user.value.name === props.category.ownerName
 
-  return isTeacher && isOwner
+  return isTeacherRole && isOwner
 })
 
 /**

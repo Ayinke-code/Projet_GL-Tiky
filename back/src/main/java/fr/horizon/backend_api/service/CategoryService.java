@@ -41,9 +41,16 @@ public class CategoryService {
      * @return liste de DTO de toutes les catégories
      */
     public List<CategoryDto> findAll() {
+        return findAll(null);
+    }
+
+    public List<CategoryDto> findAll(String currentUserEmail) {
+        User currentUser = currentUserEmail == null ? null :
+                userRepository.findByEmail(currentUserEmail).orElse(null);
+
         return categoryRepository.findAll()
                 .stream()
-                .map(this::toDto)
+                .map(category -> toDto(category, currentUser))
                 .toList();
     }
 
@@ -99,12 +106,15 @@ public class CategoryService {
         Category category = categoryRepository.findById(idCategory)
                 .orElseThrow(() -> new CategoryNotFoundException(idCategory));
 
-        boolean isTeacher = user.getRoles()
+        boolean canFollow = user.getRoles()
                 .stream()
-                .anyMatch(role -> role.getName().equals(RoleEnum.TEACHER.value()));
+                .anyMatch(role ->
+                        role.getName().equals(RoleEnum.TEACHER.value()) ||
+                        role.getName().equals(RoleEnum.STUDENT.value())
+                );
 
-        if (!isTeacher) {
-            throw new IllegalArgumentException("Only teachers can be followers");
+        if (!canFollow) {
+            throw new IllegalArgumentException("Only teachers or students can be followers");
         }
 
         if (!category.getFollowers().contains(user)) {
@@ -128,12 +138,15 @@ public class CategoryService {
         Category category = categoryRepository.findById(idCategory)
                 .orElseThrow(() -> new CategoryNotFoundException(idCategory));
 
-        boolean isTeacher = user.getRoles()
+        boolean canFollow = user.getRoles()
                 .stream()
-                .anyMatch(role -> role.getName().equals(RoleEnum.TEACHER.value()));
+                .anyMatch(role ->
+                        role.getName().equals(RoleEnum.TEACHER.value()) ||
+                        role.getName().equals(RoleEnum.STUDENT.value())
+                );
 
-        if (!isTeacher) {
-            throw new IllegalArgumentException("Only teachers can be followers");
+        if (!canFollow) {
+            throw new IllegalArgumentException("Only teachers or students can be followers");
         }
 
         if (category.getFollowers().contains(user)) {
@@ -172,9 +185,16 @@ public class CategoryService {
      * @return liste de DTO des catégories correspondant au type
      */
     public List<CategoryDto> findByCategoryType(CategoryType categoryType) {
+        return findByCategoryType(categoryType, null);
+    }
+
+    public List<CategoryDto> findByCategoryType(CategoryType categoryType, String currentUserEmail) {
+        User currentUser = currentUserEmail == null ? null :
+                userRepository.findByEmail(currentUserEmail).orElse(null);
+
         return categoryRepository.findByCategoryType(categoryType)
                 .stream()
-                .map(this::toDto)
+                .map(category -> toDto(category, currentUser))
                 .toList();
     }
 
@@ -185,6 +205,10 @@ public class CategoryService {
      * @return DTO contenant les informations publiques de la catégorie
      */
     private CategoryDto toDto(Category category) {
+        return toDto(category, null);
+    }
+
+    private CategoryDto toDto(Category category, User currentUser) {
         return CategoryDto.builder()
                 .id(category.getId())
                 .name(category.getName())
@@ -193,6 +217,9 @@ public class CategoryService {
                 .categoryType(category.getCategoryType())
                 .ownerName(category.getOwner() != null ? category.getOwner().getName() : null)
                 .ownerId(category.getOwner() != null ? category.getOwner().getId() : null)
+                .createdAt(category.getCreatedAt())
+                .updatedAt(category.getUpdatedAt())
+                .followedByCurrentUser(currentUser != null && category.getFollowers().contains(currentUser))
                 .build();
     }
 

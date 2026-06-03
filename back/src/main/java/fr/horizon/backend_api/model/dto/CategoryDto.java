@@ -16,4 +16,7 @@ public class CategoryDto {
     private String ownerName;
     private CategoryType categoryType;
     private Long ownerId;
+    private java.time.LocalDateTime createdAt;
+    private java.time.LocalDateTime updatedAt;
+    private Boolean followedByCurrentUser;
 }
