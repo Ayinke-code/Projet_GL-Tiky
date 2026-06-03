@@ -30,15 +30,36 @@
 
     <div class="mb-8">
       <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Mon Calendrier</h1>
-      <p class="text-slate-500 italic">Retrouvez vos soutenances, audits et rendez-vous ticket.</p>
+      <p class="text-slate-500 italic">Retrouvez vos soutenances, audits, rendez-vous ticket et vos créneaux de disponibilité.</p>
     </div>
 
     <ClientOnly>
-      <div class="calendar-wrapper shadow-sm border border-slate-200 rounded-xl overflow-hidden bg-white">
-        <FullCalendar
-          :key="mappedEvents.length"
-          :options="calendarOptions"
-        />
+      <div class="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6">
+        <div class="calendar-wrapper shadow-sm border border-slate-200 rounded-xl overflow-hidden bg-white">
+          <FullCalendar
+            :key="mappedEvents.length"
+            :options="calendarOptions"
+          />
+        </div>
+
+        <aside class="space-y-4">
+          <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
+            <div class="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h2 class="text-xl font-semibold text-slate-900">Mes disponibilités</h2>
+                <p class="text-sm text-slate-500">Sélectionnez un créneau dans le calendrier pour l'ajouter.</p>
+              </div>
+              <span class="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Privé</span>
+            </div>
+
+            <AvailabilityList
+              :availabilities="availabilities"
+              @delete="handleDeleteAvailability"
+            />
+
+            <p v-if="availabilityError" class="mt-4 text-sm text-rose-600">{{ availabilityError }}</p>
+          </div>
+        </aside>
       </div>
     </ClientOnly>
   </div>
@@ -47,6 +68,7 @@
 <script setup>
 import { ref, computed, onMounted, reactive } from 'vue'
 import EventCardCalendar from "~/components/events/EventCardCalendar.vue"
+import AvailabilityList from '~/components/availabilities/AvailabilityList.vue'
 
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -55,8 +77,10 @@ import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
 import frLocale from '@fullcalendar/core/locales/fr'
 import { useEvents } from '../composables/useEvents'
+import { useAvailabilities } from '../composables/useAvailabilities'
 
 const { events, fetchCalendarEvents } = useEvents()
+const { availabilities, fetchAvailabilities, createAvailability, deleteAvailability, error: availabilityError } = useAvailabilities()
 
 const isDetailOpen = ref(false)
 const selectedEvent = ref(null)
@@ -107,14 +131,87 @@ const stopDrag = () => {
   window.removeEventListener('touchend', stopDrag)
 }
 
-const mappedEvents = computed(() => {
-  return events.value.map(evt => {
-    let color = '#64748b' // slate-500 par défaut
+const formatApiTime = (date) => {
+  const hr = String(date.getHours()).padStart(2, '0')
+  const min = String(date.getMinutes()).padStart(2, '0')
+  return `${hr}:${min}`
+}
 
-    if (evt.categoryType === 'AUDIT') color = '#6366f1'   // indigo-500
-    if (evt.categoryType === 'DEFENSE') color = '#10b981' // emerald-500
-    if (evt.categoryType === 'MEETING') color = '#f59e0b' // amber-500
-    if (evt.categoryType === 'ISSUE') color = '#f43f5e'   // rose-500
+const handleSelect = async (selection) => {
+  const start = new Date(selection.startStr)
+  const end = new Date(selection.endStr)
+  const date = selection.startStr.slice(0, 10)
+  const startTime = selection.allDay ? '00:00' : formatApiTime(start)
+  const endTime = selection.allDay ? '23:59' : formatApiTime(end)
+
+  const title = `Créer une disponibilité le ${start.toLocaleDateString('fr-FR')} de ${startTime} à ${endTime} ?`
+  if (!window.confirm(title)) {
+    return
+  }
+
+  try {
+    await createAvailability({ date, startTime, endTime })
+  } catch (e) {
+    window.alert(e?.data?.message || 'Impossible de créer la disponibilité')
+  }
+}
+
+const handleDeleteAvailability = async (id) => {
+  const confirmed = window.confirm('Confirmer la suppression de cette disponibilité ?')
+  if (!confirmed) return
+
+  try {
+    await deleteAvailability(id)
+  } catch (e) {
+    window.alert(e?.data?.message || 'Impossible de supprimer la disponibilité')
+  }
+}
+
+const handleEventClick = async (info) => {
+  if (info.event.extendedProps?.type === 'AVAILABILITY') {
+    const start = new Date(info.event.start)
+    const end = new Date(info.event.end)
+    const label = `Supprimer la disponibilité du ${start.toLocaleDateString('fr-FR')} de ${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')} à ${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')} ?`
+    if (window.confirm(label)) {
+      await handleDeleteAvailability(info.event.id)
+    }
+    return
+  }
+
+  selectedEvent.value = info.event
+  if (typeof window !== 'undefined') {
+    windowPos.value = {
+      x: (window.innerWidth / 2) - (384 / 2),
+      y: (window.innerHeight / 2) - 200
+    }
+  }
+
+  isDetailOpen.value = true
+}
+
+const availabilityEvents = computed(() => {
+  return availabilities.value.map(slot => ({
+    id: String(slot.id),
+    title: 'Disponibilité',
+    start: `${slot.date}T${slot.startTime}`,
+    end: `${slot.date}T${slot.endTime}`,
+    backgroundColor: '#38bdf8',
+    borderColor: '#0ea5e9',
+    textColor: '#0f172a',
+    extendedProps: {
+      type: 'AVAILABILITY'
+    }
+  }))
+})
+
+const mappedEvents = computed(() => {
+  const defaultEvents = events.value.map(evt => {
+    let color = '#64748b'
+
+    if (evt.categoryType === 'AUDIT') color = '#6366f1'
+    if (evt.categoryType === 'DEFENSE') color = '#10b981'
+    if (evt.categoryType === 'MEETING') color = '#f59e0b'
+    if (evt.categoryType === 'ISSUE') color = '#f43f5e'
 
     return {
       id: String(evt.id),
@@ -131,6 +228,8 @@ const mappedEvents = computed(() => {
       }
     }
   })
+
+  return [...defaultEvents, ...availabilityEvents.value]
 })
 
 const calendarOptions = reactive({
@@ -144,7 +243,7 @@ const calendarOptions = reactive({
   slotDuration: '02:00:00',
   contentHeight: 'auto',
   eventDisplay: 'block',
-  displayEventTime: false,
+  displayEventTime: true,
   headerToolbar: {
     left: 'prev,next today',
     center: 'title',
@@ -156,23 +255,16 @@ const calendarOptions = reactive({
     week: "Semaine",
     list: "Planning"
   },
-  eventClick: (info) => {
-    selectedEvent.value = info.event
-    if (typeof window !== 'undefined') {
-      windowPos.value = {
-        x: (window.innerWidth / 2) - (384 / 2),
-        y: (window.innerHeight / 2) - 200
-      }
-    }
-    isDetailOpen.value = true
-  },
+  eventClick: handleEventClick,
+  select: handleSelect,
   editable: false,
   selectable: true,
   dayMaxEvents: true,
+  selectMirror: true
 })
 
 onMounted(async () => {
-  await fetchCalendarEvents()
+  await Promise.all([fetchCalendarEvents(), fetchAvailabilities()])
 })
 </script>
 
@@ -242,7 +334,7 @@ onMounted(async () => {
 :deep(.fc-daygrid-day-number) {
   color: #475569 !important;
   padding: 8px !important;
-  font-size: 0.85rem;
+  font-size: 0.85rem !important;
   font-weight: 500;
 }
 

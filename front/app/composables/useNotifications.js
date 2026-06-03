@@ -19,7 +19,7 @@ export const useNotifications = () => {
   }
 
   const connectToWebSocket = (userId, token) => {
-    const apiBase = config.public.apiBase
+    const apiBase = (config.public.apiBase || '').replace(/\/api$/, '').replace(/\/$/, '')
     const wsBaseUrl = apiBase.replace(/^http/, 'ws')
 
     const brokerURL = `${wsBaseUrl}/ws/notifications`

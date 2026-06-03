@@ -16,8 +16,10 @@ import fr.horizon.backend_api.model.dto.LoginResponse;
 import fr.horizon.backend_api.model.dto.UserDto;
 import fr.horizon.backend_api.service.AuthService;
 import fr.horizon.backend_api.service.UserService;
-import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -47,22 +49,25 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(
             @RequestBody LoginRequest loginRequest,
+            HttpServletRequest request,
             HttpServletResponse response
     ) {
         LoginResponse loginResponse = authService.login(loginRequest);
 
-        // Stock le token dans un Cookie en HTTPOnly
-        Cookie cookie = new Cookie("token", loginResponse.getToken());
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge((int) (expiration / 1000));
+        boolean secureCookie = request.isSecure();
 
-        response.addCookie(cookie);
+        ResponseCookie responseCookie = ResponseCookie.from("token", loginResponse.getToken())
+                .httpOnly(true)
+                .secure(secureCookie)
+                .path("/")
+                .maxAge(expiration / 1000)
+                .sameSite("None")
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString());
 
         // test pour s'assurer du bon fonctionnement lors du login, a supprimer apres
         notificationService.loginNotificationTest(loginRequest.getEmail());
-
 
         return ResponseEntity.ok().build();
     }
@@ -87,15 +92,19 @@ public class AuthController {
      * @return réponse HTTP 200 sans contenu
      */
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletResponse response) {
+    public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
 
-        Cookie cookie = new Cookie("token", null);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(0); // supprime le cookie
+        boolean secureCookie = request.isSecure();
 
-        response.addCookie(cookie);
+        ResponseCookie responseCookie = ResponseCookie.from("token", "")
+                .httpOnly(true)
+                .secure(secureCookie)
+                .path("/")
+                .maxAge(0)
+                .sameSite("None")
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString());
 
         return ResponseEntity.ok().build();
     }
