@@ -16,6 +16,7 @@ const { ready, user, wsToken } = useAuth()
 const { getIssueById, updateIssueStatus, updateIssuePrivacy } = useIssues()
 const { getIssueMessages, sendIssueMessage, normalizeMessage, initializeConversation } = useConversations()
 const { followIssue, unfollowIssue, isFollowing } = useIssueFollowers()
+const { acknowledgeFollowedIssueUpdate } = useFollowedIssuesState()
 
 // ID de l'issue depuis l'URL
 const issueId = Number(route.params.id)
@@ -41,6 +42,8 @@ const followSuccess = ref(false)
 const onFollowed = () => {
   alreadyFollowing.value = true
   followSuccess.value = true
+  // Si on vient de suivre l'issue, on la marque comme "vue" immédiatement
+  acknowledgeFollowedIssueUpdate(issue.value)
   setTimeout(() => followSuccess.value = false, 3000)
 }
 
@@ -77,11 +80,17 @@ const connectWebSocket = () => {
         const normalized = normalizeMessage(data.message)
         if (!messages.value.find((m) => m.id === normalized.id)) {
           messages.value.push(normalized)
+          // On marque comme lu car l'utilisateur est présentement sur l'issue
+          acknowledgeFollowedIssueUpdate(issue.value)
+          // On émet l'événement global pour informer les autres composants (ex: useFollowedIssuesState)
+          window.dispatchEvent(new CustomEvent('conversation:new_message', { detail: data.message }))
         }
-      } else if (data.type === 'privacy_update' && Number(data.issueId) === issueId) {
-        // Déclencher un check immédiat de l'accès
-        console.log('[WebSocket] Notification de changement de visibilité reçue')
+      } else if ((data.type === 'privacy_update' || data.type === 'status_update') && Number(data.issueId) === issueId) {
+        // Déclencher un check immédiat de l'accès ou du statut
+        console.log(`[WebSocket] Notification de changement (${data.type}) reçue`)
         checkAccess()
+        // Émettre un événement global pour les autres composants
+        window.dispatchEvent(new CustomEvent('issue:updated', { detail: { issueId: data.issueId, type: data.type } }))
       }
     } catch (e) {
       console.error('Erreur WebSocket:', e)
@@ -106,6 +115,9 @@ onMounted(async () => {
 
   try {
     issue.value = await getIssueById(issueId)
+    // Marquer l'issue comme lue au chargement de la page
+    acknowledgeFollowedIssueUpdate(issue.value)
+
     alreadyFollowing.value = await isFollowing(issueId)
     const conversation = await initializeConversation(issueId)
     conversationId.value = conversation?.id ?? null
@@ -161,6 +173,8 @@ const checkAccess = async () => {
     // Mettre à jour l'issue locale si elle a changé (ex: statut changé par admin)
     // Cela permet d'avoir l'UI à jour sans refresh
     issue.value = updatedIssue
+    // On marque comme lu
+    acknowledgeFollowedIssueUpdate(issue.value)
   } catch (err) {
     // Si l'API renvoie une erreur (403/404), on redirige
     console.error('[Issue Detail] Erreur lors de la vérification d\'accès:', err)
@@ -276,6 +290,14 @@ const handleSend = async () => {
     }
     newMessage.value = ''
     replyingToMessage.value = null
+
+    // On rafraîchit l'issue pour avoir le nouveau updatedAt (mis à jour par le backend suite au message)
+    // Cela évite que l'issue repasse en "non lu" au prochain polling car le updatedAt serveur aurait changé
+    const updatedIssue = await getIssueById(issueId)
+    issue.value = updatedIssue
+
+    // On marque comme lu avec la nouvelle date
+    acknowledgeFollowedIssueUpdate(updatedIssue)
   } catch (err) {
     error.value = err?.message || 'Erreur lors de l\'envoi du message'
   } finally {

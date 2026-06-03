@@ -16,6 +16,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import fr.horizon.backend_api.util.MapKeys;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -151,6 +152,7 @@ public class IssueService {
                 .orElseThrow(() -> new IssueNotFoundException(id));
 
         issue.setStatus(issueStatus);
+        issue.setUpdatedAt(LocalDateTime.now());
 
         issueRepository.save(issue);
     }
@@ -180,6 +182,7 @@ public class IssueService {
         boolean willBecomePrivate = !issue.isPrivate();
         
         issue.setPrivate(!issue.isPrivate());
+        issue.setUpdatedAt(LocalDateTime.now());
         issueRepository.saveAndFlush(issue);
 
         // Nettoyer les followers qui n'ont plus accès si l'issue vient de devenir privée
