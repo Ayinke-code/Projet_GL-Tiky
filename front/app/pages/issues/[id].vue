@@ -10,6 +10,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import IssueMeetingProposal from "~/components/issues/meeting/IssueMeetingProposal.vue";
 import IssueMeetingDemand from "~/components/issues/meeting/IssueMeetingDemand.vue";
+import IssueRelationsCard from '~/components/issues/IssueRelationCard.vue'
 
 const route = useRoute()
 const { ready, user, wsToken } = useAuth()
@@ -21,7 +22,7 @@ const { acknowledgeFollowedIssueUpdate } = useFollowedIssuesState()
 // ID de l'issue depuis l'URL
 const issueId = Number(route.params.id)
 
-// state local
+// State local
 const issue = ref(null)
 const loading = ref(true)
 const error = ref(null)
@@ -218,12 +219,12 @@ const handleReopening = async () => {
  */
 const getStatusBadgeClass = (status) => {
   const classes = {
-    'OUVERT':'bg-yellow-100 text-yellow-800 border border-yellow-300',
+    'OUVERT': 'bg-yellow-100 text-yellow-800 border border-yellow-300',
     'EN_ATTENTE': 'bg-gray-100 text-gray-800 border border-gray-300',
     'INCOMPLET': 'bg-orange-100 text-orange-800 border border-orange-300',
     'TERMINE': 'bg-green-100 text-green-800 border border-green-300'
   }
-  return classes[status] || 'bg-gray-100 text-gray-800 border border-gray-300'
+  return classes[status] || 'bg-gray-100 text-gray-600'
 }
 
 /**
@@ -239,9 +240,7 @@ const getStatusLabel = (status) => {
   return labels[status] || status
 }
 
-/**
- * Modals UI
- */
+// Modals UI
 const isResolveModalOpen = ref(false)
 const isReopeningModalOpen = ref(false)
 const isVisibilityModalOpen = ref(false)
@@ -443,7 +442,6 @@ const handleUnfollow = async () => {
             </svg>
             Ne plus suivre
           </button>
-
         </div>
       </div>
 
@@ -539,6 +537,9 @@ const handleUnfollow = async () => {
                     :issue="issue"
                   />
 
+                  <ClientOnly>
+                    <IssueRelationsCard :current-issue-id="issueId" />
+                  </ClientOnly>
                     <!-- Slot pour futures fonctionnalités sidebar -->
                   <slot name="sidebar-extra" />
 
@@ -586,6 +587,8 @@ const handleUnfollow = async () => {
     <div
       class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
 
+  <div v-if="isVisibilityModalOpen && canTogglePrivacy" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" @click.self="isVisibilityModalOpen = false">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
       <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
         <h2 class="text-lg font-bold text-gray-800">Changer la visibilité</h2>
         <button @click="isVisibilityModalOpen = false" class="text-gray-400 hover:text-gray-600">
@@ -613,7 +616,6 @@ const handleUnfollow = async () => {
           </button>
         </div>
       </div>
-
     </div>
   </div>
 
