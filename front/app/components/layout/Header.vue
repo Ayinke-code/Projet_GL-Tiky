@@ -11,6 +11,7 @@
     </div>
 
     <div class="flex items-center space-x-6">
+      <LanguageSelector />
 
       <div class="relative" ref="dropdownContainer">
         <button
@@ -73,8 +74,9 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useNotifications } from "~/composables/useNotifications.js"
-import NotificationCard from "~/components/notifications/NotificationCard.vue";
+import { useNotifications } from '~/composables/useNotifications.js'
+import NotificationCard from '~/components/notifications/NotificationCard.vue'
+import LanguageSelector from '~/components/layout/LanguageSelector.vue'
 
 defineEmits(['toggle-sidebar'])
 
