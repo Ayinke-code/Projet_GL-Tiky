@@ -11,7 +11,7 @@
       <div v-if="isTeacher || isManager" class="py-12">
         <!-- Visible uniquement par les Managers -->
         <section v-if="isManager">
-          <AssignationManager :userId="user.id" @issue-updated="fetchIssues"/>
+          <AssignationManager :userId="user.id" @issue-updated="getDisplayableIssues"/>
         </section>
 
         <!-- Séparateur visible uniquement si l'utilisateur est à la fois Manager ET Teacher -->
@@ -22,7 +22,7 @@
 
         <!-- Visible uniquement par les Professeurs -->
         <section v-if="isTeacher">
-          <AssignationTeacher :userId="user.id" @issue-updated="fetchIssues"/>
+          <AssignationTeacher :userId="user.id" @issue-updated="getDisplayableIssues"/>
         </section>
       </div>
 
@@ -34,7 +34,7 @@
         <IncompleteIssuesList
           :userId="user.id"
           @has-issues="afficherSectionIncomplete = $event"
-          @issue-updated="fetchIssues"
+          @issue-updated="getDisplayableIssues"
         />
       </div>
 
@@ -131,6 +131,7 @@
 import IssuesCard from '~/components/issues/IssuesCard.vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import { computed } from 'vue'
+import { watch } from 'vue'
 import Separator from '~/components/ui/Separator.vue'
 import AssignationManager from '~/components/assignation/AssignationManager.vue'
 import AssignationTeacher from '~/components/assignation/AssignationTeacher.vue'
@@ -140,28 +141,12 @@ const { ready, user } = useAuth()
 const { issues,getDisplayableIssues ,fetchIssues, deleteIssue, error } = useIssues()
 const { refreshFollowedIssues } = useFollowedIssuesState()
 
+const { notifications } = useNotifications()
+
 /**
  * State UI
  */
 const loading = ref(true)
-
-onMounted(async () => {
-    if (ready && !user?.value?.id) {
-        await navigateTo('/login')
-        return
-    }
-
-    try {
-        await Promise.all([
-            fetchIssues(),
-            refreshFollowedIssues()
-        ])
-    } catch (err) {
-        console.error(err)
-    } finally {
-        loading.value = false
-    }
-})
 
 /**
  * Issue en cours de suppression (null = aucune)
@@ -298,5 +283,26 @@ const isManager = computed(() => {
 })
 
 const afficherSectionIncomplete = ref(false)
+
+watch(
+  () => notifications.value.length,
+  async (newLength, oldLength) => {
+    if (newLength > (oldLength ?? 0)) {
+      const latest = notifications.value[0]
+
+      const targetTypes = [
+        'NEW_ISSUE_IN_CATEGORIE',
+        'RESPONSE_TO_MANAGER_ISSUE',
+        'INCOMPLETE_ISSUE',
+        'VALIDE_ISSUE',
+        'NEW_DEMANDE_MANAGER'
+      ]
+
+      if (targetTypes.includes(latest?.type)) {
+        await getDisplayableIssues()
+      }
+    }
+  }
+)
 
 </script>

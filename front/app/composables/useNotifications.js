@@ -34,7 +34,7 @@ export const useNotifications = () => {
 
         stompClient.subscribe(`/topic/notifications/user/${userId}`, (message) => {
           const newNotification = JSON.parse(message.body)
-          notifications.value.unshift(newNotification)
+          notifications.value = [newNotification, ...notifications.value]
         })
       },
       onStompError: (frame) => {
