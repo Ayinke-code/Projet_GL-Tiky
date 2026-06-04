@@ -1,6 +1,6 @@
 <template>
   <div class="p-8">
-    <UCard class="max-w-2xl">
+    <UCard class="max-w-2xl mx-auto">
       <template #header>
         <div class="flex items-center gap-2">
           <UButton to="/issues" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
@@ -37,6 +37,23 @@
           </select>
         </div>
 
+        <!-- Fichiers optionnel -->
+         <div class="space-y-2">
+            <label class="block text-sm font-medium text-gray-700">Fichiers <span class="italic">(optionnel)</span></label>
+            <UFileUpload
+              v-model="files"
+              multiple
+              accept="application/pdf,image/png,image/jpeg,.jpg,.jpeg,.docx,.xlsx"
+              :dropzone="true"
+              label="Lâchez vos fichiers ici"
+              description="PDF, PNG, JPG, JPEG, DOCX, XLSX (max. 10Mo)"
+              icon="i-lucide-image"
+              highlight
+              color="info"
+              layout="list"
+            />
+         </div>
+
         <!-- Option de mise en attente -->
         <div class="pt-2">
           <UCheckbox v-model="form.isPending" label="Marquer ce ticket incomplet, vous pourrez le compléter plus tard" />
@@ -70,6 +87,8 @@
  * - crée une issue
  */
 
+import { validateFiles } from '../../utils/validateFiles'
+
 const { ready, user } = useAuth()
 const { createIssue } = useIssues()
 const { fetchCategoriesByType, categories } = useCategories()
@@ -80,6 +99,11 @@ const { fetchCategoriesByType, categories } = useCategories()
 const submitting = ref(false)
 const loadingCategories = ref(true)
 const error = ref(null)
+
+/**
+ * Stock les données des fichiers à enregistrer
+ */
+const files = ref(null)
 
 /**
  * Formulaire local
@@ -115,20 +139,27 @@ const handleCreateIssue = async () => {
     return
   }
 
+  /**
+   * Validation des fichiers (taille et format)
+   */
+  const fileValidation = validateFiles(files.value)
+
+  if (!fileValidation.valid) {
+    error.value = fileValidation.error
+    return
+  }
+
   submitting.value = true
+
   try {
     // Envoi du DTO
     const result = await createIssue({
       title: form.title,
       description: form.description,
       categoryId: form.categoryId,
-      pendingCase: form.isPending
+      pendingCase: form.isPending,
+      files: files.value
     })
-
-    console.log('valeur formulaire' + form.isPending)
-    console.log('valeur requete' + result.pendingCase)
-
-
 
     if (!result) return
 

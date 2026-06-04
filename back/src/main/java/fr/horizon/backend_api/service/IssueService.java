@@ -1,6 +1,7 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
+import fr.horizon.backend_api.exception.FileStorageException;
 import fr.horizon.backend_api.exception.IssueNotFoundException;
 import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.IssueCreateDto;
@@ -12,11 +13,15 @@ import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -42,10 +47,15 @@ public class IssueService {
     private final IssueFollowerRepository issueFollowerRepository;
     private final IssueFollowerService issueFollowerService;
     private final NotificationService notificationService;
+    private final FileStorageService fileStorageService;
+    private final DocumentRepository documentRepository;
 
     private static final String USER_NOT_FOUND = "User not found";
 
     private static final String OWNER_NF = "Owner not found";
+
+    @Value("${app.upload-dir}")
+    private String uploadDir;
     /**
      * Retourne la liste de toutes les issues.
      *
@@ -97,6 +107,11 @@ public class IssueService {
      */
     @Transactional
     public IssueDto createIssue(IssueCreateDto dto, String email) {
+        return createIssue(dto, List.of(), email);
+    }
+
+    @Transactional
+    public IssueDto createIssue(IssueCreateDto dto, List<MultipartFile> files, String email) {
 
         User owner = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException(OWNER_NF));
@@ -126,6 +141,44 @@ public class IssueService {
 
         // Créer automatiquement une conversation pour cette issue
         conversationService.createConversationForIssue(issue);
+
+        /**
+         * Cas ou des fichiers sont à enregistrés
+         */
+        if (files != null && !files.isEmpty()) {
+
+            List<Document> documents = new ArrayList<>();
+
+            for (MultipartFile file : files) {
+
+                if (file.isEmpty()) continue;
+
+                String storedName;
+
+                try {
+                    storedName = fileStorageService.store(file);
+                } catch (IOException e) {
+                    throw new FileStorageException(
+                            "Error storing file: " + file.getOriginalFilename(),
+                            e
+                    );
+                }
+
+                Document document = Document.builder()
+                        .originalName(file.getOriginalFilename())
+                        .storedName(storedName)
+                        .path(uploadDir + "/" + storedName)
+                        .contentType(file.getContentType())
+                        .size(file.getSize())
+                        .issue(issue)
+                        .uploadedBy(owner)
+                        .build();
+
+                documents.add(document);
+            }
+
+            documentRepository.saveAll(documents);
+        }
 
         return toDto(issue);
     }
