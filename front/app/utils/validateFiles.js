@@ -4,6 +4,7 @@
  */
 
 const MAX_SIZE = 10 * 1024 * 1024 // 10 Mo
+const MAX_TOTAL_SIZE = 20 * 1024 * 1024 // 20 Mo total
 
 const ALLOWED_TYPES = [
   'application/pdf',
@@ -18,6 +19,8 @@ export function validateFiles(files) {
     return { valid: true }
   }
 
+  let totalSize = 0
+
   for (const file of files) {
     if (file.size > MAX_SIZE) {
       return {
@@ -26,11 +29,20 @@ export function validateFiles(files) {
       }
     }
 
+    totalSize += file.size
+
     if (!ALLOWED_TYPES.includes(file.type)) {
       return {
         valid: false,
         error: `Format non autorisé: ${file.name}`
       }
+    }
+  }
+
+  if (totalSize > MAX_TOTAL_SIZE) {
+    return {
+      valid: false,
+      error: `Taille totale des fichiers trop élevée (${(totalSize / 1024 / 1024).toFixed(1)} MB)`
     }
   }
 

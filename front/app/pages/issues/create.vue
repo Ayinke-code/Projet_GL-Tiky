@@ -60,10 +60,15 @@
         </div>
 
         <!-- Erreur -->
-        <UAlert v-if="error" color="error" class="mt-4" @close="error = null">
-          <template #title>Erreur</template>
-          {{ error }}
-        </UAlert>
+        <UAlert v-if="error" 
+          color="error" 
+          class="mt-4" 
+          @close="error = null" 
+          title="Erreur : " 
+          :description="error" 
+          icon="material-symbols:error" 
+          variant="subtle"
+        />
 
         <!-- Boutons -->
         <div class="flex gap-2 justify-end pt-4 border-t">

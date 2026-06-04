@@ -4,6 +4,7 @@ import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.exception.FileStorageException;
 import fr.horizon.backend_api.exception.IssueNotFoundException;
 import fr.horizon.backend_api.model.*;
+import fr.horizon.backend_api.model.dto.DocumentDto;
 import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.dto.RequestManagerDto;
@@ -93,23 +94,26 @@ public class IssueService {
     }
 
     /**
-     * Crée une nouvelle issue.
-     * <p>
-     * L'issue est associée à un utilisateur (owner) via son email
-     * et à une catégorie existante.
-     * Crée automatiquement une conversation pour cette issue.
+     * Crée une issue.
+     * Peut inclure des fichiers attachés.
      *
-     * @param dto   données de création de l'issue
-     * @param email email de l'utilisateur créateur
-     * @return issue créée sous forme de DTO
-     * @throws RuntimeException si l'utilisateur n'existe pas
-     * @throws CategoryNotFoundException si la catégorie n'existe pas
+     * @param dto données de création
+     * @param email email de l'utilisateur
+     * @return issue créée en DTO
      */
     @Transactional
     public IssueDto createIssue(IssueCreateDto dto, String email) {
         return createIssue(dto, List.of(), email);
     }
 
+    /**
+     * Crée une issue.
+     * Peut inclure des fichiers attachés.
+     *
+     * @param dto données de création
+     * @param email email de l'utilisateur
+     * @return issue créée en DTO
+     */
     @Transactional
     public IssueDto createIssue(IssueCreateDto dto, List<MultipartFile> files, String email) {
 
@@ -373,6 +377,29 @@ public class IssueService {
                 .teacherManagerName(manager != null ? manager.getName() : null)
                 //follower
                 .followersCount(countFollower(issue))
+                // documents
+                .documents(
+                        issue.getDocuments()
+                                .stream()
+                                .map(this::toDocumentDto)
+                                .toList()
+                )
+                .build();
+    }
+
+    /**
+     * Convertit une entité Issue en DTO Document.
+     *
+     * @param document entité document
+     * @return DTO document
+     */
+    private DocumentDto toDocumentDto(Document document) {
+        return DocumentDto.builder()
+                .id(document.getId())
+                .originalName(document.getOriginalName())
+                .contentType(document.getContentType())
+                .size(document.getSize())
+                .createdAt(document.getCreatedAt())
                 .build();
     }
 
