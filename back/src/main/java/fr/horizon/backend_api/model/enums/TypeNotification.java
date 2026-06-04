@@ -6,8 +6,18 @@ import lombok.Getter;
 @AllArgsConstructor
 @Getter
 public enum TypeNotification {
-    // mise a jour d'une issue suivi
-    UPDATING_ISSUE,
+    // Validation d'un ticket
+    VALIDE_ISSUE,
+    // Création d'un ticket dans une catégorie
+    NEW_ISSUE_IN_CATEGORIE,
+    // Réponse d'une demande de manager
+    RESPONSE_TO_MANAGER_ISSUE,
+    // MIS EN INCOMPLET D'un ticket
+    INCOMPLETE_ISSUE,
+    // RECEPTION demande de manager
+    NEW_DEMANDE_MANAGER,
+
+
     // ajout d'un event pour les participant
     NEW_EVENT,
     // ajout d'une issue dans une catégorie pour le categoryOwner

@@ -92,6 +92,12 @@ public class IssueController {
     @PostMapping("/{id}/update-status")
     public void updateStatus(@PathVariable Long id, @RequestBody String status) {
         issueService.updateStatus(status, id);
+
+        // Notification WebSocket pour le changement de statut
+        conversationService.getConversationByIssueId(id).ifPresent(conv -> {
+            String payload = "{\"type\":\"" + fr.horizon.backend_api.util.MapKeys.STATUS_UPDATE + "\",\"issueId\":" + id + "}";
+            conversationWebSocketHandler.broadcastToConversation(conv.getId(), payload);
+        });
     }
 
     /**
@@ -122,7 +128,7 @@ public class IssueController {
 
          // Diffusion d'une notification via WebSocket pour forcer le refresh/redirection chez les clients
          conversationService.getConversationByIssueId(id).ifPresent(conv -> {
-             String payload = "{\"type\":\"privacy_update\",\"issueId\":" + id + "}";
+             String payload = "{\"type\":\"" + fr.horizon.backend_api.util.MapKeys.PRIVACY_UPDATE + "\",\"issueId\":" + id + "}";
              conversationWebSocketHandler.broadcastToConversation(conv.getId(), payload);
          });
 

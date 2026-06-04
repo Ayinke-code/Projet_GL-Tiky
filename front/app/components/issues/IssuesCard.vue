@@ -1,6 +1,9 @@
 <template>
   <UCard
-    class="hover:shadow-md transition cursor-pointer"
+    :class="[
+      'hover:shadow-md transition cursor-pointer',
+      isUpdated ? 'bg-green-50 border-green-200 shadow-sm' : ''
+    ]"
     @click="navigateTo(`/issues/${issue.id}`)"
   >
     <!-- HEADER -->
@@ -29,7 +32,12 @@
       </div>
 
       <!-- DATE -->
-      <div class="text-[11px] text-gray-500 whitespace-nowrap">
+      <div
+        :class="[
+          'text-[11px] whitespace-nowrap',
+          isUpdated ? 'text-green-600 font-bold' : 'text-gray-500'
+        ]"
+      >
         {{ formatDateTime(issue.createdAt) }}
       </div>
     </div>
@@ -79,6 +87,9 @@ const props = defineProps({
   updatingStatusId: Number,
   showDelete: { type: Boolean, default: false }
 })
+
+const { isFollowedIssueUpdated } = useFollowedIssuesState()
+const isUpdated = computed(() => isFollowedIssueUpdated(props.issue?.id))
 
 /**
  * Labels statuts

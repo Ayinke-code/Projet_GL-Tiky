@@ -49,6 +49,9 @@ class IssueServiceTest {
     @Mock
     private IssueFollowerRepository issueFollowerRepository;
 
+    @Mock
+    private NotificationService notificationService;
+
     @InjectMocks
     private IssueService issueService;
 

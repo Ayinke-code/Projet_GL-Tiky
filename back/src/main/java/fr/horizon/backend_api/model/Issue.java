@@ -65,6 +65,7 @@ public class Issue extends BaseEntity {
     @JoinColumn(name = "id_util_1")
     private User manager;
     
+    @Builder.Default
     @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RequestManager> requests = new ArrayList<>();
 
