@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * Service de gestion des événements académiques.
@@ -43,6 +44,7 @@ public class EventService {
     private final UserRepository userRepository;
     private final StudentGroupRepository studentGroupRepository;
     private final IssueFollowerRepository issueFollowerRepository;
+    private final NotificationService notificationService;
 
     private static final String USER_NOT_FOUND = "User not found";
     private static final String ISSUE_NOT_FOUND = "Issue not found";
@@ -60,48 +62,23 @@ public class EventService {
      * @throws AccessDeniedException si l’utilisateur n’a pas le rôle TEACHER ou ADMIN
      * @throws CategoryNotFoundException si la catégorie n’existe pas
      */
+    @Transactional
     public EventResponseDto create(EventRequestDto request, String email) {
         User user = userService.findByEmail(email);
-        Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new CategoryNotFoundException(request.getCategoryId()));
+        Category category = getCategory(request.getCategoryId());
 
-        if (category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE) {
-            boolean hasTeacherRole = user.getRoles().stream()
-                    .anyMatch(r -> RoleEnum.TEACHER.value().equals(r.getName()) || RoleEnum.ADMIN.value().equals(r.getName()));
-            if (!hasTeacherRole) {
-                throw new AccessDeniedException("Seuls les enseignants peuvent créer des événements de type " + category.getCategoryType());
-            }
-        }
+        validateTeacherAccess(user, category);
+        validateEventDates(request, category);
 
-        if (category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE) {
-            if (request.getStartDate() == null || request.getEndDate() == null) {
-                throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires pour un événement de ce type.");
-            }
-            if (!request.getEndDate().isAfter(request.getStartDate())) {
-                throw new IllegalArgumentException("La date de fin doit être postérieure à la date de début.");
-            }
-        }
+        Event event = buildEvent(request, user, category);
 
-        Event event = Event.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .categoryType(category.getCategoryType())
-                .category(category)
-                .validated(true)
-                .createdBy(user)
-                .startDate(request.getStartDate())
-                .endDate(request.getEndDate())
-                .build();
+        assignProjectGroups(event, request);
 
-        // Affectation des groupes projet (AUDIT / DEFENSE uniquement)
-        if ((category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE)
-                && request.getProjectGroupIds() != null && !request.getProjectGroupIds().isEmpty()) {
-            Set<StudentGroup> groups = new HashSet<>(studentGroupRepository.findAllById(request.getProjectGroupIds()));
-            event.setProjectGroups(groups);
-        }
+        Event savedEvent = eventRepository.save(event);
 
-        Event saved = eventRepository.save(event);
-        return mapToResponse(saved);
+        notifyProjectGroupMembers(savedEvent);
+
+        return mapToResponse(savedEvent);
     }
 
     /**
@@ -194,6 +171,7 @@ public class EventService {
         }
 
         event.addParticipant(user, null);
+        notificationService.inviteToEventNotification(user, event);
 
         Event saved = eventRepository.save(event);
         return mapToResponse(saved);
@@ -224,6 +202,7 @@ public class EventService {
                 throw new EventConflictException("Impossible d'inviter le groupe. Conflit d'agenda pour : " + user.getName());
             }
             event.addParticipant(user, null);
+            notificationService.inviteToEventNotification(user, event);
         }
 
         Event saved = eventRepository.save(event);
@@ -268,6 +247,7 @@ public class EventService {
         }
 
         Event saved = eventRepository.save(event);
+        notificationService.responseEventNotification(event.getCreatedBy(), event ,participantParticipant.getUser().getName(), response);
 
         return mapToInvitationResponse(saved, user);
     }
@@ -520,6 +500,17 @@ public class EventService {
         }
 
         Event saved = eventRepository.save(event);
+
+        if (saved.getParticipants() != null) {
+            for (EventParticipant participant : saved.getParticipants()) {
+                User targetUser = participant.getUser();
+
+                if (targetUser != null && !targetUser.getId().equals(saved.getCreatedBy().getId())) {
+                    notificationService.updateEventNotification(targetUser, saved);
+                }
+            }
+        }
+
         return mapToResponse(saved);
     }
 
@@ -626,6 +617,14 @@ public class EventService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND+WITH_ID + eventId));
 
+        for (EventParticipant participant : event.getParticipants()) {
+            User targetUser = participant.getUser();
+
+            if (targetUser != null && !targetUser.getId().equals(event.getCreatedBy().getId())) {
+                notificationService.cancelEventNotification(targetUser, event);
+            }
+        }
+
         // Enlever tous les participants (nettoie la table d'association)
         event.getParticipants().clear();
 
@@ -730,6 +729,98 @@ public class EventService {
                 .role(user.getDisplayRole())
                 .build();
     }
+
+    private Category getCategory(Long categoryId) {
+        return categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new CategoryNotFoundException(categoryId));
+    }
+
+    /**
+     * Associe uniquement les groupes de projet à l'événement.
+     */
+    private void assignProjectGroups(Event event, EventRequestDto request) {
+        if (request.getProjectGroupIds() == null
+                || request.getProjectGroupIds().isEmpty()
+                || !isRestrictedCategory(event.getCategory())) {
+            return;
+        }
+
+        Set<StudentGroup> groups = new HashSet<>(
+                studentGroupRepository.findAllById(request.getProjectGroupIds()));
+
+        event.setProjectGroups(groups);
+    }
+
+    /**
+     * Notifie les membres des groupes de projet associés à l'événement sauvegardé.
+     */
+    private void notifyProjectGroupMembers(Event savedEvent) {
+        if (savedEvent.getProjectGroups() == null || savedEvent.getProjectGroups().isEmpty()) {
+            return;
+        }
+
+        Set<User> usersToNotify = savedEvent.getProjectGroups().stream()
+                .flatMap(group -> Stream.concat(
+                        group.getMembers() != null ? group.getMembers().stream() : Stream.empty(),
+                        group.getTeachers() != null ? group.getTeachers().stream() : Stream.empty()))
+                .collect(Collectors.toSet());
+
+        usersToNotify.stream()
+                .filter(user -> !user.getId().equals(savedEvent.getCreatedBy().getId()))
+                .forEach(user -> notificationService.inviteToEventNotification(user, savedEvent));
+    }
+
+    private void validateEventDates(EventRequestDto request, Category category) {
+        if (!isRestrictedCategory(category)) {
+            return;
+        }
+
+        if (request.getStartDate() == null || request.getEndDate() == null) {
+            throw new IllegalArgumentException(
+                    "Les dates de début et de fin sont obligatoires pour un événement de ce type.");
+        }
+
+        if (!request.getEndDate().isAfter(request.getStartDate())) {
+            throw new IllegalArgumentException(
+                    "La date de fin doit être postérieure à la date de début.");
+        }
+    }
+
+    private Event buildEvent(EventRequestDto request, User user, Category category) {
+        return Event.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .categoryType(category.getCategoryType())
+                .category(category)
+                .validated(true)
+                .createdBy(user)
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .build();
+    }
+
+    private boolean isRestrictedCategory(Category category) {
+        return category.getCategoryType() == CategoryType.AUDIT
+                || category.getCategoryType() == CategoryType.DEFENSE;
+    }
+
+    private void validateTeacherAccess(User user, Category category) {
+        if (!isRestrictedCategory(category)) {
+            return;
+        }
+
+        boolean hasTeacherRole = user.getRoles().stream()
+                .anyMatch(role ->
+                        RoleEnum.TEACHER.value().equals(role.getName())
+                                || RoleEnum.ADMIN.value().equals(role.getName()));
+
+        if (!hasTeacherRole) {
+            throw new AccessDeniedException(
+                    "Seuls les enseignants peuvent créer des événements de type "
+                            + category.getCategoryType());
+        }
+    }
+
 
 
 }

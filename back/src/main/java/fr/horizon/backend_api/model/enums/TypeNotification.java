@@ -19,11 +19,14 @@ public enum TypeNotification {
 
 
     // ajout d'un event pour les participant
-    NEW_EVENT,
-    // ajout d'une issue dans une catégorie pour le categoryOwner
-    NEW_ISSUE,
+    NEW_EVENT_INVITATION,
+    // modification de l'heure de rdv pour un event
+    UPDATE_EVENT,
+    // réponse d'un invité à un évènement
+    EVENT_RESPONSE,
+    // Annulation d'un évènement
+    EVENT_CANCEL,
     // action de fusion pour le manager
     MERGING,
-    // mise a jour d'un event (date) pour les participants
-    UPDATING_EVENT
+
 }
