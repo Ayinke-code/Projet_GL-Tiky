@@ -165,6 +165,9 @@ public class IssueService {
         if (oldStatus == IssueStatus.OUVERT && newStatus == IssueStatus.TERMINE) {
             notificationService.closeIssueNotification(issue.getCreatedBy(), issue);
         }
+        if(oldStatus == IssueStatus.TERMINE && newStatus == IssueStatus.OUVERT ){
+            notificationService.openIssueNotification(issue.getCreatedBy(), issue);
+        }
 
     }
 

@@ -285,6 +285,20 @@ public class NotificationService {
         saveAndSend(notif);
     }
 
+    public void openIssueNotification(User user, Issue issue){
+        String content ="votre ticket: "+ issue.getTitle()+ " vient d'être rouvert, consultez le vite";
+
+        Notification notif = Notification.builder()
+                .isRead(false)
+                .content(content)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.OPEN_ISSUE)
+                .build();
+
+        saveAndSend(notif);
+    }
+
 
     /**
      * Marquer une notification comme lu
