@@ -1,6 +1,5 @@
 package fr.horizon.backend_api.service;
 
-import fr.horizon.backend_api.controller.NotificationController;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.exception.EventConflictException;
 import fr.horizon.backend_api.exception.EventNotFoundException;

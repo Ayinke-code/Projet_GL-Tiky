@@ -23,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * Service de gestion des événements académiques.
@@ -63,61 +64,14 @@ public class EventService {
      */
     public EventResponseDto create(EventRequestDto request, String email) {
         User user = userService.findByEmail(email);
-        Category category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new CategoryNotFoundException(request.getCategoryId()));
+        Category category = getCategory(request.getCategoryId());
 
-        if (category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE) {
-            boolean hasTeacherRole = user.getRoles().stream()
-                    .anyMatch(r -> RoleEnum.TEACHER.value().equals(r.getName()) || RoleEnum.ADMIN.value().equals(r.getName()));
-            if (!hasTeacherRole) {
-                throw new AccessDeniedException("Seuls les enseignants peuvent créer des événements de type " + category.getCategoryType());
-            }
-        }
+        validateTeacherAccess(user, category);
+        validateEventDates(request, category);
 
-        if (category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE) {
-            if (request.getStartDate() == null || request.getEndDate() == null) {
-                throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires pour un événement de ce type.");
-            }
-            if (!request.getEndDate().isAfter(request.getStartDate())) {
-                throw new IllegalArgumentException("La date de fin doit être postérieure à la date de début.");
-            }
-        }
+        Event event = buildEvent(request, user, category);
 
-        Event event = Event.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .categoryType(category.getCategoryType())
-                .category(category)
-                .validated(true)
-                .createdBy(user)
-                .startDate(request.getStartDate())
-                .endDate(request.getEndDate())
-                .build();
-
-        // Affectation des groupes projet (AUDIT / DEFENSE uniquement)
-        if ((category.getCategoryType() == CategoryType.AUDIT || category.getCategoryType() == CategoryType.DEFENSE)
-                && request.getProjectGroupIds() != null && !request.getProjectGroupIds().isEmpty()) {
-            Set<StudentGroup> groups = new HashSet<>(studentGroupRepository.findAllById(request.getProjectGroupIds()));
-            event.setProjectGroups(groups);
-
-            Set<User> usersToNotify = new HashSet<>();
-            for (StudentGroup group : groups) {
-                if (group.getMembers() != null) {
-                    usersToNotify.addAll(group.getMembers());
-                }
-                if (group.getTeachers() != null) {
-                    usersToNotify.addAll(group.getTeachers());
-                }
-            }
-
-            for (User targetUser : usersToNotify) {
-                // ne pas notifier le créateur
-                if (!targetUser.getId().equals(event.getCreatedBy().getId())) {
-                    notificationService.inviteToEventNotification(targetUser, event);
-                }
-            }
-
-        }
+        assignProjectGroupsAndNotify(event, request);
 
         Event saved = eventRepository.save(event);
         return mapToResponse(saved);
@@ -770,6 +724,85 @@ public class EventService {
                 .name(user.getName())
                 .role(user.getDisplayRole())
                 .build();
+    }
+
+    private Category getCategory(Long categoryId) {
+        return categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new CategoryNotFoundException(categoryId));
+    }
+
+    private void validateTeacherAccess(User user, Category category) {
+        if (!isRestrictedCategory(category)) {
+            return;
+        }
+
+        boolean hasTeacherRole = user.getRoles().stream()
+                .anyMatch(role ->
+                        RoleEnum.TEACHER.value().equals(role.getName())
+                                || RoleEnum.ADMIN.value().equals(role.getName()));
+
+        if (!hasTeacherRole) {
+            throw new AccessDeniedException(
+                    "Seuls les enseignants peuvent créer des événements de type "
+                            + category.getCategoryType());
+        }
+    }
+
+    private void validateEventDates(EventRequestDto request, Category category) {
+        if (!isRestrictedCategory(category)) {
+            return;
+        }
+
+        if (request.getStartDate() == null || request.getEndDate() == null) {
+            throw new IllegalArgumentException(
+                    "Les dates de début et de fin sont obligatoires pour un événement de ce type.");
+        }
+
+        if (!request.getEndDate().isAfter(request.getStartDate())) {
+            throw new IllegalArgumentException(
+                    "La date de fin doit être postérieure à la date de début.");
+        }
+    }
+
+    private Event buildEvent(EventRequestDto request, User user, Category category) {
+        return Event.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .categoryType(category.getCategoryType())
+                .category(category)
+                .validated(true)
+                .createdBy(user)
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .build();
+    }
+
+    private void assignProjectGroupsAndNotify(Event event, EventRequestDto request) {
+        if (request.getProjectGroupIds() == null
+                || request.getProjectGroupIds().isEmpty()
+                || !isRestrictedCategory(event.getCategory())) {
+            return;
+        }
+
+        Set<StudentGroup> groups = new HashSet<>(
+                studentGroupRepository.findAllById(request.getProjectGroupIds()));
+
+        event.setProjectGroups(groups);
+
+        Set<User> usersToNotify = groups.stream()
+                .flatMap(group -> Stream.concat(
+                        group.getMembers() != null ? group.getMembers().stream() : Stream.empty(),
+                        group.getTeachers() != null ? group.getTeachers().stream() : Stream.empty()))
+                .collect(Collectors.toSet());
+
+        usersToNotify.stream()
+                .filter(user -> !user.getId().equals(event.getCreatedBy().getId()))
+                .forEach(user -> notificationService.inviteToEventNotification(user, event));
+    }
+
+    private boolean isRestrictedCategory(Category category) {
+        return category.getCategoryType() == CategoryType.AUDIT
+                || category.getCategoryType() == CategoryType.DEFENSE;
     }
 
 
