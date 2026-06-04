@@ -160,6 +160,36 @@ public class IssueService {
     }
 
     /**
+     * Demande la réouverture d'une issue terminée.
+     * <p>
+     * Met à jour le statut en {@link IssueStatus#DEMANDE_REOUVERTURE}
+     * et enregistre la description fournie par l'utilisateur.
+     *
+     * @param description justification de la demande de réouverture
+     * @param id identifiant de l'issue
+     * @throws IssueNotFoundException si l'issue n'existe pas
+     * @throws IllegalStateException si l'issue n'est pas au statut TERMINE
+     * @throws IllegalArgumentException si la description est vide
+     */
+    public void requestReopening(String description, Long id){
+        Issue issue = issueRepository.findById(id)
+                .orElseThrow(() -> new IssueNotFoundException(id));
+
+        if (issue.getStatus() != IssueStatus.TERMINE) {
+            throw new IllegalStateException("L'issue doit être terminée pour demander une réouverture");
+        }
+
+        if (description == null || description.trim().isEmpty()) {
+            throw new IllegalArgumentException("La description est obligatoire");
+        }
+
+        issue.setStatus(IssueStatus.DEMANDE_REOUVERTURE);
+        issue.setReopeningDescription(description);
+
+        issueRepository.save(issue);
+    }
+
+    /**
      * Inverse la visibilité privée d'une issue.
      * <p>
      * Passe une issue de privé à public ou inversement.
@@ -284,6 +314,8 @@ public class IssueService {
                 .createdName(issue.getCreatedBy().getName())
                 .createdAt(issue.getCreatedAt())
                 .updatedAt(issue.getUpdatedAt())
+                // request reopening
+                .reopeningDescription(issue.getReopeningDescription())
                 //manager
                 .teacherManagerName(manager != null ? manager.getName() : null)
                 //follower

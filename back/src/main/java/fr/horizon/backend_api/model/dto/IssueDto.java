@@ -36,6 +36,8 @@ public class IssueDto {
     private LocalDateTime updatedAt;
     //teacher manager
     private String teacherManagerName;
+    // demande de réouverture
+    private String reopeningDescription;
     //follower
     private int followersCount;
 }

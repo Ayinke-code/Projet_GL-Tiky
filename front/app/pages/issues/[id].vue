@@ -221,7 +221,8 @@ const getStatusBadgeClass = (status) => {
     'OUVERT':'bg-yellow-100 text-yellow-800 border border-yellow-300',
     'EN_ATTENTE': 'bg-gray-100 text-gray-800 border border-gray-300',
     'INCOMPLET': 'bg-orange-100 text-orange-800 border border-orange-300',
-    'TERMINE': 'bg-green-100 text-green-800 border border-green-300'
+    'TERMINE': 'bg-green-100 text-green-800 border border-green-300',
+    'DEMANDE_REOUVERTURE': 'bg-blue-100 text-blue-800 border border-blue-300'
   }
   return classes[status] || 'bg-gray-100 text-gray-800 border border-gray-300'
 }
@@ -234,7 +235,8 @@ const getStatusLabel = (status) => {
     'OUVERT': 'Ouvert',
     'EN_ATTENTE': 'En attente',
     'INCOMPLET': 'Incomplet',
-    'TERMINE': 'Terminé'
+    'TERMINE': 'Terminé',
+    'DEMANDE_REOUVERTURE': 'Demande réouverture'
   }
   return labels[status] || status
 }
@@ -397,7 +399,7 @@ const handleUnfollow = async () => {
                         Marquer Résolu
                     </button>
                     <button
-                        v-else-if="issue.status === 'TERMINE' && user?.id === issue?.createdId && user.id !== null"
+                        v-else-if="issue.status === 'TERMINE' && user?.id === issue?.categoryManagerId && user.id !== null"
                         @click="isReopeningModalOpen = true" :disabled="issue.status === 'résolu'"
                         class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-transform duration-200 hover:scale-105">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
