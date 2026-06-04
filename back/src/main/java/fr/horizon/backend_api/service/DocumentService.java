@@ -1,5 +1,7 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.exception.FileDeletionException;
+import fr.horizon.backend_api.exception.FileNotReadableException;
 import fr.horizon.backend_api.model.Document;
 import fr.horizon.backend_api.repository.DocumentRepository;
 import org.springframework.core.io.Resource;
@@ -44,7 +46,7 @@ public class DocumentService {
         Resource resource = new UrlResource(filePath.toUri());
 
         if (!resource.exists() || !resource.isReadable()) {
-            throw new RuntimeException("File not readable");
+            throw new FileNotReadableException();
         }
 
         return ResponseEntity.ok()
@@ -77,7 +79,7 @@ public class DocumentService {
         try {
             Files.deleteIfExists(filePath);
         } catch (IOException e) {
-            throw new RuntimeException("Error deleting file from disk", e);
+            throw new FileDeletionException("Error deleting file from disk", e);
         }
 
         // Suppression dans la table Document

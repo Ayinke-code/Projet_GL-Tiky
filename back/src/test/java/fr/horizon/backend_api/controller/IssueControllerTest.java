@@ -92,7 +92,7 @@ class IssueControllerTest {
     }
 
     @Test
-    void shouldCreateIssue() throws Exception {
+    void shouldCreateIssue() {
 
         IssueDto response = IssueDto.builder()
                 .id(1L)

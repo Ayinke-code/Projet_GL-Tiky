@@ -69,7 +69,7 @@ class DocumentServiceTest {
     }
 
     @Test
-    void shouldThrowWhenFileNotReadableOnDownload() throws IOException {
+    void shouldThrowWhenFileNotReadableOnDownload() {
 
         // Chemin qui n'existe pas sur le disque
         Document doc = new Document();

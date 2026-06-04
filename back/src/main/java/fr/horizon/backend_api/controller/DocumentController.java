@@ -22,7 +22,6 @@ public class DocumentController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        System.out.println("je suis dedans" + id);
         documentService.delete(id);
         return ResponseEntity.noContent().build();
     }

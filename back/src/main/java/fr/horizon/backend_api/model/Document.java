@@ -30,7 +30,7 @@ public class Document extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private DocumentType type;
 
-    // chemin relatif (uploads/2026/06/uuid.pdf)
+    // Exemple de chemin relatif vers un fichier uploadé
     @Column(nullable = false)
     private String path;
 

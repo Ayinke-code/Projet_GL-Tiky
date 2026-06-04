@@ -101,7 +101,6 @@ public class IssueService {
      * @param email email de l'utilisateur
      * @return issue créée en DTO
      */
-    @Transactional
     public IssueDto createIssue(IssueCreateDto dto, String email) {
         return createIssue(dto, List.of(), email);
     }
