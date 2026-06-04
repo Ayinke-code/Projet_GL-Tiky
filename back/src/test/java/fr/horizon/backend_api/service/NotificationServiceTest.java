@@ -328,7 +328,24 @@ class NotificationServiceTest {
         assertEquals(testUser, savedNotif.getRecipient());
     }
 
-    // --- TESTS GENERIQUES ---
+    @Test
+    @DisplayName("Doit créer et envoyer une notification de réouverture de ticket (OPEN_ISSUE)")
+    void openIssueNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        notificationService.openIssueNotification(testUser, testIssue);
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+
+        Notification savedNotif = notifCaptor.getValue();
+
+        assertTrue(savedNotif.getContent().contains("votre ticket: Bug Connexion vient d'être rouvert"));
+        assertEquals(TypeNotification.OPEN_ISSUE, savedNotif.getType());
+        assertEquals(testIssue, savedNotif.getIssue());
+        assertEquals(testUser, savedNotif.getRecipient());
+    }
+
 
     @Test
     @DisplayName("Marquer la notification comme lue et la sauvegarder")

@@ -189,9 +189,9 @@ const uiConfig = computed(() => {
 
     case 'OPEN_ISSUE':
       return {
-        title: 'Réouverture ticket',
-        textColor: 'text-cyan-600',
-        iconPath: 'M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99'
+        title: 'Ticket Réouvert',
+        textColor: 'text-sky-600',
+        iconPath: 'M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z'
       }
 
     case 'CLOSING_ISSUE':
