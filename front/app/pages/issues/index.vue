@@ -414,8 +414,21 @@ const handleDelete = async () => {
 /**
  * Handler nommé pour pouvoir le retirer proprement
  */
-const onNotificationReceived = async () => {
-  await getDisplayableIssues()
+const ISSUE_NOTIFICATION_TYPES = [
+  'NEW_ISSUE_IN_CATEGORIE',
+  'RESPONSE_TO_MANAGER_ISSUE',
+  'VALIDE_ISSUE',
+  'CLOSING_ISSUE',
+  'INCOMPLETE_ISSUE',
+  'NEW_DEMANDE_MANAGER',
+  'NEW_OPEN_ISSUE',
+  'ACCEPTED_OPEN_ISSUE',
+]
+
+const onNotificationReceived = async (e) => {
+  if (ISSUE_NOTIFICATION_TYPES.includes(e.detail?.type)) {
+    await getDisplayableIssues()
+  }
 }
 
 /**

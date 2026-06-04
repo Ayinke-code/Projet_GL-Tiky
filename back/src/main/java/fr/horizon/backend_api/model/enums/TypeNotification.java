@@ -25,5 +25,12 @@ public enum TypeNotification {
     // action de fusion pour le manager
     MERGING,
     // mise a jour d'un event (date) pour les participants
-    UPDATING_EVENT
+    UPDATING_EVENT,
+
+    // demande de reouverture pour le manager
+    NEW_OPEN_ISSUE,
+    // acceptation de la réouverture du ticket pour le créateur
+    ACCEPTED_OPEN_ISSUE,
+    // ticket cloturé
+    CLOSING_ISSUE
 }
