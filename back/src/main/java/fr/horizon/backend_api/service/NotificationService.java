@@ -178,6 +178,7 @@ public class NotificationService {
                 .content(content)
                 .isRead(false)
                 .recipient(user)
+                .issue(event.getIssue())
                 .event(event)
                 .type(TypeNotification.NEW_EVENT_INVITATION)
                 .build();
