@@ -45,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
 import EventCardCalendar from "~/components/events/EventCardCalendar.vue"
 
 import FullCalendar from '@fullcalendar/vue3'
@@ -171,8 +171,21 @@ const calendarOptions = reactive({
   dayMaxEvents: true,
 })
 
+const EVENT_NOTIFICATION_TYPES = ['NEW_EVENT_INVITATION', 'UPDATE_EVENT', 'EVENT_RESPONSE', 'EVENT_CANCEL']
+
+const onNotificationReceived = async (e) => {
+  if (EVENT_NOTIFICATION_TYPES.includes(e.detail?.type)) {
+    await fetchCalendarEvents()
+  }
+}
+
 onMounted(async () => {
   await fetchCalendarEvents()
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
 })
 </script>
 
