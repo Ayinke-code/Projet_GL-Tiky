@@ -439,25 +439,33 @@ class NotificationServiceTest {
     }
 
     @Test
-    @DisplayName("Lier les identifiants des entités liées (Issue, Event, RequestManager)")
+    @DisplayName("Lier les identifiants des entités liées (Issue, Event, RequestManager) et la Catégorie")
     void toDto_ShouldMapFieldsCorrectly_WithRelations() {
+        // Précondition
+        Event event = new Event();
+        event.setId(20L);
+        event.setCategoryType(CategoryType.ISSUE);
+
         Notification complexNotif = Notification.builder()
                 .id(200L)
                 .type(TypeNotification.RESPONSE_TO_MANAGER_ISSUE)
                 .isRead(true)
                 .content("Event updated")
                 .issue(testIssue)
-                .event(testEvent)
+                .event(event)
                 .requestManager(testRequestManager)
                 .build();
 
+        // Action
         NotificationDto dto = notificationService.toDto(complexNotif);
 
+        // Assertion
         assertNotNull(dto);
         assertEquals(200L, dto.getId());
         assertEquals(10L, dto.getIssueId());
         assertEquals(20L, dto.getEventId());
         assertEquals(50L, dto.getRequestManagerId());
+        assertEquals("ISSUE", dto.getEventCategory());
     }
 
     @Test

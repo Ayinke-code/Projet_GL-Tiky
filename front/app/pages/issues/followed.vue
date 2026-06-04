@@ -52,6 +52,12 @@ const { followedIssues, refreshFollowedIssues, error: stateError } = useFollowed
 const loading = ref(true)
 const error = computed(() => stateError.value)
 
+const onNotificationReceived = async (e) => {
+  if (e.detail?.type === 'NEW_FOLLOWER' || e.detail?.type === 'NEW_UNFOLLOW') {
+    await refreshFollowedIssues()
+  }
+}
+
 onMounted(async () => {
   if (ready && !user?.value?.id) {
     await navigateTo('/login')
@@ -65,5 +71,10 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
 })
 </script>

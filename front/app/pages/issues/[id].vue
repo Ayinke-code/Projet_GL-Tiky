@@ -18,6 +18,15 @@ const { getIssueMessages, sendIssueMessage, normalizeMessage, initializeConversa
 const { followIssue, unfollowIssue, isFollowing } = useIssueFollowers()
 const { acknowledgeFollowedIssueUpdate } = useFollowedIssuesState()
 
+const FOLLOWER_NOTIFICATION_TYPES = ['NEW_FOLLOWER', 'NEW_UNFOLLOW']
+
+const onNotificationReceived = async (e) => {
+  if (FOLLOWER_NOTIFICATION_TYPES.includes(e.detail?.type) && e.detail?.issueId === issueId) {
+    const updated = await getIssueById(issueId).catch(() => null)
+    if (updated) issue.value = updated
+  }
+}
+
 // ID de l'issue depuis l'URL
 const issueId = Number(route.params.id)
 
@@ -127,6 +136,7 @@ onMounted(async () => {
     // Écouter les événements de synchronisation pour vérifier l'accès
     if (process.client) {
       window.addEventListener('issue-sync', checkAccess)
+      window.addEventListener('notification:received', onNotificationReceived)
     }
 
     // Premier check d'accès au montage pour éviter de rester sur une page interdite
@@ -189,6 +199,7 @@ onUnmounted(() => {
   socket.value?.close()
   if (process.client) {
     window.removeEventListener('issue-sync', checkAccess)
+    window.removeEventListener('notification:received', onNotificationReceived)
   }
 })
 

@@ -16,8 +16,6 @@ public enum TypeNotification {
     INCOMPLETE_ISSUE,
     // RECEPTION demande de manager
     NEW_DEMANDE_MANAGER,
-
-
     // ajout d'un event pour les participant
     NEW_EVENT_INVITATION,
     // modification de l'heure de rdv pour un event
@@ -36,9 +34,6 @@ public enum TypeNotification {
     ACCEPTED_OPEN_ISSUE,
     // ticket cloturé
     CLOSING_ISSUE,
-    // mise a jour d'un event (date) pour les participants
-    UPDATING_EVENT,
-
     // nouveaux follower
     NEW_FOLLOWER,
     // desabonnement follower

@@ -127,6 +127,16 @@ public class IssueService {
         // Créer automatiquement une conversation pour cette issue
         conversationService.createConversationForIssue(issue);
 
+        // following automatique
+        if (!issueFollowerRepository.existsByUserAndIssue(owner, issue)) {
+            IssueFollower follower = IssueFollower.builder()
+                    .issue(issue)
+                    .user(owner)
+                    .reason(FollowedReason.IS_MANAGER)
+                    .build();
+            issueFollowerRepository.save(follower);
+        }
+
         return toDto(issue);
     }
 
