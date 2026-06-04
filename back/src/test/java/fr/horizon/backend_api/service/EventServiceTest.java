@@ -1,5 +1,6 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.controller.NotificationController;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.exception.EventConflictException;
 import fr.horizon.backend_api.exception.EventNotFoundException;
@@ -51,6 +52,9 @@ class EventServiceTest {
 
     @Mock
     private IssueRepository issueRepository;
+
+    @Mock
+    private NotificationService notificationService;
 
     @Mock
     private IssueFollowerRepository issueFollowerRepository;

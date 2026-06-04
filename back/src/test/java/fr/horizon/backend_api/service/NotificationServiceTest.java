@@ -6,6 +6,7 @@ import fr.horizon.backend_api.model.Notification;
 import fr.horizon.backend_api.model.RequestManager;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.NotificationDto;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.model.enums.TypeNotification;
 import fr.horizon.backend_api.repository.NotificationRepository;
@@ -20,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,6 +49,7 @@ class NotificationServiceTest {
     private Issue testIssue;
     private RequestManager testRequestManager;
     private Notification testNotification;
+    private Event testEvent;
 
     @BeforeEach
     void setUp() {
@@ -56,6 +59,7 @@ class NotificationServiceTest {
 
         testIssue = new Issue();
         testIssue.setId(10L);
+        testIssue.setTitle("Bug Connexion");
 
         User targetTeacher = new User();
         targetTeacher.setName("M. Prof");
@@ -64,6 +68,12 @@ class NotificationServiceTest {
         testRequestManager.setRequestId(50L);
         testRequestManager.setTargetTeacher(targetTeacher);
         testRequestManager.setIssue(testIssue);
+
+        testEvent = new Event();
+        testEvent.setId(20L);
+        testEvent.setName("Soutenance Finale");
+        testEvent.setStartDate(LocalDateTime.of(2026, 6, 14, 10, 30));
+        testEvent.setIssue(testIssue);
 
         testNotification = Notification.builder()
                 .id(100L)
@@ -74,20 +84,19 @@ class NotificationServiceTest {
                 .build();
     }
 
+    // --- TESTS TICKETS ET ASSIGNATIONS ---
+
     @Test
     @DisplayName("Doit créer et envoyer une notification de validation de ticket")
     void validatationTicketNotification_ShouldSaveAndSend() {
-        // Précondition
         when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> {
             Notification n = i.getArgument(0);
             n.setId(100L);
             return n;
         });
 
-        // Action
         notificationService.validatationTicketNotification(testUser, testIssue);
 
-        // Assertion
         ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository).save(notifCaptor.capture());
 
@@ -175,7 +184,6 @@ class NotificationServiceTest {
     @Test
     @DisplayName("Ne doit rien envoyer si le statut de RequestManager est différent de ACCEPTED ou DENIED")
     void managerDemandNotification_ShouldNotSend_WhenOtherStatus() {
-        // Ex: PENDING
         testRequestManager.setStatus(RequestManagerStatus.PENDING);
 
         notificationService.managerDemandNotification(testUser, testRequestManager);
@@ -183,6 +191,94 @@ class NotificationServiceTest {
         verify(notificationRepository, never()).save(any());
         verify(messagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
     }
+
+    // --- TESTS EVENEMENTS ---
+
+    @Test
+    @DisplayName("Doit notifier une invitation à un événement de type AUDIT avec date formatée")
+    void inviteToEventNotification_ShouldSend_ForAudit() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+        testEvent.setCategoryType(CategoryType.AUDIT);
+
+        notificationService.inviteToEventNotification(testUser, testEvent);
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+
+        assertEquals(TypeNotification.NEW_EVENT_INVITATION, notifCaptor.getValue().getType());
+        assertTrue(notifCaptor.getValue().getContent().contains("Vous avez un audit prévu le 14/06/2026 à 10:30"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier une invitation à un événement de type ISSUE avec nom du ticket")
+    void inviteToEventNotification_ShouldSend_ForIssue() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+        testEvent.setCategoryType(CategoryType.ISSUE);
+
+        notificationService.inviteToEventNotification(testUser, testEvent);
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+
+        assertTrue(notifCaptor.getValue().getContent().contains("rendez-vous à propos du ticket « Bug Connexion »"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier la mise à jour d'un événement")
+    void updateEventNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        notificationService.updateEventNotification(testUser, testEvent);
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+
+        assertEquals(TypeNotification.UPDATE_EVENT, notifCaptor.getValue().getType());
+        assertTrue(notifCaptor.getValue().getContent().contains("L'heure du rendez-vous pour le ticket « Bug Connexion » a été modifiée"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier l'acceptation d'une invitation à un événement")
+    void responseEventNotification_ShouldSend_WhenAccepted() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        notificationService.responseEventNotification(testUser, testEvent, "Jean Dupont", true);
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+
+        assertEquals(TypeNotification.EVENT_RESPONSE, notifCaptor.getValue().getType());
+        assertTrue(notifCaptor.getValue().getContent().contains("Jean Dupont a accepté votre demande de rendez-vous"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier le refus d'une invitation à un événement")
+    void responseEventNotification_ShouldSend_WhenDeclined() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        notificationService.responseEventNotification(testUser, testEvent, "Jean Dupont", false);
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+
+        assertTrue(notifCaptor.getValue().getContent().contains("Jean Dupont a décliné l'invitation"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier l'annulation d'un événement")
+    void cancelEventNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        notificationService.cancelEventNotification(testUser, testEvent);
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+
+        assertEquals(TypeNotification.EVENT_CANCEL, notifCaptor.getValue().getType());
+        assertTrue(notifCaptor.getValue().getContent().contains("Soutenance Finalea été annulé"));
+    }
+
+    // --- TESTS GENERIQUES ---
 
     @Test
     @DisplayName("Marquer la notification comme lue et la sauvegarder")
@@ -235,29 +331,23 @@ class NotificationServiceTest {
     @Test
     @DisplayName("Lier les identifiants des entités liées (Issue, Event, RequestManager)")
     void toDto_ShouldMapFieldsCorrectly_WithRelations() {
-        // Précondition
-        Event event = new Event();
-        event.setId(20L);
-
         Notification complexNotif = Notification.builder()
                 .id(200L)
                 .type(TypeNotification.RESPONSE_TO_MANAGER_ISSUE)
                 .isRead(true)
                 .content("Event updated")
                 .issue(testIssue)
-                .event(event)
+                .event(testEvent)
                 .requestManager(testRequestManager)
                 .build();
 
-        // Action
         NotificationDto dto = notificationService.toDto(complexNotif);
 
-        // Assertion
         assertNotNull(dto);
         assertEquals(200L, dto.getId());
         assertEquals(10L, dto.getIssueId());
         assertEquals(20L, dto.getEventId());
-        assertEquals(50L, dto.getRequestManagerId()); // Vérifie la nouvelle relation
+        assertEquals(50L, dto.getRequestManagerId());
     }
 
     @Test
