@@ -53,6 +53,9 @@ class EventServiceTest {
     private IssueRepository issueRepository;
 
     @Mock
+    private NotificationService notificationService;
+
+    @Mock
     private IssueFollowerRepository issueFollowerRepository;
 
     @InjectMocks

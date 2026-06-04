@@ -207,10 +207,15 @@ const handleMarkResolved = async () => {
 }
 
 /**
- * Demander la réouverture d'un ticket 'terminé'
+ * Issue manager peut réouvrir un ticket TERMINE
  */
 const handleReopening = async () => {
-    // TODO: US-6700: Demande de réouverture
+    if(issue?.value?.status !== 'TERMINE') return
+    try {
+      await updateIssueStatus(issue?.value?.id, 'OUVERT')
+    } catch(err) {
+      console.error(err)
+    }
 }
 
 /**

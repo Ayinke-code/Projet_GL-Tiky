@@ -1,21 +1,18 @@
 package fr.horizon.backend_api.service;
 
 
-import fr.horizon.backend_api.model.Issue;
-import fr.horizon.backend_api.model.Notification;
-import fr.horizon.backend_api.model.RequestManager;
-import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.NotificationDto;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.model.enums.TypeNotification;
 import fr.horizon.backend_api.repository.NotificationRepository;
-import fr.horizon.backend_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -23,10 +20,8 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
-    private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
-    private static final String USER_NOT_FOUND = "User not found";
 
     private static final String VALIDATE_TICKET_MESSAGE = "Votre ticket vient d'être validé";
     private static final String NEW_TICKET_CATEGORIE_MESSAGE = "Un nouveau ticket a été dans votre catégorie, affectez-le rapidement à un professeur !";
@@ -144,6 +139,161 @@ public class NotificationService {
                 .requestManager(requestManager)
                 .recipient(user)
                 .type(TypeNotification.RESPONSE_TO_MANAGER_ISSUE)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    /**
+     * Notifier un utilisateur qu'il a été invité à un événement
+     */
+    @Transactional
+    public void inviteToEventNotification(User user, Event event) {
+        String content;
+
+        //(ex: "14/06/2026 à 10:30")
+        String formattedDate = "à une date ultérieure";
+        if (event.getStartDate() != null) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm");
+            formattedDate = "le " + event.getStartDate().format(formatter);
+        }
+
+        switch (event.getCategoryType()) {
+            case AUDIT ->
+                    content = "Vous avez un audit prévu " + formattedDate + " avec votre groupe. Consultez vite votre calendrier !";
+
+            case DEFENSE ->
+                    content = "Vous avez une soutenance prévue " + formattedDate + ". Consultez vite votre calendrier !";
+
+            case ISSUE -> {
+                String issueName = (event.getIssue() != null) ? "« " + event.getIssue().getTitle() + " »" : "";
+                content = "Vous avez un rendez-vous à propos du ticket " + issueName + ". Confirmez vite votre présence !";
+            }
+
+            default ->
+                    content = "Vous avez été invité à un événement " + formattedDate + ". Consultez-le vite !";
+        }
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .recipient(user)
+                .issue(event.getIssue())
+                .event(event)
+                .type(TypeNotification.NEW_EVENT_INVITATION)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    /**
+     * Notifier les participants d'un événement d'un changement d'horaire
+     */
+    @Transactional
+    public void updateEventNotification(User user, Event event) {
+
+        String issueName = (event.getIssue() != null) ? " « " + event.getIssue().getTitle() + " »" : "";
+
+        String content = "L'heure du rendez-vous pour le ticket" + issueName + " a été modifiée. Vérifiez les nouveaux horaires rapidement !";
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .recipient(user)
+                .event(event)
+                .type(TypeNotification.UPDATE_EVENT)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    /**
+     * Notifier le créateur d'un événement de la réponse d'un invité (acceptation ou refus).
+     */
+    @Transactional
+    public void responseEventNotification(User user, Event event, String guest, boolean response) {
+        String content;
+
+        if (response) {
+            content = guest + " a accepté votre demande de rendez-vous. Consultez le statut des autres participants.";
+        } else {
+            content = guest + " a décliné l'invitation au rendez-vous en raison d'une indisponibilité.";
+        }
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .recipient(user)
+                .event(event)
+                .type(TypeNotification.EVENT_RESPONSE)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void cancelEventNotification(User user, Event event){
+        String content = event.getName()+ "a été annulé, consultez votre calendrier !";
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .recipient(user)
+                .type(TypeNotification.EVENT_CANCEL)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void reopeningDemandNotification(User user, Issue issue){
+        String content = issue.getCreatedBy().getName() + " demande une réouverture du ticket: "+ issue.getTitle()+". Répondez-lui vite !";
+
+        Notification notif = Notification.builder()
+                .isRead(false)
+                .content(content)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.NEW_OPEN_ISSUE)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void reopeningDemandAcceptedNotification(User user, Issue issue){
+        String content = issue.getManager().getName() + " a accepté votre demande, votre ticket: "+ issue.getTitle()+ " est de nouveau disponible. Consultez le rapidement !";
+
+        Notification notif = Notification.builder()
+                .isRead(false)
+                .content(content)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.ACCEPTED_OPEN_ISSUE)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void closeIssueNotification(User user, Issue issue){
+        String content ="votre ticket: "+ issue.getTitle()+ " vient d'être cloturé, consultez le vite";
+
+        Notification notif = Notification.builder()
+                .isRead(false)
+                .content(content)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.CLOSING_ISSUE)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void openIssueNotification(User user, Issue issue){
+        String content ="votre ticket: "+ issue.getTitle()+ " vient d'être rouvert, consultez le vite";
+
+        Notification notif = Notification.builder()
+                .isRead(false)
+                .content(content)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.OPEN_ISSUE)
                 .build();
 
         saveAndSend(notif);

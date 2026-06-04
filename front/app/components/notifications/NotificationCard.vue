@@ -18,14 +18,12 @@
 
     <div class="flex-1 min-w-0">
 
-      <!-- Si la notification a un lien cliquable -->
       <NuxtLink
         v-if="targetUrl"
         :to="targetUrl"
         class="block group"
         @click="$emit('mark-as-read', notification.id)"
       >
-        <!-- Wrapper flex pour aligner le titre à gauche et l'heure à droite -->
         <div class="flex justify-between items-start gap-2 mb-1">
           <h4 :class="`text-sm font-semibold flex items-center gap-1.5 group-hover:underline ${uiConfig.textColor}`">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
@@ -83,12 +81,22 @@ const props = defineProps({
 defineEmits(['mark-as-read'])
 
 const targetUrl = computed(() => {
+  if (props.notification.type === 'NEW_EVENT_INVITATION' && props.notification.eventId && props.notification.issueId) {
+    return `/invitations`
+  }
+
+  if (props.notification.type === 'NEW_EVENT_INVITATION' && props.notification.eventId) {
+    return '/calendar'
+  }
+
   if (props.notification.issueId) {
-    return `/issues/${props.notification.issueId}` //
+    return `/issues/${props.notification.issueId}`
   }
+
   if (props.notification.eventId) {
-    return `/events/${props.notification.eventId}`
+    return '/calendar'
   }
+
   return null
 })
 
@@ -107,6 +115,7 @@ const formattedTime = computed(() => {
 
 const uiConfig = computed(() => {
   switch (props.notification.type) {
+    // --- TICKETS ET AFFECTATIONS ---
     case 'NEW_ISSUE_IN_CATEGORIE':
       return {
         title: 'Nouveau Ticket',
@@ -133,10 +142,65 @@ const uiConfig = computed(() => {
       }
     case 'NEW_DEMANDE_MANAGER':
       return {
-        title: 'Nouvelle Assignation',
+        title: 'Nouvelle Affectation',
         textColor: 'text-teal-600',
         iconPath: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4'
       }
+
+    // --- ÉVÉNEMENTS ---
+    case 'NEW_EVENT_INVITATION':
+      return {
+        title: 'Nouvelle Invitation',
+        textColor: 'text-indigo-600',
+        iconPath: 'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5'
+      }
+    case 'UPDATE_EVENT':
+      return {
+        title: 'Événement Modifié',
+        textColor: 'text-amber-600',
+        iconPath: 'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z'
+      }
+    case 'EVENT_RESPONSE':
+      return {
+        title: 'Réponse à l\'événement',
+        textColor: 'text-emerald-600',
+        iconPath: 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+      }
+    case 'EVENT_CANCEL':
+      return {
+        title: 'Événement Annulé',
+        textColor: 'text-rose-600',
+        iconPath: 'M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+      }
+
+
+    case 'NEW_OPEN_ISSUE':
+      return {
+        title: 'Demande de réouverture',
+        textColor: 'text-cyan-600',
+        iconPath: 'M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99'
+      }
+    case 'ACCEPTED_OPEN_ISSUE':
+      return {
+        title: 'Réouverture Acceptée',
+        textColor: 'text-emerald-600',
+        iconPath: 'M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z'
+      }
+
+    case 'OPEN_ISSUE':
+      return {
+        title: 'Ticket Réouvert',
+        textColor: 'text-sky-600',
+        iconPath: 'M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z'
+      }
+
+    case 'CLOSING_ISSUE':
+      return {
+        title: 'Ticket Clôturé',
+        textColor: 'text-slate-600',
+        iconPath: 'M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z'
+      }
+
     default:
       return {
         title: 'Notification',
