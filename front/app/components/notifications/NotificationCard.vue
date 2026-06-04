@@ -84,9 +84,15 @@ const targetUrl = computed(() => {
   if (props.notification.issueId) {
     return `/issues/${props.notification.issueId}`
   }
+
+  if (props.notification.type === 'NEW_EVENT_INVITATION' && props.notification.eventId) {
+    return `/invitations/`
+  }
+
   if (props.notification.eventId) {
     return '/calendar'
   }
+
   return null
 })
 
