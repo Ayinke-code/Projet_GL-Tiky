@@ -173,6 +173,49 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("Doit créer et envoyer une notification pour un nouvel abonnement (Follow)")
+    void newFollowerNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        User follower = new User();
+        follower.setName("Alice");
+
+        notificationService.newFollowerNotification(testUser, testIssue, follower);
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+
+        Notification savedNotif = notifCaptor.getValue();
+        assertTrue(savedNotif.getContent().contains("Alice s'est abonné à votre ticket: Bug Connexion"));
+        assertEquals(TypeNotification.NEW_FOLLOWER, savedNotif.getType());
+        assertEquals(testIssue, savedNotif.getIssue());
+        assertEquals(testUser, savedNotif.getRecipient());
+    }
+
+    @Test
+    @DisplayName("Doit créer et envoyer une notification pour un désabonnement (Unfollow)")
+    void newUnfollowerNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        User unfollower = new User();
+        unfollower.setName("Bob");
+
+        notificationService.newUnfollowerNotification(testUser, testIssue, unfollower);
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+
+        Notification savedNotif = notifCaptor.getValue();
+        // Si tu as gardé le "à", laisse ce test tel quel. Si tu l'as corrigé par "de", pense à modifier le test !
+        assertTrue(savedNotif.getContent().contains("Bob s'est désabonné à votre ticket: Bug Connexion"));
+        assertEquals(TypeNotification.NEW_UNFOLLOW, savedNotif.getType());
+        assertEquals(testUser, savedNotif.getRecipient());
+
+        // Attention: ce assert passera uniquement si tu ajoutes .issue(issue) dans le Builder de ta méthode !
+        assertEquals(testIssue, savedNotif.getIssue());
+    }
+
+    @Test
     @DisplayName("Ne doit rien envoyer si le statut de RequestManager est différent de ACCEPTED ou DENIED")
     void managerDemandNotification_ShouldNotSend_WhenOtherStatus() {
         // Ex: PENDING

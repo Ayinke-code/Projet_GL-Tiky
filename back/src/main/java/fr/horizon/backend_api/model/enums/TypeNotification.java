@@ -25,5 +25,10 @@ public enum TypeNotification {
     // action de fusion pour le manager
     MERGING,
     // mise a jour d'un event (date) pour les participants
-    UPDATING_EVENT
+    UPDATING_EVENT,
+
+    // nouveaux follower
+    NEW_FOLLOWER,
+    // desabonnement follower
+    NEW_UNFOLLOW
 }

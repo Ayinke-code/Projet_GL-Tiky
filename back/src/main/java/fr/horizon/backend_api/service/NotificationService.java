@@ -149,6 +149,41 @@ public class NotificationService {
         saveAndSend(notif);
     }
 
+    /**
+     * Notifier le manager d'un nouveau follower
+     */
+    @Transactional
+    public void newFollowerNotification(User user, Issue issue, User follower){
+        String content = follower.getName() +" s'est abonné à votre ticket: "+issue.getTitle();
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.NEW_FOLLOWER)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    /**
+     * Notifier le manager lors d'unfollow
+     */
+    @Transactional
+    public void newUnfollowerNotification(User user, Issue issue, User follower){
+        String content = follower.getName() +" s'est désabonné à votre ticket: "+issue.getTitle();
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .recipient(user)
+                .type(TypeNotification.NEW_UNFOLLOW)
+                .build();
+
+        saveAndSend(notif);
+    }
+
 
     /**
      * Marquer une notification comme lu
