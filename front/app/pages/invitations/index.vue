@@ -118,7 +118,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useEvents } from '~/composables/useEvents'
 import { useAuth } from '~/composables/useAuth'
 import { ROLE } from '~/utils/roles'
@@ -211,10 +211,24 @@ const rescheduleForm = ref({
   addAll: true
 })
 
+const EVENT_NOTIFICATION_TYPES = ['NEW_EVENT_INVITATION', 'UPDATE_EVENT', 'EVENT_RESPONSE', 'EVENT_CANCEL']
+
+const onNotificationReceived = async (e) => {
+  if (EVENT_NOTIFICATION_TYPES.includes(e.detail?.type)) {
+    await fetchMyInvitations()
+    await fetchMyCreatedEvents()
+  }
+}
+
 // --- Lifecycle ---
 onMounted(async () => {
   await fetchMyInvitations()
   await fetchMyCreatedEvents()
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
 })
 
 const switchTab = (tab) => {

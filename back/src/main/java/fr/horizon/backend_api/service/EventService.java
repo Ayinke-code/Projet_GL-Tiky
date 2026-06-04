@@ -43,6 +43,7 @@ public class EventService {
     private final UserRepository userRepository;
     private final StudentGroupRepository studentGroupRepository;
     private final IssueFollowerRepository issueFollowerRepository;
+    private final NotificationService notificationService;
 
     private static final String USER_NOT_FOUND = "User not found";
     private static final String ISSUE_NOT_FOUND = "Issue not found";
@@ -98,6 +99,24 @@ public class EventService {
                 && request.getProjectGroupIds() != null && !request.getProjectGroupIds().isEmpty()) {
             Set<StudentGroup> groups = new HashSet<>(studentGroupRepository.findAllById(request.getProjectGroupIds()));
             event.setProjectGroups(groups);
+
+            Set<User> usersToNotify = new HashSet<>();
+            for (StudentGroup group : groups) {
+                if (group.getMembers() != null) {
+                    usersToNotify.addAll(group.getMembers());
+                }
+                if (group.getTeachers() != null) {
+                    usersToNotify.addAll(group.getTeachers());
+                }
+            }
+
+            for (User targetUser : usersToNotify) {
+                // ne pas notifier le créateur
+                if (!targetUser.getId().equals(event.getCreatedBy().getId())) {
+                    notificationService.inviteToEventNotification(targetUser, event);
+                }
+            }
+
         }
 
         Event saved = eventRepository.save(event);
@@ -194,6 +213,7 @@ public class EventService {
         }
 
         event.addParticipant(user, null);
+        notificationService.inviteToEventNotification(user, event);
 
         Event saved = eventRepository.save(event);
         return mapToResponse(saved);
@@ -224,6 +244,7 @@ public class EventService {
                 throw new EventConflictException("Impossible d'inviter le groupe. Conflit d'agenda pour : " + user.getName());
             }
             event.addParticipant(user, null);
+            notificationService.inviteToEventNotification(user, event);
         }
 
         Event saved = eventRepository.save(event);
@@ -268,6 +289,7 @@ public class EventService {
         }
 
         Event saved = eventRepository.save(event);
+        notificationService.responseEventNotification(event.getCreatedBy(), event ,participantParticipant.getUser().getName(), response);
 
         return mapToInvitationResponse(saved, user);
     }
@@ -520,6 +542,17 @@ public class EventService {
         }
 
         Event saved = eventRepository.save(event);
+
+        if (saved.getParticipants() != null) {
+            for (EventParticipant participant : saved.getParticipants()) {
+                User targetUser = participant.getUser();
+
+                if (targetUser != null && !targetUser.getId().equals(saved.getCreatedBy().getId())) {
+                    notificationService.updateEventNotification(targetUser, saved);
+                }
+            }
+        }
+
         return mapToResponse(saved);
     }
 
@@ -625,6 +658,14 @@ public class EventService {
     public void cancelEvent(Long eventId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EntityNotFoundException(EVENT_NOT_FOUND+WITH_ID + eventId));
+
+        for (EventParticipant participant : event.getParticipants()) {
+            User targetUser = participant.getUser();
+
+            if (targetUser != null && !targetUser.getId().equals(event.getCreatedBy().getId())) {
+                notificationService.cancelEventNotification(targetUser, event);
+            }
+        }
 
         // Enlever tous les participants (nettoie la table d'association)
         event.getParticipants().clear();
