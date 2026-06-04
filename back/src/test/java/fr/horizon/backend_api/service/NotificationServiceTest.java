@@ -212,12 +212,10 @@ class NotificationServiceTest {
         verify(notificationRepository).save(notifCaptor.capture());
 
         Notification savedNotif = notifCaptor.getValue();
-        // Si tu as gardé le "à", laisse ce test tel quel. Si tu l'as corrigé par "de", pense à modifier le test !
-        assertTrue(savedNotif.getContent().contains("Bob s'est désabonné à votre ticket: Bug Connexion"));
+        assertTrue(savedNotif.getContent().contains("Bob s'est désabonné de votre ticket: Bug Connexion"));
         assertEquals(TypeNotification.NEW_UNFOLLOW, savedNotif.getType());
         assertEquals(testUser, savedNotif.getRecipient());
 
-        // Attention: ce assert passera uniquement si tu ajoutes .issue(issue) dans le Builder de ta méthode !
         assertEquals(testIssue, savedNotif.getIssue());
     }
 
@@ -232,7 +230,6 @@ class NotificationServiceTest {
         verify(messagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
     }
 
-    // --- TESTS EVENEMENTS ---
 
     @Test
     @DisplayName("Doit notifier une invitation à un événement de type AUDIT avec date formatée")
@@ -318,7 +315,6 @@ class NotificationServiceTest {
         assertTrue(notifCaptor.getValue().getContent().contains("Soutenance Finalea été annulé"));
     }
 
-    // --- TESTS GENERIQUES ---
 
     @Test
     @DisplayName("Doit créer et envoyer une notification de demande de réouverture")
