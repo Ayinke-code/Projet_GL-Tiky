@@ -62,6 +62,7 @@ public class EventService {
      * @throws AccessDeniedException si l’utilisateur n’a pas le rôle TEACHER ou ADMIN
      * @throws CategoryNotFoundException si la catégorie n’existe pas
      */
+    @Transactional
     public EventResponseDto create(EventRequestDto request, String email) {
         User user = userService.findByEmail(email);
         Category category = getCategory(request.getCategoryId());
@@ -71,10 +72,13 @@ public class EventService {
 
         Event event = buildEvent(request, user, category);
 
-        assignProjectGroupsAndNotify(event, request);
+        assignProjectGroups(event, request);
 
-        Event saved = eventRepository.save(event);
-        return mapToResponse(saved);
+        Event savedEvent = eventRepository.save(event);
+
+        notifyProjectGroupMembers(savedEvent);
+
+        return mapToResponse(savedEvent);
     }
 
     /**
@@ -731,21 +735,39 @@ public class EventService {
                 .orElseThrow(() -> new CategoryNotFoundException(categoryId));
     }
 
-    private void validateTeacherAccess(User user, Category category) {
-        if (!isRestrictedCategory(category)) {
+    /**
+     * Associe uniquement les groupes de projet à l'événement.
+     */
+    private void assignProjectGroups(Event event, EventRequestDto request) {
+        if (request.getProjectGroupIds() == null
+                || request.getProjectGroupIds().isEmpty()
+                || !isRestrictedCategory(event.getCategory())) {
             return;
         }
 
-        boolean hasTeacherRole = user.getRoles().stream()
-                .anyMatch(role ->
-                        RoleEnum.TEACHER.value().equals(role.getName())
-                                || RoleEnum.ADMIN.value().equals(role.getName()));
+        Set<StudentGroup> groups = new HashSet<>(
+                studentGroupRepository.findAllById(request.getProjectGroupIds()));
 
-        if (!hasTeacherRole) {
-            throw new AccessDeniedException(
-                    "Seuls les enseignants peuvent créer des événements de type "
-                            + category.getCategoryType());
+        event.setProjectGroups(groups);
+    }
+
+    /**
+     * Notifie les membres des groupes de projet associés à l'événement sauvegardé.
+     */
+    private void notifyProjectGroupMembers(Event savedEvent) {
+        if (savedEvent.getProjectGroups() == null || savedEvent.getProjectGroups().isEmpty()) {
+            return;
         }
+
+        Set<User> usersToNotify = savedEvent.getProjectGroups().stream()
+                .flatMap(group -> Stream.concat(
+                        group.getMembers() != null ? group.getMembers().stream() : Stream.empty(),
+                        group.getTeachers() != null ? group.getTeachers().stream() : Stream.empty()))
+                .collect(Collectors.toSet());
+
+        usersToNotify.stream()
+                .filter(user -> !user.getId().equals(savedEvent.getCreatedBy().getId()))
+                .forEach(user -> notificationService.inviteToEventNotification(user, savedEvent));
     }
 
     private void validateEventDates(EventRequestDto request, Category category) {
@@ -777,33 +799,28 @@ public class EventService {
                 .build();
     }
 
-    private void assignProjectGroupsAndNotify(Event event, EventRequestDto request) {
-        if (request.getProjectGroupIds() == null
-                || request.getProjectGroupIds().isEmpty()
-                || !isRestrictedCategory(event.getCategory())) {
-            return;
-        }
-
-        Set<StudentGroup> groups = new HashSet<>(
-                studentGroupRepository.findAllById(request.getProjectGroupIds()));
-
-        event.setProjectGroups(groups);
-
-        Set<User> usersToNotify = groups.stream()
-                .flatMap(group -> Stream.concat(
-                        group.getMembers() != null ? group.getMembers().stream() : Stream.empty(),
-                        group.getTeachers() != null ? group.getTeachers().stream() : Stream.empty()))
-                .collect(Collectors.toSet());
-
-        usersToNotify.stream()
-                .filter(user -> !user.getId().equals(event.getCreatedBy().getId()))
-                .forEach(user -> notificationService.inviteToEventNotification(user, event));
-    }
-
     private boolean isRestrictedCategory(Category category) {
         return category.getCategoryType() == CategoryType.AUDIT
                 || category.getCategoryType() == CategoryType.DEFENSE;
     }
+
+    private void validateTeacherAccess(User user, Category category) {
+        if (!isRestrictedCategory(category)) {
+            return;
+        }
+
+        boolean hasTeacherRole = user.getRoles().stream()
+                .anyMatch(role ->
+                        RoleEnum.TEACHER.value().equals(role.getName())
+                                || RoleEnum.ADMIN.value().equals(role.getName()));
+
+        if (!hasTeacherRole) {
+            throw new AccessDeniedException(
+                    "Seuls les enseignants peuvent créer des événements de type "
+                            + category.getCategoryType());
+        }
+    }
+
 
 
 }
