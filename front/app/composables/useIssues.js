@@ -171,12 +171,8 @@ export const useIssues = () => {
    */
   const getDisplayableIssues = async () => {
     try {
-      // Appel à la nouvelle route backend
-      // Note: Si votre backend attend l'email en paramètre plutôt que via le token (Principal),
-      // vous pouvez faire : api('/issues/displayable', { query: { email: user.value.email } })
       const data = await api('/issues/displayable')
 
-      // Mise à jour de l'état global avec les issues filtrées
       issues.value = data
       return data
     } catch (e) {

@@ -365,5 +365,16 @@ const formatDate = (d) => {
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-onMounted(loadData)
+const onNotificationReceived = async () => {
+  await loadData()
+}
+
+onMounted(async () => {
+  await loadData()
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
+})
 </script>

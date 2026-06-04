@@ -16,7 +16,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import fr.horizon.backend_api.util.MapKeys;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -42,6 +41,7 @@ public class IssueService {
     private final RequestManagerRepository requestManagerRepository;
     private final IssueFollowerRepository issueFollowerRepository;
     private final IssueFollowerService issueFollowerService;
+    private final NotificationService notificationService;
 
     private static final String USER_NOT_FOUND = "User not found";
 
@@ -120,6 +120,8 @@ public class IssueService {
 
         if (!dto.isPendingCase()) {
             createRequestManager(issue);
+            // notification du créateur de la catégorie
+            notificationService.creationTicketNotification(issue.getCategory().getOwner(), issue);
         }
 
         // Créer automatiquement une conversation pour cette issue
@@ -242,6 +244,8 @@ public class IssueService {
         issueRepository.save(issue);
 
         createRequestManager(issue);
+
+        notificationService.creationTicketNotification(category.getOwner(), issue);
 
         return toDto(issue);
     }
@@ -391,10 +395,15 @@ public class IssueService {
             requestManager.setProcessingDate(LocalDateTime.now());
             initialStatus = RequestManagerStatus.ACCEPTED;
             issue.setStatus(IssueStatus.OUVERT);
+            // notification du créateur
+            notificationService.validatationTicketNotification(issue.getCreatedBy(), issue);
         }
 
         requestManager.setTargetTeacher(targetedUser);
         requestManager.setStatus(initialStatus);
+        if(!targetedUser.getId().equals(issue.getCategory().getOwner().getId())){
+        notificationService.reveivedManagerRequest(targetedUser,requestManager);
+        }
 
         return toDto(requestManagerRepository.save(requestManager));
     }
@@ -424,6 +433,11 @@ public class IssueService {
             requestManager.setStatus(RequestManagerStatus.ACCEPTED);
             issue.setManager(teacher);
             issue.setStatus(IssueStatus.OUVERT);
+            //notification du créateur
+            notificationService.validatationTicketNotification(issue.getCreatedBy(), issue);
+            // notifcation pour le categorie Owner que sa demande a été accepté
+            notificationService.managerDemandNotification(requestManager.getCategoryOwner(), requestManager);
+
 
             if (!issueFollowerRepository.existsByUserAndIssue(teacher, issue)) {
                 IssueFollower follower = IssueFollower.builder()
@@ -436,6 +450,7 @@ public class IssueService {
 
         } else {
             requestManager.setStatus(RequestManagerStatus.DENIED);
+            notificationService.managerDemandNotification(requestManager.getCategoryOwner(), requestManager);
             createRequestManager(issue);
         }
 
@@ -530,6 +545,7 @@ public class IssueService {
         issue.setRejectComment(commentaire);
         issue.setRejectReason(raison);
         issue.setStatus(IssueStatus.INCOMPLET);
+        notificationService.incompleteTicketNotification(issue.getCreatedBy(), issue);
         issueRepository.save(issue);
 
         RequestManager requestManager = requestManagerRepository.findFirstByIssueOrderByCreatedAtDesc(issue)
