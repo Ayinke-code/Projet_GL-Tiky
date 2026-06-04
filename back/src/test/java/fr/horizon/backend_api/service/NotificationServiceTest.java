@@ -60,9 +60,8 @@ class NotificationServiceTest {
         testIssue = new Issue();
         testIssue.setId(10L);
         testIssue.setTitle("Bug Connexion");
-
-        User targetTeacher = new User();
-        targetTeacher.setName("M. Prof");
+        testIssue.setCreatedBy(testUser);
+        testIssue.setManager(targetTeacher);
 
         testRequestManager = new RequestManager();
         testRequestManager.setRequestId(50L);
