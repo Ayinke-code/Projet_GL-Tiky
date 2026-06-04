@@ -83,7 +83,6 @@ public class IssueController {
                                 @RequestPart(value = "files", required = false) List<MultipartFile> files,
                                 Authentication authentication
     ) {
-        System.out.println("je suis appele");
         String email = authentication.getName();
         return issueService.createIssue(dto, files, email);
     }
