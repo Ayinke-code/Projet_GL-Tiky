@@ -16,8 +16,6 @@ public enum TypeNotification {
     INCOMPLETE_ISSUE,
     // RECEPTION demande de manager
     NEW_DEMANDE_MANAGER,
-
-
     // ajout d'un event pour les participant
     NEW_EVENT_INVITATION,
     // modification de l'heure de rdv pour un event
@@ -28,5 +26,12 @@ public enum TypeNotification {
     EVENT_CANCEL,
     // action de fusion pour le manager
     MERGING,
-
+    // demande de reouverture pour le manager
+    NEW_OPEN_ISSUE,
+    // réouverture par le manager
+    OPEN_ISSUE,
+    // acceptation de la réouverture du ticket pour le créateur
+    ACCEPTED_OPEN_ISSUE,
+    // ticket cloturé
+    CLOSING_ISSUE
 }

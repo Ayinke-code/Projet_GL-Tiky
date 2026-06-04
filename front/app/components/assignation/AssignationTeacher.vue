@@ -126,8 +126,10 @@ const reply = async (id, accept) => {
   }
 }
 
-const onNotificationReceived = async () => {
-  await load()
+const onNotificationReceived = async (e) => {
+  if (e.detail?.type === 'NEW_DEMANDE_MANAGER') {
+    await load()
+  }
 }
 
 onMounted(async () => {

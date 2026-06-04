@@ -243,6 +243,62 @@ public class NotificationService {
         saveAndSend(notif);
     }
 
+    public void reopeningDemandNotification(User user, Issue issue){
+        String content = issue.getCreatedBy().getName() + " demande une réouverture du ticket: "+ issue.getTitle()+". Répondez-lui vite !";
+
+        Notification notif = Notification.builder()
+                .isRead(false)
+                .content(content)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.NEW_OPEN_ISSUE)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void reopeningDemandAcceptedNotification(User user, Issue issue){
+        String content = issue.getManager().getName() + " a accepté votre demande, votre ticket: "+ issue.getTitle()+ " est de nouveau disponible. Consultez le rapidement !";
+
+        Notification notif = Notification.builder()
+                .isRead(false)
+                .content(content)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.ACCEPTED_OPEN_ISSUE)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void closeIssueNotification(User user, Issue issue){
+        String content ="votre ticket: "+ issue.getTitle()+ " vient d'être cloturé, consultez le vite";
+
+        Notification notif = Notification.builder()
+                .isRead(false)
+                .content(content)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.CLOSING_ISSUE)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void openIssueNotification(User user, Issue issue){
+        String content ="votre ticket: "+ issue.getTitle()+ " vient d'être rouvert, consultez le vite";
+
+        Notification notif = Notification.builder()
+                .isRead(false)
+                .content(content)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.OPEN_ISSUE)
+                .build();
+
+        saveAndSend(notif);
+    }
+
 
     /**
      * Marquer une notification comme lu
