@@ -115,6 +115,16 @@ public class IssueService {
      */
     @Transactional
     public IssueDto createIssue(IssueCreateDto dto, List<MultipartFile> files, String email) {
+        Issue issue = buildIssue(dto, email);
+
+        issueRepository.save(issue);
+
+        postCreateActions(dto, files, issue);
+
+        return toDto(issue);
+    }
+
+    private Issue buildIssue(IssueCreateDto dto, String email) {
 
         User owner = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException(OWNER_NF));
@@ -130,42 +140,37 @@ public class IssueService {
                 .createdBy(owner)
                 .build();
 
-        if(dto.isPendingCase()){
+        if (dto.isPendingCase()) {
             issue.setStatus(IssueStatus.INCOMPLET);
         }
 
-        issueRepository.save(issue);
+        return issue;
+    }
+
+    private void postCreateActions(IssueCreateDto dto, List<MultipartFile> files, Issue issue) {
 
         if (!dto.isPendingCase()) {
             createRequestManager(issue);
-            // notification du créateur de la catégorie
             notificationService.creationTicketNotification(issue.getCategory().getOwner(), issue);
         }
 
-        // Créer automatiquement une conversation pour cette issue
         conversationService.createConversationForIssue(issue);
 
-        /**
-         * Cas ou des fichiers sont à enregistrés
-         */
-        if (files != null && !files.isEmpty()) {
+        handleFiles(files, issue);
+    }
 
-            List<Document> documents = new ArrayList<>();
+    private void handleFiles(List<MultipartFile> files, Issue issue) {
 
-            for (MultipartFile file : files) {
+        if (files == null || files.isEmpty()) return;
 
-                if (file.isEmpty()) continue;
+        List<Document> documents = new ArrayList<>();
 
-                String storedName;
+        for (MultipartFile file : files) {
 
-                try {
-                    storedName = fileStorageService.store(file);
-                } catch (IOException e) {
-                    throw new FileStorageException(
-                            "Error storing file: " + file.getOriginalFilename(),
-                            e
-                    );
-                }
+            if (file.isEmpty()) continue;
+
+            try {
+                String storedName = fileStorageService.store(file);
 
                 Document document = Document.builder()
                         .originalName(file.getOriginalFilename())
@@ -174,16 +179,20 @@ public class IssueService {
                         .contentType(file.getContentType())
                         .size(file.getSize())
                         .issue(issue)
-                        .uploadedBy(owner)
+                        .uploadedBy(issue.getCreatedBy())
                         .build();
 
                 documents.add(document);
-            }
 
-            documentRepository.saveAll(documents);
+            } catch (IOException e) {
+                throw new FileStorageException(
+                        "Error storing file: " + file.getOriginalFilename(),
+                        e
+                );
+            }
         }
 
-        return toDto(issue);
+        documentRepository.saveAll(documents);
     }
 
     /**
