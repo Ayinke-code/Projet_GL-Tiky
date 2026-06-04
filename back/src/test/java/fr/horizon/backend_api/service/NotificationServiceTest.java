@@ -9,7 +9,6 @@ import fr.horizon.backend_api.model.dto.NotificationDto;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.model.enums.TypeNotification;
 import fr.horizon.backend_api.repository.NotificationRepository;
-import fr.horizon.backend_api.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,9 +34,6 @@ class NotificationServiceTest {
     private NotificationRepository notificationRepository;
 
     @Mock
-    private UserRepository userRepository;
-
-    @Mock
     private SimpMessagingTemplate messagingTemplate;
 
     @InjectMocks
@@ -53,12 +49,16 @@ class NotificationServiceTest {
         testUser = new User();
         testUser.setId(1L);
         testUser.setEmail("test@horizon.fr");
-
-        testIssue = new Issue();
-        testIssue.setId(10L);
+        testUser.setName("Jean Dupont");
 
         User targetTeacher = new User();
         targetTeacher.setName("M. Prof");
+
+        testIssue = new Issue();
+        testIssue.setId(10L);
+        testIssue.setTitle("Bug Connexion");
+        testIssue.setCreatedBy(testUser);
+        testIssue.setManager(targetTeacher);
 
         testRequestManager = new RequestManager();
         testRequestManager.setRequestId(50L);
@@ -77,17 +77,14 @@ class NotificationServiceTest {
     @Test
     @DisplayName("Doit créer et envoyer une notification de validation de ticket")
     void validatationTicketNotification_ShouldSaveAndSend() {
-        // Précondition
         when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> {
             Notification n = i.getArgument(0);
             n.setId(100L);
             return n;
         });
 
-        // Action
         notificationService.validatationTicketNotification(testUser, testIssue);
 
-        // Assertion
         ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository).save(notifCaptor.capture());
 
@@ -175,7 +172,6 @@ class NotificationServiceTest {
     @Test
     @DisplayName("Ne doit rien envoyer si le statut de RequestManager est différent de ACCEPTED ou DENIED")
     void managerDemandNotification_ShouldNotSend_WhenOtherStatus() {
-        // Ex: PENDING
         testRequestManager.setStatus(RequestManagerStatus.PENDING);
 
         notificationService.managerDemandNotification(testUser, testRequestManager);
@@ -183,6 +179,59 @@ class NotificationServiceTest {
         verify(notificationRepository, never()).save(any());
         verify(messagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
     }
+
+    @Test
+    @DisplayName("Doit créer et envoyer une notification de demande de réouverture")
+    void reopeningDemandNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        notificationService.reopeningDemandNotification(testUser, testIssue);
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+
+        Notification savedNotif = notifCaptor.getValue();
+        assertTrue(savedNotif.getContent().contains("Jean Dupont demande une réouverture du ticket: Bug Connexion"));
+        assertEquals(TypeNotification.NEW_OPEN_ISSUE, savedNotif.getType());
+        assertEquals(testIssue, savedNotif.getIssue());
+        assertEquals(testUser, savedNotif.getRecipient());
+    }
+
+    @Test
+    @DisplayName("Doit créer et envoyer une notification d'acceptation de réouverture")
+    void reopeningDemandAcceptedNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        notificationService.reopeningDemandAcceptedNotification(testUser, testIssue);
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+
+        Notification savedNotif = notifCaptor.getValue();
+        assertTrue(savedNotif.getContent().contains("M. Prof a accepté votre demande, votre ticket: Bug Connexion"));
+        assertEquals(TypeNotification.ACCEPTED_OPEN_ISSUE, savedNotif.getType());
+        assertEquals(testIssue, savedNotif.getIssue());
+        assertEquals(testUser, savedNotif.getRecipient());
+    }
+
+    @Test
+    @DisplayName("Doit créer et envoyer une notification de clôture de ticket")
+    void closeIssueNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        notificationService.closeIssueNotification(testUser, testIssue);
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+
+        Notification savedNotif = notifCaptor.getValue();
+        assertTrue(savedNotif.getContent().contains("votre ticket: Bug Connexion vient d'être cloturé"));
+        assertEquals(TypeNotification.CLOSING_ISSUE, savedNotif.getType());
+        assertEquals(testIssue, savedNotif.getIssue());
+        assertEquals(testUser, savedNotif.getRecipient());
+    }
+
+    // --- TESTS GENERIQUES ---
 
     @Test
     @DisplayName("Marquer la notification comme lue et la sauvegarder")
@@ -235,7 +284,6 @@ class NotificationServiceTest {
     @Test
     @DisplayName("Lier les identifiants des entités liées (Issue, Event, RequestManager)")
     void toDto_ShouldMapFieldsCorrectly_WithRelations() {
-        // Précondition
         Event event = new Event();
         event.setId(20L);
 
@@ -249,15 +297,13 @@ class NotificationServiceTest {
                 .requestManager(testRequestManager)
                 .build();
 
-        // Action
         NotificationDto dto = notificationService.toDto(complexNotif);
 
-        // Assertion
         assertNotNull(dto);
         assertEquals(200L, dto.getId());
         assertEquals(10L, dto.getIssueId());
         assertEquals(20L, dto.getEventId());
-        assertEquals(50L, dto.getRequestManagerId()); // Vérifie la nouvelle relation
+        assertEquals(50L, dto.getRequestManagerId());
     }
 
     @Test
