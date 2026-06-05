@@ -50,6 +50,9 @@ const followSuccess = ref(false)
 // Contient les fichiers associés au ticket si il y en a
 const files = ref(null)
 
+// Contient les fichiers associés à un message
+const messageFiles = ref(null)
+
 /**
  * Téléchargement des documents
  */
@@ -79,6 +82,20 @@ const deleteDoc = async (file) => {
     console.error(err)
   }
 }
+
+// IDs de tous les documents déjà présents dans les messages
+const messageDocIds = computed(() => {
+  return new Set(
+    messages.value.flatMap(m =>
+      (m.documents || []).map(d => d.id)
+    )
+  )
+})
+
+// Filtre les fichiers de l’issue en excluant ceux déjà utilisés dans les messages
+const filteredFiles = computed(() => {
+  return files.value.filter(f => !messageDocIds.value.has(f.id))
+})
 
 /**
  * Callback après suivi réussi
@@ -340,14 +357,36 @@ const handleSend = async () => {
 
   sending.value = true
   try {
-    const sentMessage = await sendIssueMessage(issueId, newMessage.value, replyingToMessage.value?.id ?? null)
+    const sentMessage = await sendIssueMessage(issueId, newMessage.value, messageFiles.value, replyingToMessage.value?.id ?? null)
     // Avoid duplicates: the server broadcasts the new message via WebSocket,
     // which may arrive before or after the HTTP response. Only push the
     // message locally if we don't already have it (compare by id).
     if (!messages.value.find((m) => m.id === sentMessage.id)) {
       messages.value.push(sentMessage)
     }
+
+    /**
+     * Check si les documents du message envoyé sont dans messages
+     * sinon les ajoutés
+     */
+    const existingMessage = messages.value.find(
+      m => m.id === sentMessage.id
+    )
+    if (!existingMessage) {
+      messages.value.push(sentMessage)
+    } else {
+      // Le message existe déjà (souvent via WebSocket)
+      // On ajoute les documents s'ils n'étaient pas présents
+      if (
+        sentMessage.documents?.length &&
+        !existingMessage.documents?.length
+      ) {
+        existingMessage.documents = sentMessage.documents
+      }
+    }
+
     newMessage.value = ''
+    messageFiles.value = null
     replyingToMessage.value = null
 
     // On rafraîchit l'issue pour avoir le nouveau updatedAt (mis à jour par le backend suite au message)
@@ -525,9 +564,13 @@ const handleUnfollow = async () => {
                             :role="msg.role"
                             :date="msg.date"
                             :contenu="msg.contenu"
+                            :files="msg.documents" 
+                            :issue="issue"
+                            :user="user"
                             :is-mine="msg.userId === user?.id"
                             :reply-to="msg.replyTo"
                             @reply="replyingToMessage = msg"
+                            @download="downloadDoc"
                         />
 
                         <!-- État vide -->
@@ -537,6 +580,7 @@ const handleUnfollow = async () => {
                     <!-- Zone d'envoi de message -->
                     <MessageInput
                         v-model="newMessage"
+                        v-model:messageFiles="messageFiles"
                         :sending="sending"
                         :replying-to="replyingToMessage"
                         @cancel-reply="replyingToMessage = null"
@@ -584,14 +628,14 @@ const handleUnfollow = async () => {
                         </div>
 
                         <!-- Documents attachés à l'issue pouvant être téléchargé -->
-                        <div v-if="files" class="mt-6">
+                        <div v-if="files " class="mt-6">
                           <div class="text-sm font-medium text-gray-500 mb-2">
                             Documents
                           </div>
 
                           <div class="space-y-2">
                             <div
-                              v-for="doc in files"
+                              v-for="doc in filteredFiles"
                               :key="doc.id"
                               class="flex items-center justify-between gap-3 p-3 border rounded-lg hover:bg-gray-50 transition"
                             >

@@ -48,8 +48,7 @@ public class IssueService {
     private final IssueFollowerRepository issueFollowerRepository;
     private final IssueFollowerService issueFollowerService;
     private final NotificationService notificationService;
-    private final FileStorageService fileStorageService;
-    private final DocumentRepository documentRepository;
+    private final DocumentService documentService;
 
     private static final String USER_NOT_FOUND = "User not found";
 
@@ -218,54 +217,7 @@ public class IssueService {
 
         conversationService.createConversationForIssue(issue);
 
-        handleFiles(files, issue);
-    }
-
-    /**
-     * Traite et persiste les fichiers attachés à une issue.
-     * <p>
-     * Pour chaque fichier non vide, stocke le fichier sur le disque via
-     * {@link FileStorageService} et crée l'entrée {@link Document} correspondante
-     * en base de données.
-     *
-     * @param files fichiers à traiter (peut être null ou vide)
-     * @param issue issue à laquelle rattacher les documents
-     * @throws FileStorageException si une erreur survient lors du stockage d'un fichier
-     */
-    private void handleFiles(List<MultipartFile> files, Issue issue) {
-
-        if (files == null || files.isEmpty()) return;
-
-        List<Document> documents = new ArrayList<>();
-
-        for (MultipartFile file : files) {
-
-            if (file.isEmpty()) continue;
-
-            try {
-                String storedName = fileStorageService.store(file);
-
-                Document document = Document.builder()
-                        .originalName(file.getOriginalFilename())
-                        .storedName(storedName)
-                        .path(uploadDir + "/" + storedName)
-                        .contentType(file.getContentType())
-                        .size(file.getSize())
-                        .issue(issue)
-                        .uploadedBy(issue.getCreatedBy())
-                        .build();
-
-                documents.add(document);
-
-            } catch (IOException e) {
-                throw new FileStorageException(
-                        "Error storing file: " + file.getOriginalFilename(),
-                        e
-                );
-            }
-        }
-
-        documentRepository.saveAll(documents);
+        documentService.storeFiles(files, issue, issue.getCreatedBy(), null);
     }
 
     /**

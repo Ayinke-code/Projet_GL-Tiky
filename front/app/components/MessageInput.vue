@@ -34,6 +34,34 @@
       @keydown.ctrl.enter.prevent="emitSend"
       style="overflow-wrap: anywhere; word-break: break-word;"
     />
+
+    <!-- Fichiers optionnel -->
+    <div class="space-y-2">
+      <label class="block text-sm font-medium text-gray-700">Fichiers <span class="italic">(optionnel)</span></label>
+      <UFileUpload
+        v-model="messageFiles"
+        multiple
+        size="sm"
+        accept="application/pdf,image/png,image/jpeg,.docx,.xlsx"
+        label="Joindre des fichiers"
+        description="PDF, PNG, JPG, JPEG, DOCX, XLSX (max. 10Mo)"
+        icon="i-lucide-paperclip"
+        layout="list"
+        class="w-fit"
+      />
+    </div>
+
+    <!-- Erreur taille ou format de fichier -->
+    <UAlert v-if="error"
+      color="error" 
+      class="mt-4" 
+      @close="error = null" 
+      title="Erreur : " 
+      :description="error" 
+      icon="material-symbols:error" 
+      variant="subtle"
+    />
+
     <div class="mt-1 text-right text-xs text-gray-400">
       {{ value.length }}/4000
     </div>
@@ -41,7 +69,7 @@
       <button
         class="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
         :disabled="sending || !value.trim()"
-        @click="emitSend"
+        @click="handleSend"
       >
         {{ sending ? 'Envoi...' : 'Envoyer' }}
       </button>
@@ -51,17 +79,26 @@
 
 <script setup>
 import { computed } from 'vue'
+import { validateFiles } from '../utils/validateFiles'
 
 defineOptions({ inheritAttrs: false })
 
+/**
+ * Erreur permettant d'afficher dans un beandeau
+ * les erreurs liés aux documents (trop volumineux, mauvais type ...)
+ */
+const error = ref(null)
+
 const props = defineProps({
   modelValue: { type: String, default: '' },
+  messageFiles: { type: Array, default: () => [] },
   sending: { type: Boolean, default: false },
   replyingTo: { type: Object, default: null }
 })
 
 const emit = defineEmits([
   'update:modelValue',
+  'update:messageFiles',
   'send',
   'cancel-reply'
 ])
@@ -70,6 +107,26 @@ const value = computed({
   get: () => props.modelValue,
   set: val => emit('update:modelValue', val)
 })
+
+const messageFiles = computed({
+  get: () => props.messageFiles,
+  set: (val) => emit('update:messageFiles', val)
+})
+
+const handleSend = () => {
+  // Check le format et la taille des fichiers
+  const res = validateFiles(messageFiles.value)
+
+  if (!res.valid) {
+    error.value = res.error
+    return
+  }
+
+  error.value = null
+
+  // Envoie au parent
+  emitSend()
+}
 
 const emitSend = () => emit('send')
 </script>

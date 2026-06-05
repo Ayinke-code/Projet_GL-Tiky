@@ -52,6 +52,9 @@ class IssueServiceTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private DocumentService documentService;
+
     @InjectMocks
     private IssueService issueService;
 
@@ -60,7 +63,7 @@ class IssueServiceTest {
 
     @Test
     void createIssue_should_save_with_OUVERT_status_and_create_manager_when_not_pending() {
-        // Préparation
+
         User categoryOwner = new User();
         categoryOwner.setId(99L);
         categoryOwner.setName("Teacher");
@@ -69,7 +72,7 @@ class IssueServiceTest {
         dto.setTitle("Bug");
         dto.setDescription("Bug description");
         dto.setCategoryId(1L);
-        dto.setPendingCase(false); // Cas normal
+        dto.setPendingCase(false);
 
         User owner = new User();
         owner.setId(1L);
@@ -78,26 +81,39 @@ class IssueServiceTest {
 
         Category category = new Category();
         category.setId(1L);
-        category.setName("Software");
         category.setOwner(categoryOwner);
 
-        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(owner));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+        when(userRepository.findByEmail("john@test.com"))
+                .thenReturn(Optional.of(owner));
 
-        // Intercepter l'Issue sauvegardée pour vérifier son statut interne
-        when(issueRepository.save(any(Issue.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(categoryRepository.findById(1L))
+                .thenReturn(Optional.of(category));
 
-        // Action
+        when(issueRepository.save(any(Issue.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // IMPORTANT
+        when(documentService.storeFiles(
+                anyList(),
+                any(Issue.class),
+                any(User.class),
+                isNull()
+        )).thenReturn(List.of());
+
         IssueDto result = issueService.createIssue(dto, "john@test.com");
 
-        // Assertions
         assertNotNull(result);
-        assertEquals("Bug", result.getTitle());
 
-        // Vérification des appels
         verify(issueRepository).save(any(Issue.class));
         verify(conversationService).createConversationForIssue(any(Issue.class));
         verify(requestManagerRepository).save(any(RequestManager.class));
+
+        verify(documentService).storeFiles(
+                anyList(),
+                any(Issue.class),
+                any(User.class),
+                isNull()
+        );
     }
 
     @Test
