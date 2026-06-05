@@ -69,6 +69,10 @@ public class Issue extends BaseEntity {
     @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RequestManager> requests = new ArrayList<>();
 
+    @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<IssueFollower> followers = new ArrayList<>();
+
 
 
 }
