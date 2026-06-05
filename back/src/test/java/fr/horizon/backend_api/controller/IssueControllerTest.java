@@ -2,7 +2,6 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.dto.IssueDto;
-import fr.horizon.backend_api.model.dto.IncompleteRequestDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.Conversation;
