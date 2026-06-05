@@ -66,5 +66,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     @Query("SELECT e FROM Event e WHERE e.createdBy.id = :userId OR (e.issue IS NOT NULL AND e.issue.manager.id = :userId) ORDER BY e.createdAt DESC")
     List<Event> findEventsManagedOrCreatedByUser(@Param("userId") Long userId);
+
+    void deleteByIssueId(Long issueId);
 }
 
