@@ -1177,7 +1177,7 @@ class EventServiceTest {
     @DisplayName("issueGotMeeting : retourne true si réunion future existe")
     void issueGotMeeting_true() {
 
-        when(eventRepository.existsByIssueIdAndStartDateAfterAndValidatedTrue(
+        when(eventRepository.existsByIssueIdAndStartDateAfter(
                 eq(100L),
                 any(LocalDateTime.class)
         )).thenReturn(true);
