@@ -162,7 +162,7 @@ const checkAccess = async () => {
       if (!hasAccess) {
         console.warn('[Issue Detail] Accès révoqué, redirection...')
         // On force un message d'erreur pour que l'utilisateur comprenne pourquoi il est redirigé
-        error.value = 'Vous n\'avez plus accès à ce ticket (passé en privé).'
+        error.value = t('issue_detail.error_access_revoked')
         setTimeout(async () => {
           await navigateTo('/issues', { replace: true })
         }, 2000)
@@ -229,12 +229,13 @@ const getStatusBadgeClass = (status) => {
 /**
  * Labels statuts
  */
+const { t } = useI18n()
 const getStatusLabel = (status) => {
   const labels = {
-    'OUVERT': 'Ouvert',
-    'EN_ATTENTE': 'En attente',
-    'INCOMPLET': 'Incomplet',
-    'TERMINE': 'Terminé'
+    OUVERT: t('status.open'),
+    EN_ATTENTE: t('status.pending'),
+    INCOMPLET: t('status.incomplete'),
+    TERMINE: t('status.finished')
   }
   return labels[status] || status
 }
@@ -344,10 +345,10 @@ const handleUnfollow = async () => {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    Retour aux tickets
+                    {{ $t('issue_detail.back_to_tickets') }}
                 </NuxtLink>
                 <span class="text-gray-300">/</span>
-                <span class="text-gray-700 font-medium">Ticket #{{ issueId }}</span>
+                <span class="text-gray-700 font-medium">{{ $t('issue_detail.ticket_number', { id: issueId }) }}</span>
             </div>
 
             <!-- Header : titre + actions -->
@@ -376,7 +377,7 @@ const handleUnfollow = async () => {
                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
-                            {{ issue.private ? 'Privé' : 'Public' }}
+                            {{ issue.private ? $t('issue_detail.private') : $t('issue_detail.public') }}
                         </span>
                     </div>
                 </div>
@@ -394,7 +395,7 @@ const handleUnfollow = async () => {
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
-                        Marquer Résolu
+                        {{ $t('issue_detail.mark_resolved') }}
                     </button>
                     <button
                         v-else-if="issue.status === 'TERMINE' && user?.id === issue?.createdId && user.id !== null"
@@ -404,7 +405,7 @@ const handleUnfollow = async () => {
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
-                        Rouvrir
+                        {{ $t('issue_detail.reopen') }}
                     </button>
                     <!--  -->
                     <!-- Privé/Public : TODO: Quand on aura les 'Issue Manager', on pourra bloquer ce bouton pour les autres -->
@@ -421,7 +422,7 @@ const handleUnfollow = async () => {
               <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
-            {{ issue.private ? 'Rendre Public' : 'Rendre Privé' }}
+            {{ issue.private ? $t('issue_detail.make_public') : $t('issue_detail.make_private') }}
           </button>
 
           <!--  Bouton Suivre / badge Suivi -->
@@ -432,7 +433,7 @@ const handleUnfollow = async () => {
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.437L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
-            Suivre
+            {{ $t('issue_detail.follow') }}
           </button>
           <button
             v-else
@@ -441,7 +442,7 @@ const handleUnfollow = async () => {
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
-            Ne plus suivre
+            {{ $t('issue_detail.unfollow') }}
           </button>
 
         </div>
@@ -449,7 +450,7 @@ const handleUnfollow = async () => {
 
       <!--Message succès après suivi -->
       <div v-if="followSuccess" class="rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-700">
-        Vous suivez maintenant ce ticket !
+        {{ $t('issue_detail.follow_success') }}
       </div>
 
       <!-- Grid principal -->
@@ -491,36 +492,36 @@ const handleUnfollow = async () => {
                     <!-- Carte INFORMATIONS -->
                     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
                         <div class="px-5 py-3 border-b border-gray-100">
-                            <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Informations</h2>
+                            <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest">{{ $t('issue_detail.details') }}</h2>
                         </div>
 
                       <div class="px-5 py-4 space-y-3 text-sm">
 
                         <div v-if="issue?.categoryManagerId && issue?.categoryManagerId === issue?.createdId" class="flex justify-between items-center">
-                          <span class="text-gray-500">Auteur & Manager</span>
+                          <span class="text-gray-500">{{ $t('issue_detail.author_manager') }}</span>
                           <span class="font-medium text-gray-900">
-                            {{ issue.createdId === user?.id ? 'Moi' : (issue.createdName || 'Inconnu') }}
+                            {{ issue.createdId === user?.id ? $t('issue_detail.me') : (issue.createdName || $t('issue_detail.unknown')) }}
                           </span>
                         </div>
 
                         <template v-else>
                           <div class="flex justify-between items-center">
-                            <span class="text-gray-500">Auteur</span>
+                            <span class="text-gray-500">{{ $t('issue_detail.author') }}</span>
                             <span class="font-medium text-gray-900">
-                              {{ issue.createdId === user?.id ? 'Moi' : (issue.createdName || 'Inconnu') }}
+                              {{ issue.createdId === user?.id ? $t('issue_detail.me') : (issue.createdName || $t('issue_detail.unknown')) }}
                             </span>
                           </div>
 
                           <div class="flex justify-between items-center">
-                            <span class="text-gray-500">Manager en charge</span>
+                            <span class="text-gray-500">{{ $t('issue_detail.manager_in_charge') }}</span>
                             <span class="font-medium text-gray-900">
-                              {{ issue?.categoryManagerId === user?.id ? 'Moi' : (issue?.teacherManagerName || issue?.categoryManagerName || 'Non défini') }}
+                              {{ issue?.categoryManagerId === user?.id ? $t('issue_detail.me') : (issue?.teacherManagerName || issue?.categoryManagerName || $t('issue_detail.not_defined')) }}
                             </span>
                           </div>
                         </template>
 
                         <div class="flex justify-between items-center">
-                          <span class="text-gray-500">Abonnés</span>
+                          <span class="text-gray-500">{{ $t('issue_detail.followers') }}</span>
                           <span class="font-medium text-gray-900">{{ issue.followersCount || 0 }}</span>
                         </div>
 
@@ -554,7 +555,7 @@ const handleUnfollow = async () => {
       class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
 
       <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-        <h2 class="text-lg font-bold text-gray-800">Confirmer</h2>
+        <h2 class="text-lg font-bold text-gray-800">{{ $t('issue_detail.modal_confirm') }}</h2>
         <button @click="isResolveModalOpen = false" class="text-gray-400 hover:text-gray-600">
           ✕
         </button>
@@ -562,19 +563,18 @@ const handleUnfollow = async () => {
 
       <div class="p-6 space-y-4">
         <p class="text-sm text-gray-600">
-          Êtes-vous sûr de vouloir marquer ce ticket comme <span
-          class="font-semibold text-emerald-600">résolu</span> ?
+          {{ $t('issue_detail.modal_resolve_text', { status: $t('status.finished') }) }}
         </p>
 
         <div class="flex justify-end gap-2">
           <button @click="isResolveModalOpen = false"
                   class="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">
-            Annuler
+            {{ $t('issue_detail.cancel') }}
           </button>
 
           <button @click="() => { handleMarkResolved(); isResolveModalOpen = false }"
                   class="px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
-            Confirmer
+            {{ $t('issue_detail.confirm') }}
           </button>
         </div>
       </div>
@@ -587,7 +587,7 @@ const handleUnfollow = async () => {
       class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
 
       <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-        <h2 class="text-lg font-bold text-gray-800">Changer la visibilité</h2>
+        <h2 class="text-lg font-bold text-gray-800">{{ $t('issue_detail.modal_visibility_title') }}</h2>
         <button @click="isVisibilityModalOpen = false" class="text-gray-400 hover:text-gray-600">
           ✕
         </button>
@@ -595,21 +595,18 @@ const handleUnfollow = async () => {
 
       <div class="p-6 space-y-4">
         <p class="text-sm text-gray-600">
-          Voulez-vous rendre ce ticket
-          <span class="font-semibold">
-                        {{ issue.private ? 'public' : 'privé' }}
-                    </span> ?
+          {{ $t('issue_detail.modal_visibility_text', { visibility: issue.private ? $t('issue_detail.public') : $t('issue_detail.private') }) }}
         </p>
 
         <div class="flex justify-end gap-2">
           <button @click="isVisibilityModalOpen = false"
                   class="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">
-            Annuler
+            {{ $t('issue_detail.cancel') }}
           </button>
 
           <button @click="() => { toggleVisibility(); isVisibilityModalOpen = false }"
                   class="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
-            Confirmer
+            {{ $t('issue_detail.confirm') }}
           </button>
         </div>
       </div>
@@ -628,8 +625,8 @@ const handleUnfollow = async () => {
   <!-- Modal de confirmation de réouverture -->
   <ConfirmModal
       v-model:open="isReopeningModalOpen"
-      title="Demande de réouverture"
-      description="Voulez-vous vraiment rouvrir ce ticket ?"
+      :title="$t('issue_detail.modal_reopen_title')"
+      :description="$t('issue_detail.modal_reopen_text')"
       @confirm="handleReopening"
   />
 </template>

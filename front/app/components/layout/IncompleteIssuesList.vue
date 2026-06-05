@@ -2,9 +2,11 @@
   <div class="space-y-6">
     <!-- En-tête de la section -->
     <div class="flex items-center justify-between">
-      <h2 class="text-lg font-semibold text-gray-900">Demandes à compléter</h2>
+      <h2 class="text-lg font-semibold text-gray-900">
+        {{ $t('incomplete_issues.title') }}
+      </h2>
       <UBadge v-if="issues.length > 0" color="orange" variant="soft" size="sm">
-        {{ issues.length }} action(s) requise(s)
+        {{ $t('incomplete_issues.actions_required', { count: issues.length }) }}
       </UBadge>
     </div>
 
@@ -15,7 +17,7 @@
 
     <!-- État vide : Aucune issue incomplète -->
     <div v-else-if="issues.length === 0" class="text-center py-8 text-gray-500 italic bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
-      Vous n'avez aucune demande nécessitant des corrections ou en attente.
+      {{ $t('incomplete_issues.empty_state') }}
     </div>
 
     <!-- Liste des issues incomplètes (Limitée) -->
@@ -28,8 +30,10 @@
       >
         <template #header>
           <div class="flex items-center justify-between">
-            <h3 class="font-bold text-gray-900">{{ issue.title }}</h3>
-            <span class="text-xs text-gray-500">Catégorie : {{ issue.categoryName }}</span>
+            <h3 class="font-bold text-gray-900">
+              {{ issue.title }}
+            </h3>
+            <span class="text-xs text-gray-500">{{ $t('incomplete_issues.category') }} : {{ issue.categoryName }}</span>
           </div>
         </template>
 
@@ -40,7 +44,7 @@
             icon="i-heroicons-exclamation-triangle"
             color="orange"
             variant="soft"
-            :title="`Refusé pour : ${issue.rejectReason}`"
+            :title="`${$t('incomplete_issues.refused_for')} : ${issue.rejectReason}`"
             :description="issue.rejectComment"
           />
 
@@ -50,12 +54,14 @@
             icon="i-heroicons-clock"
             color="blue"
             variant="soft"
-            title="Brouillon"
+            :title="$t('incomplete_issues.draft')"
           />
 
           <!-- Aperçu de la description actuelle -->
           <div>
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Votre description actuelle</p>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+              {{ $t('incomplete_issues.current_description') }}
+            </p>
             <p class="text-sm text-gray-600 line-clamp-3 bg-gray-50 p-3 rounded border border-gray-100">
               {{ issue.description }}
             </p>
@@ -65,7 +71,7 @@
         <template #footer>
           <div class="flex justify-end">
             <UButton
-              :label="issue.rejectReason ? 'Corriger la demande' : 'Finaliser la demande'"
+              :label="issue.rejectReason ? $t('incomplete_issues.correct_request') : $t('incomplete_issues.finalize_request')"
               icon="i-heroicons-pencil-square"
               :color="issue.rejectReason ? 'primary' : 'blue'"
               @click="openEditModal(issue)"
@@ -77,43 +83,50 @@
       <!-- Indicateur d'éléments supplémentaires -->
       <div v-if="remainingIssuesCount > 0" class="text-center pt-2">
         <p class="text-sm text-gray-500 italic bg-gray-50 py-2 rounded-lg border border-gray-100">
-          Et {{ remainingIssuesCount }} autre(s) demande(s) en attente... Résolvez celles-ci pour voir les suivantes.
+          {{ $t('incomplete_issues.remaining_issues', { count: remainingIssuesCount }) }}
         </p>
       </div>
     </div>
 
-    <!-- Modale de correction / finalisation -->
-    <UModal v-model:open="isModalOpen" :title="editingIssue?.rejectReason ? 'Mettre à jour la demande' : 'Finaliser la demande'">
+    <UModal
+      v-model:open="isModalOpen"
+      :title="editingIssue?.rejectReason ? $t('incomplete_issues.modal_update_title') : $t('incomplete_issues.modal_finalize_title')"
+    >
       <template #body>
         <div v-if="editingIssue" class="space-y-4">
-
           <!-- Cas 1 : Rappel de ce qu'il faut corriger (Superviseur) -->
           <div v-if="editingIssue.rejectReason" class="p-3 bg-orange-50 text-orange-800 rounded text-sm border border-orange-100 mb-4">
-            <span class="font-semibold block mb-1">À corriger : {{ editingIssue.rejectReason }}</span>
-            <span class="text-orange-700">{{ editingIssue.rejectComment }}</span>
+            <span class="font-semibold block mb-1">
+              {{ $t('incomplete_issues.to_correct') }} : {{ editingIssue.rejectReason }}
+            </span>
+            <span class="text-orange-700">
+              {{ editingIssue.rejectComment }}
+            </span>
           </div>
 
           <!-- Cas 2 : Message informatif de finalisation (Créateur) -->
           <div v-else class="p-3 bg-blue-50 text-blue-800 rounded text-sm border border-blue-100 mb-4">
-            <span class="font-semibold block mb-1">Ticket incomplet</span>
-            <span class="text-blue-700">Mettez à jour les informations de votre ticket pour le soumettre définitivement à un superviseur.</span>
+            <span class="font-semibold block mb-1">{{ $t('incomplete_issues.incomplete_ticket') }}</span>
+            <span class="text-blue-700">{{ $t('incomplete_issues.finalize_info') }}</span>
           </div>
 
           <!-- Formulaire -->
-          <UFormField label="Titre" required>
-            <UInput v-model="formData.title" placeholder="Titre de l'issue" class="w-full" />
+          <UFormField :label="$t('incomplete_issues.form.title')" required>
+            <UInput v-model="formData.title" :placeholder="$t('incomplete_issues.form.title_placeholder')" class="w-full" />
           </UFormField>
 
-          <UFormField label="Description" required>
-            <UTextarea v-model="formData.description" :rows="6" placeholder="Détaillez votre problème..." class="w-full" />
+          <UFormField :label="$t('incomplete_issues.form.description')" required>
+            <UTextarea v-model="formData.description" :rows="6" :placeholder="$t('incomplete_issues.form.description_placeholder')" class="w-full" />
           </UFormField>
 
           <!-- Correction de la catégorie -->
-          <UFormField label="Catégorie" required>
+          <UFormField :label="$t('incomplete_issues.form.category')" required>
             <select v-model="formData.categoryId"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
                     required>
-              <option disabled value="">Sélectionnez une catégorie</option>
+              <option disabled value="">
+                {{ $t('incomplete_issues.form.category_placeholder') }}
+              </option>
               <option v-for="cat in categories" :key="cat.id" :value="cat.id">
                 {{ cat.name }}
               </option>
@@ -127,12 +140,12 @@
           <UButton
             color="neutral"
             variant="ghost"
-            label="Annuler"
+            :label="$t('incomplete_issues.form.cancel')"
             @click="closeEditModal"
           />
           <UButton
             color="primary"
-            label="Enregistrer et soumettre"
+            :label="submitting ? $t('incomplete_issues.form.updating') : $t('incomplete_issues.form.submit')"
             icon="i-heroicons-paper-airplane"
             :loading="submitting"
             :disabled="!isFormValid"
@@ -190,9 +203,9 @@ const formData = ref({
 
 // Validation simple
 const isFormValid = computed(() => {
-  return formData.value.title.trim() !== '' &&
-    formData.value.description.trim() !== '' &&
-    formData.value.categoryId !== null
+  return formData.value.title.trim() !== ''
+    && formData.value.description.trim() !== ''
+    && formData.value.categoryId !== null
 })
 
 // Récupération des données
@@ -204,7 +217,7 @@ const fetchIssues = async () => {
 
     emit('has-issues', issues.value.length > 0)
   } catch (error) {
-    console.error("Erreur lors de la récupération des issues incomplètes :", error)
+    console.error('Erreur lors de la récupération des issues incomplètes :', error)
     emit('has-issues', false)
   } finally {
     loading.value = false
@@ -244,7 +257,7 @@ const submitCorrections = async () => {
 
     emit('issue-updated')
   } catch (error) {
-    console.error("Erreur lors de la mise à jour de l'issue :", error)
+    console.error('Erreur lors de la mise à jour de l\'issue :', error)
   } finally {
     submitting.value = false
   }

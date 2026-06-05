@@ -6,28 +6,28 @@
       icon="i-heroicons-language"
       class="text-gray-500 hover:text-blue-600 transition-colors"
     >
-      <span class="text-xs font-bold">{{ currentLang }}</span>
+      <span class="text-xs font-bold">{{ locale.toUpperCase() }}</span>
     </UButton>
   </UDropdown>
 </template>
 
 <script setup>
-const currentLang = ref('FR')
+const { locale, setLocale } = useI18n()
 
 const items = [
   [{
-    label: 'Français',
+    label: 'FR',
     icon: 'i-heroicons-language',
     click: () => {
-      currentLang.value = 'FR'
-      console.log('Changement de langue : FR')
+      setLocale('fr')
+      window.location.reload()
     }
   }, {
-    label: 'English',
+    label: 'EN',
     icon: 'i-heroicons-language',
     click: () => {
-      currentLang.value = 'EN'
-      console.log('Changement de langue : EN')
+      setLocale('en')
+      window.location.reload()
     }
   }]
 ]

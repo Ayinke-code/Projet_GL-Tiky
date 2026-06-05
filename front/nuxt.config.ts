@@ -5,8 +5,21 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
     '@nuxt/ui',
-    '@pinia/nuxt'
+    '@pinia/nuxt',
+    '@nuxtjs/i18n'
   ],
+
+  i18n: {
+    locales: [
+      { code: 'fr', file: 'fr.json' },
+      { code: 'en', file: 'en.json' }
+    ],
+    lazy: true,
+    langDir: 'locales',
+    defaultLocale: 'fr',
+    strategy: 'no_prefix',
+    detectBrowserLanguage: false
+  },
 
   runtimeConfig: {
     public: {

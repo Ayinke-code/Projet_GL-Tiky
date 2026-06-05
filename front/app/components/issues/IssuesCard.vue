@@ -15,7 +15,7 @@
 
         <div class="flex items-center gap-2 flex-wrap">
           <UBadge variant="soft" color="info" size="xs">
-            {{ issue.categoryName || 'Sans catégorie' }}
+            {{ issue.categoryName || $t('no_category') }}
           </UBadge>
 
           <span
@@ -43,16 +43,16 @@
     </div>
 
     <!-- FOOTER -->
-      <div v-if="showDelete" class="flex justify-end">
-        <UButton
-          @click.stop="emit('delete', issue)"
-          variant="ghost"
-          size="xs"
-          color="error"
-          icon="i-lucide-trash-2"
-          class="cursor-pointer"
-        />
-      </div>
+    <div v-if="showDelete" class="flex justify-end">
+      <UButton
+        @click.stop="emit('delete', issue)"
+        variant="ghost"
+        size="xs"
+        color="error"
+        icon="i-lucide-trash-2"
+        class="cursor-pointer"
+      />
+    </div>
   </UCard>
 </template>
 
@@ -69,27 +69,28 @@ const isUpdated = computed(() => isFollowedIssueUpdated(props.issue?.id))
 /**
  * Labels statuts
  */
+const { t } = useI18n()
 const getStatusLabel = (status) => {
-    const labels = {
-        'OUVERT': 'Ouvert',
-        'EN_ATTENTE': 'En attente',
-        'INCOMPLET': 'Incomplet',
-        'TERMINE': 'Terminé'
-    }
-    return labels[status] || status
+  const labels = {
+    OUVERT: t('status.open'),
+    EN_ATTENTE: t('status.pending'),
+    INCOMPLET: t('status.incomplete'),
+    TERMINE: t('status.finished')
+  }
+  return labels[status] || status
 }
 
 /**
  * UI status colors
  */
 const getStatusBadgeClass = (status) => {
-    const classes = {
-      'OUVERT':'bg-yellow-100 text-yellow-800 border border-yellow-300',
-      'EN_ATTENTE': 'bg-gray-100 text-gray-800 border border-gray-300',
-      'INCOMPLET': 'bg-orange-100 text-orange-800 border border-orange-300',
-      'TERMINE': 'bg-green-100 text-green-800 border border-green-300'
-    }
-    return classes[status] || 'bg-gray-100 text-gray-800'
+  const classes = {
+    OUVERT: 'bg-yellow-100 text-yellow-800 border border-yellow-300',
+    EN_ATTENTE: 'bg-gray-100 text-gray-800 border border-gray-300',
+    INCOMPLET: 'bg-orange-100 text-orange-800 border border-orange-300',
+    TERMINE: 'bg-green-100 text-green-800 border border-green-300'
+  }
+  return classes[status] || 'bg-gray-100 text-gray-800'
 }
 
 const emit = defineEmits(['delete'])

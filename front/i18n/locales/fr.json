@@ -1,0 +1,169 @@
+{
+  "welcome": "Bienvenue",
+  "login": "Connexion",
+  "logout": "Déconnexion",
+  "notifications": "Notifications",
+  "no_notifications": "Aucune notification",
+  "profile": "Profil",
+  "language": "Langue",
+  "tickets_followed": "Tickets suivis",
+  "return_to_tickets": "Retour aux tickets",
+  "up_to_date": "Vous êtes à jour !",
+  "no_followed_tickets": "Vous ne suivez aucun ticket pour le moment",
+  "see_all_tickets": "Voir tous les tickets",
+  "no_category": "Sans catégorie",
+  "status": {
+    "open": "Ouvert",
+    "pending": "En attente",
+    "incomplete": "Incomplet",
+    "finished": "Terminé"
+  },
+  "header_label": "Haut de page",
+  "sidebar": {
+    "toggle": "Afficher/Masquer la barre latérale",
+    "main_label": "Barre latérale",
+    "nav_label": "Navigation principale",
+    "my_space": "Mon espace",
+    "activities": "Activités",
+    "tickets": "Tickets",
+    "all_tickets": "Les tickets",
+    "followed_tickets": "Tickets suivis",
+    "categories": "Catégories",
+    "groups": "Groupes",
+    "calendar": "Calendrier",
+    "events": "Événements",
+    "manage_planning": "Gérer mon planning"
+  },
+  "login_page": {
+    "connect_to_account": "Connectez-vous à votre compte",
+    "email_placeholder": "exemple{'@'}email.com",
+    "email_label": "Email ou nom d'utilisateur",
+    "password_label": "Mot de passe",
+    "login_button": "Se connecter",
+    "error_fill_fields": "Veuillez remplir tous les champs.",
+    "error_invalid_email": "Adresse email invalide.",
+    "error_password_length": "Le mot de passe doit contenir au moins 8 caractères.",
+    "error_incorrect": "Email ou mot de passe incorrect."
+  },
+  "home": {
+    "tagline_start": "La plateforme de",
+    "tagline_highlight": "gestion académique",
+    "description": "Suivez vos ticket, organisez vos catégories et planifiez audits & soutenances en un seul endroit.",
+    "rights_reserved": "Tous droits réservés",
+    "welcome_back": "Bienvenue",
+    "login_prompt": "Connectez-vous pour accéder à votre espace et retrouver toutes vos activités académiques.",
+    "access_restricted": "Accès réservé aux membres de l'établissement",
+    "features": {
+      "tickets": {
+        "label": "Ticket & suivi",
+        "desc": "Déposez et suivez l'avancement de vos problématiques."
+      },
+      "categories": {
+        "label": "Catégories",
+        "desc": "Organisez vos sujets et abonnez-vous à ceux qui vous intéressent."
+      },
+      "events": {
+        "label": "Audits & Soutenances",
+        "desc": "Planifiez et gérez les événements académiques."
+      }
+    }
+  },
+  "issue_modal": {
+    "title": "Détail du ticket",
+    "field_title": "Titre",
+    "created_by": "Créé par",
+    "category": "Catégorie",
+    "description": "Description",
+    "error_loading": "Impossible de charger les détails du ticket.",
+    "close": "Fermer"
+  },
+  "confirm_modal": {
+    "cancel": "Annuler",
+    "confirm": "Confirmer"
+  },
+  "issue_detail": {
+    "author_manager": "Auteur & Manager",
+    "author": "Auteur",
+    "manager_in_charge": "Manager en charge",
+    "unknown": "Inconnu",
+    "back_to_tickets": "Retour aux tickets",
+    "ticket_number": "Ticket #{id}",
+    "private": "Privé",
+    "public": "Public",
+    "mark_resolved": "Marquer Résolu",
+    "reopen": "Rouvrir",
+    "make_public": "Rendre Public",
+    "make_private": "Rendre Privé",
+    "follow": "Suivre",
+    "unfollow": "Ne plus suivre",
+    "follow_success": "Vous suivez maintenant ce ticket !",
+    "conversation": "Conversation",
+    "no_messages": "Aucun message pour le moment.",
+    "write_message": "Écrire un message...",
+    "replying_to": "En réponse à :",
+    "cancel_reply": "Annuler",
+    "send": "Envoyer",
+    "details": "Détails",
+    "created_at": "Créé le",
+    "manager": "Manager",
+    "me": "Moi",
+    "not_defined": "Non défini",
+    "followers": "Abonnés",
+    "error_access_revoked": "Vous n'avez plus accès à ce ticket (passé en privé).",
+    "modal_confirm": "Confirmer",
+    "modal_resolve_text": "Êtes-vous sûr de vouloir marquer ce ticket comme {status} ?",
+    "modal_visibility_title": "Changer la visibilité",
+    "modal_visibility_text": "Voulez-vous rendre ce ticket {visibility} ?",
+    "modal_reopen_title": "Demande de réouverture",
+    "modal_reopen_text": "Voulez-vous vraiment rouvrir ce ticket ?",
+    "cancel": "Annuler",
+    "confirm": "Confirmer"
+  },
+  "tickets_followed_page": {
+    "error_loading_console": "Erreur au chargement des issues suivies :"
+  },
+  "tickets_page": {
+    "title": "Tickets",
+    "create_button": "Créer un ticket",
+    "no_tickets": "Aucun ticket pour le moment",
+    "create_first_ticket": "Créer le premier ticket",
+    "your_categories": "Vos catégories",
+    "your_tickets": "Vos tickets",
+    "others": "Autres",
+    "delete_confirm_title": "Supprimer le ticket",
+    "delete_confirm_desc": "Voulez-vous vraiment supprimer ce ticket ? Cette action est irréversible.",
+    "delete_confirm_cancel": "Annuler",
+    "delete_confirm_submit": "Supprimer",
+    "error_deleting": "Erreur lors de la suppression",
+    "error_loading": "Erreur lors du chargement",
+    "error_loading_console": "Erreur au chargement des issues :"
+  },
+  "incomplete_issues": {
+    "title": "Demandes à compléter",
+    "actions_required": "{count} action(s) requise(s)",
+    "empty_state": "Vous n'avez aucune demande nécessitant des corrections ou en attente.",
+    "category": "Catégorie",
+    "refused_for": "Refusé pour",
+    "draft": "Brouillon",
+    "current_description": "Votre description actuelle",
+    "correct_request": "Corriger la demande",
+    "finalize_request": "Finaliser la demande",
+    "remaining_issues": "Et {count} autre(s) demande(s) en attente... Résolvez celles-ci pour voir les suivantes.",
+    "modal_update_title": "Mettre à jour la demande",
+    "modal_finalize_title": "Finaliser la demande",
+    "to_correct": "À corriger",
+    "incomplete_ticket": "Ticket incomplet",
+    "finalize_info": "Mettez à jour les informations de votre ticket pour le soumettre définitivement à un superviseur.",
+    "form": {
+      "title": "Titre",
+      "title_placeholder": "Titre de l'issue",
+      "description": "Description",
+      "description_placeholder": "Détaillez votre problème...",
+      "category": "Catégorie",
+      "category_placeholder": "Sélectionner une catégorie",
+      "cancel": "Annuler",
+      "submit": "Soumettre",
+      "updating": "Mise à jour..."
+    }
+  }
+}
