@@ -31,7 +31,6 @@
           :key="issue.id"
           :issue="issue"
           :user="user"
-          :show-delete="canDeleteIssue(issue)"
           @delete="deleteValidation"
         />
       </div>
@@ -76,15 +75,6 @@ const error = computed(() => stateError.value)
 const isDeleteValidateModalOpen = ref(false)
 const deletingIssue = ref(null)
 
-const canDeleteIssue = (issue) => {
-  const currentUserId = user.value?.id
-  if (!currentUserId || !issue) return false
-
-  return currentUserId === issue.createdId
-    || currentUserId === issue.categoryOwnerId
-    || currentUserId === issue.categoryManagerId
-}
-
 const deleteValidation = (issue) => {
   deletingIssue.value = {
     id: issue?.id,
@@ -99,7 +89,10 @@ const handleDelete = async () => {
   try {
     await deleteIssue(id)
   } catch (err) {
-    console.error('Erreur lors de la suppression:', err)
+    // L'erreur 404 est déjà gérée dans deleteIssue
+    if (err?.response?.status !== 404) {
+      console.error('Erreur lors de la suppression:', err)
+    }
   } finally {
     deletingIssue.value = null
     isDeleteValidateModalOpen.value = false
