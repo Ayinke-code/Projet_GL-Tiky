@@ -59,6 +59,7 @@
 
               <div class="flex flex-col gap-1.5">
                 <UButton
+                  :id="'btn-affecter-manager-' + req.id"
                   label="Affecter"
                   icon="i-heroicons-paper-airplane"
                   :disabled="!selectedTeachers[req.id] || loadingIds.has(req.id)"
@@ -121,7 +122,7 @@
       <template #footer>
         <div class="flex justify-end gap-3">
           <UButton color="neutral" variant="ghost" label="Annuler" @click="isConfirmOpen = false"/>
-          <UButton color="primary" label="Confirmer l'envoi" @click="confirmAssignation"/>
+          <UButton  id="btn-confirm-assignation" color="primary" label="Confirmer l'envoi" @click="confirmAssignation"/>
         </div>
       </template>
     </UModal>

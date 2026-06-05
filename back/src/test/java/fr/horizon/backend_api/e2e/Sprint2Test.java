@@ -6,10 +6,11 @@ import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
+
 import java.util.List;
 import java.util.UUID;
 
-
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class Sprint2Test extends BaseSeleniumIT{
 
 
@@ -30,7 +31,6 @@ class Sprint2Test extends BaseSeleniumIT{
     private static final String CATEGORIE_PROPRIETAIRE = "Propriétaire";
 
     private static final String MESSAGE = "MESSAGE TEST";
-    private static final String EMPTY_ASSIGNATION = "Aucune demande d'affectation à compléter.";
 
     @BeforeEach
     void initTitreUnique() {
@@ -38,12 +38,14 @@ class Sprint2Test extends BaseSeleniumIT{
         this.ticketTitle = "titre-test-" + UUID.randomUUID().toString().substring(0, 6);
     }
 
+    @Order(1)
     @Test
     @DisplayName("Scénario 1.1 Connexion")
     void connexionTest(){
         connexion(false);
     }
 
+    @Order(2)
     @Test
     @DisplayName("Scénario 1.2 Déconnexion")
     void deconnexionTest(){
@@ -54,6 +56,7 @@ class Sprint2Test extends BaseSeleniumIT{
 
     }
 
+    @Order(5)
     @Test
     @DisplayName("Scénario 1.3.1 Crée un ticket")
     void creeTicketSansMarquerIncompletTest(){
@@ -62,6 +65,7 @@ class Sprint2Test extends BaseSeleniumIT{
         creeTicket(false);
     }
 
+    @Order(6)
     @Test
     @DisplayName("Scénario 1.3.2 Crée un ticket incomplet")
     void creeTicketMarquerIncompletTest(){
@@ -71,8 +75,9 @@ class Sprint2Test extends BaseSeleniumIT{
         creeTicket(true);
     }
 
+    @Order(7)
     @Test
-    @DisplayName("Scénario 1.5.1 proposer une catégorie")
+    @DisplayName("Scénario 1.5.1 proposer une catégorie en tant que professeur")
     void proposeCategorieAsTeacherTest(){
         //précondition
         connexion(false);
@@ -81,8 +86,9 @@ class Sprint2Test extends BaseSeleniumIT{
         creeCategorie(true);
     }
 
+    @Order(8)
     @Test
-    @DisplayName("Scénario 1.5.2 proposer une catégorie")
+    @DisplayName("Scénario 1.5.2 proposer une catégorie en etant étudiant")
     void proposeCategorieAsStudentTest(){
         //précondition
         connexion(true);
@@ -91,6 +97,7 @@ class Sprint2Test extends BaseSeleniumIT{
         creeCategorie(false);
     }
 
+    @Order(9)
     @Test
     @DisplayName("Scénario 1.6.1 envoyer un message")
     void envoyerMessageTest(){
@@ -102,16 +109,17 @@ class Sprint2Test extends BaseSeleniumIT{
         envoyerMessage();
     }
 
+    @Order(4)
     @Test
     @DisplayName("Scénario 1.7.1 Affecter un manager")
     void affecterManagerDifferentTest(){
         //précondition
         connexion(false);
         creeTicket(false);
-
         affecterManager(false);
     }
 
+    @Order(3)
     @Test
     @DisplayName("Scénario 1.7.2 Affecter un manager (sois-même)")
     void affecterManagerSelfTest(){
@@ -223,12 +231,12 @@ class Sprint2Test extends BaseSeleniumIT{
 
     }
 
-
     private void creeCategorie(boolean isTeacher) {
 
         String idBtnCreation = isTeacher ? "create-categorie-teacher" : "create-categorie-student";
         String idInputName = isTeacher ? "categorie-name-teacher" : "categorie-name-student";
         String idInputSubject = isTeacher ? "categorie-subject-teacher" : "categorie-subject-student";
+        String idBtnValidate = isTeacher ? "validate-categorie" : "validate-request";
         String idInputDesc = "categorie-description-student";
 
         WebElement btnCreeCategorie = wait.until(
@@ -237,27 +245,30 @@ class Sprint2Test extends BaseSeleniumIT{
 
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", btnCreeCategorie);
 
+        // On attend que les éléments soient bien visibles
         WebElement inputCategorieName = wait.until(
-                ExpectedConditions.elementToBeClickable(By.id(idInputName))
+                ExpectedConditions.visibilityOfElementLocated(By.id(idInputName))
         );
 
         WebElement inputCategorieSubject = wait.until(
-                ExpectedConditions.elementToBeClickable(By.id(idInputSubject))
+                ExpectedConditions.visibilityOfElementLocated(By.id(idInputSubject))
         );
 
+        inputCategorieName.click();
+        inputCategorieName.sendKeys(TITRE_CATEGORIE);
+        inputCategorieSubject.click();
         inputCategorieSubject.sendKeys(SUBJECT_CATEGORIE);
 
-        inputCategorieName.sendKeys(TITRE_CATEGORIE);
 
         if (!isTeacher) {
             WebElement inputCategorieDescription = wait.until(
-                    ExpectedConditions.elementToBeClickable(By.id(idInputDesc))
+                    ExpectedConditions.visibilityOfElementLocated(By.id(idInputDesc))
             );
             inputCategorieDescription.sendKeys(DESCRIPTION);
         }
 
         WebElement btnValidate = wait.until(
-                ExpectedConditions.elementToBeClickable(By.id("validate-categorie"))
+                ExpectedConditions.elementToBeClickable(By.id(idBtnValidate))
         );
         ((JavascriptExecutor) driver).executeScript("arguments[0].click();", btnValidate);
 
@@ -337,6 +348,7 @@ class Sprint2Test extends BaseSeleniumIT{
         WebElement btnConfirmAssignation = wait.until(
                 ExpectedConditions.elementToBeClickable(By.id("btn-confirm-assignation"))
         );
+
         btnConfirmAssignation.click();
 
         wait.until(ExpectedConditions.invisibilityOf(btnConfirmAssignation));
