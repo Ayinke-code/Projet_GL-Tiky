@@ -299,6 +299,42 @@ public class NotificationService {
         saveAndSend(notif);
     }
 
+    /**
+     * Notifier le manager d'un nouveau follower
+     */
+    @Transactional
+    public void newFollowerNotification(User user, Issue issue, User follower){
+        String content = follower.getName() +" s'est abonné à votre ticket: "+issue.getTitle();
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.NEW_FOLLOWER)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    /**
+     * Notifier le manager lors d'unfollow
+     */
+    @Transactional
+    public void newUnfollowerNotification(User user, Issue issue, User follower){
+        String content = follower.getName() +" s'est désabonné de votre ticket: "+issue.getTitle();
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.NEW_UNFOLLOW)
+                .build();
+
+        saveAndSend(notif);
+    }
+
 
     /**
      * Marquer une notification comme lu
@@ -339,6 +375,8 @@ public class NotificationService {
                 .content(notification.getContent())
                 .issueId(notification.getIssue() != null ? notification.getIssue().getId() : null)
                 .eventId(notification.getEvent() != null ? notification.getEvent().getId() : null)
+                .eventCategory(notification.getEvent() != null && notification.getEvent().getCategoryType() != null
+                        ? notification.getEvent().getCategoryType().name() : null)
                 .requestManagerId(notification.getRequestManager() != null ? notification.getRequestManager().getRequestId(): null)
                 .build();
     }

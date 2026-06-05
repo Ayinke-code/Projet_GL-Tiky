@@ -179,6 +179,47 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("Doit créer et envoyer une notification pour un nouvel abonnement (Follow)")
+    void newFollowerNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        User follower = new User();
+        follower.setName("Alice");
+
+        notificationService.newFollowerNotification(testUser, testIssue, follower);
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+
+        Notification savedNotif = notifCaptor.getValue();
+        assertTrue(savedNotif.getContent().contains("Alice s'est abonné à votre ticket: Bug Connexion"));
+        assertEquals(TypeNotification.NEW_FOLLOWER, savedNotif.getType());
+        assertEquals(testIssue, savedNotif.getIssue());
+        assertEquals(testUser, savedNotif.getRecipient());
+    }
+
+    @Test
+    @DisplayName("Doit créer et envoyer une notification pour un désabonnement (Unfollow)")
+    void newUnfollowerNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        User unfollower = new User();
+        unfollower.setName("Bob");
+
+        notificationService.newUnfollowerNotification(testUser, testIssue, unfollower);
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+
+        Notification savedNotif = notifCaptor.getValue();
+        assertTrue(savedNotif.getContent().contains("Bob s'est désabonné de votre ticket: Bug Connexion"));
+        assertEquals(TypeNotification.NEW_UNFOLLOW, savedNotif.getType());
+        assertEquals(testUser, savedNotif.getRecipient());
+
+        assertEquals(testIssue, savedNotif.getIssue());
+    }
+
+    @Test
     @DisplayName("Ne doit rien envoyer si le statut de RequestManager est différent de ACCEPTED ou DENIED")
     void managerDemandNotification_ShouldNotSend_WhenOtherStatus() {
         testRequestManager.setStatus(RequestManagerStatus.PENDING);
@@ -189,7 +230,6 @@ class NotificationServiceTest {
         verify(messagingTemplate, never()).convertAndSend(anyString(), any(Object.class));
     }
 
-    // --- TESTS EVENEMENTS ---
 
     @Test
     @DisplayName("Doit notifier une invitation à un événement de type AUDIT avec date formatée")
@@ -275,7 +315,6 @@ class NotificationServiceTest {
         assertTrue(notifCaptor.getValue().getContent().contains("Soutenance Finalea été annulé"));
     }
 
-    // --- TESTS GENERIQUES ---
 
     @Test
     @DisplayName("Doit créer et envoyer une notification de demande de réouverture")
@@ -396,25 +435,33 @@ class NotificationServiceTest {
     }
 
     @Test
-    @DisplayName("Lier les identifiants des entités liées (Issue, Event, RequestManager)")
+    @DisplayName("Lier les identifiants des entités liées (Issue, Event, RequestManager) et la Catégorie")
     void toDto_ShouldMapFieldsCorrectly_WithRelations() {
+        // Précondition
+        Event event = new Event();
+        event.setId(20L);
+        event.setCategoryType(CategoryType.ISSUE);
+
         Notification complexNotif = Notification.builder()
                 .id(200L)
                 .type(TypeNotification.RESPONSE_TO_MANAGER_ISSUE)
                 .isRead(true)
                 .content("Event updated")
                 .issue(testIssue)
-                .event(testEvent)
+                .event(event)
                 .requestManager(testRequestManager)
                 .build();
 
+        // Action
         NotificationDto dto = notificationService.toDto(complexNotif);
 
+        // Assertion
         assertNotNull(dto);
         assertEquals(200L, dto.getId());
         assertEquals(10L, dto.getIssueId());
         assertEquals(20L, dto.getEventId());
         assertEquals(50L, dto.getRequestManagerId());
+        assertEquals("ISSUE", dto.getEventCategory());
     }
 
     @Test
