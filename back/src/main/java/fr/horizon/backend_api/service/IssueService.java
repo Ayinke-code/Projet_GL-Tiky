@@ -1,7 +1,6 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
-import fr.horizon.backend_api.exception.FileStorageException;
 import fr.horizon.backend_api.exception.IssueNotFoundException;
 import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.DocumentDto;
@@ -20,9 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -49,6 +46,7 @@ public class IssueService {
     private final IssueFollowerService issueFollowerService;
     private final NotificationService notificationService;
     private final DocumentService documentService;
+    private final EventRepository eventRepository;
 
     private static final String USER_NOT_FOUND = "User not found";
 
@@ -343,6 +341,9 @@ public class IssueService {
         if (!canDeleteIssue(issue, currentUser)) {
             throw new AccessDeniedException("Vous n'avez pas l'autorisation de supprimer cette issue");
         }
+
+        // Supprimer les événements liés avant de supprimer l'issue
+        eventRepository.deleteByIssueId(id);
 
         issueRepository.delete(issue);
     }

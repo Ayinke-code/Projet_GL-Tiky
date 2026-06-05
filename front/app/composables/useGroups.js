@@ -1,12 +1,14 @@
 export const useGroups = () => {
     const api = useApi()
+    const { user } = useAuth()
 
     const groups = useState('groups', () => [])
     const loading = ref(false)
     const error = ref(null)
 
     /**
-     * Récupère tous les groupes, ou filtrés par type si fourni.
+     * Récupère les groupes filtrés par type.
+     * Si l'utilisateur est STUDENT, ne retourne que ses groupes via /groups/my-groups.
      *
      * @param {string|null} type - 'PROMOTION' | 'OPTION' | 'PROJECT' | null
      */
@@ -14,7 +16,13 @@ export const useGroups = () => {
         loading.value = true
         error.value = null
         try {
-            const url = type ? `/groups/type/${type}` : '/groups'
+            const isStudent = user.value?.roles?.includes('STUDENT') && !user.value?.roles?.includes('TEACHER') && !user.value?.roles?.includes('ADMIN')
+            let url
+            if (isStudent && type) {
+                url = `/groups/my-groups?type=${type}`
+            } else {
+                url = type ? `/groups/type/${type}` : '/groups'
+            }
             groups.value = await api(url)
         } catch (err) {
             error.value = err?.data?.error ?? 'Erreur lors du chargement des groupes'
