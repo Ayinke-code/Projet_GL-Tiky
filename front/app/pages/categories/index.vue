@@ -6,10 +6,10 @@
             <h1 class="text-2xl font-bold text-gray-800">Gestion des Catégories</h1>
 
             <!-- Bouton ouverture modal création pour les professeur -->
-            <Button v-if="ready && user?.roles?.includes(ROLE.TEACHER)" @click="isCreateModalOpen = true"
+            <Button id = "create-categorie-teacher" v-if="ready && user?.roles?.includes(ROLE.TEACHER)" @click="isCreateModalOpen = true"
                 icon="i-lucide-plus" label="Créer une catégorie" color="secondary" size="lg" variant="solid" rounded />
             <!-- Bouton ouverture modal demande de création pour les étudiants -->
-            <Button v-else-if="ready && user?.roles?.includes(ROLE.STUDENT)" @click="isRequestCreateModalOpen = true"
+            <Button id = "create-categorie-student" v-else-if="ready && user?.roles?.includes(ROLE.STUDENT)" @click="isRequestCreateModalOpen = true"
                 icon="i-lucide-plus" label="Demande de catégorie" color="secondary" size="lg" variant="solid" rounded />
         </div>
 

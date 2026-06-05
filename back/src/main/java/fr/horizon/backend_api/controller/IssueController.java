@@ -92,6 +92,24 @@ public class IssueController {
     @PostMapping("/{id}/update-status")
     public void updateStatus(@PathVariable Long id, @RequestBody String status) {
         issueService.updateStatus(status, id);
+
+        // Notification WebSocket pour le changement de statut
+        conversationService.getConversationByIssueId(id).ifPresent(conv -> {
+            String payload = "{\"type\":\"" + fr.horizon.backend_api.util.MapKeys.STATUS_UPDATE + "\",\"issueId\":" + id + "}";
+            conversationWebSocketHandler.broadcastToConversation(conv.getId(), payload);
+        });
+    }
+
+    /**
+     * Met à jour le statut de l'issue pour DEMANDE_REOUVERTURE.
+     *
+     * @param id     identifiant de l'issue
+     * @param description description de la demande de réouverture
+     */
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/{id}/request-reopening")
+        public void createRequestReopening(@PathVariable Long id, @RequestBody String description) {
+        issueService.requestReopening(description, id);
     }
 
      /**
@@ -110,7 +128,7 @@ public class IssueController {
 
          // Diffusion d'une notification via WebSocket pour forcer le refresh/redirection chez les clients
          conversationService.getConversationByIssueId(id).ifPresent(conv -> {
-             String payload = "{\"type\":\"privacy_update\",\"issueId\":" + id + "}";
+             String payload = "{\"type\":\"" + fr.horizon.backend_api.util.MapKeys.PRIVACY_UPDATE + "\",\"issueId\":" + id + "}";
              conversationWebSocketHandler.broadcastToConversation(conv.getId(), payload);
          });
 
@@ -385,6 +403,19 @@ public class IssueController {
     @GetMapping("/{issueId}/followers")
     public ResponseEntity<List<FollowersInfoDto>> getIssueFollowers(@PathVariable Long issueId){
         return  ResponseEntity.ok(issueFollowerService.getFollowers(issueId));
+    }
+
+    /**
+     * Récupère la liste des issues affichage a l'acceuil de la page
+     *
+     * @param auth contexte d'authentification Spring Security
+     * @return liste des issues affichage a l'acceuil
+     */
+    @GetMapping("/displayable")
+    public ResponseEntity<List<IssueDto>> getDisplayableIssues(Authentication auth) {
+        String email = auth.getName();
+        List<IssueDto> displayableIssues = issueService.getAllDisplayableIssue(email);
+        return ResponseEntity.ok(displayableIssues);
     }
 
 }

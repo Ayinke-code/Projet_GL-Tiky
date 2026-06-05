@@ -13,6 +13,8 @@ public final class MapKeys {
 
     public static final String TYPE = "type";
     public static final String NEW_MESSAGE = "new_message";
+    public static final String STATUS_UPDATE = "status_update";
+    public static final String PRIVACY_UPDATE = "privacy_update";
 
     public static final String ID = "id";
     public static final String NAME = "name";

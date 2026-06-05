@@ -20,6 +20,7 @@ public class RequestManager extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long requestId;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     private RequestManagerStatus status = RequestManagerStatus.PENDING;
 

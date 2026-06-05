@@ -1,5 +1,6 @@
 package fr.horizon.backend_api.controller;
 
+import fr.horizon.backend_api.service.NotificationService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -31,6 +32,7 @@ import lombok.RequiredArgsConstructor;
 public class AuthController {
 
     private final AuthService authService;
+    private final NotificationService notificationService;
     private final UserService userService;
     @Value("${jwt.expiration}")
     private long expiration;
@@ -57,6 +59,8 @@ public class AuthController {
         cookie.setMaxAge((int) (expiration / 1000));
 
         response.addCookie(cookie);
+
+
 
         return ResponseEntity.ok().build();
     }

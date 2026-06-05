@@ -250,11 +250,26 @@ const submitCorrections = async () => {
   }
 }
 
-// Chargement des données au montage
-onMounted(async () => {
-  if (props.userId) {
-    await fetchCategories()
+const onNotificationReceived = async (e) => {
+  if (e.detail?.type === 'INCOMPLETE_ISSUE') {
     await fetchIssues()
   }
+}
+
+// Chargement des données au montage
+onMounted(async () => {
+  window.addEventListener('notification:received', onNotificationReceived)
+  if (props.userId) {
+    try {
+      await fetchCategories()
+    } catch (e) {
+      console.error('Erreur lors du chargement des catégories', e)
+    }
+    await fetchIssues()
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
 })
 </script>

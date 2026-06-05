@@ -34,4 +34,10 @@ public class IssueDto {
     private String createdName;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    //teacher manager
+    private String teacherManagerName;
+    // demande de réouverture
+    private String reopeningDescription;
+    //follower
+    private int followersCount;
 }

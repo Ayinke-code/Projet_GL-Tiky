@@ -13,4 +13,5 @@ public class UserRefDto {
     private String name;
     private Set<String> roles;
     private TeacherType teacherType;
+    private boolean isIssueManagerInCategory;
 }

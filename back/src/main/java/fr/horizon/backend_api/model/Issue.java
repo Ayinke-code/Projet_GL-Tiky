@@ -43,6 +43,9 @@ public class Issue extends BaseEntity {
     @Column
     private String rejectComment;
 
+    @Column
+    private String reopeningDescription;
+
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
@@ -62,8 +65,10 @@ public class Issue extends BaseEntity {
     @JoinColumn(name = "id_util_1")
     private User manager;
     
+    @Builder.Default
     @OneToMany(mappedBy = "issue", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RequestManager> requests = new ArrayList<>();
+
 
 
 }

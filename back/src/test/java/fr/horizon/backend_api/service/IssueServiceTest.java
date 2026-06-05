@@ -8,10 +8,7 @@ import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.dto.RequestManagerDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
-import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.IssueRepository;
-import fr.horizon.backend_api.repository.RequestManagerRepository;
-import fr.horizon.backend_api.repository.UserRepository;
+import fr.horizon.backend_api.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,6 +45,12 @@ class IssueServiceTest {
 
     @Mock
     private IssueFollowerService issueFollowerService;
+
+    @Mock
+    private IssueFollowerRepository issueFollowerRepository;
+
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private IssueService issueService;
@@ -858,7 +861,7 @@ class IssueServiceTest {
         RequestManagerDto result = issueService.respondManagerRequest(false, 10L, 1L);
 
         assertEquals(RequestManagerStatus.DENIED.name(), result.getStatus());
-        verify(requestManagerRepository).save(any(RequestManager.class));
+        verify(requestManagerRepository, times(2)).save(any(RequestManager.class));
         verify(issueRepository).saveAndFlush(issue);
     }
 

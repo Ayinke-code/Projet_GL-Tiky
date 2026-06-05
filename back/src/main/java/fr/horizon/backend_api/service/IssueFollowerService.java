@@ -28,6 +28,7 @@ public class IssueFollowerService {
     private final IssueFollowerRepository issueFollowerRepository;
     private final IssueRepository issueRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     private static final String ISSUE_NOT_FOUND = "Issue non trouvée";
     private static final String USER_NOT_FOUND = "Utilisateur non trouvé";
@@ -75,6 +76,8 @@ public class IssueFollowerService {
                 .reason(followedReason)
                 .build();
 
+        notificationService.newFollowerNotification(issue.getManager(), issue, user);
+
         return issueFollowerRepository.save(follower);
     }
 
@@ -94,6 +97,8 @@ public class IssueFollowerService {
         IssueFollower follower = issueFollowerRepository.findByUserAndIssue(user, issue)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, FOLLOWER_NOT_FOUND));
+
+        notificationService.newUnfollowerNotification(issue.getManager(), issue, user);
 
         issueFollowerRepository.delete(follower);
     }

@@ -5,6 +5,7 @@ import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.*;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
+import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.RoleEnum;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.CategoryRequestRepository;
@@ -75,6 +76,8 @@ public class CategoryService {
         Category category = Category.builder()
                 .name(dto.getName())
                 .subject(dto.getSubject())
+                //correction
+                .categoryType(CategoryType.ISSUE)
                 .status(CategoryStatus.ACTIVE)
                 .owner(owner)
                 .build();
@@ -196,7 +199,19 @@ public class CategoryService {
     /**
      * Convertit l'entité User → DTO comprenant: id, name, roles.
      */
-    private UserRefDto toUserRefDto(User user) {
+    private UserRefDto toUserRefDto(User user, Category category) {
+
+        /**
+         * Vérifie si l'utilisateur est manager d'au moins une issue
+         * ouverte appartenant à la catégorie courante.
+         */
+        boolean isIssueManagerInCategory = issueRepository
+                .existsByManagerIdAndStatusAndCategoryId(
+                        user.getId(),
+                        IssueStatus.OUVERT,
+                        category.getId()
+                );
+
         return UserRefDto.builder()
                 .id(user.getId())
                 .name(user.getName())
@@ -206,6 +221,7 @@ public class CategoryService {
                                 .map(Role::getName)
                                 .collect(Collectors.toSet())
                 )
+                .isIssueManagerInCategory(isIssueManagerInCategory)
                 .build();
     }
 
@@ -218,7 +234,7 @@ public class CategoryService {
                 .followers(
                         category.getFollowers()
                                 .stream()
-                                .map(this::toUserRefDto)
+                                .map(user -> toUserRefDto(user, category))
                                 .toList()
                 )
                 .build();

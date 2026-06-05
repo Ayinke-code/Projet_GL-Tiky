@@ -73,9 +73,13 @@
                 </div>
 
                 <!-- Action suppression -->
-                <button class="text-red-500 text-sm hover:underline cursor-pointer" @click="removeFollower(user.id)">
+                <button v-if="!checkTeacherIssueManager(user.id)" class="text-red-500 text-sm hover:underline cursor-pointer" @click="removeFollower(user.id)">
                   Retirer
                 </button>
+
+                <span v-else class="text-xs text-gray-400 mt-3">
+                  L'utilisateur à un ticket ouvert
+                </span>
               </div>
             </div>
 
@@ -186,6 +190,20 @@ const availableTeachers = computed(() => {
   })
 
 })
+
+/**
+ * Vérifie si l'enseignant est manager d'au moins une issue ouverte.
+ *
+ * @param {number} id Identifiant de l'enseignant.
+ * @returns {boolean} true si l'enseignant est manager d'une issue, sinon false.
+ */
+const checkTeacherIssueManager = (id) => {
+  const userToCheck = category.value.followers.find(
+    follower => follower.id === id
+  )
+
+  return userToCheck?.issueManagerInCategory ?? false
+}
 
 /**
  * Chargement initial des catégories au montage de la page.

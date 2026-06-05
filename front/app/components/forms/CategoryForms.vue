@@ -60,6 +60,11 @@ const formData = ref({
   subject: ''
 })
 
+const resetForm = () => {
+  formData.value.name = ''
+  formData.value.subject = ''
+}
+
 const submitForm = () => {
   emit('submit', {
     name: formData.value.name,
