@@ -1,17 +1,31 @@
 <template>
   <!--
     Bordure gauche colorée selon le type : indigo (AUDIT) ou emerald (DEFENSE).
+    Si l'événement est passé : bordure grise + opacité réduite.
     Même convention visuelle que CategoryCard.vue.
   -->
   <div class="bg-white border-l-4 rounded-lg shadow-sm p-5 hover:shadow-lg transition-all flex flex-col h-full"
-    :class="event.categoryType === 'AUDIT' ? 'border-indigo-500' : 'border-emerald-500'">
+    :class="isPast
+      ? 'border-gray-300 opacity-60'
+      : event.categoryType === 'AUDIT' ? 'border-indigo-500' : 'border-emerald-500'">
 
     <div class="mb-2">
-      <!-- Type + nom de la catégorie en petit -->
-      <p class="text-[10px] font-bold uppercase tracking-widest"
-        :class="event.categoryType === 'AUDIT' ? 'text-indigo-600' : 'text-emerald-600'">
-        {{ event.categoryType === 'AUDIT' ? 'Audit' : 'Soutenance' }} · {{ event.categoryName }}
-      </p>
+      <!-- Type + nom de la catégorie en petit + badge passé/à venir -->
+      <div class="flex items-center justify-between gap-2">
+        <p class="text-[10px] font-bold uppercase tracking-widest"
+          :class="isPast ? 'text-gray-400' : event.categoryType === 'AUDIT' ? 'text-indigo-600' : 'text-emerald-600'">
+          {{ event.categoryType === 'AUDIT' ? 'Audit' : 'Soutenance' }} · {{ event.categoryName }}
+        </p>
+        <span
+          class="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide"
+          :class="isPast
+            ? 'bg-gray-100 text-gray-400'
+            : 'bg-green-50 text-green-600 border border-green-200'"
+        >
+          <i :class="isPast ? 'fa-solid fa-clock-rotate-left' : 'fa-solid fa-circle text-[6px]'"></i>
+          {{ isPast ? 'Passé' : 'À venir' }}
+        </span>
+      </div>
 
       <!-- Nom de l'événement -->
       <h3 class="text-lg font-bold text-gray-900 mt-1">{{ event.name }}</h3>
@@ -31,7 +45,9 @@
     <div
       v-if="event.startDate && event.endDate"
       class="mt-3 rounded-lg px-3 py-2 text-xs"
-      :class="event.categoryType === 'AUDIT' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'"
+      :class="isPast
+        ? 'bg-gray-50 text-gray-400'
+        : event.categoryType === 'AUDIT' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'"
     >
       <!-- Date unique -->
       <div class="flex items-center gap-1.5 font-semibold mb-2">
@@ -118,13 +134,20 @@
  * Reçoit un EventResponseDto depuis la page events/index.vue.
  * Utilise formatDateTime (déjà présent dans utils/helpers.js).
  */
+import { computed } from 'vue'
 import { formatDateTime, formatDate, formatTime } from '~/utils/helpers'
 
 const { user, ready } = useAuth()
 
-defineProps({
+const props = defineProps({
   event: { type: Object, required: true }
 })
 
 const emit = defineEmits(['delete'])
+
+/** true si la date de fin de l'événement est déjà passée */
+const isPast = computed(() => {
+  if (!props.event?.endDate) return false
+  return new Date(props.event.endDate) < new Date()
+})
 </script>

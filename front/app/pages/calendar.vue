@@ -108,7 +108,13 @@ const stopDrag = () => {
 }
 
 const mappedEvents = computed(() => {
-  return events.value.map(evt => {
+  const now = new Date()
+  return events.value
+    .filter(evt => {
+      const end = evt.endDate ? new Date(evt.endDate.replace(' ', 'T')) : null
+      return !end || end >= now
+    })
+    .map(evt => {
     let color = '#64748b' // slate-500 par défaut
 
     if (evt.categoryType === 'AUDIT') color = '#6366f1'   // indigo-500

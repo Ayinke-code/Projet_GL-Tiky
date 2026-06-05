@@ -63,6 +63,7 @@
             <i :class="typeStyle(session.categoryType).icon" class="text-[9px]"></i>
             {{ typeLabel(session.categoryType) }}
           </span>
+          <!-- Badge passé/aujourd'hui/à venir -->
           <span
             class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
             :class="isPast(session.endDate)
@@ -72,6 +73,28 @@
               : 'bg-emerald-100 text-emerald-600'"
           >
             {{ isPast(session.endDate) ? 'Passée' : isToday(session.startDate) ? "Aujourd'hui" : 'À venir' }}
+          </span>
+        </div>
+
+        <!-- Badge participation (RDV / ISSUE uniquement) -->
+        <div v-if="session.categoryType === 'ISSUE'" class="flex items-center gap-2 flex-wrap">
+          <!-- Refusé (priorité max — créateur ou participant) -->
+          <span v-if="session.myParticipationStatus === false"
+            class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
+            <i class="fa-solid fa-circle-xmark text-[8px]"></i>
+            {{ session.createdBy === user?.name ? 'RDV refusé par le professeur' : 'Refusé' }}
+          </span>
+          <!-- En attente -->
+          <span v-else-if="session.myParticipationStatus === null"
+            class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+            <i class="fa-solid fa-hourglass-half text-[8px]"></i>
+            {{ session.createdBy === user?.name ? 'En attente de confirmation' : 'En attente de votre réponse' }}
+          </span>
+          <!-- Confirmé / Accepté -->
+          <span v-else
+            class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
+            <i class="fa-solid fa-circle-check text-[8px]"></i>
+            {{ session.createdBy === user?.name ? 'RDV confirmé' : 'Accepté' }}
           </span>
         </div>
 
@@ -137,6 +160,24 @@
             </div>
           </div>
         </div>
+
+        <!-- Boutons accepter / refuser (RDV en attente uniquement, non passé) -->
+        <div
+          v-if="session.categoryType === 'ISSUE' && session.myParticipationStatus === null && !isPast(session.endDate)"
+          class="flex gap-2 mt-auto pt-1"
+          @click.stop
+        >
+          <UButton
+            size="xs" color="success" variant="soft" icon="i-lucide-check"
+            :loading="pendingResponse === session.id + '-accept'"
+            @click.stop="respond(session, true)"
+          >Accepter</UButton>
+          <UButton
+            size="xs" color="error" variant="soft" icon="i-lucide-x"
+            :loading="pendingResponse === session.id + '-refuse'"
+            @click.stop="respond(session, false)"
+          >Refuser</UButton>
+        </div>
       </div>
     </div>
 
@@ -155,6 +196,50 @@
               {{ typeLabel(selectedSession.categoryType) }}
             </span>
             <span class="text-sm text-gray-500">· {{ selectedSession.categoryName }}</span>
+          </div>
+
+          <!-- Statut participation (RDV) -->
+          <div v-if="selectedSession.categoryType === 'ISSUE'" class="rounded-xl border px-4 py-3 flex items-center justify-between gap-3"
+            :class="selectedSession.myParticipationStatus === true ? 'bg-emerald-50 border-emerald-200'
+              : selectedSession.myParticipationStatus === false ? 'bg-rose-50 border-rose-200'
+              : 'bg-amber-50 border-amber-200'"
+          >
+            <div class="flex items-center gap-2">
+              <i :class="selectedSession.myParticipationStatus === true ? 'fa-solid fa-circle-check text-emerald-500'
+                : selectedSession.myParticipationStatus === false ? 'fa-solid fa-circle-xmark text-rose-500'
+                : 'fa-solid fa-hourglass-half text-amber-500'"
+              ></i>
+              <span class="text-sm font-semibold"
+                :class="selectedSession.myParticipationStatus === true ? 'text-emerald-700'
+                  : selectedSession.myParticipationStatus === false ? 'text-rose-700'
+                  : 'text-amber-700'"
+              >
+                <template v-if="selectedSession.createdBy === user?.name">
+                  {{ selectedSession.myParticipationStatus === true ? 'RDV confirmé par le professeur'
+                    : selectedSession.myParticipationStatus === false ? 'RDV refusé par le professeur'
+                    : 'En attente de confirmation du professeur' }}
+                </template>
+                <template v-else>
+                  {{ selectedSession.myParticipationStatus === true ? 'Vous avez accepté ce RDV'
+                    : selectedSession.myParticipationStatus === false ? 'Vous avez refusé ce RDV'
+                    : 'En attente de votre réponse' }}
+                </template>
+              </span>
+            </div>
+            <!-- Boutons dans le modal pour répondre (prof uniquement, si en attente) -->
+            <div v-if="selectedSession.myParticipationStatus === null && selectedSession.createdBy !== user?.name && !isPast(selectedSession.endDate)"
+              class="flex gap-2" @click.stop>
+              <UButton size="xs" color="success" variant="solid" icon="i-lucide-check"
+                :loading="pendingResponse === selectedSession.id + '-accept'"
+                @click.stop="respondFromModal(true)">
+                Accepter
+              </UButton>
+              <UButton size="xs" color="error" variant="soft" icon="i-lucide-x"
+                :loading="pendingResponse === selectedSession.id + '-refuse'"
+                @click.stop="respondFromModal(false)">
+                Refuser
+              </UButton>
+            </div>
           </div>
 
           <!-- Description -->
@@ -254,6 +339,7 @@ const sessions = ref([])
 const activeFilter = ref('upcoming')
 const detailOpen = ref(false)
 const selectedSession = ref(null)
+const pendingResponse = ref(null)
 
 const filters = [
   { value: 'upcoming', label: 'À venir', icon: 'fa-solid fa-clock' },
@@ -270,6 +356,46 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+/** Répondre à un RDV (depuis la carte) */
+const respond = async (session, accepted) => {
+  const key = `${session.id}-${accepted ? 'accept' : 'refuse'}`
+  pendingResponse.value = key
+  try {
+    await api(`/events/${session.id}/invitations/respond`, {
+      method: 'PUT',
+      body: { response: accepted, raison: null },
+    })
+    // Mettre à jour localement sans recharger
+    const idx = sessions.value.findIndex(s => s.id === session.id)
+    if (idx !== -1) {
+      sessions.value[idx] = {
+        ...sessions.value[idx],
+        myParticipationStatus: accepted,
+        // Si le prof accepte, l'event devient validé → apparaît dans le calendrier
+        validated: accepted ? true : sessions.value[idx].validated,
+      }
+    }
+  } catch (e) {
+    console.error('Erreur réponse invitation', e)
+  } finally {
+    pendingResponse.value = null
+  }
+}
+
+/** Répondre depuis le modal de détail */
+const respondFromModal = async (accepted) => {
+  if (!selectedSession.value) return
+  await respond(selectedSession.value, accepted)
+  // Mettre à jour la session sélectionnée aussi
+  if (selectedSession.value) {
+    selectedSession.value = {
+      ...selectedSession.value,
+      myParticipationStatus: accepted,
+      validated: accepted ? true : selectedSession.value.validated,
+    }
+  }
+}
 
 const isPast   = (date) => date && new Date(date) < new Date()
 const isToday  = (date) => {
