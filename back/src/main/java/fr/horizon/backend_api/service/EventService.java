@@ -139,8 +139,8 @@ public class EventService {
         if (meetingRequest.getStartDate() == null || meetingRequest.getEndDate() == null) {
             throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires pour un événement de ce type.");
         }
-        if(meetingRequest.getStartDate().isBefore(LocalDateTime.now())){
-            throw new IllegalArgumentException("La date de début doit être antérieur à la date courante.");
+        if(meetingRequest.getStartDate().isBefore(LocalDateTime.now().plusMinutes(30))){
+            throw new IllegalArgumentException("La date de début doit être au moins 30 minutes dans le futur.");
         }
         if (!meetingRequest.getEndDate().isAfter(meetingRequest.getStartDate())) {
             throw new IllegalArgumentException("La date de fin doit être postérieure à la date de début.");
@@ -367,8 +367,13 @@ public class EventService {
         }
 
         // Tous les rôles : events ISSUE (RDV) où l'utilisateur est créateur ou participant
+        // Pour TEACHER/ADMIN : uniquement les RDV validés (accepted) dans "Mes sessions".
+        // Les RDV en attente sont gérés dans "Gérer mon planning".
         eventRepository.findIssueEventsForUser(user.getId(), CategoryType.ISSUE)
                 .forEach(e -> {
+                    if (isTeacherOrAdmin && !Boolean.TRUE.equals(e.getValidated())) {
+                        return; // RDV en attente : visible dans "Gérer mon planning", pas dans "Mes sessions"
+                    }
                     eventMap.put(e.getId(), e);
                     participationStatus.put(e.getId(), resolveIssueStatus(e, user.getId()));
                 });
@@ -406,8 +411,8 @@ public class EventService {
         }
         return event.getParticipants().stream()
                 .filter(p -> p.getUser().getId().equals(userId))
-                .map(EventParticipant::getHasAccepted)
                 .findFirst()
+                .map(EventParticipant::getHasAccepted)
                 .orElse(null);
     }
 
