@@ -6,6 +6,7 @@ import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.CategoryRequestCreateDto;
 import fr.horizon.backend_api.model.dto.CategoryRequestDto;
 import fr.horizon.backend_api.model.enums.CategoryRequestStatus;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.CategoryRequestRepository;
 import fr.horizon.backend_api.repository.UserRepository;
@@ -101,6 +102,7 @@ public class CategoryRequestService {
         Category category = Category.builder()
                 .name(request.getName())
                 .subject(request.getSubject())
+                .categoryType(CategoryType.ISSUE)
                 .owner(validator)
                 .build();
 
