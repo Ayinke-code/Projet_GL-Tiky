@@ -52,6 +52,9 @@ class IssueServiceTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private EventRepository eventRepository;
+
     @InjectMocks
     private IssueService issueService;
 
@@ -221,6 +224,7 @@ class IssueServiceTest {
 
         issueService.deleteById(1L, "john@test.com");
 
+        verify(eventRepository).deleteByIssueId(1L);
         verify(issueRepository).delete(issue);
     }
 

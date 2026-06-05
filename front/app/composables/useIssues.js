@@ -102,17 +102,27 @@ export const useIssues = () => {
      /**
     * Suppression d'une issue
     */
-    const deleteIssue = async (id) => {
-        await api(`/issues/${id}`, {
-            method: 'DELETE'
-        })
+     const deleteIssue = async (id) => {
+         try {
+             await api(`/issues/${id}`, {
+                 method: 'DELETE'
+             })
+         } catch (e) {
+             // Si l'issue est déjà supprimée (404), on ignore l'erreur
+             // car l'objectif est qu'elle disparaisse de l'interface.
+             if (e?.response?.status !== 404) {
+                 error.value = e?.data?.message || 'DELETE_ISSUE_ERROR'
+                 throw e
+             }
+         } finally {
+             // Dans tous les cas (succès ou 404), on retire l'issue de l'état local
+             issues.value = issues.value.filter(i => i.id !== id)
 
-        issues.value = issues.value.filter(i => i.id !== id)
-
-        // Mettre à jour également le state global des issues suivies si nécessaire
-        const { removeFollowedIssue } = useFollowedIssuesState()
-        removeFollowedIssue(id)
-    }
+             // Mettre à jour également le state global des issues suivies si nécessaire
+             const { removeFollowedIssue } = useFollowedIssuesState()
+             removeFollowedIssue(id)
+         }
+     }
 
      /**
     * Mise à jour statut issue

@@ -43,7 +43,7 @@
     </div>
 
     <!-- FOOTER -->
-      <div v-if="showDelete" class="flex justify-end">
+      <div v-if="canDelete" class="flex justify-end">
         <UButton
           @click.stop="emit('delete', issue)"
           variant="ghost"
@@ -84,8 +84,17 @@ import Button from '../ui/Button.vue'
 const props = defineProps({
   issue: Object,
   user: Object,
-  updatingStatusId: Number,
-  showDelete: { type: Boolean, default: false }
+  updatingStatusId: Number
+})
+
+const canDelete = computed(() => {
+  const currentUserId = props.user?.id
+  const issue = props.issue
+  if (!currentUserId || !issue) return false
+
+  return currentUserId === issue.createdId
+    || currentUserId === issue.categoryOwnerId
+    || currentUserId === issue.categoryManagerId
 })
 
 const { isFollowedIssueUpdated } = useFollowedIssuesState()

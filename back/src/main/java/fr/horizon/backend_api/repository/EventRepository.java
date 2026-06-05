@@ -124,5 +124,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     @Modifying
     @Query(value = "DELETE FROM event_project_groups WHERE group_id = :groupId", nativeQuery = true)
     void removeGroupFromAllEvents(@Param("groupId") Long groupId);
+
+    void deleteByIssueId(Long issueId);
 }
 
