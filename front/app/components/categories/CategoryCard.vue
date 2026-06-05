@@ -74,7 +74,9 @@
 
         <!-- Si l'utilisateur est propriétaire de la catégorie -->
         <span v-if="user?.name === category.ownerName">
-          <span class="px-2 py-0.5 text-xs font-semibold bg-indigo-100 text-indigo-700 rounded-full">
+          <span
+            :id="'category-card-proprio-' + category.name.replace(/\s+/g, '-')"
+            class="px-2 py-0.5 text-xs font-semibold bg-indigo-100 text-indigo-700 rounded-full">
             Propriétaire
           </span>
         </span>

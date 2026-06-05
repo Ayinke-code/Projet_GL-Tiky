@@ -40,6 +40,7 @@
             <!-- Actions : droite -->
             <div class="flex items-center justify-end gap-3 w-1/3">
               <USelectMenu
+                :id="'selector-assignation-teacher-' + req.id"
                 v-model="selectedTeachers[req.id]"
                 :items="formattedTeachers"
                 placeholder="Affecter à..."

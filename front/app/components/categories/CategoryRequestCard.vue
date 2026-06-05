@@ -32,6 +32,7 @@
             <!-- Badge utilisateur -->
             <template v-if="ready && categoryRequest.requesterId === user?.id">
                 <div
+                    :id="'category-card-proprio-'+categoryRequest.name"
                     class="text-[10px] bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-bold border border-blue-200">
                     <i class="fa-solid fa-crown mr-1"></i>
                     Propriétaire
@@ -52,6 +53,7 @@
             class="flex gap-2 mt-auto">
 
             <button @click.stop="handleAcceptCategoryRequest"
+                    id="btn-validate-category"
                 class="text-[10px] bg-emerald-600 text-white px-3 py-1 rounded-full font-bold hover:bg-green-800 transition-all cursor-pointer">
                 <i class="fa-solid fa-check mr-1"></i>
                 Accepter

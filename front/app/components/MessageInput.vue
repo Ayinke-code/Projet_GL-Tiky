@@ -26,6 +26,7 @@
       </div>
     </div>
     <textarea
+      id="input-message"
       v-model="value"
       rows="4"
       maxlength="4000"
@@ -39,6 +40,7 @@
     </div>
     <div class="mt-3 flex justify-end">
       <button
+        id="btn_send-message"
         class="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
         :disabled="sending || !value.trim()"
         @click="emitSend"

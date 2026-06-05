@@ -2,7 +2,7 @@
   <div class="p-8">
     <div class="flex justify-between items-center mb-8">
       <h1 class="text-3xl font-bold text-black">Tickets</h1>
-      <UButton to="/issues/create" icon="i-lucide-plus" size="lg">
+      <UButton to="/issues/create" id= "btn-create-issue" icon="i-lucide-plus" size="lg">
         Créer un ticket
       </UButton>
     </div>
@@ -72,7 +72,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     <IssuesCard v-if="user" v-for="issue in group.issues" :key="issue.id" :issue="issue" :user="user"
                         :show-delete="canDeleteIssue(issue)"
-                        @delete="deleteValidation" 
+                        @delete="deleteValidation"
                         @requestAReopening="openReopenModal"
                         @acceptReopening="openReopenAccessModal"
                     />
