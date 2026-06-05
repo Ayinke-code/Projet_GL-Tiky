@@ -101,8 +101,14 @@ public class IssueService {
      * @param email email de l'utilisateur
      * @return issue créée en DTO
      */
+    @Transactional
     public IssueDto createIssue(IssueCreateDto dto, String email) {
-        return createIssue(dto, List.of(), email);
+        return createIssueInternal(dto, List.of(), email);
+    }
+
+    @Transactional
+    public IssueDto createIssue(IssueCreateDto dto, List<MultipartFile> files, String email) {
+        return createIssueInternal(dto, files, email);
     }
 
     /**
@@ -113,14 +119,10 @@ public class IssueService {
      * @param email email de l'utilisateur
      * @return issue créée en DTO
      */
-    @Transactional
-    public IssueDto createIssue(IssueCreateDto dto, List<MultipartFile> files, String email) {
+    private IssueDto createIssueInternal(IssueCreateDto dto, List<MultipartFile> files, String email) {
         Issue issue = buildIssue(dto, email);
-
         issueRepository.save(issue);
-
         postCreateActions(dto, files, issue);
-
         return toDto(issue);
     }
 
