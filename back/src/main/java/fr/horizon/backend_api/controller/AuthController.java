@@ -66,8 +66,6 @@ public class AuthController {
 
         response.addHeader(HttpHeaders.SET_COOKIE, responseCookie.toString());
 
-        // test pour s'assurer du bon fonctionnement lors du login, a supprimer apres
-        notificationService.loginNotificationTest(loginRequest.getEmail());
 
         return ResponseEntity.ok().build();
     }

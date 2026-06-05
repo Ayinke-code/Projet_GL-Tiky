@@ -1,5 +1,5 @@
 export const useIssueSync = () => {
-  const { fetchIssues } = useIssues()
+  const { getDisplayableIssues } = useIssues()
   const { refreshFollowedIssues } = useFollowedIssuesState()
   const { ready, user } = useAuth()
 
@@ -9,13 +9,12 @@ export const useIssueSync = () => {
     if (process.server) return
     if (syncInterval.value) return
 
-    console.log('[useIssueSync] Démarrage de la synchronisation périodique...')
 
     syncInterval.value = setInterval(async () => {
       if (ready.value && user.value?.id) {
         try {
           await Promise.all([
-            fetchIssues(),
+            getDisplayableIssues(),
             refreshFollowedIssues()
           ])
 

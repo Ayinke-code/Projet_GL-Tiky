@@ -53,12 +53,37 @@
           class="cursor-pointer"
         />
       </div>
+
+      <!-- Si l'utilisateur connecté est le créateur de l'issue et si l'issue est TERMINE -->
+      <div v-if="(issue?.createdId === user?.id) && (issue?.status === 'TERMINE')" class="flex justify-end">
+        <Button
+          @click.stop="emit('requestAReopening', issue)"
+          label="Demander la réouverture"
+          variant="ghost"
+          size="xs"
+          color="info"
+        />
+      </div>
+
+      <!-- Si l'utilisateur connecté est l'issue manager et que l'issue est en demande de réouverture -->
+      <div v-else-if="(user?.id === issue?.categoryManagerId) && (issue?.status === 'DEMANDE_REOUVERTURE')">
+        <Button
+          @click.stop="emit('acceptReopening', issue)"
+          label="Accepter réouverture"
+          variant="ghost"
+          size="xs"
+          color="success"
+        />
+      </div>
   </UCard>
 </template>
 
 <script setup>
+import Button from '../ui/Button.vue'
+
 const props = defineProps({
   issue: Object,
+  user: Object,
   updatingStatusId: Number,
   showDelete: { type: Boolean, default: false }
 })
@@ -74,7 +99,8 @@ const getStatusLabel = (status) => {
         'OUVERT': 'Ouvert',
         'EN_ATTENTE': 'En attente',
         'INCOMPLET': 'Incomplet',
-        'TERMINE': 'Terminé'
+        'TERMINE': 'Terminé',
+        'DEMANDE_REOUVERTURE': 'Demande réouverture'
     }
     return labels[status] || status
 }
@@ -87,10 +113,11 @@ const getStatusBadgeClass = (status) => {
       'OUVERT':'bg-yellow-100 text-yellow-800 border border-yellow-300',
       'EN_ATTENTE': 'bg-gray-100 text-gray-800 border border-gray-300',
       'INCOMPLET': 'bg-orange-100 text-orange-800 border border-orange-300',
-      'TERMINE': 'bg-green-100 text-green-800 border border-green-300'
+      'TERMINE': 'bg-green-100 text-green-800 border border-green-300',
+      'DEMANDE_REOUVERTURE': 'bg-blue-100 text-blue-800 border border-blue-300'
     }
     return classes[status] || 'bg-gray-100 text-gray-800'
 }
 
-const emit = defineEmits(['delete'])
+const emit = defineEmits(['delete', 'requestAReopening', 'acceptReopening'])
 </script>

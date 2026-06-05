@@ -19,7 +19,7 @@ export const useIssues = () => {
     /**
    * Statuts autorisés (aligné backend)
    */
-    const VALID_STATUSES = ['OUVERT', 'EN_ATTENTE', 'INCOMPLET', 'TERMINE']
+    const VALID_STATUSES = ['OUVERT', 'EN_ATTENTE', 'INCOMPLET', 'TERMINE', 'DEMANDE_REOUVERTURE']
 
     /**
    * Récupère toutes les issues
@@ -123,6 +123,33 @@ export const useIssues = () => {
          return newValue
      }
 
+    /**
+    * Mise à jour statut issue, en demande de réouverture
+    */
+    const requestOpening = async (id, description) => {
+        if(!description) return
+
+        await api(`/issues/${id}/request-reopening`, {
+            method: 'POST',
+            body: description
+        })
+
+        // Mettre à jour l'issue dans la liste locale des issues
+        const issueIndex = issues.value.findIndex(i => i.id === id)
+        if (issueIndex !== -1) {
+            issues.value[issueIndex].status = "DEMANDE_REOUVERTURE"
+        }
+
+        // Si le statut n'est plus OUVERT, on retire l'issue de la liste des suivies
+        // car le backend filtre uniquement sur OUVERT pour les issues suivies.
+        if (newValue !== 'OUVERT') {
+            const { removeFollowedIssue } = useFollowedIssuesState()
+            removeFollowedIssue(id)
+        }
+
+        return newValue
+    }
+
       /**
      * Toggle visibilité issue (private/public)
      * Met à jour automatiquement la liste des issues suivies
@@ -171,12 +198,8 @@ export const useIssues = () => {
    */
   const getDisplayableIssues = async () => {
     try {
-      // Appel à la nouvelle route backend
-      // Note: Si votre backend attend l'email en paramètre plutôt que via le token (Principal),
-      // vous pouvez faire : api('/issues/displayable', { query: { email: user.value.email } })
       const data = await api('/issues/displayable')
 
-      // Mise à jour de l'état global avec les issues filtrées
       issues.value = data
       return data
     } catch (e) {
@@ -194,6 +217,7 @@ export const useIssues = () => {
         updateIssueStatus,
         deleteIssue,
         getDisplayableIssues,
+        requestOpening,
         error
     }
 }
