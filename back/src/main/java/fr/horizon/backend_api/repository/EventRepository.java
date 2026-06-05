@@ -35,18 +35,44 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     /**
      * Récupère les événements pour le calendrier d'un utilisateur donné s'il est :
      * - Créateur de l'événement
-     * - Participant direct invité
+     * - Participant direct invité (accepté)
      * - Membre d'un groupe projet assigné à l'événement
+     * - Enseignant d'un groupe projet (direct) ou du groupe OPTION parent
      */
     @Query("SELECT DISTINCT e FROM Event e " +
             "LEFT JOIN e.participants p " +
             "LEFT JOIN e.projectGroups pg " +
             "LEFT JOIN pg.members m " +
+            "LEFT JOIN pg.teachers t " +
+            "LEFT JOIN pg.parentGroup pgParent " +
+            "LEFT JOIN pgParent.teachers t2 " +
             "WHERE (e.createdBy.id = :userId " +
             "OR (p.user.id = :userId AND p.hasAccepted = true) " +
-            "OR m.id = :userId) " +
+            "OR m.id = :userId " +
+            "OR t.id = :userId " +
+            "OR t2.id = :userId) " +
             "AND e.validated = true")
     List<Event> findCalendarEventsForUser(@Param("userId") Long userId);
+
+    /** Récupère les events de type ISSUE/MEETING où l'utilisateur est créateur ou participant.
+     *  Inclut les RDVs en attente (validated=false) pour qu'ils apparaissent dans "Mes sessions". */
+    @Query("SELECT DISTINCT e FROM Event e " +
+            "LEFT JOIN e.participants p " +
+            "WHERE (e.createdBy.id = :userId OR p.user.id = :userId) " +
+            "AND e.categoryType = :type " +
+            "ORDER BY e.startDate ASC")
+    List<Event> findIssueEventsForUser(@Param("userId") Long userId, @Param("type") CategoryType type);
+
+    /** Récupère les events AUDIT/DEFENSE des groupes dont l'utilisateur est enseignant (direct ou via parent OPTION). */
+    @Query("SELECT DISTINCT e FROM Event e " +
+            "LEFT JOIN e.projectGroups pg " +
+            "LEFT JOIN pg.teachers t " +
+            "LEFT JOIN pg.parentGroup pgParent " +
+            "LEFT JOIN pgParent.teachers t2 " +
+            "WHERE (t.id = :userId OR t2.id = :userId) " +
+            "AND e.validated = true " +
+            "ORDER BY e.startDate ASC")
+    List<Event> findGroupEventsForTeacher(@Param("userId") Long userId);
 
     @Query("SELECT e FROM Event e JOIN e.participants p WHERE p.user.id = :userId AND p.hasAccepted IS NULL")
     List<Event> findPendingInvitationsByUserId(@Param("userId") Long userId);
@@ -70,6 +96,9 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                                 @Param("endDate") LocalDateTime endDate);
 
     boolean existsByIssueIdAndStartDateAfterAndValidatedTrue(Long issueId, LocalDateTime date);
+
+    /** Vérifie l'existence d'un event lié à un ticket, qu'il soit validé ou en attente. */
+    boolean existsByIssueIdAndStartDateAfter(Long issueId, LocalDateTime date);
 
     List<Event> findByCreatedByIdOrderByCreatedAtDesc(Long creatorId);
 

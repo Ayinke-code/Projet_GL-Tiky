@@ -129,16 +129,17 @@ public class EventController {
     }
 
     /**
-     * Retourne les sessions assignées à l'étudiant connecté.
-     * Accessible par STUDENT, TEACHER et ADMIN.
+     * Retourne les sessions de l'utilisateur connecté (rôle-aware) :
+     * - STUDENT : events des groupes + RDV (ISSUE) auxquels il est convoqué
+     * - TEACHER/ADMIN : events des groupes enseignés + RDV créés ou auxquels il participe
      *
      * @param authentication contexte de sécurité Spring
-     * @return liste des événements dont le groupe contient l'étudiant, triés par date
+     * @return liste des événements triés par date
      */
     @GetMapping("/my-sessions")
     public ResponseEntity<List<EventResponseDto>> mySessions(Authentication authentication) {
         String email = authentication.getName();
-        return ResponseEntity.ok(eventService.listForStudent(email));
+        return ResponseEntity.ok(eventService.getMySessions(email));
     }
 
     /**

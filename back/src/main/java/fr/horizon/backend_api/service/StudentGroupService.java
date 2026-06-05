@@ -258,20 +258,37 @@ public class StudentGroupService {
 
     @Transactional
     public StudentGroupDto assignTeacher(Long groupId, Long teacherId) {
-        StudentGroup group = studentGroupRepository.findById(groupId)
+        StudentGroup requestedGroup = studentGroupRepository.findById(groupId)
                 .orElseThrow(() -> new StudentGroupNotFoundException(groupId));
         User teacher = userRepository.findById(teacherId)
                 .orElseThrow(() -> new EntityNotFoundException("Teacher not found: " + teacherId));
-        group.getTeachers().add(teacher);
-        return toDto(studentGroupRepository.save(group));
+
+        // Pour les groupes PROJECT, les enseignants sont portés par le groupe OPTION parent
+        StudentGroup targetGroup = (requestedGroup.getType() == GroupType.PROJECT && requestedGroup.getParentGroup() != null)
+                ? requestedGroup.getParentGroup()
+                : requestedGroup;
+
+        targetGroup.getTeachers().add(teacher);
+        studentGroupRepository.save(targetGroup);
+
+        // requestedGroup.parentGroup == targetGroup (déjà à jour en mémoire) → pas de re-fetch nécessaire
+        return toDto(requestedGroup);
     }
 
     @Transactional
     public StudentGroupDto unassignTeacher(Long groupId, Long teacherId) {
-        StudentGroup group = studentGroupRepository.findById(groupId)
+        StudentGroup requestedGroup = studentGroupRepository.findById(groupId)
                 .orElseThrow(() -> new StudentGroupNotFoundException(groupId));
-        group.getTeachers().removeIf(t -> t.getId().equals(teacherId));
-        return toDto(studentGroupRepository.save(group));
+
+        // Pour les groupes PROJECT, les enseignants sont portés par le groupe OPTION parent
+        StudentGroup targetGroup = (requestedGroup.getType() == GroupType.PROJECT && requestedGroup.getParentGroup() != null)
+                ? requestedGroup.getParentGroup()
+                : requestedGroup;
+
+        targetGroup.getTeachers().removeIf(t -> t.getId().equals(teacherId));
+        studentGroupRepository.save(targetGroup);
+
+        return toDto(requestedGroup);
     }
 
     @Transactional

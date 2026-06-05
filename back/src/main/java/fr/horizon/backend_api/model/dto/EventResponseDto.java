@@ -24,7 +24,9 @@ public class EventResponseDto {
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private Set<String> participantNames;
-    private List<ProjectGroupRefDto> projectGroups;
+    private List<ProjectGroupRefDto> projectGroups;    /** true si l'événement est validé/confirmé, false si en attente de confirmation (RDV non encore accepté) */
+    private Boolean validated;    /** Statut de participation de l’utilisateur courant pour les events de type ISSUE : null=en attente, true=accepté, false=refusé */
+    private Boolean myParticipationStatus;
 
     @Data
     @Builder
