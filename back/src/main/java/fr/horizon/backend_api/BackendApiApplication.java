@@ -40,6 +40,9 @@ public class BackendApiApplication {
 		// Default user
 		System.setProperty("DEFAULT_PASSWORD", dotenv.get("DEFAULT_PASSWORD"));
 
+		// Documents
+		System.setProperty("PATH_TO_DOCUMENTS", dotenv.get("PATH_TO_DOCUMENTS"));
+
 		SpringApplication.run(BackendApiApplication.class, args);
 	}
 

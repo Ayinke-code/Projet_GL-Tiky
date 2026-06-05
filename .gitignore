@@ -34,3 +34,8 @@ front/dist/
 # Selenium
 # =========================
 back/selenium-jupiter-*.html
+
+# =========================
+# Document enregistrer des issues
+# =========================
+back/uploads
