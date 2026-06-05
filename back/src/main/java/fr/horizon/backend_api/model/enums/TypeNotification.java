@@ -33,5 +33,9 @@ public enum TypeNotification {
     // acceptation de la réouverture du ticket pour le créateur
     ACCEPTED_OPEN_ISSUE,
     // ticket cloturé
-    CLOSING_ISSUE
+    CLOSING_ISSUE,
+    // nouveaux follower
+    NEW_FOLLOWER,
+    // desabonnement follower
+    NEW_UNFOLLOW
 }

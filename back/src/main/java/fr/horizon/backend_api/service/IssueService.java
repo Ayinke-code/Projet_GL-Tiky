@@ -94,38 +94,63 @@ public class IssueService {
     }
 
     /**
-     * Crée une issue.
-     * Peut inclure des fichiers attachés.
+     * Crée une issue sans fichiers attachés.
      *
-     * @param dto données de création
-     * @param email email de l'utilisateur
-     * @return issue créée en DTO
+     * @param dto   données de création de l'issue
+     * @param email email de l'utilisateur créateur
+     * @return issue créée sous forme de DTO
      */
     @Transactional
     public IssueDto createIssue(IssueCreateDto dto, String email) {
         return createIssueInternal(dto, List.of(), email);
     }
 
+    /**
+     * Crée une issue avec fichiers attachés.
+     *
+     * @param dto   données de création de l'issue
+     * @param files fichiers à attacher à l'issue
+     * @param email email de l'utilisateur créateur
+     * @return issue créée sous forme de DTO
+     */
     @Transactional
     public IssueDto createIssue(IssueCreateDto dto, List<MultipartFile> files, String email) {
         return createIssueInternal(dto, files, email);
     }
 
     /**
-     * Crée une issue.
-     * Peut inclure des fichiers attachés.
+     * Logique commune de création d'une issue.
+     * <p>
+     * Construit l'issue, la persiste, abonne automatiquement le créateur,
+     * puis exécute les actions post-création (gestionnaire, notification,
+     * conversation, fichiers).
      *
-     * @param dto données de création
-     * @param email email de l'utilisateur
-     * @return issue créée en DTO
+     * @param dto   données de création de l'issue
+     * @param files fichiers à attacher (peut être vide)
+     * @param email email de l'utilisateur créateur
+     * @return issue créée sous forme de DTO
      */
     private IssueDto createIssueInternal(IssueCreateDto dto, List<MultipartFile> files, String email) {
         Issue issue = buildIssue(dto, email);
         issueRepository.save(issue);
+        autoFollowCreator(issue);
         postCreateActions(dto, files, issue);
         return toDto(issue);
     }
 
+    /**
+     * Construit une instance {@link Issue} à partir des données de création.
+     * <p>
+     * Récupère le créateur et la catégorie depuis la base de données,
+     * puis initialise le statut de l'issue selon qu'il s'agit d'un cas
+     * incomplet ou non.
+     *
+     * @param dto   données de création de l'issue
+     * @param email email de l'utilisateur créateur
+     * @return instance Issue non encore persistée
+     * @throws EntityNotFoundException   si le créateur n'est pas trouvé
+     * @throws CategoryNotFoundException si la catégorie n'est pas trouvée
+     */
     private Issue buildIssue(IssueCreateDto dto, String email) {
 
         User owner = userRepository.findByEmail(email)
@@ -149,6 +174,41 @@ public class IssueService {
         return issue;
     }
 
+    /**
+     * Abonne automatiquement le créateur de l'issue en tant que gestionnaire.
+     * <p>
+     * Si le créateur n'est pas déjà abonné, un {@link IssueFollower} est créé
+     * avec la raison {@link FollowedReason#IS_MANAGER}.
+     *
+     * @param issue issue déjà persistée
+     */
+    private void autoFollowCreator(Issue issue) {
+        User owner = issue.getCreatedBy();
+        if (!issueFollowerRepository.existsByUserAndIssue(owner, issue)) {
+            IssueFollower follower = IssueFollower.builder()
+                    .issue(issue)
+                    .user(owner)
+                    .reason(FollowedReason.IS_MANAGER)
+                    .build();
+            issueFollowerRepository.save(follower);
+        }
+    }
+
+    /**
+     * Exécute les actions post-création d'une issue.
+     * <p>
+     * Si l'issue n'est pas un cas incomplet :
+     * <ul>
+     *   <li>crée le gestionnaire de demande associé</li>
+     *   <li>envoie une notification de création au responsable de la catégorie</li>
+     * </ul>
+     * Dans tous les cas, crée la conversation liée à l'issue et traite
+     * les éventuels fichiers attachés.
+     *
+     * @param dto   données de création de l'issue
+     * @param files fichiers à attacher (peut être vide)
+     * @param issue issue déjà persistée
+     */
     private void postCreateActions(IssueCreateDto dto, List<MultipartFile> files, Issue issue) {
 
         if (!dto.isPendingCase()) {
@@ -161,6 +221,17 @@ public class IssueService {
         handleFiles(files, issue);
     }
 
+    /**
+     * Traite et persiste les fichiers attachés à une issue.
+     * <p>
+     * Pour chaque fichier non vide, stocke le fichier sur le disque via
+     * {@link FileStorageService} et crée l'entrée {@link Document} correspondante
+     * en base de données.
+     *
+     * @param files fichiers à traiter (peut être null ou vide)
+     * @param issue issue à laquelle rattacher les documents
+     * @throws FileStorageException si une erreur survient lors du stockage d'un fichier
+     */
     private void handleFiles(List<MultipartFile> files, Issue issue) {
 
         if (files == null || files.isEmpty()) return;
