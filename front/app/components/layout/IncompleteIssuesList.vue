@@ -250,8 +250,10 @@ const submitCorrections = async () => {
   }
 }
 
-const onNotificationReceived = async () => {
-  await fetchIssues()
+const onNotificationReceived = async (e) => {
+  if (e.detail?.type === 'INCOMPLETE_ISSUE') {
+    await fetchIssues()
+  }
 }
 
 // Chargement des données au montage

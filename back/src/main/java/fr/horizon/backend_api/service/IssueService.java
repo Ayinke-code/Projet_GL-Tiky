@@ -209,10 +209,10 @@ public class IssueService {
      * @throws IssueNotFoundException si l'issue n'existe pas
      */
     public void updateStatus(String status, Long id) {
-        IssueStatus issueStatus;
+        IssueStatus newStatus;
 
         try {
-            issueStatus = IssueStatus.valueOf(status.toUpperCase());
+            newStatus = IssueStatus.valueOf(status.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid status");
         }
@@ -220,10 +220,22 @@ public class IssueService {
         Issue issue = issueRepository.findById(id)
                 .orElseThrow(() -> new IssueNotFoundException(id));
 
-        issue.setStatus(issueStatus);
-        issue.setUpdatedAt(LocalDateTime.now());
+        IssueStatus oldStatus = issue.getStatus();
 
+        issue.setStatus(newStatus);
+        issue.setUpdatedAt(LocalDateTime.now());
         issueRepository.save(issue);
+
+        if (oldStatus == IssueStatus.DEMANDE_REOUVERTURE && newStatus == IssueStatus.OUVERT) {
+            notificationService.reopeningDemandAcceptedNotification(issue.getCreatedBy(), issue);
+        }
+        if (oldStatus == IssueStatus.OUVERT && newStatus == IssueStatus.TERMINE) {
+            notificationService.closeIssueNotification(issue.getCreatedBy(), issue);
+        }
+        if(oldStatus == IssueStatus.TERMINE && newStatus == IssueStatus.OUVERT ){
+            notificationService.openIssueNotification(issue.getCreatedBy(), issue);
+        }
+
     }
 
     /**
@@ -252,6 +264,7 @@ public class IssueService {
 
         issue.setStatus(IssueStatus.DEMANDE_REOUVERTURE);
         issue.setReopeningDescription(description);
+        notificationService.reopeningDemandNotification(issue.getManager(), issue);
 
         issueRepository.save(issue);
     }
