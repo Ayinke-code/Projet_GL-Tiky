@@ -140,5 +140,20 @@ const switchTab = async (type) => {
   }
 }
 
-onMounted(() => switchTab('AUDIT'))
+const EVENT_NOTIFICATION_TYPES = ['UPDATE_EVENT', 'EVENT_CANCEL']
+
+const onNotificationReceived = async (e) => {
+  if (EVENT_NOTIFICATION_TYPES.includes(e.detail?.type)) {
+    await switchTab(activeTab.value)
+  }
+}
+
+onMounted(() => {
+  switchTab('AUDIT')
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
+})
 </script>

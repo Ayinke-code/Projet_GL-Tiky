@@ -365,5 +365,20 @@ const formatDate = (d) => {
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-onMounted(loadData)
+const MANAGER_NOTIFICATION_TYPES = ['NEW_ISSUE_IN_CATEGORIE', 'RESPONSE_TO_MANAGER_ISSUE']
+
+const onNotificationReceived = async (e) => {
+  if (MANAGER_NOTIFICATION_TYPES.includes(e.detail?.type)) {
+    await loadData()
+  }
+}
+
+onMounted(async () => {
+  await loadData()
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
+})
 </script>

@@ -16,7 +16,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import fr.horizon.backend_api.util.MapKeys;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -42,6 +41,7 @@ public class IssueService {
     private final RequestManagerRepository requestManagerRepository;
     private final IssueFollowerRepository issueFollowerRepository;
     private final IssueFollowerService issueFollowerService;
+    private final NotificationService notificationService;
 
     private static final String USER_NOT_FOUND = "User not found";
 
@@ -120,10 +120,22 @@ public class IssueService {
 
         if (!dto.isPendingCase()) {
             createRequestManager(issue);
+            // notification du créateur de la catégorie
+            notificationService.creationTicketNotification(issue.getCategory().getOwner(), issue);
         }
 
         // Créer automatiquement une conversation pour cette issue
         conversationService.createConversationForIssue(issue);
+
+        // following automatique
+        if (!issueFollowerRepository.existsByUserAndIssue(owner, issue)) {
+            IssueFollower follower = IssueFollower.builder()
+                    .issue(issue)
+                    .user(owner)
+                    .reason(FollowedReason.IS_MANAGER)
+                    .build();
+            issueFollowerRepository.save(follower);
+        }
 
         return toDto(issue);
     }
@@ -140,10 +152,10 @@ public class IssueService {
      * @throws IssueNotFoundException si l'issue n'existe pas
      */
     public void updateStatus(String status, Long id) {
-        IssueStatus issueStatus;
+        IssueStatus newStatus;
 
         try {
-            issueStatus = IssueStatus.valueOf(status.toUpperCase());
+            newStatus = IssueStatus.valueOf(status.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid status");
         }
@@ -151,8 +163,51 @@ public class IssueService {
         Issue issue = issueRepository.findById(id)
                 .orElseThrow(() -> new IssueNotFoundException(id));
 
-        issue.setStatus(issueStatus);
+        IssueStatus oldStatus = issue.getStatus();
+
+        issue.setStatus(newStatus);
         issue.setUpdatedAt(LocalDateTime.now());
+        issueRepository.save(issue);
+
+        if (oldStatus == IssueStatus.DEMANDE_REOUVERTURE && newStatus == IssueStatus.OUVERT) {
+            notificationService.reopeningDemandAcceptedNotification(issue.getCreatedBy(), issue);
+        }
+        if (oldStatus == IssueStatus.OUVERT && newStatus == IssueStatus.TERMINE) {
+            notificationService.closeIssueNotification(issue.getCreatedBy(), issue);
+        }
+        if(oldStatus == IssueStatus.TERMINE && newStatus == IssueStatus.OUVERT ){
+            notificationService.openIssueNotification(issue.getCreatedBy(), issue);
+        }
+
+    }
+
+    /**
+     * Demande la réouverture d'une issue terminée.
+     * <p>
+     * Met à jour le statut en {@link IssueStatus#DEMANDE_REOUVERTURE}
+     * et enregistre la description fournie par l'utilisateur.
+     *
+     * @param description justification de la demande de réouverture
+     * @param id identifiant de l'issue
+     * @throws IssueNotFoundException si l'issue n'existe pas
+     * @throws IllegalStateException si l'issue n'est pas au statut TERMINE
+     * @throws IllegalArgumentException si la description est vide
+     */
+    public void requestReopening(String description, Long id){
+        Issue issue = issueRepository.findById(id)
+                .orElseThrow(() -> new IssueNotFoundException(id));
+
+        if (issue.getStatus() != IssueStatus.TERMINE) {
+            throw new IllegalStateException("L'issue doit être terminée pour demander une réouverture");
+        }
+
+        if (description == null || description.trim().isEmpty()) {
+            throw new IllegalArgumentException("La description est obligatoire");
+        }
+
+        issue.setStatus(IssueStatus.DEMANDE_REOUVERTURE);
+        issue.setReopeningDescription(description);
+        notificationService.reopeningDemandNotification(issue.getManager(), issue);
 
         issueRepository.save(issue);
     }
@@ -243,6 +298,8 @@ public class IssueService {
 
         createRequestManager(issue);
 
+        notificationService.creationTicketNotification(category.getOwner(), issue);
+
         return toDto(issue);
     }
 
@@ -280,6 +337,8 @@ public class IssueService {
                 .createdName(issue.getCreatedBy().getName())
                 .createdAt(issue.getCreatedAt())
                 .updatedAt(issue.getUpdatedAt())
+                // request reopening
+                .reopeningDescription(issue.getReopeningDescription())
                 //manager
                 .teacherManagerName(manager != null ? manager.getName() : null)
                 //follower
@@ -391,10 +450,15 @@ public class IssueService {
             requestManager.setProcessingDate(LocalDateTime.now());
             initialStatus = RequestManagerStatus.ACCEPTED;
             issue.setStatus(IssueStatus.OUVERT);
+            // notification du créateur
+            notificationService.validatationTicketNotification(issue.getCreatedBy(), issue);
         }
 
         requestManager.setTargetTeacher(targetedUser);
         requestManager.setStatus(initialStatus);
+        if(!targetedUser.getId().equals(issue.getCategory().getOwner().getId())){
+        notificationService.reveivedManagerRequest(targetedUser,requestManager);
+        }
 
         return toDto(requestManagerRepository.save(requestManager));
     }
@@ -424,6 +488,11 @@ public class IssueService {
             requestManager.setStatus(RequestManagerStatus.ACCEPTED);
             issue.setManager(teacher);
             issue.setStatus(IssueStatus.OUVERT);
+            //notification du créateur
+            notificationService.validatationTicketNotification(issue.getCreatedBy(), issue);
+            // notifcation pour le categorie Owner que sa demande a été accepté
+            notificationService.managerDemandNotification(requestManager.getCategoryOwner(), requestManager);
+
 
             if (!issueFollowerRepository.existsByUserAndIssue(teacher, issue)) {
                 IssueFollower follower = IssueFollower.builder()
@@ -436,6 +505,7 @@ public class IssueService {
 
         } else {
             requestManager.setStatus(RequestManagerStatus.DENIED);
+            notificationService.managerDemandNotification(requestManager.getCategoryOwner(), requestManager);
             createRequestManager(issue);
         }
 
@@ -530,6 +600,7 @@ public class IssueService {
         issue.setRejectComment(commentaire);
         issue.setRejectReason(raison);
         issue.setStatus(IssueStatus.INCOMPLET);
+        notificationService.incompleteTicketNotification(issue.getCreatedBy(), issue);
         issueRepository.save(issue);
 
         RequestManager requestManager = requestManagerRepository.findFirstByIssueOrderByCreatedAtDesc(issue)
