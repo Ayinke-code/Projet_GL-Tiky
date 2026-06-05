@@ -1,8 +1,10 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
+import fr.horizon.backend_api.exception.FileStorageException;
 import fr.horizon.backend_api.exception.IssueNotFoundException;
 import fr.horizon.backend_api.model.*;
+import fr.horizon.backend_api.model.dto.DocumentDto;
 import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.dto.RequestManagerDto;
@@ -12,11 +14,15 @@ import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -42,11 +48,16 @@ public class IssueService {
     private final IssueFollowerRepository issueFollowerRepository;
     private final IssueFollowerService issueFollowerService;
     private final NotificationService notificationService;
+    private final FileStorageService fileStorageService;
+    private final DocumentRepository documentRepository;
     private final EventRepository eventRepository;
 
     private static final String USER_NOT_FOUND = "User not found";
 
     private static final String OWNER_NF = "Owner not found";
+
+    @Value("${app.upload-dir}")
+    private String uploadDir;
     /**
      * Retourne la liste de toutes les issues.
      *
@@ -84,20 +95,64 @@ public class IssueService {
     }
 
     /**
-     * Crée une nouvelle issue.
-     * <p>
-     * L'issue est associée à un utilisateur (owner) via son email
-     * et à une catégorie existante.
-     * Crée automatiquement une conversation pour cette issue.
+     * Crée une issue sans fichiers attachés.
      *
      * @param dto   données de création de l'issue
      * @param email email de l'utilisateur créateur
      * @return issue créée sous forme de DTO
-     * @throws RuntimeException si l'utilisateur n'existe pas
-     * @throws CategoryNotFoundException si la catégorie n'existe pas
      */
     @Transactional
     public IssueDto createIssue(IssueCreateDto dto, String email) {
+        return createIssueInternal(dto, List.of(), email);
+    }
+
+    /**
+     * Crée une issue avec fichiers attachés.
+     *
+     * @param dto   données de création de l'issue
+     * @param files fichiers à attacher à l'issue
+     * @param email email de l'utilisateur créateur
+     * @return issue créée sous forme de DTO
+     */
+    @Transactional
+    public IssueDto createIssue(IssueCreateDto dto, List<MultipartFile> files, String email) {
+        return createIssueInternal(dto, files, email);
+    }
+
+    /**
+     * Logique commune de création d'une issue.
+     * <p>
+     * Construit l'issue, la persiste, abonne automatiquement le créateur,
+     * puis exécute les actions post-création (gestionnaire, notification,
+     * conversation, fichiers).
+     *
+     * @param dto   données de création de l'issue
+     * @param files fichiers à attacher (peut être vide)
+     * @param email email de l'utilisateur créateur
+     * @return issue créée sous forme de DTO
+     */
+    private IssueDto createIssueInternal(IssueCreateDto dto, List<MultipartFile> files, String email) {
+        Issue issue = buildIssue(dto, email);
+        issueRepository.save(issue);
+        autoFollowCreator(issue);
+        postCreateActions(dto, files, issue);
+        return toDto(issue);
+    }
+
+    /**
+     * Construit une instance {@link Issue} à partir des données de création.
+     * <p>
+     * Récupère le créateur et la catégorie depuis la base de données,
+     * puis initialise le statut de l'issue selon qu'il s'agit d'un cas
+     * incomplet ou non.
+     *
+     * @param dto   données de création de l'issue
+     * @param email email de l'utilisateur créateur
+     * @return instance Issue non encore persistée
+     * @throws EntityNotFoundException   si le créateur n'est pas trouvé
+     * @throws CategoryNotFoundException si la catégorie n'est pas trouvée
+     */
+    private Issue buildIssue(IssueCreateDto dto, String email) {
 
         User owner = userRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException(OWNER_NF));
@@ -113,22 +168,23 @@ public class IssueService {
                 .createdBy(owner)
                 .build();
 
-        if(dto.isPendingCase()){
+        if (dto.isPendingCase()) {
             issue.setStatus(IssueStatus.INCOMPLET);
         }
 
-        issueRepository.save(issue);
+        return issue;
+    }
 
-        if (!dto.isPendingCase()) {
-            createRequestManager(issue);
-            // notification du créateur de la catégorie
-            notificationService.creationTicketNotification(issue.getCategory().getOwner(), issue);
-        }
-
-        // Créer automatiquement une conversation pour cette issue
-        conversationService.createConversationForIssue(issue);
-
-        // following automatique
+    /**
+     * Abonne automatiquement le créateur de l'issue en tant que gestionnaire.
+     * <p>
+     * Si le créateur n'est pas déjà abonné, un {@link IssueFollower} est créé
+     * avec la raison {@link FollowedReason#IS_MANAGER}.
+     *
+     * @param issue issue déjà persistée
+     */
+    private void autoFollowCreator(Issue issue) {
+        User owner = issue.getCreatedBy();
         if (!issueFollowerRepository.existsByUserAndIssue(owner, issue)) {
             IssueFollower follower = IssueFollower.builder()
                     .issue(issue)
@@ -137,8 +193,80 @@ public class IssueService {
                     .build();
             issueFollowerRepository.save(follower);
         }
+    }
 
-        return toDto(issue);
+    /**
+     * Exécute les actions post-création d'une issue.
+     * <p>
+     * Si l'issue n'est pas un cas incomplet :
+     * <ul>
+     *   <li>crée le gestionnaire de demande associé</li>
+     *   <li>envoie une notification de création au responsable de la catégorie</li>
+     * </ul>
+     * Dans tous les cas, crée la conversation liée à l'issue et traite
+     * les éventuels fichiers attachés.
+     *
+     * @param dto   données de création de l'issue
+     * @param files fichiers à attacher (peut être vide)
+     * @param issue issue déjà persistée
+     */
+    private void postCreateActions(IssueCreateDto dto, List<MultipartFile> files, Issue issue) {
+
+        if (!dto.isPendingCase()) {
+            createRequestManager(issue);
+            notificationService.creationTicketNotification(issue.getCategory().getOwner(), issue);
+        }
+
+        conversationService.createConversationForIssue(issue);
+
+        handleFiles(files, issue);
+    }
+
+    /**
+     * Traite et persiste les fichiers attachés à une issue.
+     * <p>
+     * Pour chaque fichier non vide, stocke le fichier sur le disque via
+     * {@link FileStorageService} et crée l'entrée {@link Document} correspondante
+     * en base de données.
+     *
+     * @param files fichiers à traiter (peut être null ou vide)
+     * @param issue issue à laquelle rattacher les documents
+     * @throws FileStorageException si une erreur survient lors du stockage d'un fichier
+     */
+    private void handleFiles(List<MultipartFile> files, Issue issue) {
+
+        if (files == null || files.isEmpty()) return;
+
+        List<Document> documents = new ArrayList<>();
+
+        for (MultipartFile file : files) {
+
+            if (file.isEmpty()) continue;
+
+            try {
+                String storedName = fileStorageService.store(file);
+
+                Document document = Document.builder()
+                        .originalName(file.getOriginalFilename())
+                        .storedName(storedName)
+                        .path(uploadDir + "/" + storedName)
+                        .contentType(file.getContentType())
+                        .size(file.getSize())
+                        .issue(issue)
+                        .uploadedBy(issue.getCreatedBy())
+                        .build();
+
+                documents.add(document);
+
+            } catch (IOException e) {
+                throw new FileStorageException(
+                        "Error storing file: " + file.getOriginalFilename(),
+                        e
+                );
+            }
+        }
+
+        documentRepository.saveAll(documents);
     }
 
     /**
@@ -347,6 +475,29 @@ public class IssueService {
                 .teacherManagerName(manager != null ? manager.getName() : null)
                 //follower
                 .followersCount(countFollower(issue))
+                // documents
+                .documents(
+                        issue.getDocuments()
+                                .stream()
+                                .map(this::toDocumentDto)
+                                .toList()
+                )
+                .build();
+    }
+
+    /**
+     * Convertit une entité Issue en DTO Document.
+     *
+     * @param document entité document
+     * @return DTO document
+     */
+    private DocumentDto toDocumentDto(Document document) {
+        return DocumentDto.builder()
+                .id(document.getId())
+                .originalName(document.getOriginalName())
+                .contentType(document.getContentType())
+                .size(document.getSize())
+                .createdAt(document.getCreatedAt())
                 .build();
     }
 

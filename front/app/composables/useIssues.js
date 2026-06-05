@@ -57,15 +57,36 @@ export const useIssues = () => {
             return
         }
 
+        /**
+        * Mettre les données dans un formData pour inclure les fichiers si présents
+        */
+        const formData = new FormData()
+
+        // Donnée de base pour créer une issue
+        formData.append(
+        'dto',
+        new Blob(
+            [JSON.stringify({
+            title: payload.title,
+            description: payload.description,
+            categoryId: payload.categoryId,
+            pendingCase: payload.isPending
+            })],
+            { type: 'application/json' }
+        )
+        )
+
+        // Si fichiers
+        if (payload.files?.length) {
+            payload.files.forEach(file => {
+                formData.append('files', file)
+            })
+        }
+
         try {
             const created = await api('/issues', {
                 method: 'POST',
-                body: {
-                    title: payload.title,
-                    description: payload.description,
-                    categoryId: payload.categoryId,
-                    pendingCase: payload.pendingCase
-                }
+                body: formData
             })
 
             // refresh local state
