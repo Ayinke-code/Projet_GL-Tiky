@@ -6,9 +6,7 @@ import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.service.CategoryService;
 import fr.horizon.backend_api.service.JwtToken;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
