@@ -49,10 +49,11 @@
 
         <!-- Nom -->
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">
+          <label for="event-name" class="block text-xs font-medium text-gray-700 mb-1">
             Nom de l'événement <span class="text-red-500">*</span>
           </label>
           <input
+            id="event-name"
             v-model="form.name"
             type="text"
             :placeholder="isAudit ? 'Ex : Audit Sprint 3 — Groupe A' : 'Ex : Soutenance PFE — Promo 2025'"
@@ -64,8 +65,9 @@
 
         <!-- Description -->
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
+          <label for="event-description" class="block text-xs font-medium text-gray-700 mb-1">Description</label>
           <textarea
+            id="event-description"
             v-model="form.description"
             placeholder="Décrivez l'événement…"
             rows="3"
@@ -76,12 +78,13 @@
 
         <!-- Catégorie filtrée par type -->
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">
+          <label for="event-category" class="block text-xs font-medium text-gray-700 mb-1">
             Catégorie <span class="text-red-500">*</span>
           </label>
           <USkeleton v-if="loadingCategories" class="h-10 w-full rounded-lg" />
           <select
             v-else
+            id="event-category"
             v-model="form.categoryId"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
                    focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -94,49 +97,70 @@
           </select>
         </div>
 
-        <!-- Plage de dates — obligatoire pour les Audits et Soutenances -->
-        <div v-if="requiresDates" class="grid grid-cols-2 gap-4">
+        <!-- Date unique + heures début/fin -->
+        <div v-if="requiresDates" class="space-y-3">
+
+          <!-- Date -->
           <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">
-              Date de début <span class="text-red-500">*</span>
+            <label for="event-date" class="block text-xs font-medium text-gray-700 mb-1">
+              Date <span class="text-red-500">*</span>
             </label>
             <input
-              v-model="form.startDate"
-              type="datetime-local"
+              id="event-date"
+              v-model="form.eventDate"
+              type="date"
+              :min="todayDate"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
                      focus:ring-2 focus:ring-indigo-500 outline-none"
               required
             />
           </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-700 mb-1">
-              Date de fin <span class="text-red-500">*</span>
-            </label>
-            <input
-              v-model="form.endDate"
-              type="datetime-local"
-              :min="form.startDate"
-              :max="endDateMax"
-              class="w-full px-4 py-2 border rounded-lg text-sm outline-none
-                     focus:ring-2 focus:ring-indigo-500"
-              :class="dateError ? 'border-red-400' : 'border-gray-300'"
-              required
-            />
-            <p v-if="dateError" class="text-xs text-red-500 mt-1">
-              {{ dateError }}
-            </p>
+
+          <!-- Heures côte à côte -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="event-start-time" class="block text-xs font-medium text-gray-700 mb-1">
+                Heure de début <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="event-start-time"
+                v-model="form.startTime"
+                type="time"
+                :min="minStartTime"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
+                       focus:ring-2 focus:ring-indigo-500 outline-none"
+                required
+              />
+            </div>
+            <div>
+              <label for="event-end-time" class="block text-xs font-medium text-gray-700 mb-1">
+                Heure de fin <span class="text-red-500">*</span>
+              </label>
+              <input
+                id="event-end-time"
+                v-model="form.endTime"
+                type="time"
+                class="w-full px-4 py-2 border rounded-lg text-sm outline-none
+                       focus:ring-2 focus:ring-indigo-500"
+                :class="dateError ? 'border-red-400' : 'border-gray-300'"
+                required
+              />
+              <p v-if="dateError" class="text-xs text-red-500 mt-1">{{ dateError }}</p>
+            </div>
           </div>
+
         </div>
 
         <!-- Groupes projet (AUDIT et DEFENSE uniquement) -->
         <div v-if="requiresDates">
-          <label class="block text-xs font-medium text-gray-700 mb-1">
+          <label for="group-search" class="block text-xs font-medium text-gray-700 mb-1">
             Groupes projet
             <span class="text-gray-400 font-normal ml-1">({{ form.projectGroupIds.length }} sélectionné(s))</span>
           </label>
 
           <!-- Barre de recherche -->
           <input
+            id="group-search"
             v-model="groupSearch"
             type="text"
             placeholder="Rechercher un groupe projet…"
@@ -202,7 +226,7 @@
 definePageMeta({ ssr: false })
 
 import Alert from '~/components/ui/Alert.vue'
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -223,7 +247,24 @@ const projectGroups      = ref([])
 const loadingProjectGroups = ref(false)
 const groupSearch        = ref('')
 
-const form = ref({ name: '', description: '', categoryId: '', startDate: '', endDate: '', projectGroupIds: [] })
+const form = ref({ name: '', description: '', categoryId: '', eventDate: '', startTime: '', endTime: '', projectGroupIds: [] })
+
+const todayDate = computed(() => {
+  const d = new Date()
+  const pad = (n) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+})
+
+const minStartTime = computed(() => {
+  if (!form.value.eventDate) return ''
+  const d = new Date()
+  const pad = (n) => n.toString().padStart(2, '0')
+  const todayStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  if (form.value.eventDate !== todayStr) return ''
+  // Au moins 30 minutes dans le futur
+  d.setMinutes(d.getMinutes() + 30)
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+})
 
 const filteredProjectGroups = computed(() => {
   const q = groupSearch.value.toLowerCase().trim()
@@ -231,19 +272,6 @@ const filteredProjectGroups = computed(() => {
   return projectGroups.value.filter(g =>
     g.name.toLowerCase().includes(q) || g.categoryName?.toLowerCase().includes(q)
   )
-})
-
-// Force la date de fin sur le même jour que la date de début
-const endDateMax = computed(() => {
-  if (!form.value.startDate) return ''
-  return form.value.startDate.split('T')[0] + 'T23:59'
-})
-
-watch(() => form.value.startDate, (newStart) => {
-  if (!newStart) return
-  const datePart = newStart.split('T')[0]
-  const timePart = form.value.endDate?.split('T')[1] ?? ''
-  form.value.endDate = timePart ? `${datePart}T${timePart}` : ''
 })
 
 onMounted(async () => {
@@ -273,25 +301,34 @@ const handleSubmit = async () => {
   dateError.value   = null
 
   if (requiresDates.value) {
-    if (!form.value.startDate || !form.value.endDate) {
-      dateError.value = 'Les dates de début et de fin sont obligatoires.'
+    if (!form.value.eventDate || !form.value.startTime || !form.value.endTime) {
+      dateError.value = 'La date et les heures de début et de fin sont obligatoires.'
       return
     }
-    if (new Date(form.value.endDate) <= new Date(form.value.startDate)) {
-      dateError.value = 'La date de fin doit être postérieure à la date de début.'
+    const startDateTime = new Date(`${form.value.eventDate}T${form.value.startTime}`)
+    const minDateTime = new Date()
+    minDateTime.setMinutes(minDateTime.getMinutes() + 30)
+    if (startDateTime < minDateTime) {
+      dateError.value = "La date de début doit être au moins 30 minutes dans le futur."
+      return
+    }
+    if (form.value.endTime <= form.value.startTime) {
+      dateError.value = "L'heure de fin doit être postérieure à l'heure de début."
       return
     }
   }
 
   submitting.value = true
   try {
+    const startDate = `${form.value.eventDate}T${form.value.startTime}`
+    const endDate   = `${form.value.eventDate}T${form.value.endTime}`
     const payload = {
       name:        form.value.name,
       description: form.value.description,
       categoryId:  form.value.categoryId,
       ...(requiresDates.value && {
-        startDate: form.value.startDate,
-        endDate:   form.value.endDate,
+        startDate,
+        endDate,
         projectGroupIds: form.value.projectGroupIds,
       })
     }

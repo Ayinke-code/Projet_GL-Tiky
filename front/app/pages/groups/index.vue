@@ -145,6 +145,7 @@
                         class="cursor-pointer"
                     />
                     <UButton
+                        v-if="ready && (user?.roles?.includes(ROLE.TEACHER) || user?.roles?.includes(ROLE.ADMIN))"
                         @click.stop="deleteValidation(group)"
                         variant="ghost"
                         size="xs"
