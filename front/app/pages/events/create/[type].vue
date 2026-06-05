@@ -109,6 +109,7 @@
               id="event-date"
               v-model="form.eventDate"
               type="date"
+              :min="todayDate"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
                      focus:ring-2 focus:ring-indigo-500 outline-none"
               required
@@ -125,6 +126,7 @@
                 id="event-start-time"
                 v-model="form.startTime"
                 type="time"
+                :min="minStartTime"
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
                        focus:ring-2 focus:ring-indigo-500 outline-none"
                 required
@@ -247,6 +249,23 @@ const groupSearch        = ref('')
 
 const form = ref({ name: '', description: '', categoryId: '', eventDate: '', startTime: '', endTime: '', projectGroupIds: [] })
 
+const todayDate = computed(() => {
+  const d = new Date()
+  const pad = (n) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+})
+
+const minStartTime = computed(() => {
+  if (!form.value.eventDate) return ''
+  const d = new Date()
+  const pad = (n) => n.toString().padStart(2, '0')
+  const todayStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  if (form.value.eventDate !== todayStr) return ''
+  // Au moins 30 minutes dans le futur
+  d.setMinutes(d.getMinutes() + 30)
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+})
+
 const filteredProjectGroups = computed(() => {
   const q = groupSearch.value.toLowerCase().trim()
   if (!q) return projectGroups.value
@@ -284,6 +303,13 @@ const handleSubmit = async () => {
   if (requiresDates.value) {
     if (!form.value.eventDate || !form.value.startTime || !form.value.endTime) {
       dateError.value = 'La date et les heures de début et de fin sont obligatoires.'
+      return
+    }
+    const startDateTime = new Date(`${form.value.eventDate}T${form.value.startTime}`)
+    const minDateTime = new Date()
+    minDateTime.setMinutes(minDateTime.getMinutes() + 30)
+    if (startDateTime < minDateTime) {
+      dateError.value = "La date de début doit être au moins 30 minutes dans le futur."
       return
     }
     if (form.value.endTime <= form.value.startTime) {

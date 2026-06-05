@@ -55,7 +55,6 @@
         </UCollapsible>
 
         <!-- Catégories -->
-        <NuxtLink v-if="user" to="/categories"
         <NuxtLink
           v-if="user" to="/categories"
                   class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
@@ -72,8 +71,8 @@
           <span class="font-medium">Groupes</span>
         </NuxtLink>
 
-        <!-- Événements (tous les rôles) -->
-        <NuxtLink v-if="user" to="/events"
+        <!-- Événements (teacher / admin uniquement — les étudiants voient tout dans "Mes sessions") -->
+        <NuxtLink v-if="user?.roles?.includes('TEACHER') || user?.roles?.includes('ADMIN')" to="/events"
           class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
           :class="isActive('/events') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
           <i class="fa-solid fa-calendar-days w-6" aria-hidden="true"></i>
@@ -88,6 +87,16 @@
           <span class="font-medium">Calendrier</span>
         </NuxtLink>
 
+        <!-- Gérer mon planning (teacher / admin) -->
+        <NuxtLink
+          v-if="user?.roles?.includes('TEACHER') || user?.roles?.includes('ADMIN')"
+          to="/invitations"
+          class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
+          :class="isActive('/invitations') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
+          <i class="fa-solid fa-table-list w-6" aria-hidden="true"></i>
+          <span class="font-medium">Gérer mon planning</span>
+        </NuxtLink>
+
         <!-- Mes sessions (student) -->
         <NuxtLink
           v-if="user?.roles?.includes('STUDENT')"
@@ -100,9 +109,9 @@
         <!-- Mes sessions (teacher / admin) -->
         <NuxtLink
           v-if="user?.roles?.includes('TEACHER') || user?.roles?.includes('ADMIN')"
-          to="/invitations"
+          to="/sessions"
           class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
-          :class="isActive('/invitations') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
+          :class="isActive('/sessions') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
           <i class="fa-solid fa-calendar-check w-6" aria-hidden="true"></i>
           <span class="font-medium">Mes sessions</span>
         </NuxtLink>

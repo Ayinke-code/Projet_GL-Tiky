@@ -5,7 +5,7 @@
     <div class="flex justify-between items-center mb-8">
       <div>
         <h1 class="text-2xl font-bold text-gray-800">Mes sessions</h1>
-        <p class="text-sm text-gray-400 mt-1">Vos rencontres planifiées avec vos enseignants</p>
+        <p class="text-sm text-gray-400 mt-1">Vos événements et rencontres planifiés</p>
       </div>
 
       <!-- Filtre passé / à venir -->
@@ -161,9 +161,9 @@
           </div>
         </div>
 
-        <!-- Boutons accepter / refuser (RDV en attente uniquement, non passé) -->
+        <!-- Boutons accepter / refuser (RDV en attente uniquement, non passé, destinataire uniquement) -->
         <div
-          v-if="session.categoryType === 'ISSUE' && session.myParticipationStatus === null && !isPast(session.endDate)"
+          v-if="session.categoryType === 'ISSUE' && session.myParticipationStatus === null && session.createdBy !== user?.name && !isPast(session.endDate)"
           class="flex gap-2 mt-auto pt-1"
           @click.stop
         >
@@ -346,8 +346,9 @@ const filters = [
   { value: 'past',     label: 'Passées',  icon: 'fa-solid fa-history' },
 ]
 
-onMounted(async () => {
+const loadSessions = async () => {
   loading.value = true
+  error.value = null
   try {
     sessions.value = await api('/events/my-sessions')
   } catch (e) {
@@ -355,6 +356,22 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+}
+
+const REFRESH_NOTIF_TYPES = ['NEW_EVENT_INVITATION', 'EVENT_RESPONSE', 'UPDATE_EVENT', 'EVENT_CANCEL']
+const onNotificationReceived = (e) => {
+  if (REFRESH_NOTIF_TYPES.includes(e.detail?.type)) {
+    loadSessions()
+  }
+}
+
+onMounted(async () => {
+  await loadSessions()
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
 })
 
 /** Répondre à un RDV (depuis la carte) */
@@ -427,7 +444,7 @@ const typeLabel = (type) => ({
   AUDIT:   'Audit',
   DEFENSE: 'Soutenance',
   MEETING: 'Réunion',
-  ISSUE:   'Issue',
+  ISSUE:   'Ticket',
 }[type] ?? type)
 
 const typeStyle = (type) => ({

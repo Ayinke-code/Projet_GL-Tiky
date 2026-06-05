@@ -15,17 +15,6 @@
 
     <button
       v-if="isTeacher"
-      @click="$emit('switch', 'sessions')"
-      :class="[
-        activeTab === 'sessions' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200',
-        'px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2'
-      ]"
-    >
-      <span class="i-lucide-calendar-check"></span> Mes sessions
-    </button>
-
-    <button
-      v-if="isTeacher"
       @click="$emit('switch', 'tracking')"
       :class="[
         activeTab === 'tracking' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200',

@@ -145,7 +145,7 @@ const handleCreateIssue = async () => {
  * Chargement initial des catégories
  */
 onMounted(async () => {
-  if (ready && !user?.value?.id) {
+  if (ready.value && !user?.value?.id) {
     await navigateTo('/login')
     return
   }
