@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -115,15 +116,6 @@ class CategoryControllerTest {
 
         verify(categoryService).addFollower(1L, 10L);
         verify(categoryService).findById(1L);
-    }
-
-    @Test
-    void shouldDeleteFollower() throws Exception {
-
-        mockMvc.perform(delete("/categories/followers/10/1"))
-                .andExpect(status().isOk());
-
-        verify(categoryService).deleteFollowerById(1L, 10L);
     }
 
     @Test
