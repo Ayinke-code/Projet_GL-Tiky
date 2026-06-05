@@ -909,4 +909,264 @@ class IssueServiceTest {
 
         assertThrows(AccessDeniedException.class, () -> issueService.updatePrivacy(1L, "not_owner@test.fr"));
     }
+
+    // =============================================
+    // updateStatus()
+    // =============================================
+
+    @Test
+    void updateStatus_should_change_to_TERMINE() {
+        Issue issue = setupIssue();
+        issue.setStatus(IssueStatus.OUVERT);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(issueRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        issueService.updateStatus("TERMINE", 1L);
+
+        assertEquals(IssueStatus.TERMINE, issue.getStatus());
+        verify(notificationService).closeIssueNotification(any(), any());
+    }
+
+    @Test
+    void updateStatus_should_throw_on_invalid_status() {
+        assertThrows(IllegalArgumentException.class, () -> issueService.updateStatus("INVALID", 1L));
+    }
+
+    @Test
+    void updateStatus_should_notify_reopening_when_DEMANDE_REOUVERTURE_to_OUVERT() {
+        Issue issue = setupIssue();
+        issue.setStatus(IssueStatus.DEMANDE_REOUVERTURE);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(issueRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        issueService.updateStatus("OUVERT", 1L);
+
+        verify(notificationService).reopeningDemandAcceptedNotification(any(), any());
+    }
+
+    // =============================================
+    // requestReopening()
+    // =============================================
+
+    @Test
+    void requestReopening_should_set_status_and_notify() {
+        Issue issue = setupIssue();
+        issue.setStatus(IssueStatus.TERMINE);
+        User manager = new User();
+        manager.setId(42L);
+        issue.setManager(manager);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(issueRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        issueService.requestReopening("Besoin de réouverture", 1L);
+
+        assertEquals(IssueStatus.DEMANDE_REOUVERTURE, issue.getStatus());
+        verify(notificationService).reopeningDemandNotification(any(), any());
+    }
+
+    @Test
+    void requestReopening_should_throw_when_not_TERMINE() {
+        Issue issue = setupIssue();
+        issue.setStatus(IssueStatus.OUVERT);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+
+        assertThrows(IllegalStateException.class, () -> issueService.requestReopening("desc", 1L));
+    }
+
+    @Test
+    void requestReopening_should_throw_when_description_blank() {
+        Issue issue = setupIssue();
+        issue.setStatus(IssueStatus.TERMINE);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+
+        assertThrows(IllegalArgumentException.class, () -> issueService.requestReopening("  ", 1L));
+    }
+
+    // =============================================
+    // markIssueAsIncomplete()
+    // =============================================
+
+    @Test
+    void markIssueAsIncomplete_should_set_status_INCOMPLET() {
+        Issue issue = setupIssue();
+        issue.setStatus(IssueStatus.OUVERT);
+
+        RequestManager rm = new RequestManager();
+        rm.setStatus(RequestManagerStatus.PENDING);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(issueRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(requestManagerRepository.findFirstByIssueOrderByCreatedAtDesc(issue)).thenReturn(Optional.of(rm));
+        when(requestManagerRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        issueService.markIssueAsIncomplete(1L, "commentaire", "raison");
+
+        assertEquals(IssueStatus.INCOMPLET, issue.getStatus());
+        assertEquals(RequestManagerStatus.DENIED, rm.getStatus());
+        verify(notificationService).incompleteTicketNotification(any(), any());
+    }
+
+    @Test
+    void markIssueAsIncomplete_should_throw_when_already_TERMINE() {
+        Issue issue = setupIssue();
+        issue.setStatus(IssueStatus.TERMINE);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+
+        assertThrows(IllegalStateException.class,
+                () -> issueService.markIssueAsIncomplete(1L, "c", "r"));
+    }
+
+    // =============================================
+    // getIssueDTOById()
+    // =============================================
+
+    @Test
+    void getIssueDTOById_should_return_dto_when_accessible() {
+        User user = setupUser();
+        Issue issue = setupIssue();
+        issue.setPrivate(false);
+        Category cat = new Category();
+        cat.setId(1L);
+        cat.setName("CAT");
+        User owner = new User();
+        owner.setId(99L);
+        owner.setName("Owner");
+        cat.setOwner(owner);
+        issue.setCategory(cat);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("john@test.fr")).thenReturn(Optional.of(user));
+
+        IssueDto result = issueService.getIssueDTOById(1L, "john@test.fr");
+
+        assertNotNull(result);
+    }
+
+    @Test
+    void getIssueDTOById_should_throw_when_private_and_not_allowed() {
+        User user = setupUser();
+        user.setId(99L);
+        Issue issue = setupIssue();
+        issue.setPrivate(true);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("john@test.fr")).thenReturn(Optional.of(user));
+
+        assertThrows(AccessDeniedException.class,
+                () -> issueService.getIssueDTOById(1L, "john@test.fr"));
+    }
+
+    // =============================================
+    // getIncompleteIssuesToResent()
+    // =============================================
+
+    @Test
+    void getIncompleteIssuesToResent_should_return_list() {
+        Issue issue = setupIssue();
+        Category cat = new Category();
+        cat.setId(1L);
+        cat.setName("CAT");
+        User owner = new User();
+        owner.setId(99L);
+        owner.setName("Owner");
+        cat.setOwner(owner);
+        issue.setCategory(cat);
+
+        when(issueRepository.findByStatusAndCreatedBy_Id(IssueStatus.INCOMPLET, 1L))
+                .thenReturn(List.of(issue));
+
+        List<IssueDto> result = issueService.getIncompleteIssuesToResent(1L);
+
+        assertEquals(1, result.size());
+    }
+
+    // =============================================
+    // getTeacherAssignations() / alertCategoryOwner() / getHistoricalRequestManager()
+    // =============================================
+
+    @Test
+    void getTeacherAssignations_should_return_list() {
+        when(requestManagerRepository.findByTargetTeacher_Id(1L)).thenReturn(List.of());
+
+        List<RequestManagerDto> result = issueService.getTeacherAssignations(1L);
+
+        assertNotNull(result);
+    }
+
+    @Test
+    void getHistoricalRequestManager_should_return_list() {
+        when(requestManagerRepository.findByCategoryOwner_IdAndTargetTeacherIsNotNullOrderByCreatedAtDesc(1L))
+                .thenReturn(List.of());
+
+        List<RequestManagerDto> result = issueService.getHistoricalRequestManager(1L);
+
+        assertNotNull(result);
+    }
+
+    // =============================================
+    // canAccessIssue()
+    // =============================================
+
+    @Test
+    void canAccessIssue_should_return_true_when_public() {
+        Issue issue = setupIssue();
+        issue.setPrivate(false);
+
+        assertTrue(issueService.canAccessIssue(issue, setupUser()));
+    }
+
+    @Test
+    void canAccessIssue_should_return_true_for_creator_when_private() {
+        User creator = setupUser();
+        creator.setId(1L);
+        Issue issue = setupIssue();
+        issue.setPrivate(true);
+        issue.setCreatedBy(creator);
+        issue.setCategory(new Category());
+        issue.getCategory().setOwner(new User());
+        issue.getCategory().getOwner().setId(99L);
+
+        assertTrue(issueService.canAccessIssue(issue, creator));
+    }
+
+    @Test
+    void deleteById_should_throw_when_not_authorized() {
+        User user = setupUser();
+        user.setId(99L);
+        Issue issue = setupIssue();
+        issue.setCreatedBy(new User());
+        issue.getCreatedBy().setId(1L);
+        issue.setCategory(new Category());
+        issue.getCategory().setOwner(new User());
+        issue.getCategory().getOwner().setId(2L);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("john@test.fr")).thenReturn(Optional.of(user));
+
+        assertThrows(AccessDeniedException.class, () -> issueService.deleteById(1L, "john@test.fr"));
+    }
+
+    @Test
+    void deleteById_should_delete_when_authorized() {
+        User creator = setupUser();
+        creator.setId(1L);
+        Issue issue = setupIssue();
+        issue.setCreatedBy(creator);
+        issue.setCategory(new Category());
+        issue.getCategory().setOwner(new User());
+        issue.getCategory().getOwner().setId(99L);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("john@test.fr")).thenReturn(Optional.of(creator));
+
+        issueService.deleteById(1L, "john@test.fr");
+
+        verify(issueRepository).delete(issue);
+    }
 }

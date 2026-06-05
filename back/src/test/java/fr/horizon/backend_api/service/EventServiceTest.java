@@ -1450,4 +1450,277 @@ class EventServiceTest {
         assertEquals(CategoryType.AUDIT, result.get(0).getCategoryType());
         verify(eventRepository).findByProjectGroupIds(Set.of(5L));
     }
+
+    // =============================================
+    // inviteUsersToMeeting()
+    // =============================================
+
+    @Test
+    @DisplayName("inviteUsersToMeeting : invite plusieurs utilisateurs sans conflit")
+    void inviteUsersToMeeting_success() {
+        User creator = makeUser(1L, "creator@test.fr", "TEACHER");
+
+        Category cat = new Category();
+        cat.setId(1L);
+        cat.setName("CAT");
+        cat.setCategoryType(CategoryType.ISSUE);
+
+        Event event = Event.builder()
+                .id(10L).name("RDV")
+                .categoryType(CategoryType.ISSUE)
+                .category(cat)
+                .createdBy(creator)
+                .startDate(LocalDateTime.now().plusDays(1))
+                .endDate(LocalDateTime.now().plusDays(1).plusHours(1))
+                .participants(new HashSet<>())
+                .projectGroups(new HashSet<>())
+                .build();
+
+        User invited = makeUser(2L, "invited@test.fr", "STUDENT");
+
+        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(invited));
+        when(eventRepository.countConflictingEvents(any(), any(), any(), any())).thenReturn(0L);
+        when(eventRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        EventResponseDto result = eventService.inviteUsersToMeeting(10L, Set.of(2L));
+
+        assertNotNull(result);
+        verify(notificationService).inviteToEventNotification(invited, event);
+    }
+
+    @Test
+    @DisplayName("inviteUsersToMeeting : lève EventConflictException si conflit")
+    void inviteUsersToMeeting_conflict() {
+        User creator = makeUser(1L, "creator@test.fr", "TEACHER");
+        Category cat = new Category();
+        cat.setId(1L); cat.setName("CAT"); cat.setCategoryType(CategoryType.ISSUE);
+
+        Event event = Event.builder()
+                .id(10L).name("RDV").categoryType(CategoryType.ISSUE).category(cat)
+                .createdBy(creator)
+                .startDate(LocalDateTime.now().plusDays(1))
+                .endDate(LocalDateTime.now().plusDays(1).plusHours(1))
+                .participants(new HashSet<>()).projectGroups(new HashSet<>()).build();
+
+        User invited = makeUser(2L, "invited@test.fr", "STUDENT");
+
+        when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(invited));
+        when(eventRepository.countConflictingEvents(any(), any(), any(), any())).thenReturn(1L);
+
+        assertThrows(fr.horizon.backend_api.exception.EventConflictException.class,
+                () -> eventService.inviteUsersToMeeting(10L, Set.of(2L)));
+    }
+
+    // =============================================
+    // getMyParticipations()
+    // =============================================
+
+    @Test
+    @DisplayName("getMyParticipations : retourne les participations acceptées")
+    void getMyParticipations_success() {
+        User user = makeUser(1L, "user@test.fr", "STUDENT");
+        Category cat = new Category();
+        cat.setId(1L); cat.setName("CAT"); cat.setCategoryType(CategoryType.ISSUE);
+
+        Event event = Event.builder()
+                .id(5L).name("RDV").categoryType(CategoryType.ISSUE).category(cat)
+                .createdBy(user).participants(new HashSet<>()).projectGroups(new HashSet<>()).build();
+
+        when(userService.findByEmail("user@test.fr")).thenReturn(user);
+        when(eventRepository.findAcceptedParticipationsByUserId(1L)).thenReturn(List.of(event));
+
+        List<EventResponseDto> result = eventService.getMyParticipations("user@test.fr");
+
+        assertEquals(1, result.size());
+    }
+
+    // =============================================
+    // getMyCalendarEvents()
+    // =============================================
+
+    @Test
+    @DisplayName("getMyCalendarEvents : exclut les RDV créés si un participant a refusé")
+    void getMyCalendarEvents_excludes_refused_rdv() {
+        User creator = makeUser(1L, "creator@test.fr", "TEACHER");
+        Category cat = new Category();
+        cat.setId(1L); cat.setName("CAT"); cat.setCategoryType(CategoryType.ISSUE);
+
+        User refuser = makeUser(2L, "student@test.fr", "STUDENT");
+        EventParticipant refused = new EventParticipant();
+        refused.setUser(refuser);
+        refused.setHasAccepted(false);
+
+        Event event = Event.builder()
+                .id(5L).name("RDV refusé").categoryType(CategoryType.ISSUE).category(cat)
+                .createdBy(creator).participants(new HashSet<>(Set.of(refused))).projectGroups(new HashSet<>()).build();
+
+        when(userService.findByEmail("creator@test.fr")).thenReturn(creator);
+        when(eventRepository.findCalendarEventsForUser(1L)).thenReturn(List.of(event));
+
+        List<EventResponseDto> result = eventService.getMyCalendarEvents("creator@test.fr");
+
+        assertEquals(0, result.size()); // Le RDV refusé est exclu
+    }
+
+    @Test
+    @DisplayName("getMyCalendarEvents : inclut un RDV accepté")
+    void getMyCalendarEvents_includes_accepted_rdv() {
+        User creator = makeUser(1L, "creator@test.fr", "TEACHER");
+        Category cat = new Category();
+        cat.setId(1L); cat.setName("CAT"); cat.setCategoryType(CategoryType.ISSUE);
+
+        User acceptor = makeUser(2L, "student@test.fr", "STUDENT");
+        EventParticipant accepted = new EventParticipant();
+        accepted.setUser(acceptor);
+        accepted.setHasAccepted(true);
+
+        Event event = Event.builder()
+                .id(5L).name("RDV confirmé").categoryType(CategoryType.ISSUE).category(cat)
+                .createdBy(creator).participants(new HashSet<>(Set.of(accepted))).projectGroups(new HashSet<>()).build();
+
+        when(userService.findByEmail("creator@test.fr")).thenReturn(creator);
+        when(eventRepository.findCalendarEventsForUser(1L)).thenReturn(List.of(event));
+
+        List<EventResponseDto> result = eventService.getMyCalendarEvents("creator@test.fr");
+
+        assertEquals(1, result.size());
+    }
+
+    // =============================================
+    // getEventInvitationStatut()
+    // =============================================
+
+    @Test
+    @DisplayName("getEventInvitationStatut : retourne les statuts pour le créateur")
+    void getEventInvitationStatut_as_creator() {
+        User creator = makeUser(1L, "creator@test.fr", "TEACHER");
+        creator.setName("Prof");
+
+        Category cat = new Category();
+        cat.setId(1L); cat.setName("CAT"); cat.setCategoryType(CategoryType.ISSUE);
+
+        User participant = makeUser(2L, "student@test.fr", "STUDENT");
+        participant.setName("Étudiant");
+        EventParticipant ep = new EventParticipant();
+        ep.setUser(participant);
+        ep.setHasAccepted(true);
+
+        Event event = Event.builder()
+                .id(5L).name("RDV").categoryType(CategoryType.ISSUE).category(cat)
+                .createdBy(creator).participants(new HashSet<>(Set.of(ep))).projectGroups(new HashSet<>()).build();
+
+        when(eventRepository.findById(5L)).thenReturn(Optional.of(event));
+        when(userService.findByEmail("creator@test.fr")).thenReturn(creator);
+
+        var result = eventService.getEventInvitationStatut(5L, "creator@test.fr");
+
+        assertEquals(1, result.size());
+        assertEquals("Étudiant", result.get(0).getParticipantName());
+    }
+
+    @Test
+    @DisplayName("getEventInvitationStatut : lève IllegalArgumentException si non créateur")
+    void getEventInvitationStatut_not_creator_throws() {
+        User creator = makeUser(1L, "creator@test.fr", "TEACHER");
+        User other = makeUser(2L, "other@test.fr", "STUDENT");
+        Category cat = new Category();
+        cat.setId(1L); cat.setName("CAT"); cat.setCategoryType(CategoryType.ISSUE);
+
+        Event event = Event.builder()
+                .id(5L).name("RDV").categoryType(CategoryType.ISSUE).category(cat)
+                .createdBy(creator).participants(new HashSet<>()).projectGroups(new HashSet<>()).build();
+
+        when(eventRepository.findById(5L)).thenReturn(Optional.of(event));
+        when(userService.findByEmail("other@test.fr")).thenReturn(other);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> eventService.getEventInvitationStatut(5L, "other@test.fr"));
+    }
+
+    // =============================================
+    // getInvitationsToEvent()
+    // =============================================
+
+    @Test
+    @DisplayName("getInvitationsToEvent : retourne les invitations en attente")
+    void getInvitationsToEvent_returns_list() {
+        User user = makeUser(1L, "user@test.fr", "STUDENT");
+        Category cat = new Category();
+        cat.setId(1L); cat.setName("CAT"); cat.setCategoryType(CategoryType.ISSUE);
+
+        User creator = makeUser(2L, "creator@test.fr", "TEACHER");
+        Event event = Event.builder()
+                .id(5L).name("RDV").categoryType(CategoryType.ISSUE).category(cat)
+                .createdBy(creator).participants(new HashSet<>()).projectGroups(new HashSet<>()).build();
+
+        when(userService.findByEmail("user@test.fr")).thenReturn(user);
+        when(eventRepository.findPendingInvitationsByUserId(1L)).thenReturn(List.of(event));
+
+        var result = eventService.getInvitationsToEvent("user@test.fr");
+
+        assertEquals(1, result.size());
+    }
+
+    // =============================================
+    // getMySessions() — prof
+    // =============================================
+
+    @Test
+    @DisplayName("getMySessions : exclut les ISSUE non validées pour un prof")
+    void getMySessions_excludes_pending_issue_for_teacher() {
+        User teacher = makeUser(1L, "teacher@test.fr", "TEACHER");
+
+        Category cat = new Category();
+        cat.setId(1L); cat.setName("CAT"); cat.setCategoryType(CategoryType.ISSUE);
+
+        Event pendingRdv = Event.builder()
+                .id(10L).name("RDV en attente").categoryType(CategoryType.ISSUE).category(cat)
+                .createdBy(teacher).validated(false).participants(new HashSet<>()).projectGroups(new HashSet<>()).build();
+
+        when(userService.findByEmail("teacher@test.fr")).thenReturn(teacher);
+        when(eventRepository.findGroupEventsForTeacher(1L)).thenReturn(List.of());
+        when(eventRepository.findIssueEventsForUser(1L, CategoryType.ISSUE)).thenReturn(List.of(pendingRdv));
+
+        List<EventResponseDto> result = eventService.getMySessions("teacher@test.fr");
+
+        assertTrue(result.isEmpty()); // Le RDV en attente est exclu pour le prof
+    }
+
+    @Test
+    @DisplayName("getMySessions : inclut les ISSUE validées pour un prof")
+    void getMySessions_includes_validated_issue_for_teacher() {
+        User teacher = makeUser(1L, "teacher@test.fr", "TEACHER");
+
+        Category cat = new Category();
+        cat.setId(1L); cat.setName("CAT"); cat.setCategoryType(CategoryType.ISSUE);
+
+        Event validatedRdv = Event.builder()
+                .id(10L).name("RDV confirmé").categoryType(CategoryType.ISSUE).category(cat)
+                .createdBy(teacher).validated(true).participants(new HashSet<>()).projectGroups(new HashSet<>()).build();
+
+        when(userService.findByEmail("teacher@test.fr")).thenReturn(teacher);
+        when(eventRepository.findGroupEventsForTeacher(1L)).thenReturn(List.of());
+        when(eventRepository.findIssueEventsForUser(1L, CategoryType.ISSUE)).thenReturn(List.of(validatedRdv));
+
+        List<EventResponseDto> result = eventService.getMySessions("teacher@test.fr");
+
+        assertEquals(1, result.size());
+        assertEquals("RDV confirmé", result.get(0).getName());
+    }
+
+    // =============================================
+    // Helper
+    // =============================================
+
+    private User makeUser(Long id, String email, String roleName) {
+        Role role = new Role(roleName);
+        User user = new User();
+        user.setId(id);
+        user.setEmail(email);
+        user.setName(email);
+        user.setRoles(Set.of(role));
+        return user;
+    }
 }

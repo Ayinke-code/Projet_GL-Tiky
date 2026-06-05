@@ -2,6 +2,7 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.dto.IssueDto;
+import fr.horizon.backend_api.model.dto.IncompleteRequestDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.Conversation;
@@ -283,5 +284,123 @@ class IssueControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(issueFollowerService).unfollowIssue(eq(1L), any(User.class));
+    }
+
+    @Test
+    void shouldGetTeacherAssignations() throws Exception {
+        when(issueService.getTeacherAssignations(1L)).thenReturn(List.of());
+
+        mockMvc.perform(get("/issues/demandes-manager/teacher").param("userId", "1"))
+                .andExpect(status().isOk());
+
+        verify(issueService).getTeacherAssignations(1L);
+    }
+
+    @Test
+    void shouldGetOwnerAlerts() throws Exception {
+        when(issueService.alertCategoryOwner(1L)).thenReturn(List.of());
+
+        mockMvc.perform(get("/issues/demandes-manager/owner-alerts").param("userId", "1"))
+                .andExpect(status().isOk());
+
+        verify(issueService).alertCategoryOwner(1L);
+    }
+
+    @Test
+    void shouldGetHistoricalRequests() throws Exception {
+        when(issueService.getHistoricalRequestManager(1L)).thenReturn(List.of());
+
+        mockMvc.perform(get("/issues/demandes-manager/history").param("userId", "1"))
+                .andExpect(status().isOk());
+
+        verify(issueService).getHistoricalRequestManager(1L);
+    }
+
+    @Test
+    void shouldGetIncompleteIssues() throws Exception {
+        IssueDto dto = IssueDto.builder().id(1L).title("Incomplet").build();
+        when(issueService.getIncompleteIssuesToResent(1L)).thenReturn(List.of(dto));
+
+        mockMvc.perform(get("/issues/incomplete/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1));
+    }
+
+    @Test
+    void shouldReturn204WhenNoIncompleteIssues() throws Exception {
+        when(issueService.getIncompleteIssuesToResent(1L)).thenReturn(List.of());
+
+        mockMvc.perform(get("/issues/incomplete/1"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void shouldMarkIssueAsIncomplete() throws Exception {
+        mockMvc.perform(put("/issues/1/mark-incomplete")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"commentaire\":\"manque info\",\"raison\":\"raison\"}"))
+                .andExpect(status().isOk());
+
+        verify(issueService).markIssueAsIncomplete(eq(1L), any(), any());
+    }
+
+    @Test
+    void shouldReturn404WhenMarkIncompleteNotFound() throws Exception {
+        doThrow(new jakarta.persistence.EntityNotFoundException("not found"))
+                .when(issueService).markIssueAsIncomplete(eq(99L), any(), any());
+
+        mockMvc.perform(put("/issues/99/mark-incomplete")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"commentaire\":\"c\",\"raison\":\"r\"}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldGetIssueDTOById() throws Exception {
+        IssueDto dto = IssueDto.builder().id(1L).title("Bug").build();
+        when(authentication.getName()).thenReturn("john@test.com");
+        when(issueService.getIssueDTOById(1L, "john@test.com")).thenReturn(dto);
+
+        mockMvc.perform(get("/issues/dto/1").principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1));
+    }
+
+    @Test
+    void shouldUpdateIssueWhenIncomplete() throws Exception {
+        IssueDto dto = IssueDto.builder().id(1L).title("Corrigé").build();
+        when(authentication.getName()).thenReturn("john@test.com");
+        when(issueService.updateIssueWhenIncomplete(eq("john@test.com"), eq(1L), any())).thenReturn(dto);
+
+        mockMvc.perform(post("/issues/update/incomplete/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"Corrigé\",\"description\":\"desc\",\"categoryId\":1}")
+                        .principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("Corrigé"));
+    }
+
+    @Test
+    void shouldCreateRequestReopening() throws Exception {
+        mockMvc.perform(post("/issues/1/request-reopening")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("\"Besoin de réouverture\""))
+                .andExpect(status().isOk());
+
+        verify(issueService).requestReopening(any(), eq(1L));
+    }
+
+    @Test
+    void shouldUpdateStatusWithWebSocketNotification() throws Exception {
+        Conversation conv = Conversation.builder().id(5L).build();
+        when(conversationService.getConversationByIssueId(1L)).thenReturn(Optional.of(conv));
+
+        mockMvc.perform(post("/issues/1/update-status")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("OUVERT"))
+                .andExpect(status().isOk());
+
+        verify(issueService).updateStatus("OUVERT", 1L);
+        verify(conversationWebSocketHandler).broadcastToConversation(eq(5L), contains("status_update"));
     }
 }
