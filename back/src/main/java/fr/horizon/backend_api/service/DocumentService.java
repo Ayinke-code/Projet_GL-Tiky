@@ -123,7 +123,6 @@ public class DocumentService {
      * @return liste des documents persistés
      * @throws FileStorageException si une erreur survient lors du stockage d'un fichier
      */
-    @Transactional
     public List<Document> storeFiles(List<MultipartFile> files, Issue issue, User uploadedBy, Message message) {
         if (files == null || files.isEmpty()) return List.of();
 
