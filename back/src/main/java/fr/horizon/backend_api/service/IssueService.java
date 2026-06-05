@@ -50,6 +50,7 @@ public class IssueService {
     private final NotificationService notificationService;
     private final FileStorageService fileStorageService;
     private final DocumentRepository documentRepository;
+    private final EventRepository eventRepository;
 
     private static final String USER_NOT_FOUND = "User not found";
 
@@ -391,6 +392,9 @@ public class IssueService {
         if (!canDeleteIssue(issue, currentUser)) {
             throw new AccessDeniedException("Vous n'avez pas l'autorisation de supprimer cette issue");
         }
+
+        // Supprimer les événements liés avant de supprimer l'issue
+        eventRepository.deleteByIssueId(id);
 
         issueRepository.delete(issue);
     }

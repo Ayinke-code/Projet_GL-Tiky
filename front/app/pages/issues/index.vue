@@ -71,7 +71,6 @@
               <div class="overflow-visible p-2">
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     <IssuesCard v-if="user" v-for="issue in group.issues" :key="issue.id" :issue="issue" :user="user"
-                        :show-delete="canDeleteIssue(issue)"
                         @delete="deleteValidation"
                         @requestAReopening="openReopenModal"
                         @acceptReopening="openReopenAccessModal"
@@ -104,7 +103,9 @@
               <div class="overflow-visible p-2">
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   <IssuesCard v-if="user" v-for="issue in group.issues" :key="issue.id" :issue="issue" :user="user"
-                                        @delete="deleteValidation" @requestAReopening="openReopenModal" @acceptReopening="openReopenAccessModal"/>
+                                        @delete="deleteValidation"
+                                        @requestAReopening="openReopenModal"
+                                        @acceptReopening="openReopenAccessModal"/>
                 </div>
               </div>
             </template>
@@ -370,14 +371,6 @@ const otherIssuesByCategory = computed(() => {
   }, {})
 })
 
-const canDeleteIssue = (issue) => {
-  const currentUserId = user.value?.id
-  if (!currentUserId || !issue) return false
-
-  return currentUserId === issue.createdId
-    || currentUserId === issue.categoryOwnerId
-    || currentUserId === issue.categoryManagerId
-}
 
 /**
  * Ouvre modal suppression
@@ -400,11 +393,11 @@ const handleDelete = async () => {
 
   try {
     await deleteIssue(id)
-
-    // update local state
-    issues.value = issues.value.filter(i => i.id !== id)
   } catch (err) {
-    error.value = err.message || 'Erreur lors de la suppression'
+    // L'erreur 404 est déjà gérée dans deleteIssue
+    if (err?.response?.status !== 404) {
+      error.value = err.message || 'Erreur lors de la suppression'
+    }
   } finally {
     deletingIssue.value = null
     isDeleteValidateModalOpen.value = false
