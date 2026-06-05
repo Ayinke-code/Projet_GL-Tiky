@@ -1,7 +1,6 @@
 package fr.horizon.backend_api.repository;
 
 import fr.horizon.backend_api.model.IssueRelation;
-import fr.horizon.backend_api.model.enums.RelationType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,7 +13,7 @@ public interface IssueRelationRepository extends JpaRepository<IssueRelation, Lo
     @Query("SELECT r FROM IssueRelation r WHERE r.sourceIssue.id = :issueId OR r.targetIssue.id = :issueId")
     List<IssueRelation> findAllByIssueId(@Param("issueId") Long issueId);
 
-    boolean existsBySourceIssueIdAndTargetIssueIdAndType(Long sourceId, Long targetId, RelationType type);
+    boolean existsBySourceIssueIdAndTargetIssueId(Long sourceId, Long targetId);
 
     List<IssueRelation> findAllBySourceIssueIdOrTargetIssueId(Long sourceId, Long targetId);
 }

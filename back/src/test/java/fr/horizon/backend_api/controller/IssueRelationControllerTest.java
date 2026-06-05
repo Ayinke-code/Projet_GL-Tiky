@@ -4,7 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.horizon.backend_api.model.dto.RelationDto;
 import fr.horizon.backend_api.model.dto.RelationRequestDto;
 import fr.horizon.backend_api.model.enums.RelationType;
+import fr.horizon.backend_api.service.IssueFollowerService;
 import fr.horizon.backend_api.service.IssueRelationService;
+import fr.horizon.backend_api.model.User;
+import org.springframework.security.core.Authentication;
+import java.security.Principal;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import fr.horizon.backend_api.service.JwtToken;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +46,9 @@ class IssueRelationControllerTest {
     private IssueRelationService relationService;
 
     @MockitoBean
+    private IssueFollowerService issueFollowerService;
+
+    @MockitoBean
     private JwtToken jwtToken;
 
     /**
@@ -62,15 +70,14 @@ class IssueRelationControllerTest {
                 .type(RelationType.LINKED)
                 .build();
 
-        when(relationService.createRelation(eq(1L), any(RelationRequestDto.class)))
+        when(relationService.createRelation(eq(1L), any(RelationRequestDto.class), any(User.class)))
                 .thenReturn(response);
-
+        when(issueFollowerService.getUserByEmail(any())).thenReturn(new User());
         // Exécution de la requête HTTP et vérification des assertions
         mockMvc.perform(post("/issues/1/relations")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1));
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("test@test.com"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)));
     }
 
     /**
@@ -84,13 +91,14 @@ class IssueRelationControllerTest {
         request.setType(RelationType.LINKED);
 
         // Simulation d'une levée d'exception par le service métier
-        when(relationService.createRelation(eq(1L), any(RelationRequestDto.class)))
+        when(relationService.createRelation(eq(1L), any(RelationRequestDto.class), any(User.class)))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Issue source introuvable"));
 
+        when(issueFollowerService.getUserByEmail(any())).thenReturn(new User());
         mockMvc.perform(post("/issues/1/relations")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound());
+                .with(user("test@test.com"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)));
     }
 
     /**

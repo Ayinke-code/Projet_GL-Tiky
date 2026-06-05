@@ -11,7 +11,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "issue_relation", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"source_id", "target_id", "type"})
+        @UniqueConstraint(columnNames = {"source_id", "target_id"})
 })
 public class IssueRelation extends BaseEntity {
 

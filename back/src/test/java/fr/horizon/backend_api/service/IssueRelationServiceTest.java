@@ -1,10 +1,12 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.RelationDto;
 import fr.horizon.backend_api.model.dto.RelationRequestDto;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.IssueRelation;
 import fr.horizon.backend_api.model.enums.RelationType;
+import fr.horizon.backend_api.repository.IssueFollowerRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.IssueRelationRepository;
 import org.junit.jupiter.api.Test;
@@ -33,9 +35,13 @@ class IssueRelationServiceTest {
     @Mock
     private IssueRepository issueRepository;
 
+    @Mock
+    private IssueFollowerRepository issueFollowerRepository;
+
     @InjectMocks
     private IssueRelationService relationService;
 
+    private final User user = new User();
     /**
      * Scénario nominal de création d'une liaison.
      * Vérifie que les données sont validées, enregistrées en base, et converties en DTO.
@@ -64,13 +70,14 @@ class IssueRelationServiceTest {
         savedRelation.setType(RelationType.DEPENDS_ON);
 
         // Définition du comportement attendu des mocks
-        when(relationRepository.existsBySourceIssueIdAndTargetIssueIdAndType(sourceId, targetId, RelationType.DEPENDS_ON))
+        when(relationRepository.existsBySourceIssueIdAndTargetIssueId(sourceId, targetId))
                 .thenReturn(false);
         when(issueRepository.findById(sourceId)).thenReturn(Optional.of(sourceIssue));
         when(issueRepository.findById(targetId)).thenReturn(Optional.of(targetIssue));
+        when(issueFollowerRepository.existsByUserAndIssue(user, sourceIssue)).thenReturn(true);
         when(relationRepository.save(any(IssueRelation.class))).thenReturn(savedRelation);
 
-        RelationDto result = relationService.createRelation(sourceId, dto);
+        RelationDto result = relationService.createRelation(sourceId, dto, user);
 
         // Validation des assertions de sortie
         assertNotNull(result);
@@ -88,7 +95,7 @@ class IssueRelationServiceTest {
         dto.setTargetIssueId(10L);
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> {
-            relationService.createRelation(10L, dto);
+            relationService.createRelation(10L, dto, user);
         });
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
@@ -104,10 +111,14 @@ class IssueRelationServiceTest {
         dto.setTargetIssueId(11L);
         dto.setType(RelationType.DEPENDS_ON);
 
-        when(relationRepository.existsBySourceIssueIdAndTargetIssueIdAndType(10L, 11L, RelationType.DEPENDS_ON))
+        Issue sourceIssue = new Issue();
+        sourceIssue.setId(10L);
+        when(issueRepository.findById(10L)).thenReturn(Optional.of(sourceIssue));
+        when(issueFollowerRepository.existsByUserAndIssue(user, sourceIssue)).thenReturn(true);
+        when(relationRepository.existsBySourceIssueIdAndTargetIssueId(10L, 11L))
                 .thenReturn(true);
 
-        assertThrows(ResponseStatusException.class, () -> relationService.createRelation(10L, dto));
+        assertThrows(ResponseStatusException.class, () -> relationService.createRelation(10L, dto, user));
     }
 
     /**
@@ -120,11 +131,9 @@ class IssueRelationServiceTest {
         dto.setTargetIssueId(11L);
         dto.setType(RelationType.LINKED);
 
-        when(relationRepository.existsBySourceIssueIdAndTargetIssueIdAndType(10L, 11L, RelationType.LINKED))
-                .thenReturn(false);
         when(issueRepository.findById(10L)).thenReturn(Optional.empty());
 
-        assertThrows(ResponseStatusException.class, () -> relationService.createRelation(10L, dto));
+        assertThrows(ResponseStatusException.class, () -> relationService.createRelation(10L, dto, user));
     }
 
     /**
@@ -146,5 +155,27 @@ class IssueRelationServiceTest {
     void deleteRelation_notFound_throwsNotFound() {
         when(relationRepository.existsById(99L)).thenReturn(false);
         assertThrows(ResponseStatusException.class, () -> relationService.deleteRelation(99L));
+    }
+
+    /**
+     * Règle métier : Restriction aux abonnés.
+     * Vérifie la levée d'une exception FORBIDDEN (403) si l'utilisateur ne suit pas le ticket.
+     */
+    @Test
+    void createRelation_notFollower_throwsForbidden() {
+        RelationRequestDto dto = new RelationRequestDto();
+        dto.setTargetIssueId(11L);
+        dto.setType(RelationType.DEPENDS_ON);
+
+        Issue sourceIssue = new Issue();
+        sourceIssue.setId(10L);
+
+        when(issueRepository.findById(10L)).thenReturn(Optional.of(sourceIssue));
+        when(issueFollowerRepository.existsByUserAndIssue(user, sourceIssue)).thenReturn(false);
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> relationService.createRelation(10L, dto, user));
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
     }
 }

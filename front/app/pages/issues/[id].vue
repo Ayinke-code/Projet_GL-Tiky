@@ -1,4 +1,5 @@
 <script setup lang="js">
+import IssueRelationCard from '~/components/issues/IssueRelationCard.vue'
 /**
  * Page détail d'une issue
  * - charge une issue par ID
@@ -328,6 +329,15 @@ const handleUnfollow = async () => {
     error.value = err?.message || 'Erreur lors du désabonnement'
   }
 }
+
+// Slider sidebar
+const activeSlide = ref(0)
+const slides = computed(() => {
+  if (user?.value?.id === issue?.value?.categoryManagerId) {
+    return ['meeting-proposal', 'relations']
+  }
+  return ['meeting-demand', 'relations']
+})
 </script>
 
 <template>
@@ -517,18 +527,49 @@ const handleUnfollow = async () => {
             </div>
           </div>
 
-          <IssueMeetingProposal
-            v-if="user?.value?.id && user.value.id === issue?.categoryManagerId"
-            :issue="issue"
-          />
-          <IssueMeetingDemand
-            v-if="user?.value?.id && user.value.id !== issue?.categoryManagerId"
-            :issue="issue"
-          />
+          <!-- Slider sidebar : visible uniquement pour les abonnés -->
+          <div v-if="alreadyFollowing" class="relative">
+            <div class="overflow-hidden">
+              <div
+                class="flex transition-transform duration-300 ease-in-out"
+                :style="`transform: translateX(-${activeSlide * 100}%)`"
+              >
+                <div class="min-w-full" v-if="user?.id === issue?.categoryManagerId">
+                  <IssueMeetingProposal :issue="issue" />
+                </div>
+                <div class="min-w-full" v-if="user?.id !== issue?.categoryManagerId">
+                  <IssueMeetingDemand :issue="issue" />
+                </div>
+                <div class="min-w-full">
+                  <IssueRelationCard :current-issue-id="issueId" />
+                </div>
+              </div>
+            </div>
 
-          <ClientOnly>
-            <IssueRelationsCard :current-issue-id="issueId" />
-          </ClientOnly>
+            <div class="flex justify-center gap-2 mt-3">
+              <button
+                v-for="(_, i) in slides"
+                :key="i"
+                @click="activeSlide = i"
+                class="w-2 h-2 rounded-full transition-all duration-200"
+                :class="activeSlide === i ? 'bg-indigo-600 w-4' : 'bg-gray-300 hover:bg-gray-400'"
+              />
+            </div>
+          </div>
+
+          <!-- RDV seul : visible pour les non-abonnés -->
+          <!-- Slide RDV Manager -->
+          <div class="min-w-full" v-if="user?.id === issue?.categoryManagerId">
+            <ClientOnly>
+              <IssueMeetingProposal :issue="issue" />
+            </ClientOnly>
+          </div>
+          <!-- Slide RDV Demande -->
+          <div class="min-w-full" v-if="user?.id !== issue?.categoryManagerId">
+            <ClientOnly>
+              <IssueMeetingDemand :issue="issue" />
+            </ClientOnly>
+          </div>
 
           <slot name="sidebar-extra" />
         </div>

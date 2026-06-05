@@ -4,7 +4,7 @@
     <div class="px-5 py-3 border-b border-gray-100 flex justify-between items-center bg-slate-50/50">
       <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
         <i class="fa-solid fa-network-wired text-indigo-500"></i>
-        Issues Liées
+        Tickets Liés
       </h2>
       <UBadge v-if="relations.length" size="xs" color="gray" variant="solid" class="rounded-full">
         {{ relations.length }}
@@ -18,10 +18,10 @@
       </div>
 
       <p v-else-if="!relations.length" class="text-xs text-gray-400 text-center py-2">
-        Aucune issue liée ou dépendance enregistrée.
+        Aucun ticket lié ou dépendance enregistrée.
       </p>
 
-      <!-- LISTE DES RELATIONS EXISTANTES -->
+      <!-- LISTE DES LIENS EXISTANTS -->
       <div v-else class="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
         <div
           v-for="rel in relations"
@@ -31,10 +31,10 @@
           <div class="min-w-0 flex-1 pr-2">
             <div class="flex items-center gap-1.5 font-medium text-gray-800">
               <span v-if="rel.sourceIssueId === currentIssueId" class="truncate">
-                👉 Lié à : <span class="font-semibold">#{{ rel.targetIssueId }}</span>
+                 Lié à : <span class="font-semibold">#{{ rel.targetIssueId }}</span>
               </span>
               <span v-else class="truncate">
-                👈 Requis par : <span class="font-semibold">#{{ rel.sourceIssueId }}</span>
+                 Requis par : <span class="font-semibold">#{{ rel.sourceIssueId }}</span>
               </span>
             </div>
 
@@ -77,7 +77,7 @@
       <form @submit.prevent="handleSubmit" class="space-y-3">
         <div>
           <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-            Rechercher une issue
+            Rechercher un ticket
           </label>
           <USelectMenu
             v-model="selectedTarget"
@@ -91,14 +91,14 @@
 
         <div>
           <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-            Type de relation
+            Type de lien
           </label>
           <select
             v-model="form.type"
             class="w-full text-xs px-2 py-2 border border-gray-200 rounded-lg bg-gray-50/50 focus:bg-white outline-none transition-all"
           >
-            <option value="LINKED">🔗 Liaison (Est lié à)</option>
-            <option value="DEPENDS_ON">⚠️ Dépendance (Dépend de)</option>
+            <option value="LINKED"> Liaison (Est lié à)</option>
+            <option value="DEPENDS_ON"> Dépendance (Dépend de)</option>
           </select>
         </div>
 
@@ -125,7 +125,7 @@
     <ConfirmModal
       v-model="isDeleteModalOpen"
       title="Supprimer la liaison"
-      description="Êtes-vous sûr de vouloir casser définitivement le lien entre ces deux tickets ?"
+      description="Voulez-vous vraiment supprimer ce lien entre les deux tickets ?"
       @confirm="confirmDelete"
     />
   </div>
@@ -157,8 +157,8 @@ const form = ref({
 })
 
 const relationOptions = [
-  { value: 'LINKED', label: '🔗 Est lié à (Lien simple)' },
-  { value: 'DEPENDS_ON', label: '⚠️ Dépend de (Bloquant)' }
+  { value: 'LINKED', label: ' Est lié à ' },
+  { value: 'DEPENDS_ON', label: ' Dépend de ' }
 ]
 
 const searchableIssues = computed(() => {
@@ -186,7 +186,14 @@ const handleSubmit = async () => {
     await createRelation(props.currentIssueId, selectedTarget.value.id, form.value.type)
     selectedTarget.value = null
   } catch (err) {
-    localError.value = err?.data?.message || "Erreur lors de la liaison"
+    const status = err?.response?.status || err?.status || err?.statusCode
+    if (status === 409) {
+      localError.value = "Vous avez déjà lié ces deux tickets."
+    } else if (status === 403) {
+      localError.value = "Vous devez suivre ce ticket pour créer une liaison."
+    } else {
+      localError.value = err?.data?.message || "Erreur lors de la liaison."
+    }
   } finally {
     submitting.value = false
   }
@@ -205,7 +212,7 @@ const confirmDelete = async () => {
     isDeleteModalOpen.value = false
     relationIdToDelete.value = null
   } catch (err) {
-    deleteError.value = err?.data?.message || "Impossible de supprimer la relation."
+    deleteError.value = err?.data?.message || "Impossible de supprimer le lien."
     isDeleteModalOpen.value = false
   }
 }
