@@ -41,8 +41,7 @@ abstract class BaseSeleniumIT {
                 "--window-size=1920,1080",
                 "--ignore-certificate-errors"
         );
-//        driver = new ChromeDriver(options);
-        driver = new ChromeDriver();
+        driver = new ChromeDriver(options);
         wait = new WebDriverWait(driver, Duration.ofSeconds(5));
     }
 
