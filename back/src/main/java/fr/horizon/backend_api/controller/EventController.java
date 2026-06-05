@@ -5,6 +5,7 @@ import fr.horizon.backend_api.service.EventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -121,9 +122,37 @@ public class EventController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAuthority('TEACHER') or hasAuthority('ADMIN')")
     @DeleteMapping("/{id}")
     public void deleteEvent(@PathVariable Long id) {
         eventService.deleteById(id);
+    }
+
+    /**
+     * Retourne les sessions de l'utilisateur connecté (rôle-aware) :
+     * - STUDENT : events des groupes + RDV (ISSUE) auxquels il est convoqué
+     * - TEACHER/ADMIN : events des groupes enseignés + RDV créés ou auxquels il participe
+     *
+     * @param authentication contexte de sécurité Spring
+     * @return liste des événements triés par date
+     */
+    @GetMapping("/my-sessions")
+    public ResponseEntity<List<EventResponseDto>> mySessions(Authentication authentication) {
+        String email = authentication.getName();
+        return ResponseEntity.ok(eventService.getMySessions(email));
+    }
+
+    /**
+     * Retourne les événements auxquels l'utilisateur connecté participe (invitations acceptées).
+     * Exclut les événements créés par l'utilisateur lui-même.
+     *
+     * @param authentication contexte de sécurité Spring
+     * @return liste des événements acceptés triés par date
+     */
+    @GetMapping("/my-participations")
+    public ResponseEntity<List<EventResponseDto>> myParticipations(Authentication authentication) {
+        String email = authentication.getName();
+        return ResponseEntity.ok(eventService.getMyParticipations(email));
     }
 
     /**

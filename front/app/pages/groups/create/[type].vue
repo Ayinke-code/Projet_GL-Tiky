@@ -44,13 +44,13 @@
 
         <!-- Nom auto-généré (OPTION) — aperçu read-only -->
         <div v-if="isOption">
-          <label class="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-2">
+          <p class="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-2">
             Nom du groupe
             <span class="inline-flex items-center gap-1 text-indigo-500 font-medium text-xs">
               <i class="fa-solid fa-wand-magic-sparkles"></i>
               Auto-généré
             </span>
-          </label>
+          </p>
           <div
             class="w-full px-4 py-2 border rounded-lg text-sm"
             :class="form.name
@@ -64,7 +64,7 @@
         <!-- Catégorie filtrée par type -->
         <div>
           <div class="flex items-center justify-between mb-1">
-            <label class="block text-xs font-medium text-gray-700">
+            <label for="category-field" class="block text-xs font-medium text-gray-700">
               {{ isOption ? 'Option' : 'Nom du groupe' }} <span class="text-red-500">*</span>
             </label>
             <button
@@ -79,6 +79,7 @@
           <!-- Saisie libre -->
           <input
             v-if="useCustomCategory"
+            id="category-field"
             v-model="form.customCategoryName"
             type="text"
             :placeholder="isOption ? 'Ex : Génie Logiciel' : 'Ex : Horizon Alpha'"
@@ -92,6 +93,7 @@
             <USkeleton v-if="loadingCategories" class="h-10 w-full rounded-lg" />
             <select
               v-else
+              id="category-field"
               v-model="form.categoryId"
               class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
                      focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -107,12 +109,13 @@
 
         <!-- Groupe d'option parent (PROJECT uniquement) -->
         <div v-if="!isOption">
-          <label class="block text-xs font-medium text-gray-700 mb-1">
+          <label for="parent-group-select" class="block text-xs font-medium text-gray-700 mb-1">
             Groupe d'option rattaché <span class="text-red-500">*</span>
           </label>
           <USkeleton v-if="loadingOptionGroups" class="h-10 w-full rounded-lg" />
           <select
             v-else
+            id="parent-group-select"
             v-model="form.parentGroupId"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
                    focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -142,11 +145,12 @@
 
         <!-- Promotion associée (OPTION uniquement) -->
         <div v-if="isOption && promotions.length > 0">
-          <label class="block text-xs font-medium text-gray-700 mb-1">
+          <label for="promotion-select" class="block text-xs font-medium text-gray-700 mb-1">
             Promotion associée
             <span class="text-gray-400 font-normal ml-1">(optionnel)</span>
           </label>
           <select
+            id="promotion-select"
             v-model="form.promotionId"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm
                    focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -163,7 +167,7 @@
 
         <!-- Sélection des étudiants -->
         <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">
+          <label for="student-search" class="block text-xs font-medium text-gray-700 mb-1">
             Étudiants
             <span class="text-gray-400 font-normal ml-1">({{ form.memberIds.length }} sélectionné(s))</span>
             <span :class="form.memberIds.length < minMembers ? 'text-red-500' : 'text-emerald-600'" class="font-semibold ml-1">
@@ -182,6 +186,7 @@
 
           <template v-else>
           <input
+            id="student-search"
             v-model="studentSearch"
             type="text"
             placeholder="Rechercher un étudiant…"
@@ -327,22 +332,16 @@ watch(
       if (useCustomCategory.value) {
         form.name = form.customCategoryName
       } else {
-        const cat = categories.value.find(c => c.id === form.categoryId)
-        if (cat) form.name = cat.name
+        form.name = categories.value.find(c => c.id === form.categoryId)?.name ?? form.name
       }
     }
   }
 )
 
-// Pour OPTION : quand une promo est sélectionnée, auto-sélectionner tous ses étudiants
-watch(() => form.promotionId, (newPromoId) => {
+// Pour OPTION : quand la promo change, vider la sélection (pas d'auto-sélection)
+watch(() => form.promotionId, () => {
   if (!isOption.value) return
-  if (!newPromoId) {
-    form.memberIds = []
-    return
-  }
-  const promo = promotions.value.find(p => p.id === newPromoId)
-  form.memberIds = promo?.members?.map(m => m.id) ?? []
+  form.memberIds = []
 })
 
 // Pour PROJECT : vider la sélection quand le groupe d'option change

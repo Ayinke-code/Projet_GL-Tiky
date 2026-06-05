@@ -47,6 +47,12 @@ onMounted(async () => {
   }
 })
 
+const minStartDate = computed(() => {
+  const d = new Date()
+  d.setMinutes(d.getMinutes() + 30)
+  return formatDateTimeLocal(d)
+})
+
 const handleSubmit = async () => {
   error.value = null
 
@@ -56,9 +62,11 @@ const handleSubmit = async () => {
   }
 
   const startObj = new Date(startDate.value)
+  const minDate = new Date()
+  minDate.setMinutes(minDate.getMinutes() + 30)
 
-  if (startObj < new Date()) {
-    error.value = "La date de début ne peut pas être dans le passé."
+  if (startObj < minDate) {
+    error.value = "La date de début doit être au moins 30 minutes dans le futur."
     return
   }
 
@@ -129,17 +137,6 @@ const handleSubmit = async () => {
           Une réunion est déjà prévue ou une demande est en attente de validation pour ce ticket.
         </p>
       </div>
-      <div class="w-full max-w-[240px] pt-2">
-        <UButton
-          to="/invitations"
-          icon="i-heroicons-eye"
-          label="Suivre mes demandes"
-          color="blue"
-          variant="solid"
-          block
-          size="sm"
-        />
-      </div>
     </div>
 
     <div v-else class="px-5 py-6 flex flex-col items-center gap-6 text-sm w-full max-w-sm mx-auto">
@@ -181,6 +178,7 @@ const handleSubmit = async () => {
         <UInput
           v-model="startDate"
           type="datetime-local"
+          :min="minStartDate"
           icon="i-heroicons-calendar"
           size="sm"
           class="w-full max-w-[260px]"

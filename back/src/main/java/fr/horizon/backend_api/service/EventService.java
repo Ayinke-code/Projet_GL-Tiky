@@ -139,8 +139,8 @@ public class EventService {
         if (meetingRequest.getStartDate() == null || meetingRequest.getEndDate() == null) {
             throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires pour un événement de ce type.");
         }
-        if(meetingRequest.getStartDate().isBefore(LocalDateTime.now())){
-            throw new IllegalArgumentException("La date de début doit être antérieur à la date courante.");
+        if(meetingRequest.getStartDate().isBefore(LocalDateTime.now().plusMinutes(30))){
+            throw new IllegalArgumentException("La date de début doit être au moins 30 minutes dans le futur.");
         }
         if (!meetingRequest.getEndDate().isAfter(meetingRequest.getStartDate())) {
             throw new IllegalArgumentException("La date de fin doit être postérieure à la date de début.");
@@ -236,7 +236,9 @@ public class EventService {
         participantParticipant.setHasAccepted(response);
         participantParticipant.setReason(!response ? raison : null);
 
-        if(response || Objects.equals(event.getIssue().getManager().getId(), user.getId())){
+        // Valider l'event UNIQUEMENT si le prof accepte.
+        // En cas de refus, validated reste false → l'event disparaît du calendrier.
+        if (response) {
             event.setValidated(true);
         }
 
@@ -307,6 +309,131 @@ public class EventService {
     }
 
 
+    /**
+     * Retourne les sessions assignées à l'étudiant connecté.
+     * Inclut les événements liés aux groupes PROJECT, OPTION et PROMOTION
+     * dont l'étudiant est membre (directement ou via la hiérarchie).
+     *
+     * @param email email de l'étudiant extrait du contexte de sécurité
+     * @return liste de DTO triée par date de début croissante
+     */
+    @Transactional(readOnly = true)
+    public List<EventResponseDto> listForStudent(String email) {
+        User student = userService.findByEmail(email);
+
+        // Tous les groupes dont l'étudiant est membre directement
+        List<StudentGroup> directGroups = studentGroupRepository.findAllByMemberId(student.getId());
+
+        Set<Long> groupIds = buildGroupIdHierarchy(directGroups);
+
+        if (groupIds.isEmpty()) {
+            return List.of();
+        }
+
+        return eventRepository.findByProjectGroupIds(groupIds)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    /**
+     * Retourne les sessions pour tous les rôles (STUDENT, TEACHER, ADMIN) :
+     * - STUDENT : events des groupes dont il est membre + events ISSUE où il est participant/créateur
+     * - TEACHER/ADMIN : events des groupes qu'il enseigne + events ISSUE où il est participant/créateur
+     * Chaque event ISSUE inclut le statut de participation de l'utilisateur courant.
+     */
+    @Transactional(readOnly = true)
+    public List<EventResponseDto> getMySessions(String email) {
+        User user = userService.findByEmail(email);
+
+        boolean isTeacherOrAdmin = user.getRoles().stream()
+                .anyMatch(r -> RoleEnum.TEACHER.value().equals(r.getName()) || RoleEnum.ADMIN.value().equals(r.getName()));
+
+        Map<Long, Event> eventMap = new LinkedHashMap<>();
+        Map<Long, Boolean> participationStatus = new HashMap<>();
+
+        if (isTeacherOrAdmin) {
+            // Teacher/Admin : events AUDIT/DEFENSE des groupes qu'ils enseignent
+            eventRepository.findGroupEventsForTeacher(user.getId())
+                    .forEach(e -> eventMap.put(e.getId(), e));
+        } else {
+            // Student : events AUDIT/DEFENSE des groupes dont ils sont membres
+            List<StudentGroup> directGroups = studentGroupRepository.findAllByMemberId(user.getId());
+            Set<Long> groupIds = buildGroupIdHierarchy(directGroups);
+            if (!groupIds.isEmpty()) {
+                eventRepository.findByProjectGroupIds(groupIds)
+                        .forEach(e -> eventMap.put(e.getId(), e));
+            }
+        }
+
+        // Tous les rôles : events ISSUE (RDV) où l'utilisateur est créateur ou participant
+        // Pour TEACHER/ADMIN : uniquement les RDV validés (accepted) dans "Mes sessions".
+        // Les RDV en attente sont gérés dans "Gérer mon planning".
+        eventRepository.findIssueEventsForUser(user.getId(), CategoryType.ISSUE)
+                .forEach(e -> {
+                    if (isTeacherOrAdmin && !Boolean.TRUE.equals(e.getValidated())) {
+                        return; // RDV en attente : visible dans "Gérer mon planning", pas dans "Mes sessions"
+                    }
+                    eventMap.put(e.getId(), e);
+                    participationStatus.put(e.getId(), resolveIssueStatus(e, user.getId()));
+                });
+
+        return eventMap.values().stream()
+                .sorted(Comparator.comparing(
+                        e -> e.getStartDate() != null ? e.getStartDate() : LocalDateTime.MAX,
+                        Comparator.naturalOrder()
+                ))
+                .map(e -> {
+                    EventResponseDto dto = mapToResponse(e);
+                    if (participationStatus.containsKey(e.getId())) {
+                        dto.setMyParticipationStatus(participationStatus.get(e.getId()));
+                    }
+                    return dto;
+                })
+                .toList();
+    }
+
+    /**
+     * Calcule le statut de participation d'un utilisateur pour un event ISSUE :
+     * - Si créateur : déduit le statut depuis la réponse des autres participants
+     * - Si participant invité : retourne son propre hasAccepted
+     */
+    private Boolean resolveIssueStatus(Event event, Long userId) {
+        if (event.getCreatedBy().getId().equals(userId)) {
+            boolean anyRefused = event.getParticipants().stream()
+                    .filter(p -> !p.getUser().getId().equals(userId))
+                    .anyMatch(p -> Boolean.FALSE.equals(p.getHasAccepted()));
+            if (anyRefused) return false;
+            boolean anyAccepted = event.getParticipants().stream()
+                    .filter(p -> !p.getUser().getId().equals(userId))
+                    .anyMatch(p -> Boolean.TRUE.equals(p.getHasAccepted()));
+            return anyAccepted ? true : null;
+        }
+        return event.getParticipants().stream()
+                .filter(p -> p.getUser().getId().equals(userId))
+                .findFirst()
+                .map(EventParticipant::getHasAccepted)
+                .orElse(null);
+    }
+
+    /** Construit la hiérarchie complète des groupes (PROJECT → OPTION parent → PROMOTION) pour un étudiant. */
+    private Set<Long> buildGroupIdHierarchy(List<StudentGroup> directGroups) {
+        Set<Long> groupIds = new HashSet<>();
+        for (StudentGroup g : directGroups) {
+            groupIds.add(g.getId());
+            if (g.getParentGroup() != null) {
+                groupIds.add(g.getParentGroup().getId());
+                if (g.getParentGroup().getPromotion() != null) {
+                    groupIds.add(g.getParentGroup().getPromotion().getId());
+                }
+            }
+            if (g.getPromotion() != null) {
+                groupIds.add(g.getPromotion().getId());
+            }
+        }
+        return groupIds;
+    }
+
     @Transactional
     public void deleteById(Long id) {
         Event event = eventRepository.findById(id)
@@ -321,12 +448,29 @@ public class EventService {
      * @return Une liste de EventResponseDto formatée pour le frontend
      */
     @Transactional(readOnly = true)
+    public List<EventResponseDto> getMyParticipations(String email) {
+        User user = userService.findByEmail(email);
+        return eventRepository.findAcceptedParticipationsByUserId(user.getId())
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<EventResponseDto> getMyCalendarEvents(String email) {
         User user = userService.findByEmail(email);
 
-        List<Event> events = eventRepository.findCalendarEventsForUser(user.getId());
-
-        return events.stream()
+        return eventRepository.findCalendarEventsForUser(user.getId()).stream()
+                .filter(e -> {
+                    // Pour les RDV (ISSUE) créés par cet utilisateur, ne pas afficher si un participant a refusé
+                    if (CategoryType.ISSUE.equals(e.getCategoryType())
+                            && e.getCreatedBy().getId().equals(user.getId())) {
+                        return e.getParticipants().stream()
+                                .filter(p -> !p.getUser().getId().equals(user.getId()))
+                                .noneMatch(p -> Boolean.FALSE.equals(p.getHasAccepted()));
+                    }
+                    return true;
+                })
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -341,18 +485,21 @@ public class EventService {
         List<EventResponseDto.ProjectGroupRefDto> groups = event.getProjectGroups().stream()
                 .map(g -> {
                     // Enseignants : ceux du groupe parent (OPTION) s'il existe, sinon ceux du groupe lui-même
-                    Set<String> teacherNames = (g.getParentGroup() != null
+                    Set<EventResponseDto.TeacherRefDto> teachers = (g.getParentGroup() != null
                             ? g.getParentGroup().getTeachers()
                             : g.getTeachers())
                             .stream()
-                            .map(fr.horizon.backend_api.model.User::getName)
+                            .map(t -> EventResponseDto.TeacherRefDto.builder()
+                                    .name(t.getName())
+                                    .teacherType(t.getTeacherType() != null ? t.getTeacherType().name() : null)
+                                    .build())
                             .collect(java.util.stream.Collectors.toSet());
                     return EventResponseDto.ProjectGroupRefDto.builder()
                             .id(g.getId())
                             .name(g.getName())
                             .categoryName(g.getCategory().getName())
                             .parentGroupName(g.getParentGroup() != null ? g.getParentGroup().getName() : null)
-                            .teachers(teacherNames)
+                            .teachers(teachers)
                             .build();
                 })
                 .toList();
@@ -367,6 +514,7 @@ public class EventService {
                 .createdAt(event.getCreatedAt())
                 .startDate(event.getStartDate())
                 .endDate(event.getEndDate())
+                .validated(event.getValidated())
                 .projectGroups(groups)
                 .participantNames(event.getParticipants().stream()
                         .map(participant -> participant.getUser().getName())
@@ -427,7 +575,8 @@ public class EventService {
      * @return true s'il y a une réunion à venir, false sinon
      */
     public boolean issueGotMeeting(Long issueId) {
-        return eventRepository.existsByIssueIdAndStartDateAfterAndValidatedTrue(issueId, LocalDateTime.now());
+        // Inclut les demandes en attente (validated=false) pour éviter les doublons
+        return eventRepository.existsByIssueIdAndStartDateAfter(issueId, LocalDateTime.now());
     }
 
     /**
@@ -648,6 +797,13 @@ public class EventService {
         Issue issue = issueRepository.findById(issueId)
                 .orElseThrow(() -> new EntityNotFoundException(ISSUE_NOT_FOUND));
 
+        // Bloquer si une demande (en attente ou confirmée) existe déjà pour ce ticket
+        if (eventRepository.existsByIssueIdAndStartDateAfter(issueId, LocalDateTime.now())) {
+            throw new EventConflictException(
+                "Une demande de rendez-vous est déjà en cours pour ce ticket."
+            );
+        }
+
         checkDatesForCreation(meetingRequest);
 
         Event event = Event.builder()
@@ -665,7 +821,13 @@ public class EventService {
         event.addParticipant(user, true);
         Event saved = eventRepository.save(event);
 
-        return inviteUserToMeeting(saved.getId(), issue.getManager().getId());
+        // Si c'est le manager (prof) qui crée → inviter le créateur du ticket (étudiant)
+        // Si c'est l'étudiant qui crée → inviter le manager (prof)
+        Long otherPartyId = user.getId().equals(issue.getManager().getId())
+                ? issue.getCreatedBy().getId()
+                : issue.getManager().getId();
+
+        return inviteUserToMeeting(saved.getId(), otherPartyId);
 
     }
 
