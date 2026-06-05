@@ -63,39 +63,24 @@
             <i :class="typeStyle(session.categoryType).icon" class="text-[9px]"></i>
             {{ typeLabel(session.categoryType) }}
           </span>
-          <!-- Badge passé/aujourd'hui/à venir -->
-          <span
-            class="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-            :class="isPast(session.endDate)
-              ? 'bg-gray-100 text-gray-400'
-              : isToday(session.startDate)
-              ? 'bg-amber-100 text-amber-600'
-              : 'bg-emerald-100 text-emerald-600'"
-          >
-            {{ isPast(session.endDate) ? 'Passée' : isToday(session.startDate) ? "Aujourd'hui" : 'À venir' }}
-          </span>
-        </div>
-
-        <!-- Badge participation (RDV / ISSUE uniquement) -->
-        <div v-if="session.categoryType === 'ISSUE'" class="flex items-center gap-2 flex-wrap">
-          <!-- Refusé (priorité max — créateur ou participant) -->
-          <span v-if="session.myParticipationStatus === false"
-            class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
-            <i class="fa-solid fa-circle-xmark text-[8px]"></i>
-            {{ session.createdBy === user?.name ? 'RDV refusé par le professeur' : 'Refusé' }}
-          </span>
-          <!-- En attente -->
-          <span v-else-if="session.myParticipationStatus === null"
-            class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
-            <i class="fa-solid fa-hourglass-half text-[8px]"></i>
-            {{ session.createdBy === user?.name ? 'En attente de confirmation' : 'En attente de votre réponse' }}
-          </span>
-          <!-- Confirmé / Accepté -->
-          <span v-else
-            class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
-            <i class="fa-solid fa-circle-check text-[8px]"></i>
-            {{ session.createdBy === user?.name ? 'RDV confirmé' : 'Accepté' }}
-          </span>
+          <!-- Badge participation (TICKET uniquement) -->
+          <template v-if="session.categoryType === 'ISSUE'">
+            <span v-if="session.myParticipationStatus === false"
+              class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
+              <i class="fa-solid fa-circle-xmark text-[8px]"></i>
+              {{ session.createdBy === user?.name ? 'RDV refusé' : 'Refusé' }}
+            </span>
+            <span v-else-if="session.myParticipationStatus === null"
+              class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+              <i class="fa-solid fa-hourglass-half text-[8px]"></i>
+              {{ session.createdBy === user?.name ? 'En attente' : 'En attente' }}
+            </span>
+            <span v-else
+              class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
+              <i class="fa-solid fa-circle-check text-[8px]"></i>
+              {{ session.createdBy === user?.name ? 'RDV confirmé' : 'Accepté' }}
+            </span>
+          </template>
         </div>
 
         <!-- Nom de l'événement -->
@@ -178,8 +163,45 @@
             @click.stop="respond(session, false)"
           >Refuser</UButton>
         </div>
+
+        <!-- Bouton supprimer (prof / admin, sessions passées uniquement) -->
+        <div
+          v-if="isTeacherOrAdmin && isPast(session.endDate)"
+          class="flex justify-end mt-auto pt-1"
+          @click.stop
+        >
+          <UButton
+            size="xs" color="error" variant="ghost" icon="i-lucide-trash-2"
+            @click.stop="openDeleteConfirm(session)"
+          ></UButton>
+        </div>
       </div>
     </div>
+
+    <!-- Modal de confirmation de suppression -->
+    <UModal v-model:open="deleteConfirmOpen" title="Supprimer la session" :ui="{ width: 'sm:max-w-md' }">
+      <template #body>
+        <div class="space-y-3">
+          <div class="flex items-center gap-3 p-4 bg-rose-50 rounded-xl border border-rose-200">
+            <i class="fa-solid fa-triangle-exclamation text-rose-500 text-lg"></i>
+            <p class="text-sm text-rose-700">
+              Vous êtes sur le point de supprimer <strong>{{ sessionToDelete?.name }}</strong>.<br>
+              Les participants seront notifiés de l'annulation.
+            </p>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton color="neutral" variant="ghost" @click="deleteConfirmOpen = false">Annuler</UButton>
+          <UButton color="error" variant="solid" icon="i-lucide-trash-2"
+            :loading="deleting"
+            @click="confirmDelete">
+            Supprimer définitivement
+          </UButton>
+        </div>
+      </template>
+    </UModal>
 
     <!-- Modal de détail -->
     <UModal v-model:open="detailOpen" :title="selectedSession?.name" :ui="{ width: 'sm:max-w-lg' }">
@@ -340,6 +362,13 @@ const activeFilter = ref('upcoming')
 const detailOpen = ref(false)
 const selectedSession = ref(null)
 const pendingResponse = ref(null)
+const deleteConfirmOpen = ref(false)
+const sessionToDelete = ref(null)
+const deleting = ref(false)
+
+const isTeacherOrAdmin = computed(() =>
+  user.value?.roles?.includes('TEACHER') || user.value?.roles?.includes('ADMIN')
+)
 
 const filters = [
   { value: 'upcoming', label: 'À venir', icon: 'fa-solid fa-clock' },
@@ -457,5 +486,29 @@ const typeStyle = (type) => ({
 const openDetail = (session) => {
   selectedSession.value = session
   detailOpen.value = true
+}
+
+const openDeleteConfirm = (session) => {
+  sessionToDelete.value = session
+  deleteConfirmOpen.value = true
+}
+
+const confirmDelete = async () => {
+  if (!sessionToDelete.value) return
+  deleting.value = true
+  try {
+    await api(`/events/${sessionToDelete.value.id}/cancel`, { method: 'DELETE' })
+    sessions.value = sessions.value.filter(s => s.id !== sessionToDelete.value.id)
+    if (selectedSession.value?.id === sessionToDelete.value.id) {
+      detailOpen.value = false
+      selectedSession.value = null
+    }
+    deleteConfirmOpen.value = false
+    sessionToDelete.value = null
+  } catch (e) {
+    console.error('Erreur suppression session', e)
+  } finally {
+    deleting.value = false
+  }
 }
 </script>
