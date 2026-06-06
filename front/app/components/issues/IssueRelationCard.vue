@@ -6,8 +6,8 @@
         <i class="fa-solid fa-network-wired text-indigo-500"></i>
         Tickets Liés
       </h2>
-      <UBadge v-if="relations.length" size="xs" color="gray" variant="solid" class="rounded-full">
-        {{ relations.length }}
+      <UBadge v-if="visibleRelations.length" size="xs" color="gray" variant="solid" class="rounded-full">
+        {{ visibleRelations.length }}
       </UBadge>
     </div>
 
@@ -17,32 +17,33 @@
         Chargement des liaisons...
       </div>
 
-      <p v-else-if="!relations.length" class="text-xs text-gray-400 text-center py-2">
+      <p v-else-if="!visibleRelations.length" class="text-xs text-gray-400 text-center py-2">
         Aucun ticket lié ou dépendance enregistrée.
       </p>
 
       <!-- LISTE DES LIENS EXISTANTS -->
       <div v-else class="space-y-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
         <div
-          v-for="rel in relations"
+          v-for="rel in visibleRelations"
           :key="rel.id"
           class="group flex items-center justify-between p-2 rounded-lg border border-gray-100 bg-gray-50/50 text-xs hover:bg-gray-50 transition-colors"
         >
           <div class="min-w-0 flex-1 pr-2">
             <div class="flex items-center gap-1.5 font-medium text-gray-800">
+
               <span v-if="rel.sourceIssueId === currentIssueId" class="truncate">
-                 Lié à : <span class="font-semibold">#{{ rel.targetIssueId }}</span>
+                {{ rel.type === 'DEPENDS_ON' ? 'Dépend de :' : 'Lié à :' }}
+                <span class="text-[11px] text-gray-400 italic">{{ rel.targetIssueTitle }}</span>
               </span>
+
               <span v-else class="truncate">
-                 Requis par : <span class="font-semibold">#{{ rel.sourceIssueId }}</span>
+                {{ rel.type === 'DEPENDS_ON' ? 'Requis par :' : 'Lié à :' }}
+                <span class="text-[11px] text-gray-400 italic">{{ rel.sourceIssueTitle }}</span>
               </span>
+
             </div>
 
-            <p class="text-[11px] text-gray-400 truncate italic mt-0.5">
-              {{ rel.sourceIssueId === currentIssueId ? rel.targetIssueTitle : rel.sourceIssueTitle }}
-            </p>
-
-            <div class="mt-1">
+            <div class="mt-1 flex gap-1 flex-wrap">
               <UBadge
                 size="xs"
                 :color="rel.type === 'DEPENDS_ON' ? 'error' : 'info'"
@@ -50,6 +51,33 @@
                 class="text-[9px] px-1.5 py-0 uppercase font-bold tracking-wider"
               >
                 {{ rel.type === 'DEPENDS_ON' ? 'Dépendance' : 'Association' }}
+              </UBadge>
+              <UBadge
+                v-if="rel.createdById === props.currentUserId"
+                size="xs"
+                color="success"
+                variant="solid"
+                class="text-[9px] px-1.5 py-0 uppercase font-bold tracking-wider"
+              >
+                Vous
+              </UBadge>
+              <UBadge
+                v-else-if="rel.manager"
+                size="xs"
+                color="primary"
+                variant="solid"
+                class="text-[9px] px-1.5 py-0 uppercase font-bold tracking-wider"
+              >
+                Lien validé!
+              </UBadge>
+              <UBadge
+                v-else
+                size="xs"
+                color="warning"
+                variant="solid"
+                class="text-[9px] px-1.5 py-0 uppercase font-bold tracking-wider"
+              >
+                Etudiant
               </UBadge>
             </div>
           </div>
@@ -65,7 +93,7 @@
           />
         </div>
 
-        <!-- Feedback d'erreur ciblé sur la suppression -->
+        <!-- Feedback d'erreur suppression -->
         <p v-if="deleteError" class="text-[11px] text-red-500 bg-red-50 border border-red-100 rounded-lg p-2 text-center mt-1">
           {{ deleteError }}
         </p>
@@ -73,8 +101,8 @@
 
       <hr class="border-gray-100 my-1" />
 
-      <!-- FORMULAIRE D'ASSOCIATION (RECHERCHE TEXTUELLE) -->
-      <form @submit.prevent="handleSubmit" class="space-y-3">
+      <!-- FORMULAIRE D'ASSOCIATION -->
+      <form v-if="canCreate" @submit.prevent="handleSubmit" class="space-y-3">
         <div>
           <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
             Rechercher un ticket
@@ -82,7 +110,7 @@
           <USelectMenu
             v-model="selectedTarget"
             :items="searchableIssues"
-            :search-input="{ placeholder: 'Rechercher par titre ou numéro...' }"
+            :search-input="{ placeholder: 'Rechercher par titre ...' }"
             placeholder="Sélectionner un ticket..."
             class="w-full text-xs"
             @update:model-value="localError = null"
@@ -97,8 +125,8 @@
             v-model="form.type"
             class="w-full text-xs px-2 py-2 border border-gray-200 rounded-lg bg-gray-50/50 focus:bg-white outline-none transition-all"
           >
-            <option value="LINKED"> Liaison (Est lié à)</option>
-            <option value="DEPENDS_ON"> Dépendance (Dépend de)</option>
+            <option value="LINKED">Liaison</option>
+            <option value="DEPENDS_ON">Dépendance</option>
           </select>
         </div>
 
@@ -106,25 +134,28 @@
           type="submit"
           block
           size="sm"
-          color="primary"
-          class="font-medium tracking-wide cursor-pointer shadow-sm"
           :loading="submitting"
           :disabled="!selectedTarget"
+          color="secondary"
+          :ui="{
+            base: 'bg-violet-500 hover:bg-violet-600 disabled:bg-violet-300 text-white font-medium tracking-wide cursor-pointer shadow-sm w-full justify-center',
+            loading: 'bg-violet-500'
+          }"
         >
-          Créer la liaison
+          Créer le lien
         </UButton>
 
-        <!-- Feedback d'erreur ciblé sur l'ajout -->
+        <!-- Feedback d'erreur ajout -->
         <p v-if="localError" class="text-[11px] text-red-500 bg-red-50 border border-red-100 rounded-lg p-2 text-center mt-1">
           {{ localError }}
         </p>
       </form>
     </div>
 
-    <!-- MODAL DE CONFIRMATION COMMUNE DE L'APPLICATION -->
+    <!-- MODAL DE CONFIRMATION -->
     <ConfirmModal
-      v-model="isDeleteModalOpen"
-      title="Supprimer la liaison"
+      v-model:open="isDeleteModalOpen"
+      title="Supprimer le lien"
       description="Voulez-vous vraiment supprimer ce lien entre les deux tickets ?"
       @confirm="confirmDelete"
     />
@@ -138,6 +169,22 @@ const props = defineProps({
   currentIssueId: {
     type: Number,
     required: true
+  },
+  currentCategoryId: {
+    type: Number,
+    required: true
+  },
+  currentCategoryManagerId: {
+    type: Number,
+    default: null
+  },
+  canCreate: {
+    type: Boolean,
+    default: false
+  },
+  currentUserId: {
+    type: Number,
+    default: null
   }
 })
 
@@ -156,17 +203,30 @@ const form = ref({
   type: 'LINKED'
 })
 
-const relationOptions = [
-  { value: 'LINKED', label: ' Est lié à ' },
-  { value: 'DEPENDS_ON', label: ' Dépend de ' }
-]
+const visibleRelations = computed(() => {
+  if (!props.currentUserId) return relations.value
+  const isManager = props.currentUserId === props.currentCategoryManagerId
+  if (isManager) return relations.value
+  return relations.value.filter(r =>
+    r.manager || r.createdById === props.currentUserId
+  )
+})
 
 const searchableIssues = computed(() => {
+  const myLinkedIds = new Set(
+    relations.value
+      .filter(r => r.createdById === props.currentUserId)
+      .flatMap(r => [r.sourceIssueId, r.targetIssueId])
+  )
   return issues.value
-    .filter(issue => issue.id !== props.currentIssueId)
+    .filter(issue =>
+      issue.id !== props.currentIssueId &&
+      !myLinkedIds.has(issue.id) &&
+      issue.categoryId === props.currentCategoryId
+    )
     .map(issue => ({
       id: issue.id,
-      label: `#${issue.id} - ${issue.title}`
+      label: `Ticket : ${issue.title}`
     }))
 })
 
@@ -188,7 +248,7 @@ const handleSubmit = async () => {
   } catch (err) {
     const status = err?.response?.status || err?.status || err?.statusCode
     if (status === 409) {
-      localError.value = "Vous avez déjà lié ces deux tickets."
+      localError.value = err?.data?.message || "Ce lien existe déjà."
     } else if (status === 403) {
       localError.value = "Vous devez suivre ce ticket pour créer une liaison."
     } else {
@@ -201,7 +261,7 @@ const handleSubmit = async () => {
 
 const openConfirmDelete = (id) => {
   relationIdToDelete.value = id
-  deleteError.value = null // Reset de l'état d'erreur de suppression précédent
+  deleteError.value = null
   isDeleteModalOpen.value = true
 }
 
