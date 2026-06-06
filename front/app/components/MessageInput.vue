@@ -37,17 +37,26 @@
 
     <!-- Fichiers optionnel -->
     <div class="space-y-2">
-      <label class="block text-sm font-medium text-gray-700">Fichiers <span class="italic">(optionnel)</span></label>
+      <label class="block text-sm font-medium text-gray-400">Fichiers <span class="italic">(optionnel)</span></label>
       <UFileUpload
         v-model="messageFiles"
         multiple
         size="sm"
         accept="application/pdf,image/png,image/jpeg,.docx,.xlsx"
-        label="Joindre des fichiers"
-        description="PDF, PNG, JPG, JPEG, DOCX, XLSX (max. 10Mo)"
         icon="i-lucide-paperclip"
         layout="list"
-        class="w-fit"
+        class="w-fit cursor-pointer"
+        button-variant="ghost"
+        :ui="{
+          root: 'w-fit',
+          wrapper: 'w-fit p-0',
+          base: 'w-fit p-0',
+          label: 'hidden',
+          description: 'hidden',
+          button: 'size-8 p-0 flex items-center justify-center rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-gray-100',
+          buttonLabel: 'hidden',
+          buttonLeadingIcon: 'size-5',
+        }"
       />
     </div>
 
