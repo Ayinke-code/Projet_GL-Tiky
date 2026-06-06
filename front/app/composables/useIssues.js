@@ -70,7 +70,7 @@ export const useIssues = () => {
             title: payload.title,
             description: payload.description,
             categoryId: payload.categoryId,
-            pendingCase: payload.isPending
+            pendingCase: payload.pendingCase
             })],
             { type: 'application/json' }
         )
