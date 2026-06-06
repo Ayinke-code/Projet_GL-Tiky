@@ -20,4 +20,6 @@ public class RelationDto {
     private String targetIssueTitle;
     private RelationType type;
     private LocalDateTime createdAt;
+    private boolean manager;
+    private Long createdById;
 }
