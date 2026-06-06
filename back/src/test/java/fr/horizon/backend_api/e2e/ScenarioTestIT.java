@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class Sprint2Test extends BaseSeleniumIT{
+class ScenarioTestIT extends BaseSeleniumIT{
 
 
     static final String EMAIL_TEACHER_TEST = "admin@admin.fr";
