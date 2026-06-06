@@ -45,7 +45,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue'
+import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
 import EventCardCalendar from "~/components/events/EventCardCalendar.vue"
 
 import FullCalendar from '@fullcalendar/vue3'
@@ -108,7 +108,13 @@ const stopDrag = () => {
 }
 
 const mappedEvents = computed(() => {
-  return events.value.map(evt => {
+  const now = new Date()
+  return events.value
+    .filter(evt => {
+      const end = evt.endDate ? new Date(evt.endDate.replace(' ', 'T')) : null
+      return !end || end >= now
+    })
+    .map(evt => {
     let color = '#64748b' // slate-500 par défaut
 
     if (evt.categoryType === 'AUDIT') color = '#6366f1'   // indigo-500
@@ -171,8 +177,21 @@ const calendarOptions = reactive({
   dayMaxEvents: true,
 })
 
+const EVENT_NOTIFICATION_TYPES = ['NEW_EVENT_INVITATION', 'UPDATE_EVENT', 'EVENT_RESPONSE', 'EVENT_CANCEL']
+
+const onNotificationReceived = async (e) => {
+  if (EVENT_NOTIFICATION_TYPES.includes(e.detail?.type)) {
+    await fetchCalendarEvents()
+  }
+}
+
 onMounted(async () => {
   await fetchCalendarEvents()
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
 })
 </script>
 

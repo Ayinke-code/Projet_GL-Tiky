@@ -126,5 +126,18 @@ const reply = async (id, accept) => {
   }
 }
 
-onMounted(load)
+const onNotificationReceived = async (e) => {
+  if (e.detail?.type === 'NEW_DEMANDE_MANAGER') {
+    await load()
+  }
+}
+
+onMounted(async () => {
+  await load()
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
+})
 </script>

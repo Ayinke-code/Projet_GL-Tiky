@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -18,4 +20,7 @@ public class NotificationDto {
     private String content;
     private Long issueId;
     private Long eventId;
+    private String eventCategory;
+    private LocalDateTime sendingHour;
+    private Long requestManagerId;
 }

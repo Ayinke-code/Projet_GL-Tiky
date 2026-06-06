@@ -4,7 +4,8 @@ public enum IssueStatus {
     OUVERT,
     EN_ATTENTE,
     INCOMPLET,
-    TERMINE;
+    TERMINE,
+    DEMANDE_REOUVERTURE;
 
     public static IssueStatus fromValue(String value) {
         if (value == null) {

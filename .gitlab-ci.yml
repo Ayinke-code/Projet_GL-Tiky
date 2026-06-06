@@ -18,9 +18,6 @@ cache:
   paths:
     - .m2/repository
     - .sonar/cache
-    - back/target/
-    - front/node_modules/
-    - front/.nuxt/
 
 stages:
   - build
@@ -29,8 +26,7 @@ stages:
   - selenium
   - sonar
 
-before_script:  
-  # Ensure clean slate for ChromeDriver if needed by the runner
+before_script:
   - rm -f /usr/bin/chromedriver || true
   - export http_proxy=http://192.168.4.8:3128
   - export https_proxy=http://192.168.4.8:3128
@@ -54,7 +50,7 @@ build-backend:
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend-dev:
   stage: build
-  image: node:22
+  image: node:22-alpine
   script:
     - export http_proxy=http://192.168.4.8:3128
     - export https_proxy=http://192.168.4.8:3128
@@ -65,7 +61,6 @@ build-frontend-dev:
     - cd front
     - npm ci
     - export NUXT_PUBLIC_API_BASE="$NUXT_PUBLIC_API_BASE_DEV"
-    - echo "NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE_DEV"
     - npm run build
     - ls -lah .output/public
 
@@ -80,7 +75,7 @@ build-frontend-dev:
 # Stage 2: Build Frontend (fichiers statiques)
 build-frontend-prod:
   stage: build
-  image: node:22
+  image: node:22-alpine
   script:
     - export http_proxy=http://192.168.4.8:3128
     - export https_proxy=http://192.168.4.8:3128
@@ -91,7 +86,6 @@ build-frontend-prod:
     - cd front
     - npm ci
     - export NUXT_PUBLIC_API_BASE="$NUXT_PUBLIC_API_BASE_PROD"
-    - echo "NUXT_PUBLIC_API_BASE=$NUXT_PUBLIC_API_BASE_PROD"
     - npm run build
     - ls -lah .output/public
 
@@ -101,7 +95,6 @@ build-frontend-prod:
     expire_in: 1 days
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
-    # - when: never
 
 # Stage 2: Unit Tests
 unit-test:
@@ -128,10 +121,11 @@ unit-test:
 deploy_dev:
   stage: deploy
   before_script:
-    - apt-get update && apt-get install -y openssh-client rsync
+    - apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*
+    - apt-get update && apt-get install -y --no-install-recommends openssh-client rsync
+    - apt-get clean && rm -rf /var/cache/apt/archives/*
     - eval $(ssh-agent -s)
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - echo "$SSH_PRIVATE_KEY_DEV" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
     - ssh-add ~/.ssh/id_rsa
@@ -175,27 +169,13 @@ deploy_dev:
 
         echo "Arrêt du backend existant..."
         OLD_PID=$(pgrep -f "app.jar" || true)
-        if [ -n "$OLD_PID" ]; then
-          kill $OLD_PID
-          sleep 2
-          echo "Ancien processus $OLD_PID arrêté"
-        else
-          echo "Aucun backend en cours"
-        fi
-
-        echo "Démarrage du nouveau backend..."
+        if [ -n "$OLD_PID" ]; then kill $OLD_PID && sleep 2; fi
         cd ~/app/backend
         nohup java -jar app.jar > ~/app/logs/app.log 2>&1 &
         NEW_PID=$!
         sleep 3
-
-        if ps -p $NEW_PID > /dev/null 2>&1; then
-          echo "Backend démarré (PID $NEW_PID)"
-        else
-          echo "Échec du démarrage — dernières lignes de log :"
-          tail -20 ~/app/logs/app.log
-          exit 1
-        fi
+        ps -p $NEW_PID > /dev/null 2>&1 || { tail -20 ~/app/logs/app.log; exit 1; }
+        echo "Backend démarré (PID $NEW_PID)"
       ENDSSH
     
   environment:
@@ -213,20 +193,19 @@ deploy_prod:
   stage: deploy
   before_script:
     # Installation des outils SSH
-    - apt-get update && apt-get install -y openssh-client rsync
+    - apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*
+    - apt-get update && apt-get install -y --no-install-recommends openssh-client rsync
+    - apt-get clean && rm -rf /var/cache/apt/archives/*
     - eval $(ssh-agent -s)
-    
+
     # Créer le dossier SSH
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    
-    # Créer le fichier de clé avec la variable
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
     - echo "$SSH_PRIVATE_KEY_PROD" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
-    
+
     # Ajouter la clé à l'agent
     - ssh-add ~/.ssh/id_rsa
-    
+
     # Ajouter le serveur aux known_hosts
     - ssh-keyscan -H $DEPLOY_SERVER_PROD >> ~/.ssh/known_hosts
     
@@ -270,27 +249,13 @@ deploy_prod:
 
         echo "Arrêt du backend existant..."
         OLD_PID=$(pgrep -f "app.jar" || true)
-        if [ -n "$OLD_PID" ]; then
-          kill $OLD_PID
-          sleep 2
-          echo "Ancien processus $OLD_PID arrêté"
-        else
-          echo "Aucun backend en cours"
-        fi
-
-        echo "Démarrage du nouveau backend..."
+        if [ -n "$OLD_PID" ]; then kill $OLD_PID && sleep 2; fi
         cd ~/app/backend
         nohup java -jar app.jar > ~/app/logs/app.log 2>&1 &
         NEW_PID=$!
         sleep 3
-
-        if ps -p $NEW_PID > /dev/null 2>&1; then
-          echo "Backend démarré (PID $NEW_PID)"
-        else
-          echo "Échec du démarrage — dernières lignes de log :"
-          tail -20 ~/app/logs/app.log
-          exit 1
-        fi
+        ps -p $NEW_PID > /dev/null 2>&1 || { tail -20 ~/app/logs/app.log; exit 1; }
+        echo "Backend démarré (PID $NEW_PID)"
       ENDSSH
     
   environment:
@@ -316,10 +281,12 @@ selenium-test-dev:
     # Proxy
     - export http_proxy=http://192.168.4.8:3128
     - export https_proxy=http://192.168.4.8:3128
-    - apt-get update && apt-get install -y chromium chromium-driver
+    - apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*  # ← nettoyage
+    - apt-get update && apt-get install -y --no-install-recommends chromium chromium-driver
+    - apt-get clean && rm -rf /var/cache/apt/archives/*                       # ← nettoyage
     - export CHROME_BIN=/usr/bin/chromium
     - export CHROMEDRIVER_PATH=/usr/bin/chromedriver
-    - export WDM_CHROMEDRIVER_PATH=/usr/bin/chromedriver
+
   script:
     - cd back
     - mvn $MAVEN_CLI_OPTS test-compile failsafe:integration-test failsafe:verify
@@ -346,10 +313,12 @@ selenium-test-prod:
     # Proxy
     - export http_proxy=http://192.168.4.8:3128
     - export https_proxy=http://192.168.4.8:3128
-    - apt-get update && apt-get install -y chromium chromium-driver
+    - apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*
+    - apt-get update && apt-get install -y --no-install-recommends chromium chromium-driver
+    - apt-get clean && rm -rf /var/cache/apt/archives/*
     - export CHROME_BIN=/usr/bin/chromium
     - export CHROMEDRIVER_PATH=/usr/bin/chromedriver
-    - export WDM_CHROMEDRIVER_PATH=/usr/bin/chromedriver
+
   script:
     - cd back
     - mvn $MAVEN_CLI_OPTS test-compile failsafe:integration-test failsafe:verify
@@ -368,7 +337,9 @@ selenium-test-prod:
 sonar-dev:
   stage: sonar
   before_script:
-    - apt-get update && apt-get install -y openssl
+    - apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*  # ← nettoyage
+    - apt-get update && apt-get install -y --no-install-recommends openssl
+    - apt-get clean && rm -rf /var/cache/apt/archives/*                       # ← nettoyage
     - echo -n | openssl s_client -connect 172.24.1.1:443 -showcerts | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/sonar.crt
     - keytool -import -v -trustcacerts -alias sonar -file /tmp/sonar.crt -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
 
@@ -388,7 +359,9 @@ sonar-dev:
 sonar-prod:
   stage: sonar
   before_script:
-    - apt-get update && apt-get install -y openssl
+    - apt-get clean && rm -rf /var/cache/apt/archives/* /var/lib/apt/lists/*
+    - apt-get update && apt-get install -y --no-install-recommends openssl
+    - apt-get clean && rm -rf /var/cache/apt/archives/*
     - echo -n | openssl s_client -connect 172.24.1.1:443 -showcerts | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' > /tmp/sonar.crt
     - keytool -import -v -trustcacerts -alias sonar -file /tmp/sonar.crt -keystore $JAVA_HOME/lib/security/cacerts -storepass changeit -noprompt
 

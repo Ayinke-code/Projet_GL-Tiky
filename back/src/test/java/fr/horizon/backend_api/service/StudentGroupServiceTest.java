@@ -15,6 +15,7 @@ import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.model.enums.GroupType;
 import fr.horizon.backend_api.repository.CategoryRepository;
+import fr.horizon.backend_api.repository.EventRepository;
 import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.StudentGroupRepository;
 import fr.horizon.backend_api.repository.UserRepository;
@@ -46,6 +47,9 @@ class StudentGroupServiceTest {
 
     @Mock
     private StudentGroupRepository studentGroupRepository;
+
+    @Mock
+    private EventRepository eventRepository;
 
     @Mock
     private UserRepository userRepository;
@@ -476,10 +480,12 @@ class StudentGroupServiceTest {
                 .build();
 
         when(studentGroupRepository.findById(1L)).thenReturn(Optional.of(group));
+        when(studentGroupRepository.findByParentGroup_Id(1L)).thenReturn(List.of());
 
         studentGroupService.deleteById(1L);
 
         verify(studentGroupRepository).findById(1L);
+        verify(eventRepository).removeGroupFromAllEvents(1L);
         verify(studentGroupRepository).delete(group);
     }
 
@@ -492,6 +498,68 @@ class StudentGroupServiceTest {
                 () -> studentGroupService.deleteById(99L));
 
         verify(studentGroupRepository, never()).delete(any());
+    }
+
+    @Test
+    void deleteById_cascade_promotion_should_cascade_to_options_and_projects() {
+
+        StudentGroup projectGroup = StudentGroup.builder()
+                .id(3L).name("Projet Alpha").type(GroupType.PROJECT)
+                .category(category).createdBy(creator).members(new HashSet<>()).build();
+
+        StudentGroup optionGroup = StudentGroup.builder()
+                .id(2L).name("Option LD").type(GroupType.OPTION)
+                .category(category).createdBy(creator).members(new HashSet<>()).build();
+
+        StudentGroup promoGroup = StudentGroup.builder()
+                .id(1L).name("Promo 2026").type(GroupType.PROMOTION)
+                .category(category).createdBy(creator).members(new HashSet<>()).build();
+
+        when(studentGroupRepository.findById(1L)).thenReturn(Optional.of(promoGroup));
+        when(studentGroupRepository.findByPromotion_Id(1L)).thenReturn(List.of(optionGroup));
+        when(studentGroupRepository.findByParentGroup_Id(2L)).thenReturn(List.of(projectGroup));
+
+        studentGroupService.deleteById(1L);
+
+        verify(eventRepository).removeGroupFromAllEvents(3L);
+        verify(studentGroupRepository).delete(projectGroup);
+        verify(eventRepository).removeGroupFromAllEvents(2L);
+        verify(studentGroupRepository).delete(optionGroup);
+        verify(eventRepository).removeGroupFromAllEvents(1L);
+        verify(studentGroupRepository).delete(promoGroup);
+    }
+
+    @Test
+    void findMyGroups_should_return_groups_for_student() {
+
+        User student = new User();
+        student.setId(42L);
+        student.setEmail("student@student.fr");
+        student.setRoles(Set.of(new Role("STUDENT")));
+
+        StudentGroup optionGroup = StudentGroup.builder()
+                .id(7L).name("Option LD").type(GroupType.OPTION)
+                .category(category).createdBy(creator).members(new HashSet<>())
+                .teachers(new HashSet<>()).build();
+
+        when(userRepository.findByEmail("student@student.fr")).thenReturn(Optional.of(student));
+        when(studentGroupRepository.findByMemberIdAndType(42L, GroupType.OPTION))
+                .thenReturn(List.of(optionGroup));
+
+        List<StudentGroupDto> result = studentGroupService.findMyGroups("student@student.fr", GroupType.OPTION);
+
+        assertEquals(1, result.size());
+        assertEquals("Option LD", result.get(0).getName());
+        verify(studentGroupRepository).findByMemberIdAndType(42L, GroupType.OPTION);
+    }
+
+    @Test
+    void findMyGroups_should_throw_UserNotFoundException_when_email_not_found() {
+
+        when(userRepository.findByEmail("unknown@student.fr")).thenReturn(Optional.empty());
+
+        assertThrows(UserNotFoundException.class,
+                () -> studentGroupService.findMyGroups("unknown@student.fr", GroupType.OPTION));
     }
 
     // -------------------------------------------------------

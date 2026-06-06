@@ -11,6 +11,7 @@
           <input
             type="datetime-local"
             :value="rescheduleForm.startDate"
+            :min="minStartDate"
             @input="updateForm('startDate', $event.target.value)"
             :class="['w-full border border-gray-300 rounded-xl p-2.5 text-sm outline-none focus:ring-2 bg-white', isTeacher ? 'focus:ring-indigo-500' : 'focus:ring-blue-500']"
           />
@@ -86,6 +87,13 @@ const emit = defineEmits(['update:open', 'update:rescheduleForm', 'confirm'])
 const openModel = computed({
   get: () => props.open,
   set: (val) => emit('update:open', val)
+})
+
+const minStartDate = computed(() => {
+  const d = new Date()
+  d.setMinutes(d.getMinutes() + 30)
+  const pad = (n) => n.toString().padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 })
 
 const updateForm = (key, value) => {

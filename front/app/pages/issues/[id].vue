@@ -10,7 +10,11 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import IssueMeetingProposal from "~/components/issues/meeting/IssueMeetingProposal.vue";
 import IssueMeetingDemand from "~/components/issues/meeting/IssueMeetingDemand.vue";
+<<<<<<< HEAD
 import IssueRelationCard from '~/components/issues/IssueRelationCard.vue'
+=======
+import { getFileIcon } from '#imports';
+>>>>>>> ca31f512fc3f810a0e1cc192408577c4f945d7f2
 
 const route = useRoute()
 const { ready, user, wsToken } = useAuth()
@@ -18,6 +22,16 @@ const { getIssueById, updateIssueStatus, updateIssuePrivacy } = useIssues()
 const { getIssueMessages, sendIssueMessage, normalizeMessage, initializeConversation } = useConversations()
 const { followIssue, unfollowIssue, isFollowing } = useIssueFollowers()
 const { acknowledgeFollowedIssueUpdate } = useFollowedIssuesState()
+const { downloadFile, deleteFile } = useDocuments()
+
+const FOLLOWER_NOTIFICATION_TYPES = ['NEW_FOLLOWER', 'NEW_UNFOLLOW']
+
+const onNotificationReceived = async (e) => {
+  if (FOLLOWER_NOTIFICATION_TYPES.includes(e.detail?.type) && e.detail?.issueId === issueId) {
+    const updated = await getIssueById(issueId).catch(() => null)
+    if (updated) issue.value = updated
+  }
+}
 
 // ID de l'issue depuis l'URL
 const issueId = Number(route.params.id)
@@ -36,6 +50,56 @@ const conversationId = ref(null)
 const showFollowModal = ref(false)
 const alreadyFollowing = ref(false)
 const followSuccess = ref(false)
+
+// Contient les fichiers associés au ticket si il y en a
+const files = ref(null)
+
+// Contient les fichiers associés à un message
+const messageFiles = ref(null)
+
+/**
+ * Téléchargement des documents
+ */
+const downloadDoc = async (file) => {
+  try{
+    await downloadFile(file)
+  } catch(err) {
+    console.error(err)
+  }
+}
+
+/**
+ * Créateur du ticket peut supprimer un fichier
+ */
+const deleteDoc = async (file) => {
+  try {
+    await deleteFile(file)
+
+    // mise à jour UI locale de issue
+    issue.value.documents =
+      issue.value.documents.filter(d => d.id !== file.id)
+
+    // mise à jour UI locale de files
+    files.value = files.value.filter(d => d.id !== file.id)
+
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+// IDs de tous les documents déjà présents dans les messages
+const messageDocIds = computed(() => {
+  return new Set(
+    messages.value.flatMap(m =>
+      (m.documents || []).map(d => d.id)
+    )
+  )
+})
+
+// Filtre les fichiers de l’issue en excluant ceux déjà utilisés dans les messages
+const filteredFiles = computed(() => {
+  return files.value.filter(f => !messageDocIds.value.has(f.id))
+})
 
 /**
  * Callback après suivi réussi
@@ -141,6 +205,7 @@ onMounted(async () => {
     // Écouter les événements de synchronisation pour vérifier l'accès
     if (process.client) {
       window.addEventListener('issue-sync', checkAccess)
+      window.addEventListener('notification:received', onNotificationReceived)
     }
 
     // Premier check d'accès au montage pour éviter de rester sur une page interdite
@@ -148,6 +213,12 @@ onMounted(async () => {
     if (issue.value?.private) {
       await checkAccess()
     }
+
+    // check si il y a des documents attachés à l'issue
+    if (issue.value?.documents?.length > 0){
+      files.value = issue?.value?.documents
+    }
+
   } catch (err) {
     error.value = err?.message || 'Erreur de chargement'
   } finally {
@@ -203,6 +274,7 @@ onUnmounted(() => {
   socket.value?.close()
   if (process.client) {
     window.removeEventListener('issue-sync', checkAccess)
+    window.removeEventListener('notification:received', onNotificationReceived)
   }
 })
 
@@ -222,10 +294,19 @@ const handleMarkResolved = async () => {
 }
 
 /**
- * Demander la réouverture d'un ticket 'terminé'
+ * Issue manager peut réouvrir un ticket TERMINE
  */
 const handleReopening = async () => {
+<<<<<<< HEAD
   // TODO: US-6700: Demande de réouverture
+=======
+    if(issue?.value?.status !== 'TERMINE') return
+    try {
+      await updateIssueStatus(issue?.value?.id, 'OUVERT')
+    } catch(err) {
+      console.error(err)
+    }
+>>>>>>> ca31f512fc3f810a0e1cc192408577c4f945d7f2
 }
 
 /**
@@ -236,7 +317,8 @@ const getStatusBadgeClass = (status) => {
     'OUVERT': 'bg-yellow-100 text-yellow-800 border border-yellow-300',
     'EN_ATTENTE': 'bg-gray-100 text-gray-800 border border-gray-300',
     'INCOMPLET': 'bg-orange-100 text-orange-800 border border-orange-300',
-    'TERMINE': 'bg-green-100 text-green-800 border border-green-300'
+    'TERMINE': 'bg-green-100 text-green-800 border border-green-300',
+    'DEMANDE_REOUVERTURE': 'bg-blue-100 text-blue-800 border border-blue-300'
   }
   return classes[status] || 'bg-gray-100 text-gray-600'
 }
@@ -249,7 +331,8 @@ const getStatusLabel = (status) => {
     'OUVERT': 'Ouvert',
     'EN_ATTENTE': 'En attente',
     'INCOMPLET': 'Incomplet',
-    'TERMINE': 'Terminé'
+    'TERMINE': 'Terminé',
+    'DEMANDE_REOUVERTURE': 'Demande réouverture'
   }
   return labels[status] || status
 }
@@ -295,14 +378,36 @@ const handleSend = async () => {
 
   sending.value = true
   try {
-    const sentMessage = await sendIssueMessage(issueId, newMessage.value, replyingToMessage.value?.id ?? null)
+    const sentMessage = await sendIssueMessage(issueId, newMessage.value, messageFiles.value, replyingToMessage.value?.id ?? null)
     // Avoid duplicates: the server broadcasts the new message via WebSocket,
     // which may arrive before or after the HTTP response. Only push the
     // message locally if we don't already have it (compare by id).
     if (!messages.value.find((m) => m.id === sentMessage.id)) {
       messages.value.push(sentMessage)
     }
+
+    /**
+     * Check si les documents du message envoyé sont dans messages
+     * sinon les ajoutés
+     */
+    const existingMessage = messages.value.find(
+      m => m.id === sentMessage.id
+    )
+    if (!existingMessage) {
+      messages.value.push(sentMessage)
+    } else {
+      // Le message existe déjà (souvent via WebSocket)
+      // On ajoute les documents s'ils n'étaient pas présents
+      if (
+        sentMessage.documents?.length &&
+        !existingMessage.documents?.length
+      ) {
+        existingMessage.documents = sentMessage.documents
+      }
+    }
+
     newMessage.value = ''
+    messageFiles.value = null
     replyingToMessage.value = null
 
     // On rafraîchit l'issue pour avoir le nouveau updatedAt (mis à jour par le backend suite au message)
@@ -370,10 +475,19 @@ const slides = computed(() => {
         <span class="text-gray-700 font-medium">Ticket #{{ issueId }}</span>
       </div>
 
+<<<<<<< HEAD
       <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div class="space-y-2">
           <h1 class="text-2xl font-bold text-gray-900">{{ issue.title }}</h1>
           <div class="flex flex-wrap items-center gap-2">
+=======
+            <!-- Header : titre + actions -->
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div class="space-y-2">
+                    <h1 id="issue-title" class="text-2xl font-bold text-gray-900">{{ issue.title }}</h1>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Catégorie -->
+>>>>>>> ca31f512fc3f810a0e1cc192408577c4f945d7f2
                         <span v-if="issue?.categoryId && issue?.categoryName"
                               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
                             {{ issue.categoryName }}
@@ -397,6 +511,7 @@ const slides = computed(() => {
           </div>
         </div>
 
+<<<<<<< HEAD
         <div class="flex items-center gap-2 shrink-0">
           <button
             v-if="issue.status !== 'TERMINE' && user?.value?.id && user.value.id === issue?.categoryManagerId"
@@ -423,6 +538,39 @@ const slides = computed(() => {
           <button v-if="canTogglePrivacy" @click="isVisibilityModalOpen = true"
                   class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors transition-transform duration-200 hover:scale-105 cursor-pointer"
                   :class="issue.private
+=======
+                <!-- Boutons d'action -->
+                <div class="flex items-center gap-2 shrink-0">
+                    <!--  -->
+                    <!-- Résolu : TODO: Quand on aura les 'Issue Manager', on pourra bloquer ce bouton pour les autres -->
+                    <!--  -->
+                    <button
+                        v-if="issue.status !== 'TERMINE' && user?.id === issue?.categoryManagerId && user.id !== null"
+                        @click="isResolveModalOpen = true" :disabled="issue.status === 'résolu'"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-transform duration-200 hover:scale-105">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Marquer Résolu
+                    </button>
+                    <button
+                        v-else-if="issue.status === 'TERMINE' && user?.id === issue?.categoryManagerId && user.id !== null"
+                        @click="isReopeningModalOpen = true" :disabled="issue.status === 'résolu'"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-transform duration-200 hover:scale-105">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Rouvrir
+                    </button>
+                    <!--  -->
+                    <!-- Privé/Public : TODO: Quand on aura les 'Issue Manager', on pourra bloquer ce bouton pour les autres -->
+                    <!--  -->
+                    <button v-if="canTogglePrivacy" @click="isVisibilityModalOpen = true"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors transition-transform duration-200 hover:scale-105 cursor-pointer"
+                        :class="issue.private
+>>>>>>> ca31f512fc3f810a0e1cc192408577c4f945d7f2
                             ? 'border-blue-300 text-blue-600 bg-white hover:bg-blue-50'
                             : 'border-red-300 text-red-600 bg-white hover:bg-red-50'">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
@@ -462,6 +610,7 @@ const slides = computed(() => {
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
+<<<<<<< HEAD
         <div class="lg:col-span-2 space-y-4">
           <div class="space-y-3">
             <IssueMessage
@@ -475,10 +624,32 @@ const slides = computed(() => {
               :reply-to="msg.replyTo"
               @reply="replyingToMessage = msg"
             />
+=======
+                <!-- ===== COLONNE GAUCHE : CONVERSATION ===== -->
+                <div class="lg:col-span-2 space-y-4">
+                    <!-- Messages -->
+                    <div class="space-y-3">
+                        <IssueMessage
+                            v-for="msg in messages"
+                            :key="msg.id"
+                            :auteur="msg.auteur"
+                            :role="msg.role"
+                            :date="msg.date"
+                            :contenu="msg.contenu"
+                            :files="msg.documents" 
+                            :issue="issue"
+                            :user="user"
+                            :is-mine="msg.userId === user?.id"
+                            :reply-to="msg.replyTo"
+                            @reply="replyingToMessage = msg"
+                            @download="downloadDoc"
+                        />
+>>>>>>> ca31f512fc3f810a0e1cc192408577c4f945d7f2
 
             <IssueEmptyMessages v-if="messages.length === 0" />
           </div>
 
+<<<<<<< HEAD
           <MessageInput
             v-model="newMessage"
             :sending="sending"
@@ -509,6 +680,17 @@ const slides = computed(() => {
                   <span class="font-medium text-gray-900">
                                         {{ issue.createdId === user?.id ? 'Moi' : (issue.createdName || 'Inconnu') }}
                                     </span>
+=======
+                    <!-- Zone d'envoi de message -->
+                    <MessageInput
+                        v-model="newMessage"
+                        v-model:messageFiles="messageFiles"
+                        :sending="sending"
+                        :replying-to="replyingToMessage"
+                        @cancel-reply="replyingToMessage = null"
+                        @send="handleSend"
+                    />
+>>>>>>> ca31f512fc3f810a0e1cc192408577c4f945d7f2
                 </div>
 
                 <div class="flex justify-between items-center">
@@ -572,6 +754,7 @@ const slides = computed(() => {
             </div>
           </div>
 
+<<<<<<< HEAD
           <template v-else>
             <IssueMeetingProposal
               v-if="user?.id === issue?.categoryManagerId"
@@ -582,6 +765,100 @@ const slides = computed(() => {
               :issue="issue"
             />
           </template>
+=======
+                        <template v-else>
+                          <div class="flex justify-between items-center">
+                            <span class="text-gray-500">Auteur</span>
+                            <span class="font-medium text-gray-900">
+                              {{ issue.createdId === user?.id ? 'Moi' : (issue.createdName || 'Inconnu') }}
+                            </span>
+                          </div>
+
+                          <div class="flex justify-between items-center">
+                            <span class="text-gray-500">Manager en charge</span>
+                            <span class="font-medium text-gray-900">
+                              {{ issue?.categoryManagerId === user?.id ? 'Moi' : (issue?.teacherManagerName || issue?.categoryManagerName || 'Non défini') }}
+                            </span>
+                          </div>
+                        </template>
+
+                        <div class="flex justify-between items-center">
+                          <span class="text-gray-500">Abonnés</span>
+                          <span class="font-medium text-gray-900">{{ issue.followersCount || 0 }}</span>
+                        </div>
+
+                        <!-- Documents attachés à l'issue pouvant être téléchargé -->
+                        <div v-if="files " class="mt-6">
+                          <div class="text-sm font-medium text-gray-500 mb-2">
+                            Documents
+                          </div>
+
+                          <div class="space-y-2">
+                            <div
+                              v-for="doc in filteredFiles"
+                              :key="doc.id"
+                              class="flex items-center justify-between gap-3 p-3 border rounded-lg hover:bg-gray-50 transition"
+                            >
+                              <!-- gauche -->
+                              <div class="flex items-center gap-3 min-w-0">
+                                <UIcon
+                                  :name="getFileIcon(doc.contentType)"
+                                  class="text-gray-500 text-lg shrink-0"
+                                />
+
+                                <div class="min-w-0">
+                                  <p class="font-medium text-gray-900 truncate">
+                                    {{ doc.originalName }}
+                                  </p>
+
+                                  <p class="text-xs text-gray-500">
+                                    {{ (doc.size / 1024).toFixed(1) }} KB
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div class="flex items-center gap-1 shrink-0">
+                                <!-- Si créateur de l'issue, bouton suppression -->
+                                <UButton v-if="issue.createdId === user?.id"
+                                  icon="streamline-ultimate:delete-bold"
+                                  size="sm"
+                                  variant="ghost"
+                                  class="shrink-0 cursor-pointer"
+                                  color="error"
+                                  v-on:click="deleteDoc(doc)"
+                                />
+                                <!-- Télécharge -->
+                                <UButton
+                                  icon="i-lucide-download"
+                                  size="sm"
+                                  variant="ghost"
+                                  class="shrink-0 cursor-pointer"
+                                  color="info"
+                                  v-on:click="downloadDoc(doc)"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  <!-- Visible uniquement si l'utilisateur est le manager de l'issue -->
+                  <IssueMeetingProposal
+                    v-if="user?.id === issue?.categoryManagerId && user?.id !== null"
+                    :issue="issue"
+                  />
+                  <!-- Visible pour tout les utilisatuer sauf le manager de l'issue -->
+                  <IssueMeetingDemand
+                    v-if="user?.id !== issue?.categoryManagerId && user?.id !== null"
+                    :issue="issue"
+                  />
+
+                    <!-- Slot pour futures fonctionnalités sidebar -->
+                  <slot name="sidebar-extra" />
+>>>>>>> ca31f512fc3f810a0e1cc192408577c4f945d7f2
 
           <slot name="sidebar-extra" />
         </div>

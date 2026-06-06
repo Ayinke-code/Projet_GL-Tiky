@@ -3,6 +3,9 @@ package fr.horizon.backend_api.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Getter
 @Setter
@@ -29,9 +32,8 @@ public class Message extends BaseEntity {
     @JoinColumn(name = "id_tick")
     private Issue issue;
 
-    @ManyToOne
-    @JoinColumn(name = "id_doc")
-    private Document document;
+    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Document> documents = new ArrayList<>();
 
     @ManyToOne
     @JoinColumn(name = "id_convs", nullable = false)
