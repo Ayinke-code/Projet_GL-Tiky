@@ -48,10 +48,11 @@ public class IssueRelationController {
     }
 
     /**
-     * Récupère toutes les relations associées à un ticket (rendu bidirectionnel).
+     * Récupère toutes les relations associées à un ticket.
+     * Le filtrage par rôle est géré côté front.
      *
      * @param id identifiant du ticket
-     * @return liste des DTO de relations trouvées
+     * @return liste des DTOs de relations
      */
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}/relations")
@@ -66,7 +67,8 @@ public class IssueRelationController {
      */
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/relations/{relationId}")
-    public void unlinkIssue(@PathVariable Long relationId) {
-        relationService.deleteRelation(relationId);
+    public void unlinkIssue(@PathVariable Long relationId, Authentication authentication) {
+        User user = issueFollowerService.getUserByEmail(authentication.getName());
+        relationService.deleteRelation(relationId, user);
     }
 }
