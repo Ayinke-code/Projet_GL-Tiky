@@ -1,10 +1,6 @@
 package fr.horizon.backend_api.service;
 
-import fr.horizon.backend_api.model.Conversation;
-import fr.horizon.backend_api.model.ConversationUser;
-import fr.horizon.backend_api.model.Issue;
-import fr.horizon.backend_api.model.Message;
-import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.enums.ConversationRole;
 import fr.horizon.backend_api.exception.ConversationNotFoundException;
 import fr.horizon.backend_api.exception.IssueNotFoundException;
@@ -282,7 +278,38 @@ public class ConversationService {
         messageMap.put(MapKeys.CREATED_AT, message.getCreatedAt());
         messageMap.put(MapKeys.REPLY_TO_MESSAGE_ID, message.getReplyTo() != null ? message.getReplyTo().getId() : null);
         messageMap.put(MapKeys.REPLY_TO_MESSAGE, message.getReplyTo() != null ? toMessageSummaryMap(message.getReplyTo()) : null);
+        messageMap.put(MapKeys.DOCUMENTS, toDocumentList(message.getDocuments()));
         return messageMap;
+    }
+
+    /**
+     * Convertit une liste de documents en une liste de Maps
+     * sérialisables pour l'envoi WebSocket.
+     *
+     * @param documents liste des documents associés à un message
+     * @return liste des documents sous forme de Maps
+     */
+    private List<Map<String, Object>> toDocumentList(List<Document> documents) {
+        if (documents == null || documents.isEmpty()) return List.of();
+        return documents.stream()
+                .map(this::toDocumentMap)
+                .toList();
+    }
+
+    /**
+     * Convertit un document en Map contenant uniquement
+     * les informations nécessaires au frontend.
+     *
+     * @param document document à convertir
+     * @return représentation simplifiée du document
+     */
+    private Map<String, Object> toDocumentMap(Document document) {
+        Map<String, Object> documentMap = new HashMap<>();
+        documentMap.put(MapKeys.ID, document.getId());
+        documentMap.put(MapKeys.ORIGINAL_NAME, document.getOriginalName());
+        documentMap.put(MapKeys.CONTENT_TYPE, document.getContentType());
+        documentMap.put(MapKeys.SIZE, document.getSize());
+        return documentMap;
     }
 
     private Map<String, Object> toMessageSummaryMap(Message message) {
