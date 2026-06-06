@@ -124,5 +124,8 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     @Modifying
     @Query(value = "DELETE FROM event_project_groups WHERE group_id = :groupId", nativeQuery = true)
     void removeGroupFromAllEvents(@Param("groupId") Long groupId);
+
+    /** Récupère les disponibilités déclarées par un utilisateur, triées par date de début. */
+    List<Event> findByCreatedBy_IdAndCategoryTypeOrderByStartDateAsc(Long userId, CategoryType categoryType);
 }
 
