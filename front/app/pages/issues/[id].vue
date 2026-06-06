@@ -1,5 +1,4 @@
 <script setup lang="js">
-import IssueRelationCard from '~/components/issues/IssueRelationCard.vue'
 /**
  * Page détail d'une issue
  * - charge une issue par ID
@@ -11,7 +10,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import IssueMeetingProposal from "~/components/issues/meeting/IssueMeetingProposal.vue";
 import IssueMeetingDemand from "~/components/issues/meeting/IssueMeetingDemand.vue";
-import IssueRelationsCard from '~/components/issues/IssueRelationCard.vue'
+import IssueRelationCard from '~/components/issues/IssueRelationCard.vue'
 
 const route = useRoute()
 const { ready, user, wsToken } = useAuth()
@@ -527,21 +526,37 @@ const slides = computed(() => {
             </div>
           </div>
 
-          <!-- Slider sidebar : visible uniquement pour les abonnés -->
+          <!-- Slider sidebar -->
           <div v-if="alreadyFollowing" class="relative">
             <div class="overflow-hidden">
               <div
                 class="flex transition-transform duration-300 ease-in-out"
                 :style="`transform: translateX(-${activeSlide * 100}%)`"
               >
+                <!-- Slide RDV Manager -->
                 <div class="min-w-full" v-if="user?.id === issue?.categoryManagerId">
-                  <IssueMeetingProposal :issue="issue" />
+                  <ClientOnly>
+                    <IssueMeetingProposal v-if="activeSlide === 0" :issue="issue" />
+                  </ClientOnly>
                 </div>
+                <!-- Slide RDV Demande -->
                 <div class="min-w-full" v-if="user?.id !== issue?.categoryManagerId">
-                  <IssueMeetingDemand :issue="issue" />
+                  <ClientOnly>
+                    <IssueMeetingDemand v-if="activeSlide === 0" :issue="issue" />
+                  </ClientOnly>
                 </div>
+                <!-- Slide Relations -->
                 <div class="min-w-full">
-                  <IssueRelationCard :current-issue-id="issueId" />
+                  <ClientOnly>
+                    <IssueRelationCard
+                      v-if="activeSlide === 1"
+                      :current-issue-id="issueId"
+                      :current-category-id="issue.categoryId"
+                      :current-category-manager-id="issue.categoryManagerId"
+                      :can-create="alreadyFollowing"
+                      :current-user-id="user?.id"
+                    />
+                  </ClientOnly>
                 </div>
               </div>
             </div>
@@ -557,19 +572,16 @@ const slides = computed(() => {
             </div>
           </div>
 
-          <!-- RDV seul : visible pour les non-abonnés -->
-          <!-- Slide RDV Manager -->
-          <div class="min-w-full" v-if="user?.id === issue?.categoryManagerId">
-            <ClientOnly>
-              <IssueMeetingProposal :issue="issue" />
-            </ClientOnly>
-          </div>
-          <!-- Slide RDV Demande -->
-          <div class="min-w-full" v-if="user?.id !== issue?.categoryManagerId">
-            <ClientOnly>
-              <IssueMeetingDemand :issue="issue" />
-            </ClientOnly>
-          </div>
+          <template v-else>
+            <IssueMeetingProposal
+              v-if="user?.id === issue?.categoryManagerId"
+              :issue="issue"
+            />
+            <IssueMeetingDemand
+              v-if="user?.id !== issue?.categoryManagerId"
+              :issue="issue"
+            />
+          </template>
 
           <slot name="sidebar-extra" />
         </div>
