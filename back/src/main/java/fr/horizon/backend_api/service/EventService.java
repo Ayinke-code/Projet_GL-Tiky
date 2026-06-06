@@ -3,6 +3,7 @@ package fr.horizon.backend_api.service;
 import fr.horizon.backend_api.exception.EventConflictException;
 import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.*;
+import fr.horizon.backend_api.model.dto.AvailabilityRequestDto;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Event;
 import fr.horizon.backend_api.model.StudentGroup;
@@ -460,7 +461,7 @@ public class EventService {
     public List<EventResponseDto> getMyCalendarEvents(String email) {
         User user = userService.findByEmail(email);
 
-        return eventRepository.findCalendarEventsForUser(user.getId()).stream()
+        List<EventResponseDto> regularEvents = eventRepository.findCalendarEventsForUser(user.getId()).stream()
                 .filter(e -> {
                     // Pour les RDV (ISSUE) créés par cet utilisateur, ne pas afficher si un participant a refusé
                     if (CategoryType.ISSUE.equals(e.getCategoryType())
@@ -472,7 +473,114 @@ public class EventService {
                     return true;
                 })
                 .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
+        // Inclure les créneaux de disponibilité déclarés par l'utilisateur (validated=false, absents de findCalendarEventsForUser)
+        List<EventResponseDto> availabilities = eventRepository
+                .findByCreatedBy_IdAndCategoryTypeOrderByStartDateAsc(user.getId(), CategoryType.AVAILABILITY)
+                .stream()
+                .map(this::mapToResponse)
                 .toList();
+
+        return Stream.concat(regularEvents.stream(), availabilities.stream()).toList();
+    }
+
+    /**
+     * Déclare une plage de disponibilité pour l'utilisateur connecté.
+     * L'event créé est de type AVAILABILITY, validated=false, sans participants.
+     *
+     * @param request données de la disponibilité (startDate, endDate, description)
+     * @param email   email de l'utilisateur connecté
+     * @return le DTO de l'event créé
+     */
+    @Transactional
+    public EventResponseDto createAvailability(AvailabilityRequestDto request, String email) {
+        User user = userService.findByEmail(email);
+
+        if (request.getStartDate() == null || request.getEndDate() == null) {
+            throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires.");
+        }
+        if (!request.getEndDate().isAfter(request.getStartDate())) {
+            throw new IllegalArgumentException("La date de fin doit être postérieure à la date de début.");
+        }
+
+        // Catégorie système dédiée aux disponibilités (créée une seule fois si absente)
+        Category availabilityCategory = categoryRepository.findByNameIgnoreCase("__AVAILABILITY__")
+                .orElseGet(() -> categoryRepository.save(
+                        Category.builder()
+                                .name("__AVAILABILITY__")
+                                .subject("Disponibilité")
+                                .categoryType(CategoryType.AVAILABILITY)
+                                .build()
+                ));
+
+        Event event = Event.builder()
+                .name("Disponible")
+                .description(request.getDescription())
+                .categoryType(CategoryType.AVAILABILITY)
+                .category(availabilityCategory)
+                .createdBy(user)
+                .validated(false)
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .build();
+
+        return mapToResponse(eventRepository.save(event));
+    }
+
+    /**
+     * Récupère toutes les disponibilités déclarées par l'utilisateur connecté.
+     *
+     * @param email email de l'utilisateur connecté
+     * @return liste de DTOs triée par date de début croissante
+     */
+    public List<EventResponseDto> getMyAvailabilities(String email) {
+        User user = userService.findByEmail(email);
+        return eventRepository
+                .findByCreatedBy_IdAndCategoryTypeOrderByStartDateAsc(user.getId(), CategoryType.AVAILABILITY)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    /**
+     * Récupère toutes les disponibilités déclarées par un utilisateur donné.
+     * Accessible pour vérifier la disponibilité avant d'envoyer une invitation.
+     *
+     * @param userId L'ID de l'utilisateur cible
+     * @return liste de DTOs triée par date de début croissante
+     */
+    public List<EventResponseDto> getUserAvailabilities(Long userId) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+        return eventRepository
+                .findByCreatedBy_IdAndCategoryTypeOrderByStartDateAsc(userId, CategoryType.AVAILABILITY)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    /**
+     * Supprime une disponibilité appartenant à l'utilisateur connecté.
+     *
+     * @param id    identifiant de l'event AVAILABILITY
+     * @param email email de l'utilisateur connecté
+     * @throws EntityNotFoundException si l'event n'existe pas
+     * @throws AccessDeniedException   si l'utilisateur n'est pas le créateur
+     * @throws IllegalArgumentException si l'event n'est pas de type AVAILABILITY
+     */
+    @Transactional
+    public void deleteAvailability(Long id, String email) {
+        User user = userService.findByEmail(email);
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new EventNotFoundException(id));
+        if (!CategoryType.AVAILABILITY.equals(event.getCategoryType())) {
+            throw new IllegalArgumentException("Cet événement n'est pas une disponibilité.");
+        }
+        if (!event.getCreatedBy().getId().equals(user.getId())) {
+            throw new AccessDeniedException("Vous ne pouvez supprimer que vos propres disponibilités.");
+        }
+        eventRepository.delete(event);
     }
 
     /**
@@ -509,7 +617,7 @@ public class EventService {
                 .name(event.getName())
                 .description(event.getDescription())
                 .categoryType(event.getCategoryType())
-                .categoryName(event.getCategory().getName())
+                .categoryName(event.getCategory() != null ? event.getCategory().getName() : null)
                 .createdBy(event.getCreatedBy().getName())
                 .createdAt(event.getCreatedAt())
                 .startDate(event.getStartDate())
@@ -535,7 +643,7 @@ public class EventService {
                 .name(event.getName())
                 .description(event.getDescription())
                 .categoryType(event.getCategoryType())
-                .categoryName(event.getCategory().getName())
+                .categoryName(event.getCategory() != null ? event.getCategory().getName() : null)
                 .createdBy(event.getCreatedBy().getName())
                 .createdAt(event.getCreatedAt())
                 .startDate(event.getStartDate())
