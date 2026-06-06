@@ -1,25 +1,23 @@
 package fr.horizon.backend_api.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.RelationDto;
 import fr.horizon.backend_api.model.dto.RelationRequestDto;
 import fr.horizon.backend_api.model.enums.RelationType;
 import fr.horizon.backend_api.service.IssueFollowerService;
 import fr.horizon.backend_api.service.IssueRelationService;
-import fr.horizon.backend_api.model.User;
-import org.springframework.security.core.Authentication;
-import java.security.Principal;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import fr.horizon.backend_api.service.JwtToken;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.http.HttpStatus;
 
 import java.util.List;
 
@@ -28,10 +26,6 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/**
- * Tests d'intégration pour le contrôleur des relations entre issues.
- * L'option addFilters = false désactive la sécurité globale pour tester uniquement la logique de routage.
- */
 @WebMvcTest(IssueRelationController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class IssueRelationControllerTest {
@@ -51,18 +45,18 @@ class IssueRelationControllerTest {
     @MockitoBean
     private JwtToken jwtToken;
 
+    @MockitoBean
+    private Authentication authentication;
+
     /**
      * Test de succès pour la création d'une liaison.
-     * Vérifie que l'endpoint POST retourne un statut 200 et le DTO correspondant.
      */
     @Test
     void shouldLinkIssue() throws Exception {
-        // Préparation de la requête de test
         RelationRequestDto request = new RelationRequestDto();
         request.setTargetIssueId(2L);
         request.setType(RelationType.LINKED);
 
-        // Simulation de la réponse du service
         RelationDto response = RelationDto.builder()
                 .id(1L)
                 .sourceIssueId(1L)
@@ -70,19 +64,21 @@ class IssueRelationControllerTest {
                 .type(RelationType.LINKED)
                 .build();
 
+        when(authentication.getName()).thenReturn("test@test.com");
+        when(issueFollowerService.getUserByEmail(any())).thenReturn(new User());
         when(relationService.createRelation(eq(1L), any(RelationRequestDto.class), any(User.class)))
                 .thenReturn(response);
-        when(issueFollowerService.getUserByEmail(any())).thenReturn(new User());
-        // Exécution de la requête HTTP et vérification des assertions
+
         mockMvc.perform(post("/issues/1/relations")
-                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("test@test.com"))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)));
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1));
     }
 
     /**
      * Test de gestion d'erreur lors de la création d'une liaison.
-     * Vérifie qu'un statut 404 est retourné si l'issue cible ou source n'est pas trouvée.
      */
     @Test
     void shouldReturn404WhenIssueMissing() throws Exception {
@@ -90,20 +86,20 @@ class IssueRelationControllerTest {
         request.setTargetIssueId(99L);
         request.setType(RelationType.LINKED);
 
-        // Simulation d'une levée d'exception par le service métier
-        when(relationService.createRelation(eq(1L), any(RelationRequestDto.class), any(User.class)))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Issue source introuvable"));
-
+        when(authentication.getName()).thenReturn("test@test.com");
         when(issueFollowerService.getUserByEmail(any())).thenReturn(new User());
+        when(relationService.createRelation(eq(1L), any(RelationRequestDto.class), any(User.class)))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket source introuvable"));
+
         mockMvc.perform(post("/issues/1/relations")
-                .with(user("test@test.com"))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)));
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound());
     }
 
     /**
      * Test de récupération des relations d'un ticket.
-     * Vérifie que l'endpoint GET retourne un statut 200 et une liste JSON valide.
      */
     @Test
     void shouldGetRelations() throws Exception {
@@ -121,15 +117,17 @@ class IssueRelationControllerTest {
 
     /**
      * Test de suppression d'une liaison.
-     * Vérifie que l'endpoint DELETE invoque correctement le service et retourne un statut 200.
      */
     @Test
     void shouldUnlinkIssue() throws Exception {
-        doNothing().when(relationService).deleteRelation(1L);
+        when(authentication.getName()).thenReturn("test@test.com");
+        when(issueFollowerService.getUserByEmail(any())).thenReturn(new User());
+        doNothing().when(relationService).deleteRelation(eq(1L), any(User.class));
 
-        mockMvc.perform(delete("/issues/relations/1"))
+        mockMvc.perform(delete("/issues/relations/1")
+                        .principal(authentication))
                 .andExpect(status().isOk());
 
-        verify(relationService).deleteRelation(1L);
+        verify(relationService).deleteRelation(eq(1L), any(User.class));
     }
 }
