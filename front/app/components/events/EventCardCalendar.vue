@@ -70,7 +70,16 @@
       </div>
     </div>
 
-    <div class="flex justify-end mt-4 border-t border-slate-100 pt-4">
+    <div class="flex justify-end mt-4 border-t border-slate-100 pt-4 gap-2">
+      <Button
+        v-if="event?.extendedProps?.type === 'AVAILABILITY'"
+        @click="confirmDelete"
+        color="error"
+        label="Supprimer"
+        variant="subtle"
+        size="sm"
+        rounded
+      />
       <Button
         @click="$emit('close')"
         color="secondary"
@@ -92,7 +101,13 @@ const props = defineProps({
   event: Object
 })
 
-defineEmits(['close'])
+const emit = defineEmits(['close', 'delete'])
+
+const confirmDelete = () => {
+  if (globalThis.window?.confirm('Supprimer ce créneau de disponibilité ?')) {
+    emit('delete', props.event?.id)
+  }
+}
 
 const cleanTypeLabel = (type) => {
   switch(type) {
@@ -100,6 +115,7 @@ const cleanTypeLabel = (type) => {
     case 'AUDIT': return 'Audit'
     case 'MEETING': return 'Réunion'
     case 'ISSUE': return 'Rendez-vous Ticket'
+    case 'AVAILABILITY': return 'Disponible'
     default: return 'Événement'
   }
 }
@@ -111,6 +127,7 @@ const theme = computed(() => {
     case 'DEFENSE': return { badge: 'bg-emerald-100 text-emerald-700 border-emerald-200', iconBg: 'bg-emerald-50', iconText: 'text-emerald-600', dot: 'bg-emerald-500' }
     case 'MEETING': return { badge: 'bg-amber-100 text-amber-700 border-amber-200', iconBg: 'bg-amber-50', iconText: 'text-amber-600', dot: 'bg-amber-500' }
     case 'ISSUE': return { badge: 'bg-rose-100 text-rose-700 border-rose-200', iconBg: 'bg-rose-50', iconText: 'text-rose-600', dot: 'bg-rose-500' }
+    case 'AVAILABILITY': return { badge: 'bg-teal-100 text-teal-700 border-teal-200', iconBg: 'bg-teal-50', iconText: 'text-teal-600', dot: 'bg-teal-500' }
     default: return { badge: 'bg-gray-100 text-gray-600 border-gray-200', iconBg: 'bg-gray-50', iconText: 'text-gray-600', dot: 'bg-gray-500' }
   }
 })
