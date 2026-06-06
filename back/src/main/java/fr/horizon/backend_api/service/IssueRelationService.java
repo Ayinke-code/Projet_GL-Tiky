@@ -18,8 +18,8 @@ import java.util.List;
 
 /**
  * Service gérant les liens de parenté et les dépendances entre les issues.
- * Permet de lier des tickets connexes ou de déclarer des blocages fonctionnels.
- * Seuls les abonnés de l'issue source peuvent créer une liaison.
+ * Seuls les abonnés peuvent créer une liaison.
+ * Les managers voient tous les liens, les étudiants voient uniquement les leurs et les liens officiels.
  */
 @Service
 @RequiredArgsConstructor
@@ -31,17 +31,33 @@ public class IssueRelationService {
     private final IssueFollowerRepository issueFollowerRepository;
 
     /**
-     * Crée une relation de dépendance ou d'association entre deux issues distinctes.
-     * L'utilisateur doit suivre l'issue source pour pouvoir créer le lien.
+     * Détermine si un utilisateur est manager du ticket source ou cible.
      *
-     * @param sourceId identifiant de l'issue émettrice
-     * @param dto      contient l'identifiant de la cible et le type (LINKED, DEPENDS_ON)
+     * @param source ticket source
+     * @param target ticket cible
+     * @param user   utilisateur à vérifier
+     * @return true si l'utilisateur est manager de l'un des deux tickets
+     */
+    private boolean isManager(Issue source, Issue target, User user) {
+        return (source.getManager() != null && source.getManager().getId().equals(user.getId()))
+                || (target.getManager() != null && target.getManager().getId().equals(user.getId()));
+    }
+
+    /**
+     * Crée une relation entre deux tickets distincts de la même catégorie.
+     * L'utilisateur doit suivre le ticket source.
+     * Un manager crée un lien officiel visible par tous.
+     * Un étudiant crée un lien visible uniquement par lui et les managers.
+     *
+     * @param sourceId identifiant du ticket source
+     * @param dto      contient l'identifiant cible et le type (LINKED, DEPENDS_ON)
      * @param user     utilisateur effectuant l'action
-     * @return le DTO de la relation créée enrichi des titres des issues
-     * @throws ResponseStatusException 403 si l'utilisateur ne suit pas l'issue source
-     * @throws ResponseStatusException 400 si l'issue tente de se lier à elle-même
-     * @throws ResponseStatusException 409 si un lien existe déjà entre ces deux tickets
-     * @throws ResponseStatusException 404 si l'issue source ou cible est introuvable
+     * @return le DTO de la relation créée
+     * @throws ResponseStatusException 400 si le ticket tente de se lier à lui-même
+     * @throws ResponseStatusException 400 si les tickets ne sont pas de la même catégorie
+     * @throws ResponseStatusException 403 si l'utilisateur ne suit pas le ticket source
+     * @throws ResponseStatusException 404 si le ticket source ou cible est introuvable
+     * @throws ResponseStatusException 409 si un lien identique existe déjà
      */
     public RelationDto createRelation(Long sourceId, RelationRequestDto dto, User user) {
         if (sourceId.equals(dto.getTargetIssueId())) {
@@ -55,29 +71,59 @@ public class IssueRelationService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous devez suivre ce ticket pour créer une liaison.");
         }
 
-        boolean exists = relationRepository.existsBySourceIssueIdAndTargetIssueId(sourceId, dto.getTargetIssueId())
-                || relationRepository.existsBySourceIssueIdAndTargetIssueId(dto.getTargetIssueId(), sourceId);
-        if (exists) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Un lien existe déjà entre ces deux tickets.");
-        }
-
         Issue target = issueRepository.findById(dto.getTargetIssueId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket cible introuvable"));
+
+        if (source.getCategory() == null || target.getCategory() == null
+                || !source.getCategory().getId().equals(target.getCategory().getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Les deux tickets doivent appartenir à la même catégorie.");
+        }
+
+        boolean manager = isManager(source, target, user);
+
+        // Un manager ne peut pas créer deux liens officiels identiques
+        if (manager) {
+            boolean officialExists =
+                    relationRepository.existsBySourceIssueIdAndTargetIssueIdAndManagerTrue(sourceId, dto.getTargetIssueId())
+                            || relationRepository.existsBySourceIssueIdAndTargetIssueIdAndManagerTrue(dto.getTargetIssueId(), sourceId);
+            if (officialExists) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Un lien officiel existe déjà entre ces deux tickets.");
+            }
+        }
+
+        // Tout utilisateur (manager ou non) ne peut pas recréer un lien qu'il a déjà créé
+        boolean alreadyLinkedByUser =
+                relationRepository.existsBySourceIssueIdAndTargetIssueIdAndCreatedByAndManagerFalse(sourceId, dto.getTargetIssueId(), user)
+                        || relationRepository.existsBySourceIssueIdAndTargetIssueIdAndCreatedByAndManagerFalse(dto.getTargetIssueId(), sourceId, user);
+        if (alreadyLinkedByUser) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Vous avez déjà créé ce lien.");
+        }
+
+        // Bloquer si un lien officiel identique existe déjà
+        boolean officialExists =
+                relationRepository.existsBySourceIssueIdAndTargetIssueIdAndManagerTrue(sourceId, dto.getTargetIssueId())
+                        || relationRepository.existsBySourceIssueIdAndTargetIssueIdAndManagerTrue(dto.getTargetIssueId(), sourceId);
+        if (officialExists) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Un lien officiel existe déjà entre ces deux tickets.");
+        }
 
         IssueRelation relation = new IssueRelation();
         relation.setSourceIssue(source);
         relation.setTargetIssue(target);
         relation.setType(dto.getType());
+        relation.setManager(manager);
+        relation.setCreatedBy(user);
 
         IssueRelation saved = relationRepository.save(relation);
         return mapToDto(saved);
     }
 
     /**
-     * Récupère l'ensemble des relations impliquant un ticket, qu'il soit source ou cible.
+     * Récupère toutes les relations d'un ticket sans filtrage.
+     * Le filtrage par rôle est géré côté front via createdById et manager.
      *
-     * @param issueId identifiant du ticket concerné
-     * @return la liste des DTOs des relations associées
+     * @param issueId identifiant du ticket
+     * @return liste des DTOs de relations
      */
     @Transactional(readOnly = true)
     public List<RelationDto> getRelationsByIssueId(Long issueId) {
@@ -88,20 +134,27 @@ public class IssueRelationService {
     }
 
     /**
-     * Supprime définitivement un lien de relation entre deux tickets.
+     * Supprime définitivement un lien entre deux tickets.
      *
-     * @param relationId identifiant unique de la relation à rompre
+     * @param relationId identifiant unique de la relation à supprimer
      * @throws ResponseStatusException 404 si la relation n'existe pas en base
      */
-    public void deleteRelation(Long relationId) {
-        if (!relationRepository.existsById(relationId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Relation introuvable avec l'id : " + relationId);
+    public void deleteRelation(Long relationId, User user) {
+        IssueRelation relation = relationRepository.findById(relationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Relation introuvable avec l'id : " + relationId));
+
+        boolean isCreator = relation.getCreatedBy().getId().equals(user.getId());
+        boolean isManager = isManager(relation.getSourceIssue(), relation.getTargetIssue(), user);
+
+        if (!isCreator && !isManager) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous n'avez pas le droit de supprimer ce lien.");
         }
+
         relationRepository.deleteById(relationId);
     }
 
     /**
-     * Convertit une entité IssueRelation en son DTO de transfert, avec résolution des titres.
+     * Convertit une entité IssueRelation en DTO de transfert.
      */
     private RelationDto mapToDto(IssueRelation relation) {
         RelationDto dto = new RelationDto();
@@ -111,6 +164,9 @@ public class IssueRelationService {
         dto.setSourceIssueTitle(relation.getSourceIssue().getTitle());
         dto.setTargetIssueTitle(relation.getTargetIssue().getTitle());
         dto.setType(relation.getType());
+        dto.setManager(relation.isManager());
+        dto.setCreatedById(relation.getCreatedBy() != null ? relation.getCreatedBy().getId() : null);
+        dto.setCreatedAt(relation.getCreatedAt());
         return dto;
     }
 }
