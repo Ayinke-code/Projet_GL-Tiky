@@ -84,6 +84,34 @@ public class DocumentService {
     }
 
     /**
+     * Supprime tous les documents selon une issue,
+     * à la fois en base de données et sur le disque.
+     */
+    @Transactional
+    public void deleteDocumentsByIssueId(Long issueId) {
+
+        List<Document> documents = documentRepository.findByIssueId(issueId);
+
+        for (Document document : documents) {
+            try {
+                Path filePath = Paths.get(document.getPath());
+
+                if (Files.exists(filePath)) {
+                    Files.delete(filePath);
+                }
+
+            } catch (IOException e) {
+                throw new RuntimeException(
+                        "Erreur lors de la suppression du fichier : " + document.getStoredName(),
+                        e
+                );
+            }
+        }
+
+        documentRepository.deleteByIssueId(issueId);
+    }
+
+    /**
      * Attache des fichiers à un message existant.
      * <p>
      * Récupère le message et son issue parente, puis délègue le stockage
