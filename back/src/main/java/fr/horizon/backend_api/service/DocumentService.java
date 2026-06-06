@@ -1,5 +1,6 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.exception.DocumentDeletionException;
 import fr.horizon.backend_api.exception.FileDeletionException;
 import fr.horizon.backend_api.exception.FileNotReadableException;
 import fr.horizon.backend_api.exception.FileStorageException;
@@ -101,7 +102,7 @@ public class DocumentService {
                 }
 
             } catch (IOException e) {
-                throw new RuntimeException(
+                throw new DocumentDeletionException(
                         "Erreur lors de la suppression du fichier : " + document.getStoredName(),
                         e
                 );
