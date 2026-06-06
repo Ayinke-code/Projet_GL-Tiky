@@ -1,5 +1,6 @@
 <script setup lang="js">
 import { ref, computed, onMounted } from 'vue'
+import AvailabilityConflictModal from '~/components/invitations/AvailabilityConflictModal.vue'
 
 const props = defineProps({
   issue: {
@@ -8,7 +9,7 @@ const props = defineProps({
   }
 })
 
-const { createMeeting, inviteUsersToEvent } = useEvents()
+const { createMeeting, inviteUsersToEvent, fetchUserAvailabilities } = useEvents()
 const { getIssueFollowers } = useIssueFollowers()
 const { user } = useAuth()
 
@@ -24,6 +25,11 @@ const loadingFollowers = ref(true)
 const submitting = ref(false)
 const error = ref(null)
 const success = ref(false)
+
+// --- Contrôle de disponibilité ---
+const isAvailabilityConflictOpen = ref(false)
+const availabilityConflictUsers = ref([])
+const skipAvailabilityCheck = ref(false)
 
 const pad = (n) => n.toString().padStart(2, '0')
 
@@ -64,6 +70,17 @@ onMounted(async () => {
   }
 })
 
+const isAvailableForSlot = (availabilities, eventStart, eventEnd) => {
+  if (!availabilities || availabilities.length === 0) return true
+  const eStart = new Date(String(eventStart).replace(' ', 'T'))
+  const eEnd = new Date(String(eventEnd).replace(' ', 'T'))
+  return availabilities.some(avail => {
+    const aStart = new Date(String(avail.startDate).replace(' ', 'T'))
+    const aEnd = new Date(String(avail.endDate).replace(' ', 'T'))
+    return aStart <= eStart && aEnd >= eEnd
+  })
+}
+
 const handleSubmit = async () => {
   error.value = null
 
@@ -90,6 +107,24 @@ const handleSubmit = async () => {
   try {
     const endObj = new Date(startObj.getTime() + totalDurationMinutes.value * 60_000)
 
+    // Vérification de disponibilité pour les abonnés sélectionnés
+    if (!skipAvailabilityCheck.value && selectedFollowerIds.value.length > 0) {
+      const conflictList = []
+      for (const fId of selectedFollowerIds.value) {
+        const avails = await fetchUserAvailabilities(fId)
+        if (!isAvailableForSlot(avails, startObj.toISOString(), endObj.toISOString())) {
+          const follower = followers.value.find(f => f.id === fId)
+          conflictList.push({ id: fId, name: follower?.name || 'Inconnu', availabilities: avails })
+        }
+      }
+      if (conflictList.length > 0) {
+        availabilityConflictUsers.value = conflictList
+        isAvailabilityConflictOpen.value = true
+        submitting.value = false
+        return
+      }
+    }
+
     const createdEvent = await createMeeting({
       name: meetingName.value,
       description: `Réunion de suivi pour le ticket #${props.issue.id}`,
@@ -103,15 +138,17 @@ const handleSubmit = async () => {
     }
 
     success.value = true
+    skipAvailabilityCheck.value = false
     setTimeout(() => { success.value = false }, 5000)
 
   } catch (err) {
     const status = err?.response?.status || err?.statusCode || err?.status
+    console.error('[IssueMeetingProposal] handleSubmit error, status:', status, err)
 
     if (status === 400) {
       error.value = err?.data?.message || "Impossible de créer la réunion : vérifiez que la date n'est pas dans le passé."
     } else if (status === 403) {
-      error.value = "Vous n'avez pas l'autorisation d'organiser cette réunion."
+      error.value = err?.data?.message || "Vous n'avez pas l'autorisation d'organiser cette réunion."
     } else if (status === 409) {
       error.value = err?.data?.message || "Conflit d'agenda détecté pour ce créneau."
     } else {
@@ -120,6 +157,37 @@ const handleSubmit = async () => {
   } finally {
     submitting.value = false
   }
+}
+
+const proceedDespiteConflicts = async () => {
+  isAvailabilityConflictOpen.value = false
+  skipAvailabilityCheck.value = true
+  await handleSubmit()
+}
+
+const cancelAvailabilityCheck = () => {
+  isAvailabilityConflictOpen.value = false
+  skipAvailabilityCheck.value = false
+}
+
+const handleSelectSlot = async ({ startDate: slotStart, endDate: slotEnd }) => {
+  isAvailabilityConflictOpen.value = false
+
+  const start = new Date(slotStart)
+  const end = new Date(slotEnd)
+  const diffMin = Math.round((end.getTime() - start.getTime()) / 60000)
+
+  // Mettre à jour le formulaire avec le créneau choisi
+  startDate.value = formatDateTimeLocal(start)
+  durationHours.value = Math.floor(diffMin / 60)
+  durationMinutes.value = diffMin % 60
+
+  // Attendre que Vue applique les mises à jour réactives avant de soumettre
+  await nextTick()
+
+  // Soumettre directement avec ce créneau (skip la vérification de dispo)
+  skipAvailabilityCheck.value = true
+  await handleSubmit()
 }
 </script>
 
@@ -309,6 +377,15 @@ const handleSubmit = async () => {
 
     </div>
   </div>
+
+  <AvailabilityConflictModal
+    v-model:open="isAvailabilityConflictOpen"
+    :conflictUsers="availabilityConflictUsers"
+    :selectable="true"
+    @proceed="proceedDespiteConflicts"
+    @cancel="cancelAvailabilityCheck"
+    @select-slot="handleSelectSlot"
+  />
 </template>
 
 <style scoped>
