@@ -10,9 +10,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "issue_relation", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"source_id", "target_id"})
-})
+@Table(name = "issue_relation")
 public class IssueRelation extends BaseEntity {
 
     @Id
@@ -30,4 +28,13 @@ public class IssueRelation extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RelationType type;
+
+    /** Indique si le lien a été créé par un manager (visible par tous) ou un étudiant (visible par lui et les managers) */
+    @Column(name = "is_manager", nullable = false)
+    private boolean manager;
+
+    /** Utilisateur ayant créé le lien */
+    @ManyToOne
+    @JoinColumn(name = "created_by", nullable = false)
+    private User createdBy;
 }
