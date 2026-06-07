@@ -103,7 +103,11 @@ const filteredFiles = computed(() => {
 const onFollowed = () => {
   alreadyFollowing.value = true
   followSuccess.value = true
-  // Si on vient de suivre l'issue, on la marque comme "vue" immédiatement
+
+  if (issue.value) {
+    issue.value.followersCount = (issue.value.followersCount || 0) + 1
+  }
+
   acknowledgeFollowedIssueUpdate(issue.value)
   setTimeout(() => followSuccess.value = false, 3000)
 }
@@ -407,6 +411,11 @@ const handleUnfollow = async () => {
   try {
     await unfollowIssue(issueId)
     alreadyFollowing.value = false
+
+    if (issue.value && issue.value.followersCount > 0) {
+      issue.value.followersCount -= 1
+    }
+
   } catch (err) {
     console.error(err)
   }
@@ -564,7 +573,7 @@ const handleUnfollow = async () => {
                             :role="msg.role"
                             :date="msg.date"
                             :contenu="msg.contenu"
-                            :files="msg.documents" 
+                            :files="msg.documents"
                             :issue="issue"
                             :user="user"
                             :is-mine="msg.userId === user?.id"
