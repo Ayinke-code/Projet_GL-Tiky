@@ -2,6 +2,8 @@ package fr.horizon.backend_api.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.dto.HandleLinkRequestDto;
+import fr.horizon.backend_api.model.dto.OfficialLinkRequestDto;
 import fr.horizon.backend_api.model.dto.RelationDto;
 import fr.horizon.backend_api.model.dto.RelationRequestDto;
 import fr.horizon.backend_api.model.enums.RelationType;
@@ -49,10 +51,10 @@ class IssueRelationControllerTest {
     private Authentication authentication;
 
     /**
-     * Test de succès pour la création d'une liaison.
+     * Test de succès : Création d'une liaison (Retourne 201 CREATED).
      */
     @Test
-    void shouldLinkIssue() throws Exception {
+    void shouldLinkIssueAndReturnCreated() throws Exception {
         RelationRequestDto request = new RelationRequestDto();
         request.setTargetIssueId(2L);
         request.setType(RelationType.LINKED);
@@ -73,8 +75,30 @@ class IssueRelationControllerTest {
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1));
+    }
+
+    /**
+     * Test de succès alternatif : Une requête manager est générée (Retourne 202 ACCEPTED).
+     */
+    @Test
+    void shouldLinkIssueAndReturnAcceptedWhenManagerRequestInitiated() throws Exception {
+        RelationRequestDto request = new RelationRequestDto();
+        request.setTargetIssueId(2L);
+        request.setType(RelationType.DEPENDS_ON);
+
+        when(authentication.getName()).thenReturn("test@test.com");
+        when(issueFollowerService.getUserByEmail(any())).thenReturn(new User());
+        // Le service retourne null quand un manager a fait une requête au second manager
+        when(relationService.createRelation(eq(1L), any(RelationRequestDto.class), any(User.class)))
+                .thenReturn(null);
+
+        mockMvc.perform(post("/issues/1/relations")
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isAccepted());
     }
 
     /**
@@ -116,7 +140,7 @@ class IssueRelationControllerTest {
     }
 
     /**
-     * Test de suppression d'une liaison.
+     * Test de suppression d'une liaison (Retourne 204 NO_CONTENT).
      */
     @Test
     void shouldUnlinkIssue() throws Exception {
@@ -126,8 +150,78 @@ class IssueRelationControllerTest {
 
         mockMvc.perform(delete("/issues/relations/1")
                         .principal(authentication))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         verify(relationService).deleteRelation(eq(1L), any(User.class));
+    }
+
+    /**
+     * Test de récupération des requêtes en attente pour un manager.
+     */
+    @Test
+    void shouldGetPendingRequests() throws Exception {
+        OfficialLinkRequestDto requestDto = OfficialLinkRequestDto.builder()
+                .id(5L)
+                .sourceIssueId(1L)
+                .targetIssueId(2L)
+                .type(RelationType.LINKED)
+                .build();
+
+        when(authentication.getName()).thenReturn("test@test.com");
+        when(issueFollowerService.getUserByEmail(any())).thenReturn(new User());
+        when(relationService.getPendingOfficialLinkRequests(any(User.class))).thenReturn(List.of(requestDto));
+
+        mockMvc.perform(get("/issues/relations/requests")
+                        .principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(5));
+    }
+
+    /**
+     * Test d'approbation d'une demande par les managers (Retourne 201 CREATED si finalisé).
+     */
+    @Test
+    void shouldHandleLinkRequestAndReturnCreatedIfFinalized() throws Exception {
+        HandleLinkRequestDto request = new HandleLinkRequestDto();
+        request.setApprove(true);
+
+        RelationDto finalRelation = RelationDto.builder()
+                .id(10L)
+                .manager(true)
+                .build();
+
+        when(authentication.getName()).thenReturn("test@test.com");
+        when(issueFollowerService.getUserByEmail(any())).thenReturn(new User());
+        // Simule le cas où les deux managers ont validé
+        when(relationService.handleOfficialLinkRequest(eq(5L), any(HandleLinkRequestDto.class), any(User.class)))
+                .thenReturn(finalRelation);
+
+        mockMvc.perform(post("/issues/relations/requests/5/handle")
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(10));
+    }
+
+    /**
+     * Test d'approbation partielle ou de refus (Retourne 200 OK).
+     */
+    @Test
+    void shouldHandleLinkRequestAndReturnOkIfPartialOrRejected() throws Exception {
+        HandleLinkRequestDto request = new HandleLinkRequestDto();
+        request.setApprove(false); // Cas d'un refus (ou d'une approbation en attente du 2ème manager)
+
+        when(authentication.getName()).thenReturn("test@test.com");
+        when(issueFollowerService.getUserByEmail(any())).thenReturn(new User());
+        // Le service retourne null si le lien officiel n'est pas encore créé
+        when(relationService.handleOfficialLinkRequest(eq(5L), any(HandleLinkRequestDto.class), any(User.class)))
+                .thenReturn(null);
+
+        mockMvc.perform(post("/issues/relations/requests/5/handle")
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
     }
 }
