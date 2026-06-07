@@ -25,7 +25,7 @@
             <span class="text-indigo-400">gestion académique</span>
           </h1>
           <p class="mt-4 text-slate-400 text-lg leading-relaxed">
-            Suivez vos ticket, organisez vos catégories et planifiez
+            Suivez vos tickets, organisez vos catégories et planifiez
             audits &amp; soutenances en un seul endroit.
           </p>
         </div>
