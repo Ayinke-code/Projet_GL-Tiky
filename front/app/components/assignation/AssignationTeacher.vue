@@ -36,19 +36,21 @@
         <div class="flex justify-end gap-3 w-1/3">
           <UButton
             color="green"
-            variant="soft"
+            variant="outline"
             label="Accepter"
             icon="i-heroicons-check"
             :loading="processingId === task.id"
             @click="reply(task.id, true)"
+            class="transition-all duration-200 hover:bg-green-600 hover:text-white border-2 border-green-500 text-green-600 font-bold"
           />
           <UButton
             color="red"
-            variant="ghost"
+            variant="outline"
             label="Refuser"
             icon="i-heroicons-x-mark"
             :loading="processingId === task.id"
             @click="reply(task.id, false)"
+            class="transition-all duration-200 hover:bg-red-600 hover:text-white border-2 border-red-500 text-red-600 font-bold"
           />
         </div>
       </div>
