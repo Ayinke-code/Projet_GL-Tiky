@@ -315,12 +315,11 @@ const rejectOptions = [
 
 const isManager = computed(() => props.currentUserId && props.currentUserId === props.currentCategoryManagerId)
 
-// On affiche tous les liens pour le manager,
-// et pour l'étudiant on affiche les liens officiels + SES PROPRES suggestions
+// Tout le monde (manager ou étudiant) voit uniquement :
+// 1. Les liens officiels validés
+// 2. Ses propres suggestions
 const visibleRelations = computed(() => {
   if (!props.currentUserId) return relations.value
-  if (isManager.value) return relations.value
-
   return relations.value.filter(r => r.manager || r.createdById === props.currentUserId)
 })
 
