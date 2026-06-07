@@ -97,7 +97,7 @@ watchEffect(() => {
 
 const features = [
   {
-    label: 'Ticket & suivi',
+    label: 'Tickets & Suivi',
     desc:  'Déposez et suivez l\'avancement de vos problématiques.',
     icon:  'fa-solid fa-circle-exclamation',
     bg:    'bg-rose-500/10',
