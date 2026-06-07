@@ -30,7 +30,7 @@
 
     <div class="mb-8">
       <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Mon Calendrier</h1>
-      <p class="text-slate-500 italic">Retrouvez vos soutenances, audits et rendez-vous ticket.</p>
+      <p class="text-slate-500 italic">Retrouvez vos soutenances, audits et rendez-vous.</p>
     </div>
 
     <ClientOnly>
