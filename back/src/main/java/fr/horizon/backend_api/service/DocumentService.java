@@ -1,5 +1,6 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.exception.DocumentDeletionException;
 import fr.horizon.backend_api.exception.FileDeletionException;
 import fr.horizon.backend_api.exception.FileNotReadableException;
 import fr.horizon.backend_api.exception.FileStorageException;
@@ -81,6 +82,34 @@ public class DocumentService {
         }
 
         documentRepository.delete(doc);
+    }
+
+    /**
+     * Supprime tous les documents selon une issue,
+     * à la fois en base de données et sur le disque.
+     */
+    @Transactional
+    public void deleteDocumentsByIssueId(Long issueId) {
+
+        List<Document> documents = documentRepository.findByIssueId(issueId);
+
+        for (Document document : documents) {
+            try {
+                Path filePath = Paths.get(document.getPath());
+
+                if (Files.exists(filePath)) {
+                    Files.delete(filePath);
+                }
+
+            } catch (IOException e) {
+                throw new DocumentDeletionException(
+                        "Erreur lors de la suppression du fichier : " + document.getStoredName(),
+                        e
+                );
+            }
+        }
+
+        documentRepository.deleteByIssueId(issueId);
     }
 
     /**

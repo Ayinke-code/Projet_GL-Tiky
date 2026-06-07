@@ -345,6 +345,9 @@ public class IssueService {
         // Supprimer les événements liés avant de supprimer l'issue
         eventRepository.deleteByIssueId(id);
 
+        // Supprime tous les documents liés à l'issue qui va être supprimé
+        documentService.deleteDocumentsByIssueId(id);
+
         issueRepository.delete(issue);
     }
 

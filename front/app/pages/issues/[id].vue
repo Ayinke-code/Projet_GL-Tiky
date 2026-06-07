@@ -98,6 +98,11 @@ const filteredFiles = computed(() => {
 const onFollowed = () => {
   alreadyFollowing.value = true
   followSuccess.value = true
+
+  if (issue.value) {
+    issue.value.followersCount = (issue.value.followersCount || 0) + 1
+  }
+
   acknowledgeFollowedIssueUpdate(issue.value)
   setTimeout(() => followSuccess.value = false, 3000)
 }
@@ -369,6 +374,11 @@ const handleUnfollow = async () => {
   try {
     await unfollowIssue(issueId)
     alreadyFollowing.value = false
+
+    if (issue.value && issue.value.followersCount > 0) {
+      issue.value.followersCount -= 1
+    }
+
   } catch (err) {
     console.error(err)
     error.value = err?.message || 'Erreur lors du désabonnement'
@@ -506,27 +516,25 @@ const slides = computed(() => {
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-        <!-- ===== COLONNE GAUCHE : CONVERSATION ===== -->
-        <div class="lg:col-span-2 space-y-4">
-          <!-- Messages -->
-          <div class="space-y-3">
-            <IssueMessage
-              v-for="msg in messages"
-              :key="msg.id"
-              :auteur="msg.auteur"
-              :role="msg.role"
-              :date="msg.date"
-              :contenu="msg.contenu"
-              :files="msg.documents"
-              :issue="issue"
-              :user="user"
-              :is-mine="msg.userId === user?.id"
-              :reply-to="msg.replyTo"
-              @reply="replyingToMessage = msg"
-              @download="downloadDoc"
-            />
-            <IssueEmptyMessages v-if="messages.length === 0" />
-          </div>
+                <!-- ===== COLONNE GAUCHE : CONVERSATION ===== -->
+                <div class="lg:col-span-2 space-y-4">
+                    <!-- Messages -->
+                    <div class="space-y-3">
+                        <IssueMessage
+                            v-for="msg in messages"
+                            :key="msg.id"
+                            :auteur="msg.auteur"
+                            :role="msg.role"
+                            :date="msg.date"
+                            :contenu="msg.contenu"
+                            :files="msg.documents"
+                            :issue="issue"
+                            :user="user"
+                            :is-mine="msg.userId === user?.id"
+                            :reply-to="msg.replyTo"
+                            @reply="replyingToMessage = msg"
+                            @download="downloadDoc"
+                        />
 
           <!-- Zone d'envoi de message -->
           <MessageInput

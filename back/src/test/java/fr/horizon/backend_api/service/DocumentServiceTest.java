@@ -179,4 +179,34 @@ class DocumentServiceTest {
         verify(fileStorageService).store(file);
         verify(documentRepository).saveAll(any());
     }
+
+    @Test
+    void shouldDeleteAllDocumentsByIssueIdSuccessfully() throws IOException {
+
+        Path file1 = tempDir.resolve("file1.pdf");
+        Path file2 = tempDir.resolve("file2.pdf");
+
+        Files.write(file1, "data1".getBytes());
+        Files.write(file2, "data2".getBytes());
+
+        Document doc1 = new Document();
+        doc1.setId(1L);
+        doc1.setPath(file1.toString());
+
+        Document doc2 = new Document();
+        doc2.setId(2L);
+        doc2.setPath(file2.toString());
+
+        when(documentRepository.findByIssueId(10L))
+                .thenReturn(List.of(doc1, doc2));
+
+        documentService.deleteDocumentsByIssueId(10L);
+
+        // Vérifie que les fichiers ont été supprimés
+        assertThat(Files.exists(file1)).isFalse();
+        assertThat(Files.exists(file2)).isFalse();
+
+        // Vérifie la suppression en base
+        verify(documentRepository).deleteByIssueId(10L);
+    }
 }
