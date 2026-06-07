@@ -5,6 +5,7 @@ import fr.horizon.backend_api.model.dto.RelationRequestDto;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.IssueRelation;
 import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.enums.RelationStatus;
 import fr.horizon.backend_api.repository.IssueFollowerRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.IssueRelationRepository;
@@ -20,6 +21,7 @@ import java.util.List;
  * Service gérant les liens de parenté et les dépendances entre les issues.
  * Seuls les abonnés peuvent créer une liaison.
  * Les managers voient tous les liens, les étudiants voient uniquement les leurs et les liens officiels.
+ * Pour un lien entre deux issues de managers différents, les deux managers doivent valider.
  */
 @Service
 @RequiredArgsConstructor
@@ -46,8 +48,10 @@ public class IssueRelationService {
     /**
      * Crée une relation entre deux tickets distincts de la même catégorie.
      * L'utilisateur doit suivre le ticket source.
-     * Un manager crée un lien officiel visible par tous.
-     * Un étudiant crée un lien visible uniquement par lui et les managers.
+     * Si le créateur est manager :
+     *   - même manager pour les deux tickets → lien directement OFFICIAL
+     *   - managers différents → lien PENDING, le second manager doit valider
+     * Un étudiant ne peut pas créer un lien si un lien officiel (OFFICIAL) existe déjà.
      *
      * @param sourceId identifiant du ticket source
      * @param dto      contient l'identifiant cible et le type (LINKED, DEPENDS_ON)
@@ -79,19 +83,17 @@ public class IssueRelationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Les deux tickets doivent appartenir à la même catégorie.");
         }
 
-        boolean manager = isManager(source, target, user);
-
-        // Un manager ne peut pas créer deux liens officiels identiques
-        if (manager) {
-            boolean officialExists =
-                    relationRepository.existsBySourceIssueIdAndTargetIssueIdAndManagerTrue(sourceId, dto.getTargetIssueId())
-                            || relationRepository.existsBySourceIssueIdAndTargetIssueIdAndManagerTrue(dto.getTargetIssueId(), sourceId);
-            if (officialExists) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Un lien officiel existe déjà entre ces deux tickets.");
-            }
+        // Bloquer si un lien officiel validé existe déjà entre ces deux tickets
+        boolean officialExists =
+                relationRepository.existsBySourceIssueIdAndTargetIssueIdAndManagerTrueAndStatus(sourceId, dto.getTargetIssueId(), RelationStatus.OFFICIAL)
+                        || relationRepository.existsBySourceIssueIdAndTargetIssueIdAndManagerTrueAndStatus(dto.getTargetIssueId(), sourceId, RelationStatus.OFFICIAL);
+        if (officialExists) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Un lien officiel existe déjà entre ces deux tickets.");
         }
 
-        // Tout utilisateur (manager ou non) ne peut pas recréer un lien qu'il a déjà créé
+        boolean manager = isManager(source, target, user);
+
+        // Tout utilisateur ne peut pas recréer un lien qu'il a déjà créé
         boolean alreadyLinkedByUser =
                 relationRepository.existsBySourceIssueIdAndTargetIssueIdAndCreatedByAndManagerFalse(sourceId, dto.getTargetIssueId(), user)
                         || relationRepository.existsBySourceIssueIdAndTargetIssueIdAndCreatedByAndManagerFalse(dto.getTargetIssueId(), sourceId, user);
@@ -99,28 +101,89 @@ public class IssueRelationService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Vous avez déjà créé ce lien.");
         }
 
-        // Bloquer si un lien officiel identique existe déjà
-        boolean officialExists =
-                relationRepository.existsBySourceIssueIdAndTargetIssueIdAndManagerTrue(sourceId, dto.getTargetIssueId())
-                        || relationRepository.existsBySourceIssueIdAndTargetIssueIdAndManagerTrue(dto.getTargetIssueId(), sourceId);
-        if (officialExists) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Un lien officiel existe déjà entre ces deux tickets.");
-        }
-
         IssueRelation relation = new IssueRelation();
         relation.setSourceIssue(source);
         relation.setTargetIssue(target);
         relation.setType(dto.getType());
-        relation.setManager(manager);
         relation.setCreatedBy(user);
+
+        if (manager) {
+            relation.setManager(true);
+
+            User sourceManager = source.getManager();
+            User targetManager = target.getManager();
+
+            // Même manager pour les deux tickets → lien directement officiel
+            boolean sameManager = sourceManager != null && targetManager != null
+                    && sourceManager.getId().equals(targetManager.getId());
+
+            if (sameManager) {
+                relation.setStatus(RelationStatus.OFFICIAL);
+                relation.setValidator(null);
+            } else {
+                // Managers différents → PENDING, le second manager doit valider
+                relation.setStatus(RelationStatus.PENDING);
+                // Le validateur est l'autre manager (celui qui n'a pas créé le lien)
+                User validator = sourceManager != null && sourceManager.getId().equals(user.getId())
+                        ? targetManager
+                        : sourceManager;
+                relation.setValidator(validator);
+            }
+        } else {
+            relation.setManager(false);
+            relation.setStatus(RelationStatus.PENDING);
+            relation.setValidator(null);
+        }
 
         IssueRelation saved = relationRepository.save(relation);
         return mapToDto(saved);
     }
 
     /**
+     * Permet au second manager de valider ou refuser un lien en attente.
+     *
+     * @param relationId identifiant de la relation à valider
+     * @param accept     true pour valider, false pour refuser
+     * @param user       manager effectuant la validation
+     * @return le DTO de la relation mise à jour
+     * @throws ResponseStatusException 403 si l'utilisateur n'est pas le validateur désigné
+     * @throws ResponseStatusException 404 si la relation n'existe pas
+     * @throws ResponseStatusException 409 si la relation n'est pas en statut PENDING
+     */
+    public RelationDto validateRelation(Long relationId, boolean accept, User user) {
+        IssueRelation relation = relationRepository.findById(relationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Relation introuvable"));
+
+        if (relation.getStatus() != RelationStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Ce lien n'est pas en attente de validation.");
+        }
+
+        if (relation.getValidator() == null || !relation.getValidator().getId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous n'êtes pas le validateur désigné pour ce lien.");
+        }
+
+        relation.setStatus(accept ? RelationStatus.OFFICIAL : RelationStatus.REJECTED);
+        IssueRelation saved = relationRepository.save(relation);
+        return mapToDto(saved);
+    }
+
+    /**
+     * Récupère tous les liens en attente de validation pour le manager connecté.
+     *
+     * @param user manager connecté
+     * @return liste des DTOs de relations en attente
+     */
+    @Transactional(readOnly = true)
+    public List<RelationDto> getPendingRelationsForValidator(User user) {
+        return relationRepository.findAllByValidatorAndStatus(user, RelationStatus.PENDING)
+                .stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
+    /**
      * Récupère toutes les relations d'un ticket sans filtrage.
-     * Le filtrage par rôle est géré côté front via createdById et manager.
+     * Le filtrage par rôle est géré côté front via createdById, manager et status.
      *
      * @param issueId identifiant du ticket
      * @return liste des DTOs de relations
@@ -137,6 +200,8 @@ public class IssueRelationService {
      * Supprime définitivement un lien entre deux tickets.
      *
      * @param relationId identifiant unique de la relation à supprimer
+     * @param user       utilisateur effectuant la suppression
+     * @throws ResponseStatusException 403 si l'utilisateur n'est pas créateur ou manager
      * @throws ResponseStatusException 404 si la relation n'existe pas en base
      */
     public void deleteRelation(Long relationId, User user) {
@@ -167,6 +232,8 @@ public class IssueRelationService {
         dto.setManager(relation.isManager());
         dto.setCreatedById(relation.getCreatedBy() != null ? relation.getCreatedBy().getId() : null);
         dto.setCreatedAt(relation.getCreatedAt());
+        dto.setStatus(relation.getStatus());
+        dto.setValidatorId(relation.getValidator() != null ? relation.getValidator().getId() : null);
         return dto;
     }
 }

@@ -6,6 +6,7 @@ import fr.horizon.backend_api.model.dto.RelationDto;
 import fr.horizon.backend_api.model.dto.RelationRequestDto;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.IssueRelation;
+import fr.horizon.backend_api.model.enums.RelationStatus;
 import fr.horizon.backend_api.model.enums.RelationType;
 import fr.horizon.backend_api.repository.IssueFollowerRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
@@ -82,6 +83,8 @@ class IssueRelationServiceTest {
         when(issueRepository.findById(targetId)).thenReturn(Optional.of(targetIssue));
         when(relationRepository.existsBySourceIssueIdAndTargetIssueIdAndCreatedByAndManagerFalse(sourceId, targetId, user)).thenReturn(false);
         when(relationRepository.existsBySourceIssueIdAndTargetIssueIdAndCreatedByAndManagerFalse(targetId, sourceId, user)).thenReturn(false);
+        when(relationRepository.existsBySourceIssueIdAndTargetIssueIdAndManagerTrueAndStatus(sourceId, targetId, RelationStatus.OFFICIAL)).thenReturn(false);
+        when(relationRepository.existsBySourceIssueIdAndTargetIssueIdAndManagerTrueAndStatus(targetId, sourceId, RelationStatus.OFFICIAL)).thenReturn(false);
         when(relationRepository.save(any(IssueRelation.class))).thenReturn(savedRelation);
 
         RelationDto result = relationService.createRelation(sourceId, dto, user);
@@ -152,6 +155,8 @@ class IssueRelationServiceTest {
         when(issueRepository.findById(10L)).thenReturn(Optional.of(sourceIssue));
         when(issueFollowerRepository.existsByUserAndIssue(user, sourceIssue)).thenReturn(true);
         when(issueRepository.findById(11L)).thenReturn(Optional.of(targetIssue));
+        when(relationRepository.existsBySourceIssueIdAndTargetIssueIdAndManagerTrueAndStatus(10L, 11L, RelationStatus.OFFICIAL)).thenReturn(false);
+        when(relationRepository.existsBySourceIssueIdAndTargetIssueIdAndManagerTrueAndStatus(11L, 10L, RelationStatus.OFFICIAL)).thenReturn(false);
         when(relationRepository.existsBySourceIssueIdAndTargetIssueIdAndCreatedByAndManagerFalse(10L, 11L, user)).thenReturn(true);
 
         assertThrows(ResponseStatusException.class, () ->
@@ -245,6 +250,58 @@ class IssueRelationServiceTest {
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () ->
                 relationService.deleteRelation(1L, otherUser));
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+    }
+
+    /**
+     * Vérifie qu'un manager peut valider un lien en attente.
+     */
+    @Test
+    void validateRelation_success() {
+        User validator = new User();
+        validator.setId(1L);
+
+        IssueRelation relation = new IssueRelation();
+        relation.setId(1L);
+        relation.setStatus(RelationStatus.PENDING);
+        relation.setValidator(validator);
+
+        Issue source = new Issue();
+        Issue target = new Issue();
+        relation.setSourceIssue(source);
+        relation.setTargetIssue(target);
+        relation.setCreatedBy(new User());
+
+        when(relationRepository.findById(1L)).thenReturn(Optional.of(relation));
+        when(relationRepository.save(any(IssueRelation.class))).thenReturn(relation);
+
+        RelationDto result = relationService.validateRelation(1L, true, validator);
+
+        assertNotNull(result);
+        verify(relationRepository).save(any(IssueRelation.class));
+    }
+
+    /**
+     * Vérifie qu'un utilisateur non validateur ne peut pas valider un lien.
+     */
+    @Test
+    void validateRelation_forbidden_throwsForbidden() {
+        User validator = new User();
+        validator.setId(1L);
+
+        User otherUser = new User();
+        otherUser.setId(2L);
+
+        IssueRelation relation = new IssueRelation();
+        relation.setId(1L);
+        relation.setStatus(RelationStatus.PENDING);
+        relation.setValidator(validator);
+
+        when(relationRepository.findById(1L)).thenReturn(Optional.of(relation));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () ->
+                relationService.validateRelation(1L, true, otherUser));
 
         assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
     }

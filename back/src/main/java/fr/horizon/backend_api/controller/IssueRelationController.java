@@ -63,12 +63,46 @@ public class IssueRelationController {
     /**
      * Supprime une liaison existante entre deux tickets.
      *
-     * @param relationId identifiant unique de la relation à supprimer
+     * @param relationId     identifiant unique de la relation à supprimer
+     * @param authentication contexte d'authentification Spring Security
      */
     @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/relations/{relationId}")
-    public void unlinkIssue(@PathVariable Long relationId, Authentication authentication) {
+    public void unlinkIssue(
+            @PathVariable Long relationId,
+            Authentication authentication) {
         User user = issueFollowerService.getUserByEmail(authentication.getName());
         relationService.deleteRelation(relationId, user);
+    }
+
+    /**
+     * Permet au second manager de valider ou refuser un lien en attente.
+     *
+     * @param relationId     identifiant de la relation à valider
+     * @param accept         true pour valider, false pour refuser
+     * @param authentication contexte d'authentification Spring Security
+     * @return le DTO de la relation mise à jour
+     */
+    @PreAuthorize("isAuthenticated()")
+    @PatchMapping("/relations/{relationId}/validate")
+    public RelationDto validateRelation(
+            @PathVariable Long relationId,
+            @RequestParam boolean accept,
+            Authentication authentication) {
+        User user = issueFollowerService.getUserByEmail(authentication.getName());
+        return relationService.validateRelation(relationId, accept, user);
+    }
+
+    /**
+     * Récupère tous les liens en attente de validation pour le manager connecté.
+     *
+     * @param authentication contexte d'authentification Spring Security
+     * @return liste des DTOs de relations en attente
+     */
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/relations/pending")
+    public List<RelationDto> getPendingRelations(Authentication authentication) {
+        User user = issueFollowerService.getUserByEmail(authentication.getName());
+        return relationService.getPendingRelationsForValidator(user);
     }
 }

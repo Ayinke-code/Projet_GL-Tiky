@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.RelationDto;
 import fr.horizon.backend_api.model.dto.RelationRequestDto;
+import fr.horizon.backend_api.model.enums.RelationStatus;
 import fr.horizon.backend_api.model.enums.RelationType;
 import fr.horizon.backend_api.service.IssueFollowerService;
 import fr.horizon.backend_api.service.IssueRelationService;
@@ -25,6 +26,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 
 @WebMvcTest(IssueRelationController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -129,5 +131,48 @@ class IssueRelationControllerTest {
                 .andExpect(status().isOk());
 
         verify(relationService).deleteRelation(eq(1L), any(User.class));
+    }
+
+    /**
+     * Test de validation d'un lien en attente.
+     */
+    @Test
+    void shouldValidateRelation() throws Exception {
+        RelationDto response = RelationDto.builder()
+                .id(1L)
+                .type(RelationType.LINKED)
+                .status(RelationStatus.OFFICIAL)
+                .build();
+
+        when(authentication.getName()).thenReturn("test@test.com");
+        when(issueFollowerService.getUserByEmail(any())).thenReturn(new User());
+        when(relationService.validateRelation(eq(1L), eq(true), any(User.class))).thenReturn(response);
+
+        mockMvc.perform(patch("/issues/relations/1/validate")
+                        .param("accept", "true")
+                        .principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1));
+    }
+
+    /**
+     * Test de récupération des liens en attente pour le manager.
+     */
+    @Test
+    void shouldGetPendingRelations() throws Exception {
+        RelationDto rel = RelationDto.builder()
+                .id(1L)
+                .type(RelationType.LINKED)
+                .status(RelationStatus.PENDING)
+                .build();
+
+        when(authentication.getName()).thenReturn("test@test.com");
+        when(issueFollowerService.getUserByEmail(any())).thenReturn(new User());
+        when(relationService.getPendingRelationsForValidator(any(User.class))).thenReturn(List.of(rel));
+
+        mockMvc.perform(get("/issues/relations/pending")
+                        .principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(1));
     }
 }

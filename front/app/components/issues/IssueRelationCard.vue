@@ -30,20 +30,17 @@
         >
           <div class="min-w-0 flex-1 pr-2">
             <div class="flex items-center gap-1.5 font-medium text-gray-800">
-
               <span v-if="rel.sourceIssueId === currentIssueId" class="truncate">
                 {{ rel.type === 'DEPENDS_ON' ? 'Dépend de :' : 'Lié à :' }}
                 <span class="text-[11px] text-gray-400 italic">{{ rel.targetIssueTitle }}</span>
               </span>
-
               <span v-else class="truncate">
                 {{ rel.type === 'DEPENDS_ON' ? 'Requis par :' : 'Lié à :' }}
                 <span class="text-[11px] text-gray-400 italic">{{ rel.sourceIssueTitle }}</span>
               </span>
-
             </div>
 
-            <div class="mt-1 flex gap-1 flex-wrap">
+            <div class="mt-1 flex gap-1 flex-wrap items-center">
               <UBadge
                 size="xs"
                 :color="rel.type === 'DEPENDS_ON' ? 'error' : 'info'"
@@ -52,33 +49,75 @@
               >
                 {{ rel.type === 'DEPENDS_ON' ? 'Dépendance' : 'Association' }}
               </UBadge>
+
+              <!-- Lien officiel validé -->
               <UBadge
-                v-if="rel.createdById === props.currentUserId"
-                size="xs"
-                color="success"
-                variant="solid"
-                class="text-[9px] px-1.5 py-0 uppercase font-bold tracking-wider"
-              >
-                Vous
-              </UBadge>
-              <UBadge
-                v-else-if="rel.manager"
+                v-if="rel.status === 'OFFICIAL'"
                 size="xs"
                 color="primary"
                 variant="solid"
                 class="text-[9px] px-1.5 py-0 uppercase font-bold tracking-wider"
               >
-                Lien validé!
+                Validé
               </UBadge>
+
+              <!-- Lien en attente de validation -->
               <UBadge
-                v-else
+                v-else-if="rel.status === 'PENDING'"
                 size="xs"
                 color="warning"
                 variant="solid"
                 class="text-[9px] px-1.5 py-0 uppercase font-bold tracking-wider"
               >
-                Etudiant
+                En attente
               </UBadge>
+
+              <!-- Lien refusé -->
+              <UBadge
+                v-else-if="rel.status === 'REJECTED'"
+                size="xs"
+                color="error"
+                variant="solid"
+                class="text-[9px] px-1.5 py-0 uppercase font-bold tracking-wider"
+              >
+                Refusé
+              </UBadge>
+
+              <!-- Créé par l'utilisateur courant -->
+              <UBadge
+                v-if="rel.createdById === props.currentUserId"
+                size="xs"
+                color="success"
+                variant="soft"
+                class="text-[9px] px-1.5 py-0 uppercase font-bold tracking-wider"
+              >
+                Votre lien
+              </UBadge>
+
+              <!-- Boutons valider/refuser pour le manager validateur -->
+              <div
+                v-if="isManager && rel.status === 'PENDING' && rel.validatorId === props.currentUserId"
+                class="flex gap-1 ml-1"
+              >
+                <UButton
+                  size="xs"
+                  color="success"
+                  variant="soft"
+                  class="text-[9px] cursor-pointer"
+                  @click="handleValidate(rel.id, true)"
+                >
+                  ✓
+                </UButton>
+                <UButton
+                  size="xs"
+                  color="error"
+                  variant="soft"
+                  class="text-[9px] cursor-pointer"
+                  @click="handleValidate(rel.id, false)"
+                >
+                  ✕
+                </UButton>
+              </div>
             </div>
           </div>
 
@@ -145,14 +184,13 @@
           Créer le lien
         </UButton>
 
-        <!-- Feedback d'erreur ajout -->
         <p v-if="localError" class="text-[11px] text-red-500 bg-red-50 border border-red-100 rounded-lg p-2 text-center mt-1">
           {{ localError }}
         </p>
       </form>
     </div>
 
-    <!-- MODAL DE CONFIRMATION -->
+    <!-- MODAL DE CONFIRMATION SUPPRESSION -->
     <ConfirmModal
       v-model:open="isDeleteModalOpen"
       title="Supprimer le lien"
@@ -188,27 +226,41 @@ const props = defineProps({
   }
 })
 
-const { relations, loading, fetchRelationsByIssue, createRelation, deleteRelation } = useIssueRelations()
+const { relations, loading, fetchRelationsByIssue, createRelation, deleteRelation, validateRelation } = useIssueRelations()
 const { issues, fetchIssues } = useIssues()
 
 const submitting = ref(false)
 const localError = ref(null)
 const deleteError = ref(null)
 const selectedTarget = ref(null)
-
 const isDeleteModalOpen = ref(false)
 const relationIdToDelete = ref(null)
 
-const form = ref({
-  type: 'LINKED'
-})
+const form = ref({ type: 'LINKED' })
+
+const isManager = computed(() => props.currentUserId === props.currentCategoryManagerId)
 
 const visibleRelations = computed(() => {
   if (!props.currentUserId) return relations.value
-  const isManager = props.currentUserId === props.currentCategoryManagerId
-  if (isManager) return relations.value
+
+  if (isManager.value) {
+    // Le manager voit tous les liens sauf les liens non-officiels
+    // qui ont un équivalent officiel (OFFICIAL) pour la même paire
+    const officialPairs = new Set(
+      relations.value
+        .filter(r => r.status === 'OFFICIAL')
+        .map(r => [r.sourceIssueId, r.targetIssueId].sort().join('-'))
+    )
+    return relations.value.filter(r => {
+      if (r.status === 'OFFICIAL') return true
+      const pair = [r.sourceIssueId, r.targetIssueId].sort().join('-')
+      return !officialPairs.has(pair)
+    })
+  }
+
+  // Étudiant : voit ses propres liens et les liens OFFICIAL uniquement
   return relations.value.filter(r =>
-    r.manager || r.createdById === props.currentUserId
+    r.status === 'OFFICIAL' || r.createdById === props.currentUserId
   )
 })
 
@@ -218,10 +270,16 @@ const searchableIssues = computed(() => {
       .filter(r => r.createdById === props.currentUserId)
       .flatMap(r => [r.sourceIssueId, r.targetIssueId])
   )
+  const officialLinkedIds = new Set(
+    relations.value
+      .filter(r => r.status === 'OFFICIAL')
+      .flatMap(r => [r.sourceIssueId, r.targetIssueId])
+  )
   return issues.value
     .filter(issue =>
       issue.id !== props.currentIssueId &&
       !myLinkedIds.has(issue.id) &&
+      !officialLinkedIds.has(issue.id) &&
       issue.categoryId === props.currentCategoryId
     )
     .map(issue => ({
@@ -241,7 +299,6 @@ const handleSubmit = async () => {
   if (!selectedTarget.value) return
   submitting.value = true
   localError.value = null
-
   try {
     await createRelation(props.currentIssueId, selectedTarget.value.id, form.value.type)
     selectedTarget.value = null
@@ -256,6 +313,14 @@ const handleSubmit = async () => {
     }
   } finally {
     submitting.value = false
+  }
+}
+
+const handleValidate = async (relationId, accept) => {
+  try {
+    await validateRelation(relationId, accept, props.currentIssueId)
+  } catch (err) {
+    deleteError.value = err?.data?.message || "Erreur lors de la validation."
   }
 }
 

@@ -1,5 +1,6 @@
 package fr.horizon.backend_api.model.dto;
 
+import fr.horizon.backend_api.model.enums.RelationStatus;
 import fr.horizon.backend_api.model.enums.RelationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,4 +23,6 @@ public class RelationDto {
     private LocalDateTime createdAt;
     private boolean manager;
     private Long createdById;
+    private RelationStatus status;
+    private Long validatorId;
 }
