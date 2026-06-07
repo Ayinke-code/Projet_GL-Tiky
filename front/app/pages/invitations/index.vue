@@ -299,7 +299,7 @@ const pendingIssueInvitations = computed(() =>
 const pendingNonIssueInvitations = computed(() => myPendingInvitations.value)
 
 const tabDescription = computed(() => isTeacher.value
-  ? "Gérez vos rendez-vous : suivez les réponses des invités ou reprogrammez un créneau à tout moment."
+  ? "Suivez les réponses des invités ou reprogrammez un créneau à tout moment."
   : "Suivez l'état de vos demandes de rendez-vous et relancez les enseignants si besoin."
 )
 const emptyIcon = computed(() => isTeacher.value ? 'i-lucide-calendar-x' : 'i-lucide-send')
