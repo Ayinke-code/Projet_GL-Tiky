@@ -31,12 +31,46 @@
       </time>
     </div>
     <p
+      :id="'issue-message-'+contenu"
       class="whitespace-pre-line text-sm leading-6"
       :class="isMine ? 'text-gray-800' : 'text-gray-700'"
       style="overflow-wrap: anywhere; word-break: break-word; hyphens: auto;"
     >
       {{ contenu }}
     </p>
+
+    <!-- Affichage des fichiers, fonction permettant des les télécharger -->
+    <div v-if="files.length" class="mt-6">
+      <div class="text-sm font-medium text-gray-500 mb-2">
+        Documents
+      </div>
+
+      <div class="space-y-2">
+        <div v-for="doc in files" :key="doc.id"
+          class="flex items-center justify-between gap-3 p-3 border rounded-lg hover:bg-gray-50 transition">
+          <!-- gauche -->
+          <div class="flex items-center gap-3 min-w-0">
+            <UIcon :name="getFileIcon(doc.contentType)" class="text-gray-500 text-lg shrink-0" />
+
+            <div class="min-w-0">
+              <p class="font-medium text-gray-900 truncate">
+                {{ doc.originalName }}
+              </p>
+
+              <p class="text-xs text-gray-500">
+                {{ (doc.size / 1024).toFixed(1) }} KB
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1 shrink-0">
+            <!-- Télécharge -->
+            <UButton icon="i-lucide-download" size="sm" variant="ghost" class="shrink-0 cursor-pointer" color="info"
+              v-on:click="downloadDoc(doc)" />
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="mt-3 flex justify-end">
       <button
@@ -58,11 +92,18 @@ const props = defineProps({
   role: { type: String, default: '' },
   date: { type: [String, Date], default: '' },
   contenu: { type: String, default: '' },
+  files: { type: Array, default: () => [] },
+  issue: { type: Object, defaut: {} },
+  user: { type: Object, defaut: {} },
   isMine: { type: Boolean, default: false },
   replyTo: { type: Object, default: null }
 })
 
-const emit = defineEmits(['reply'])
+const emit = defineEmits(['reply', 'download'])
+
+const downloadDoc = (doc) => {
+  emit('download', doc)
+}
 
 const formattedDate = computed(() => {
   if (!props.date) return ''

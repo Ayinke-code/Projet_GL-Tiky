@@ -10,6 +10,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import IssueMeetingProposal from "~/components/issues/meeting/IssueMeetingProposal.vue";
 import IssueMeetingDemand from "~/components/issues/meeting/IssueMeetingDemand.vue";
+import { getFileIcon } from '#imports';
 
 const route = useRoute()
 const { ready, user, wsToken } = useAuth()
@@ -17,6 +18,7 @@ const { getIssueById, updateIssueStatus, updateIssuePrivacy } = useIssues()
 const { getIssueMessages, sendIssueMessage, normalizeMessage, initializeConversation } = useConversations()
 const { followIssue, unfollowIssue, isFollowing } = useIssueFollowers()
 const { acknowledgeFollowedIssueUpdate } = useFollowedIssuesState()
+const { downloadFile, deleteFile } = useDocuments()
 
 const FOLLOWER_NOTIFICATION_TYPES = ['NEW_FOLLOWER', 'NEW_UNFOLLOW']
 
@@ -45,13 +47,67 @@ const showFollowModal = ref(false)
 const alreadyFollowing = ref(false)
 const followSuccess = ref(false)
 
+// Contient les fichiers associés au ticket si il y en a
+const files = ref(null)
+
+// Contient les fichiers associés à un message
+const messageFiles = ref(null)
+
+/**
+ * Téléchargement des documents
+ */
+const downloadDoc = async (file) => {
+  try{
+    await downloadFile(file)
+  } catch(err) {
+    console.error(err)
+  }
+}
+
+/**
+ * Créateur du ticket peut supprimer un fichier
+ */
+const deleteDoc = async (file) => {
+  try {
+    await deleteFile(file)
+
+    // mise à jour UI locale de issue
+    issue.value.documents =
+      issue.value.documents.filter(d => d.id !== file.id)
+
+    // mise à jour UI locale de files
+    files.value = files.value.filter(d => d.id !== file.id)
+
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+// IDs de tous les documents déjà présents dans les messages
+const messageDocIds = computed(() => {
+  return new Set(
+    messages.value.flatMap(m =>
+      (m.documents || []).map(d => d.id)
+    )
+  )
+})
+
+// Filtre les fichiers de l’issue en excluant ceux déjà utilisés dans les messages
+const filteredFiles = computed(() => {
+  return files.value.filter(f => !messageDocIds.value.has(f.id))
+})
+
 /**
  * Callback après suivi réussi
  */
 const onFollowed = () => {
   alreadyFollowing.value = true
   followSuccess.value = true
-  // Si on vient de suivre l'issue, on la marque comme "vue" immédiatement
+
+  if (issue.value) {
+    issue.value.followersCount = (issue.value.followersCount || 0) + 1
+  }
+
   acknowledgeFollowedIssueUpdate(issue.value)
   setTimeout(() => followSuccess.value = false, 3000)
 }
@@ -144,6 +200,12 @@ onMounted(async () => {
     if (issue.value?.private) {
       await checkAccess()
     }
+
+    // check si il y a des documents attachés à l'issue
+    if (issue.value?.documents?.length > 0){
+      files.value = issue?.value?.documents
+    }
+
   } catch (err) {
     error.value = err?.message || 'Erreur de chargement'
   } finally {
@@ -299,14 +361,36 @@ const handleSend = async () => {
 
   sending.value = true
   try {
-    const sentMessage = await sendIssueMessage(issueId, newMessage.value, replyingToMessage.value?.id ?? null)
+    const sentMessage = await sendIssueMessage(issueId, newMessage.value, messageFiles.value, replyingToMessage.value?.id ?? null)
     // Avoid duplicates: the server broadcasts the new message via WebSocket,
     // which may arrive before or after the HTTP response. Only push the
     // message locally if we don't already have it (compare by id).
     if (!messages.value.find((m) => m.id === sentMessage.id)) {
       messages.value.push(sentMessage)
     }
+
+    /**
+     * Check si les documents du message envoyé sont dans messages
+     * sinon les ajoutés
+     */
+    const existingMessage = messages.value.find(
+      m => m.id === sentMessage.id
+    )
+    if (!existingMessage) {
+      messages.value.push(sentMessage)
+    } else {
+      // Le message existe déjà (souvent via WebSocket)
+      // On ajoute les documents s'ils n'étaient pas présents
+      if (
+        sentMessage.documents?.length &&
+        !existingMessage.documents?.length
+      ) {
+        existingMessage.documents = sentMessage.documents
+      }
+    }
+
     newMessage.value = ''
+    messageFiles.value = null
     replyingToMessage.value = null
 
     // On rafraîchit l'issue pour avoir le nouveau updatedAt (mis à jour par le backend suite au message)
@@ -327,6 +411,11 @@ const handleUnfollow = async () => {
   try {
     await unfollowIssue(issueId)
     alreadyFollowing.value = false
+
+    if (issue.value && issue.value.followersCount > 0) {
+      issue.value.followersCount -= 1
+    }
+
   } catch (err) {
     console.error(err)
   }
@@ -371,7 +460,7 @@ const handleUnfollow = async () => {
             <!-- Header : titre + actions -->
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div class="space-y-2">
-                    <h1 class="text-2xl font-bold text-gray-900">{{ issue.title }}</h1>
+                    <h1 id="issue-title" class="text-2xl font-bold text-gray-900">{{ issue.title }}</h1>
                     <div class="flex flex-wrap items-center gap-2">
                         <!-- Catégorie -->
                         <span v-if="issue?.categoryId && issue?.categoryName"
@@ -484,9 +573,13 @@ const handleUnfollow = async () => {
                             :role="msg.role"
                             :date="msg.date"
                             :contenu="msg.contenu"
+                            :files="msg.documents"
+                            :issue="issue"
+                            :user="user"
                             :is-mine="msg.userId === user?.id"
                             :reply-to="msg.replyTo"
                             @reply="replyingToMessage = msg"
+                            @download="downloadDoc"
                         />
 
                         <!-- État vide -->
@@ -496,6 +589,7 @@ const handleUnfollow = async () => {
                     <!-- Zone d'envoi de message -->
                     <MessageInput
                         v-model="newMessage"
+                        v-model:messageFiles="messageFiles"
                         :sending="sending"
                         :replying-to="replyingToMessage"
                         @cancel-reply="replyingToMessage = null"
@@ -540,6 +634,60 @@ const handleUnfollow = async () => {
                         <div class="flex justify-between items-center">
                           <span class="text-gray-500">Abonnés</span>
                           <span class="font-medium text-gray-900">{{ issue.followersCount || 0 }}</span>
+                        </div>
+
+                        <!-- Documents attachés à l'issue pouvant être téléchargé -->
+                        <div v-if="files " class="mt-6">
+                          <div class="text-sm font-medium text-gray-500 mb-2">
+                            Documents
+                          </div>
+
+                          <div class="space-y-2">
+                            <div
+                              v-for="doc in filteredFiles"
+                              :key="doc.id"
+                              class="flex items-center justify-between gap-3 p-3 border rounded-lg hover:bg-gray-50 transition"
+                            >
+                              <!-- gauche -->
+                              <div class="flex items-center gap-3 min-w-0">
+                                <UIcon
+                                  :name="getFileIcon(doc.contentType)"
+                                  class="text-gray-500 text-lg shrink-0"
+                                />
+
+                                <div class="min-w-0">
+                                  <p class="font-medium text-gray-900 truncate">
+                                    {{ doc.originalName }}
+                                  </p>
+
+                                  <p class="text-xs text-gray-500">
+                                    {{ (doc.size / 1024).toFixed(1) }} KB
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div class="flex items-center gap-1 shrink-0">
+                                <!-- Si créateur de l'issue, bouton suppression -->
+                                <UButton v-if="issue.createdId === user?.id"
+                                  icon="streamline-ultimate:delete-bold"
+                                  size="sm"
+                                  variant="ghost"
+                                  class="shrink-0 cursor-pointer"
+                                  color="error"
+                                  v-on:click="deleteDoc(doc)"
+                                />
+                                <!-- Télécharge -->
+                                <UButton
+                                  icon="i-lucide-download"
+                                  size="sm"
+                                  variant="ghost"
+                                  class="shrink-0 cursor-pointer"
+                                  color="info"
+                                  v-on:click="downloadDoc(doc)"
+                                />
+                              </div>
+                            </div>
+                          </div>
                         </div>
 
                       </div>

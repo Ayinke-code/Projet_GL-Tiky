@@ -20,24 +20,24 @@ function onSubmit() {
 
 <template>
   <div class="space-y-4">
-    <UForm ref="form" :state="state" class="space-y-4" @submit="onSubmit">
+    <UForm :state="state" class="space-y-4" @submit="onSubmit">
       <UFormField label="Nom" name="name">
-        <UInput v-model="state.name" required />
+        <UInput id="categorie-name-student" v-model="state.name" required />
       </UFormField>
 
       <UFormField label="Sujet" name="subject">
-        <UInput v-model="state.subject" required />
+        <UInput id="categorie-subject-student" v-model="state.subject" required />
       </UFormField>
 
       <UFormField label="Description (optionnel)" name="description">
-        <UInput v-model="state.description" />
+        <UInput id="categorie-description-student" v-model="state.description" />
       </UFormField>
-    </UForm>
 
-    <div class="flex justify-center">
-      <UButton @click="form?.submit()" color="secondary" variant="soft" class="cursor-pointer">
-        Envoyer
-      </UButton>
-    </div>
+      <div class="flex justify-center mt-4">
+        <UButton type="submit" id="validate-request" color="secondary" variant="soft" class="cursor-pointer">
+          Envoyer
+        </UButton>
+      </div>
+    </UForm>
   </div>
 </template>

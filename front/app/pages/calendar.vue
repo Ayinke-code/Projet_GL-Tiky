@@ -30,7 +30,7 @@
 
     <div class="mb-8">
       <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Mon Calendrier</h1>
-      <p class="text-slate-500 italic">Retrouvez vos soutenances, audits et rendez-vous ticket.</p>
+      <p class="text-slate-500 italic">Retrouvez vos soutenances, audits et rendez-vous.</p>
     </div>
 
     <ClientOnly>
@@ -108,7 +108,13 @@ const stopDrag = () => {
 }
 
 const mappedEvents = computed(() => {
-  return events.value.map(evt => {
+  const now = new Date()
+  return events.value
+    .filter(evt => {
+      const end = evt.endDate ? new Date(evt.endDate.replace(' ', 'T')) : null
+      return !end || end >= now
+    })
+    .map(evt => {
     let color = '#64748b' // slate-500 par défaut
 
     if (evt.categoryType === 'AUDIT') color = '#6366f1'   // indigo-500
