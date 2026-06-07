@@ -17,4 +17,8 @@ public class OfficialLinkRequestDto {
     private Long targetIssueId;
     private String targetIssueTitle;
     private RelationType type;
+    private Long sourceManagerId;
+    private Long targetManagerId;
+    private Boolean sourceManagerApproved;
+    private Boolean targetManagerApproved;
 }

@@ -246,6 +246,10 @@ public class IssueRelationService {
                 .targetIssueId(request.getTargetIssue().getId())
                 .targetIssueTitle(request.getTargetIssue().getTitle())
                 .type(request.getType())
+                .sourceManagerId(request.getSourceIssue().getManager() != null ? request.getSourceIssue().getManager().getId() : null)
+                .targetManagerId(request.getTargetIssue().getManager() != null ? request.getTargetIssue().getManager().getId() : null)
+                .sourceManagerApproved(request.getSourceManagerApproved())
+                .targetManagerApproved(request.getTargetManagerApproved())
                 .build();
     }
 
