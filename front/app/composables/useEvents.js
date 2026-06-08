@@ -373,6 +373,21 @@ export const useEvents = () => {
     }
   }
 
+  /**
+   * Récupère les événements auxquels l'utilisateur connecté participe (invitations acceptées).
+   * Exclut les événements créés par l'utilisateur lui-même.
+   */
+  const fetchMyParticipations = async () => {
+    error.value = null
+    try {
+      const data = await api('/events/my-participations')
+      return Array.isArray(data) ? data : []
+    } catch (e) {
+      error.value = e?.data?.message || 'FETCH_MY_PARTICIPATIONS_ERROR'
+      return []
+    }
+  }
+
   return {
     fetchEventsByType,
     deleteEvent,
@@ -395,6 +410,7 @@ export const useEvents = () => {
     fetchMyDemandsStatus,
     askForMeeting,
     removeParticipantFromMeeting,
-    fetchPossibleUsersInterested
+    fetchPossibleUsersInterested,
+    fetchMyParticipations
   }
 }

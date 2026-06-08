@@ -12,7 +12,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
         "JWT_SECRET=test-secret",
         "JWT_EXPIRATION=3600000",
         "DEFAULT_PASSWORD=test",
-        "app.default-password=test"
+        "app.default-password=test",
+        "app.upload-dir=./uploads"
 })
 class BackendApiApplicationTest {
 

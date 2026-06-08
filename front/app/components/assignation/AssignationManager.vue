@@ -40,6 +40,7 @@
             <!-- Actions : droite -->
             <div class="flex items-center justify-end gap-3 w-1/3">
               <USelectMenu
+                :id="'selector-assignation-teacher-' + req.id"
                 v-model="selectedTeachers[req.id]"
                 :items="formattedTeachers"
                 placeholder="Affecter à..."
@@ -58,6 +59,7 @@
 
               <div class="flex flex-col gap-1.5">
                 <UButton
+                  :id="'btn-affecter-manager-' + req.id"
                   label="Affecter"
                   icon="i-heroicons-paper-airplane"
                   :disabled="!selectedTeachers[req.id] || loadingIds.has(req.id)"
@@ -120,7 +122,7 @@
       <template #footer>
         <div class="flex justify-end gap-3">
           <UButton color="neutral" variant="ghost" label="Annuler" @click="isConfirmOpen = false"/>
-          <UButton color="primary" label="Confirmer l'envoi" @click="confirmAssignation"/>
+          <UButton  id="btn-confirm-assignation" color="primary" label="Confirmer l'envoi" @click="confirmAssignation"/>
         </div>
       </template>
     </UModal>
@@ -365,5 +367,20 @@ const formatDate = (d) => {
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-onMounted(loadData)
+const MANAGER_NOTIFICATION_TYPES = ['NEW_ISSUE_IN_CATEGORIE', 'RESPONSE_TO_MANAGER_ISSUE']
+
+const onNotificationReceived = async (e) => {
+  if (MANAGER_NOTIFICATION_TYPES.includes(e.detail?.type)) {
+    await loadData()
+  }
+}
+
+onMounted(async () => {
+  await loadData()
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
+})
 </script>

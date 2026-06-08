@@ -10,6 +10,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import IssueMeetingProposal from "~/components/issues/meeting/IssueMeetingProposal.vue";
 import IssueMeetingDemand from "~/components/issues/meeting/IssueMeetingDemand.vue";
+import { getFileIcon } from '#imports';
 
 const route = useRoute()
 const { ready, user, wsToken } = useAuth()
@@ -17,6 +18,16 @@ const { getIssueById, updateIssueStatus, updateIssuePrivacy } = useIssues()
 const { getIssueMessages, sendIssueMessage, normalizeMessage, initializeConversation } = useConversations()
 const { followIssue, unfollowIssue, isFollowing } = useIssueFollowers()
 const { acknowledgeFollowedIssueUpdate } = useFollowedIssuesState()
+const { downloadFile, deleteFile } = useDocuments()
+
+const FOLLOWER_NOTIFICATION_TYPES = ['NEW_FOLLOWER', 'NEW_UNFOLLOW']
+
+const onNotificationReceived = async (e) => {
+  if (FOLLOWER_NOTIFICATION_TYPES.includes(e.detail?.type) && e.detail?.issueId === issueId) {
+    const updated = await getIssueById(issueId).catch(() => null)
+    if (updated) issue.value = updated
+  }
+}
 
 // ID de l'issue depuis l'URL
 const issueId = Number(route.params.id)
@@ -36,13 +47,67 @@ const showFollowModal = ref(false)
 const alreadyFollowing = ref(false)
 const followSuccess = ref(false)
 
+// Contient les fichiers associés au ticket si il y en a
+const files = ref(null)
+
+// Contient les fichiers associés à un message
+const messageFiles = ref(null)
+
+/**
+ * Téléchargement des documents
+ */
+const downloadDoc = async (file) => {
+  try{
+    await downloadFile(file)
+  } catch(err) {
+    console.error(err)
+  }
+}
+
+/**
+ * Créateur du ticket peut supprimer un fichier
+ */
+const deleteDoc = async (file) => {
+  try {
+    await deleteFile(file)
+
+    // mise à jour UI locale de issue
+    issue.value.documents =
+      issue.value.documents.filter(d => d.id !== file.id)
+
+    // mise à jour UI locale de files
+    files.value = files.value.filter(d => d.id !== file.id)
+
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+// IDs de tous les documents déjà présents dans les messages
+const messageDocIds = computed(() => {
+  return new Set(
+    messages.value.flatMap(m =>
+      (m.documents || []).map(d => d.id)
+    )
+  )
+})
+
+// Filtre les fichiers de l’issue en excluant ceux déjà utilisés dans les messages
+const filteredFiles = computed(() => {
+  return files.value.filter(f => !messageDocIds.value.has(f.id))
+})
+
 /**
  * Callback après suivi réussi
  */
 const onFollowed = () => {
   alreadyFollowing.value = true
   followSuccess.value = true
-  // Si on vient de suivre l'issue, on la marque comme "vue" immédiatement
+
+  if (issue.value) {
+    issue.value.followersCount = (issue.value.followersCount || 0) + 1
+  }
+
   acknowledgeFollowedIssueUpdate(issue.value)
   setTimeout(() => followSuccess.value = false, 3000)
 }
@@ -127,6 +192,7 @@ onMounted(async () => {
     // Écouter les événements de synchronisation pour vérifier l'accès
     if (process.client) {
       window.addEventListener('issue-sync', checkAccess)
+      window.addEventListener('notification:received', onNotificationReceived)
     }
 
     // Premier check d'accès au montage pour éviter de rester sur une page interdite
@@ -134,6 +200,12 @@ onMounted(async () => {
     if (issue.value?.private) {
       await checkAccess()
     }
+
+    // check si il y a des documents attachés à l'issue
+    if (issue.value?.documents?.length > 0){
+      files.value = issue?.value?.documents
+    }
+
   } catch (err) {
     error.value = err?.message || 'Erreur de chargement'
   } finally {
@@ -162,7 +234,7 @@ const checkAccess = async () => {
       if (!hasAccess) {
         console.warn('[Issue Detail] Accès révoqué, redirection...')
         // On force un message d'erreur pour que l'utilisateur comprenne pourquoi il est redirigé
-        error.value = t('issue_detail.error_access_revoked')
+        error.value = 'Vous n\'avez plus accès à ce ticket (passé en privé).'
         setTimeout(async () => {
           await navigateTo('/issues', { replace: true })
         }, 2000)
@@ -189,6 +261,7 @@ onUnmounted(() => {
   socket.value?.close()
   if (process.client) {
     window.removeEventListener('issue-sync', checkAccess)
+    window.removeEventListener('notification:received', onNotificationReceived)
   }
 })
 
@@ -207,10 +280,15 @@ const handleMarkResolved = async () => {
 }
 
 /**
- * Demander la réouverture d'un ticket 'terminé'
+ * Issue manager peut réouvrir un ticket TERMINE
  */
 const handleReopening = async () => {
-    // TODO: US-6700: Demande de réouverture
+    if(issue?.value?.status !== 'TERMINE') return
+    try {
+      await updateIssueStatus(issue?.value?.id, 'OUVERT')
+    } catch(err) {
+      console.error(err)
+    }
 }
 
 /**
@@ -221,7 +299,8 @@ const getStatusBadgeClass = (status) => {
     'OUVERT':'bg-yellow-100 text-yellow-800 border border-yellow-300',
     'EN_ATTENTE': 'bg-gray-100 text-gray-800 border border-gray-300',
     'INCOMPLET': 'bg-orange-100 text-orange-800 border border-orange-300',
-    'TERMINE': 'bg-green-100 text-green-800 border border-green-300'
+    'TERMINE': 'bg-green-100 text-green-800 border border-green-300',
+    'DEMANDE_REOUVERTURE': 'bg-blue-100 text-blue-800 border border-blue-300'
   }
   return classes[status] || 'bg-gray-100 text-gray-800 border border-gray-300'
 }
@@ -229,13 +308,13 @@ const getStatusBadgeClass = (status) => {
 /**
  * Labels statuts
  */
-const { t } = useI18n()
 const getStatusLabel = (status) => {
   const labels = {
-    OUVERT: t('status.open'),
-    EN_ATTENTE: t('status.pending'),
-    INCOMPLET: t('status.incomplete'),
-    TERMINE: t('status.finished')
+    'OUVERT': 'Ouvert',
+    'EN_ATTENTE': 'En attente',
+    'INCOMPLET': 'Incomplet',
+    'TERMINE': 'Terminé',
+    'DEMANDE_REOUVERTURE': 'Demande réouverture'
   }
   return labels[status] || status
 }
@@ -282,14 +361,36 @@ const handleSend = async () => {
 
   sending.value = true
   try {
-    const sentMessage = await sendIssueMessage(issueId, newMessage.value, replyingToMessage.value?.id ?? null)
+    const sentMessage = await sendIssueMessage(issueId, newMessage.value, messageFiles.value, replyingToMessage.value?.id ?? null)
     // Avoid duplicates: the server broadcasts the new message via WebSocket,
     // which may arrive before or after the HTTP response. Only push the
     // message locally if we don't already have it (compare by id).
     if (!messages.value.find((m) => m.id === sentMessage.id)) {
       messages.value.push(sentMessage)
     }
+
+    /**
+     * Check si les documents du message envoyé sont dans messages
+     * sinon les ajoutés
+     */
+    const existingMessage = messages.value.find(
+      m => m.id === sentMessage.id
+    )
+    if (!existingMessage) {
+      messages.value.push(sentMessage)
+    } else {
+      // Le message existe déjà (souvent via WebSocket)
+      // On ajoute les documents s'ils n'étaient pas présents
+      if (
+        sentMessage.documents?.length &&
+        !existingMessage.documents?.length
+      ) {
+        existingMessage.documents = sentMessage.documents
+      }
+    }
+
     newMessage.value = ''
+    messageFiles.value = null
     replyingToMessage.value = null
 
     // On rafraîchit l'issue pour avoir le nouveau updatedAt (mis à jour par le backend suite au message)
@@ -310,6 +411,11 @@ const handleUnfollow = async () => {
   try {
     await unfollowIssue(issueId)
     alreadyFollowing.value = false
+
+    if (issue.value && issue.value.followersCount > 0) {
+      issue.value.followersCount -= 1
+    }
+
   } catch (err) {
     console.error(err)
   }
@@ -345,16 +451,16 @@ const handleUnfollow = async () => {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
-                    {{ $t('issue_detail.back_to_tickets') }}
+                    Retour aux tickets
                 </NuxtLink>
                 <span class="text-gray-300">/</span>
-                <span class="text-gray-700 font-medium">{{ $t('issue_detail.ticket_number', { id: issueId }) }}</span>
+                <span class="text-gray-700 font-medium">Ticket #{{ issueId }}</span>
             </div>
 
             <!-- Header : titre + actions -->
             <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div class="space-y-2">
-                    <h1 class="text-2xl font-bold text-gray-900">{{ issue.title }}</h1>
+                    <h1 id="issue-title" class="text-2xl font-bold text-gray-900">{{ issue.title }}</h1>
                     <div class="flex flex-wrap items-center gap-2">
                         <!-- Catégorie -->
                         <span v-if="issue?.categoryId && issue?.categoryName"
@@ -377,7 +483,7 @@ const handleUnfollow = async () => {
                                 <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
-                            {{ issue.private ? $t('issue_detail.private') : $t('issue_detail.public') }}
+                            {{ issue.private ? 'Privé' : 'Public' }}
                         </span>
                     </div>
                 </div>
@@ -395,17 +501,17 @@ const handleUnfollow = async () => {
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
-                        {{ $t('issue_detail.mark_resolved') }}
+                        Marquer Résolu
                     </button>
                     <button
-                        v-else-if="issue.status === 'TERMINE' && user?.id === issue?.createdId && user.id !== null"
+                        v-else-if="issue.status === 'TERMINE' && user?.id === issue?.categoryManagerId && user.id !== null"
                         @click="isReopeningModalOpen = true" :disabled="issue.status === 'résolu'"
                         class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-white hover:bg-emerald-50 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-transform duration-200 hover:scale-105">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
-                        {{ $t('issue_detail.reopen') }}
+                        Rouvrir
                     </button>
                     <!--  -->
                     <!-- Privé/Public : TODO: Quand on aura les 'Issue Manager', on pourra bloquer ce bouton pour les autres -->
@@ -422,7 +528,7 @@ const handleUnfollow = async () => {
               <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
             </svg>
-            {{ issue.private ? $t('issue_detail.make_public') : $t('issue_detail.make_private') }}
+            {{ issue.private ? 'Rendre Public' : 'Rendre Privé' }}
           </button>
 
           <!--  Bouton Suivre / badge Suivi -->
@@ -433,7 +539,7 @@ const handleUnfollow = async () => {
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.437L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
-            {{ $t('issue_detail.follow') }}
+            Suivre
           </button>
           <button
             v-else
@@ -442,7 +548,7 @@ const handleUnfollow = async () => {
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
-            {{ $t('issue_detail.unfollow') }}
+            Ne plus suivre
           </button>
 
         </div>
@@ -450,7 +556,7 @@ const handleUnfollow = async () => {
 
       <!--Message succès après suivi -->
       <div v-if="followSuccess" class="rounded-lg bg-green-50 border border-green-200 px-4 py-2 text-sm text-green-700">
-        {{ $t('issue_detail.follow_success') }}
+        Vous suivez maintenant ce ticket !
       </div>
 
       <!-- Grid principal -->
@@ -467,9 +573,13 @@ const handleUnfollow = async () => {
                             :role="msg.role"
                             :date="msg.date"
                             :contenu="msg.contenu"
+                            :files="msg.documents"
+                            :issue="issue"
+                            :user="user"
                             :is-mine="msg.userId === user?.id"
                             :reply-to="msg.replyTo"
                             @reply="replyingToMessage = msg"
+                            @download="downloadDoc"
                         />
 
                         <!-- État vide -->
@@ -479,6 +589,7 @@ const handleUnfollow = async () => {
                     <!-- Zone d'envoi de message -->
                     <MessageInput
                         v-model="newMessage"
+                        v-model:messageFiles="messageFiles"
                         :sending="sending"
                         :replying-to="replyingToMessage"
                         @cancel-reply="replyingToMessage = null"
@@ -492,37 +603,91 @@ const handleUnfollow = async () => {
                     <!-- Carte INFORMATIONS -->
                     <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
                         <div class="px-5 py-3 border-b border-gray-100">
-                            <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest">{{ $t('issue_detail.details') }}</h2>
+                            <h2 class="text-xs font-bold text-gray-500 uppercase tracking-widest">Informations</h2>
                         </div>
 
                       <div class="px-5 py-4 space-y-3 text-sm">
 
                         <div v-if="issue?.categoryManagerId && issue?.categoryManagerId === issue?.createdId" class="flex justify-between items-center">
-                          <span class="text-gray-500">{{ $t('issue_detail.author_manager') }}</span>
+                          <span class="text-gray-500">Auteur & Manager</span>
                           <span class="font-medium text-gray-900">
-                            {{ issue.createdId === user?.id ? $t('issue_detail.me') : (issue.createdName || $t('issue_detail.unknown')) }}
+                            {{ issue.createdId === user?.id ? 'Moi' : (issue.createdName || 'Inconnu') }}
                           </span>
                         </div>
 
                         <template v-else>
                           <div class="flex justify-between items-center">
-                            <span class="text-gray-500">{{ $t('issue_detail.author') }}</span>
+                            <span class="text-gray-500">Auteur</span>
                             <span class="font-medium text-gray-900">
-                              {{ issue.createdId === user?.id ? $t('issue_detail.me') : (issue.createdName || $t('issue_detail.unknown')) }}
+                              {{ issue.createdId === user?.id ? 'Moi' : (issue.createdName || 'Inconnu') }}
                             </span>
                           </div>
 
                           <div class="flex justify-between items-center">
-                            <span class="text-gray-500">{{ $t('issue_detail.manager_in_charge') }}</span>
+                            <span class="text-gray-500">Manager en charge</span>
                             <span class="font-medium text-gray-900">
-                              {{ issue?.categoryManagerId === user?.id ? $t('issue_detail.me') : (issue?.teacherManagerName || issue?.categoryManagerName || $t('issue_detail.not_defined')) }}
+                              {{ issue?.categoryManagerId === user?.id ? 'Moi' : (issue?.teacherManagerName || issue?.categoryManagerName || 'Non défini') }}
                             </span>
                           </div>
                         </template>
 
                         <div class="flex justify-between items-center">
-                          <span class="text-gray-500">{{ $t('issue_detail.followers') }}</span>
+                          <span class="text-gray-500">Abonnés</span>
                           <span class="font-medium text-gray-900">{{ issue.followersCount || 0 }}</span>
+                        </div>
+
+                        <!-- Documents attachés à l'issue pouvant être téléchargé -->
+                        <div v-if="files " class="mt-6">
+                          <div class="text-sm font-medium text-gray-500 mb-2">
+                            Documents
+                          </div>
+
+                          <div class="space-y-2">
+                            <div
+                              v-for="doc in filteredFiles"
+                              :key="doc.id"
+                              class="flex items-center justify-between gap-3 p-3 border rounded-lg hover:bg-gray-50 transition"
+                            >
+                              <!-- gauche -->
+                              <div class="flex items-center gap-3 min-w-0">
+                                <UIcon
+                                  :name="getFileIcon(doc.contentType)"
+                                  class="text-gray-500 text-lg shrink-0"
+                                />
+
+                                <div class="min-w-0">
+                                  <p class="font-medium text-gray-900 truncate">
+                                    {{ doc.originalName }}
+                                  </p>
+
+                                  <p class="text-xs text-gray-500">
+                                    {{ (doc.size / 1024).toFixed(1) }} KB
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div class="flex items-center gap-1 shrink-0">
+                                <!-- Si créateur de l'issue, bouton suppression -->
+                                <UButton v-if="issue.createdId === user?.id"
+                                  icon="streamline-ultimate:delete-bold"
+                                  size="sm"
+                                  variant="ghost"
+                                  class="shrink-0 cursor-pointer"
+                                  color="error"
+                                  v-on:click="deleteDoc(doc)"
+                                />
+                                <!-- Télécharge -->
+                                <UButton
+                                  icon="i-lucide-download"
+                                  size="sm"
+                                  variant="ghost"
+                                  class="shrink-0 cursor-pointer"
+                                  color="info"
+                                  v-on:click="downloadDoc(doc)"
+                                />
+                              </div>
+                            </div>
+                          </div>
                         </div>
 
                       </div>
@@ -555,7 +720,7 @@ const handleUnfollow = async () => {
       class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
 
       <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-        <h2 class="text-lg font-bold text-gray-800">{{ $t('issue_detail.modal_confirm') }}</h2>
+        <h2 class="text-lg font-bold text-gray-800">Confirmer</h2>
         <button @click="isResolveModalOpen = false" class="text-gray-400 hover:text-gray-600">
           ✕
         </button>
@@ -563,18 +728,19 @@ const handleUnfollow = async () => {
 
       <div class="p-6 space-y-4">
         <p class="text-sm text-gray-600">
-          {{ $t('issue_detail.modal_resolve_text', { status: $t('status.finished') }) }}
+          Êtes-vous sûr de vouloir marquer ce ticket comme <span
+          class="font-semibold text-emerald-600">résolu</span> ?
         </p>
 
         <div class="flex justify-end gap-2">
           <button @click="isResolveModalOpen = false"
                   class="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">
-            {{ $t('issue_detail.cancel') }}
+            Annuler
           </button>
 
           <button @click="() => { handleMarkResolved(); isResolveModalOpen = false }"
                   class="px-4 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
-            {{ $t('issue_detail.confirm') }}
+            Confirmer
           </button>
         </div>
       </div>
@@ -587,7 +753,7 @@ const handleUnfollow = async () => {
       class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
 
       <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-        <h2 class="text-lg font-bold text-gray-800">{{ $t('issue_detail.modal_visibility_title') }}</h2>
+        <h2 class="text-lg font-bold text-gray-800">Changer la visibilité</h2>
         <button @click="isVisibilityModalOpen = false" class="text-gray-400 hover:text-gray-600">
           ✕
         </button>
@@ -595,18 +761,21 @@ const handleUnfollow = async () => {
 
       <div class="p-6 space-y-4">
         <p class="text-sm text-gray-600">
-          {{ $t('issue_detail.modal_visibility_text', { visibility: issue.private ? $t('issue_detail.public') : $t('issue_detail.private') }) }}
+          Voulez-vous rendre ce ticket
+          <span class="font-semibold">
+                        {{ issue.private ? 'public' : 'privé' }}
+                    </span> ?
         </p>
 
         <div class="flex justify-end gap-2">
           <button @click="isVisibilityModalOpen = false"
                   class="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50">
-            {{ $t('issue_detail.cancel') }}
+            Annuler
           </button>
 
           <button @click="() => { toggleVisibility(); isVisibilityModalOpen = false }"
                   class="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
-            {{ $t('issue_detail.confirm') }}
+            Confirmer
           </button>
         </div>
       </div>
@@ -625,8 +794,8 @@ const handleUnfollow = async () => {
   <!-- Modal de confirmation de réouverture -->
   <ConfirmModal
       v-model:open="isReopeningModalOpen"
-      :title="$t('issue_detail.modal_reopen_title')"
-      :description="$t('issue_detail.modal_reopen_text')"
+      title="Demande de réouverture"
+      description="Voulez-vous vraiment rouvrir ce ticket ?"
       @confirm="handleReopening"
   />
 </template>

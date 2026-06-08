@@ -1,6 +1,7 @@
 package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.UserDto;
+import fr.horizon.backend_api.model.dto.UserFollowerDto;
 import fr.horizon.backend_api.model.dto.UserRefDto;
 import fr.horizon.backend_api.security.JwtAuthenticationFilter;
 import fr.horizon.backend_api.service.JwtToken;
@@ -116,5 +117,24 @@ class UserControllerTest {
                 .andExpect(jsonPath("$[0].roles[0]").value("TEACHER"));
 
         verify(userService).findAllByRoles(List.of("TEACHER"));
+    }
+
+    @Test
+    void shouldGetAllTeachersWithCategoryDetail() throws Exception {
+
+        UserFollowerDto dto = UserFollowerDto.builder()
+                .id(1L)
+                .name("Prof Martin")
+                .follower(true)
+                .build();
+
+        when(userService.getAllTeachersWithCategoryDetail(5L)).thenReturn(List.of(dto));
+
+        mockMvc.perform(get("/users/teachers/5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Prof Martin"))
+                .andExpect(jsonPath("$[0].follower").value(true));
+
+        verify(userService).getAllTeachersWithCategoryDetail(5L);
     }
 }
