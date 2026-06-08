@@ -50,6 +50,9 @@ public class Notification extends BaseEntity{
     @JoinColumn(name = "recipient_id", nullable = false)
     private User recipient;
 
-
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
 }

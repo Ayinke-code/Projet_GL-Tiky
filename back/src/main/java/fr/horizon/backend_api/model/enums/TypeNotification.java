@@ -37,5 +37,9 @@ public enum TypeNotification {
     // nouveaux follower
     NEW_FOLLOWER,
     // desabonnement follower
-    NEW_UNFOLLOW
+    NEW_UNFOLLOW,
+    // demande de retrait d'une catégorie par un professeur
+    CATEGORY_REMOVAL_REQUEST,
+    // ajout d'un professeur à une catégorie
+    ADDED_TO_CATEGORY
 }
