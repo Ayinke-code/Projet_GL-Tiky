@@ -7,7 +7,6 @@
       >
         <i class="fa-solid fa-bars text-xl"></i>
       </button>
-      <h1 class="text-xl md:text-2xl font-bold text-gray-700">Tiky</h1>
     </div>
 
     <div class="flex items-center space-x-6">
