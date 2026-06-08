@@ -1946,6 +1946,10 @@ class EventServiceTest {
         when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
         when(categoryRepository.findById(10L)).thenReturn(Optional.of(eventCategory));
         when(studentGroupRepository.findAllById(Set.of(5L))).thenReturn(List.of(group));
+        // Créateur disponible sur ce créneau
+        when(eventRepository.countConflictingEvents(eq(1L), isNull(), eq(start), eq(end)))
+                .thenReturn(0L);
+        // Membre du groupe a un conflit
         when(eventRepository.countConflictingEvents(eq(10L), isNull(), eq(start), eq(end)))
                 .thenReturn(1L);
 
@@ -1996,6 +2000,10 @@ class EventServiceTest {
         when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
         when(categoryRepository.findById(10L)).thenReturn(Optional.of(eventCategory));
         when(studentGroupRepository.findAllById(Set.of(5L))).thenReturn(List.of(group));
+        // Créateur disponible
+        when(eventRepository.countConflictingEvents(eq(1L), isNull(), eq(start), eq(end)))
+                .thenReturn(0L);
+        // Membre disponible
         when(eventRepository.countConflictingEvents(eq(10L), isNull(), eq(start), eq(end)))
                 .thenReturn(0L);
         when(eventRepository.save(any(Event.class))).thenReturn(saved);
@@ -2004,5 +2012,111 @@ class EventServiceTest {
 
         assertNotNull(result);
         verify(eventRepository).save(any(Event.class));
+    }
+
+    // =============================================
+    // create() — conflit d'agenda pour le créateur
+    // =============================================
+
+    @Test
+    @DisplayName("create : lève EventConflictException si le créateur TEACHER a un conflit")
+    void create_should_throw_when_creator_teacher_has_conflict() {
+        Role teacherRole = new Role("TEACHER");
+        User teacher = new User();
+        teacher.setId(1L); teacher.setName("Sophie"); teacher.setEmail("teacher@teacher.fr");
+        teacher.setRoles(Set.of(teacherRole));
+
+        Category category = new Category();
+        category.setId(10L); category.setName("UI/UX");
+        category.setCategoryType(CategoryType.AUDIT);
+
+        LocalDateTime start = LocalDateTime.of(2026, 6, 10, 9, 0);
+        LocalDateTime end   = LocalDateTime.of(2026, 6, 10, 11, 0);
+
+        EventRequestDto request = new EventRequestDto();
+        request.setCategoryId(10L);
+        request.setName("Audit conflit");
+        request.setStartDate(start);
+        request.setEndDate(end);
+
+        when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+        // Le créateur a déjà un event sur ce créneau
+        when(eventRepository.countConflictingEvents(eq(1L), isNull(), eq(start), eq(end)))
+                .thenReturn(1L);
+
+        assertThrows(EventConflictException.class,
+                () -> eventService.create(request, "teacher@teacher.fr"));
+
+        verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("create : lève EventConflictException si le créateur ADMIN a un conflit")
+    void create_should_throw_when_creator_admin_has_conflict() {
+        Role adminRole = new Role("ADMIN");
+        User admin = new User();
+        admin.setId(99L); admin.setName("Admin"); admin.setEmail("admin@test.fr");
+        admin.setRoles(Set.of(adminRole));
+
+        Category category = new Category();
+        category.setId(20L); category.setName("PFE");
+        category.setCategoryType(CategoryType.DEFENSE);
+
+        LocalDateTime start = LocalDateTime.of(2026, 7, 1, 14, 0);
+        LocalDateTime end   = LocalDateTime.of(2026, 7, 1, 16, 0);
+
+        EventRequestDto request = new EventRequestDto();
+        request.setCategoryId(20L);
+        request.setName("Soutenance conflit admin");
+        request.setStartDate(start);
+        request.setEndDate(end);
+
+        when(userService.findByEmail("admin@test.fr")).thenReturn(admin);
+        when(categoryRepository.findById(20L)).thenReturn(Optional.of(category));
+        when(eventRepository.countConflictingEvents(eq(99L), isNull(), eq(start), eq(end)))
+                .thenReturn(2L);
+
+        assertThrows(EventConflictException.class,
+                () -> eventService.create(request, "admin@test.fr"));
+
+        verify(eventRepository, never()).save(any());
+    }
+
+    // =============================================
+    // askForMeeting() — conflit pour le demandeur
+    // =============================================
+
+    @Test
+    @DisplayName("askForMeeting : lève EventConflictException si le demandeur a un conflit")
+    void askForMeeting_should_throw_when_requester_has_conflict() {
+        User student = new User(); student.setId(1L); student.setName("Alice");
+
+        User manager = new User(); manager.setId(2L); manager.setName("Prof");
+
+        Category category = new Category(); category.setName("Backend");
+
+        Issue issue = new Issue();
+        issue.setId(100L); issue.setCategory(category); issue.setManager(manager);
+
+        LocalDateTime start = LocalDateTime.of(2026, 6, 15, 10, 0);
+        LocalDateTime end   = LocalDateTime.of(2026, 6, 15, 11, 0);
+
+        EventRequestDto dto = new EventRequestDto();
+        dto.setName("Demande RDV conflit");
+        dto.setStartDate(start);
+        dto.setEndDate(end);
+
+        when(userService.findByEmail("student@test.fr")).thenReturn(student);
+        when(issueRepository.findById(100L)).thenReturn(Optional.of(issue));
+        when(eventRepository.existsByIssueIdAndStartDateAfter(eq(100L), any())).thenReturn(false);
+        // Le demandeur (student) a déjà un event sur ce créneau
+        when(eventRepository.countConflictingEvents(eq(1L), isNull(), eq(start), eq(end)))
+                .thenReturn(1L);
+
+        assertThrows(EventConflictException.class,
+                () -> eventService.askForMeeting(dto, "student@test.fr", 100L));
+
+        verify(eventRepository, never()).save(any());
     }
 }

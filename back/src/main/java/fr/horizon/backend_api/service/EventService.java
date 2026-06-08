@@ -73,6 +73,12 @@ public class EventService {
 
         Event event = buildEvent(request, user, category);
 
+        // Vérifier que le créateur (TEACHER/ADMIN) est lui-même disponible sur ce créneau
+        if (isRestrictedCategory(category) && checkConflictWithAnotherEvent(user, event)) {
+            throw new EventConflictException(
+                "Conflit d'agenda : " + user.getName() + " n'est pas disponible sur ce créneau.");
+        }
+
         assignProjectGroups(event, request);
         validateGroupMembersAvailability(event);
 
@@ -946,6 +952,12 @@ public class EventService {
                 .startDate(meetingRequest.getStartDate())
                 .endDate(meetingRequest.getEndDate())
                 .build();
+
+        // Vérifier que le demandeur est disponible sur ce créneau
+        if (checkConflictWithAnotherEvent(user, event)) {
+            throw new EventConflictException(
+                "Conflit d'agenda : " + user.getName() + " n'est pas disponible sur ce créneau.");
+        }
 
         event.addParticipant(user, true);
         Event saved = eventRepository.save(event);
