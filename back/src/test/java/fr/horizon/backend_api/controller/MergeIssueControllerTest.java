@@ -50,7 +50,7 @@ class MergeIssueControllerTest {
         mockDto.setTargetIssueId(20L);
         mockDto.setStatus(MergeRequestStatus.PENDING);
 
-        when(mergeIssueService.sendMergeRequest(eq(10L), eq(20L), eq("test@horizon.fr")))
+        when(mergeIssueService.sendMergeRequest(10L, 20L, "test@horizon.fr"))
                 .thenReturn(mockDto);
 
         mockMvc.perform(post("/merging/10/merge")
