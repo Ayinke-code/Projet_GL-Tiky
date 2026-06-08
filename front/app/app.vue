@@ -8,7 +8,7 @@
 
       <!-- Header -->
       <Header v-if="!isAuthPage" />
-      <div v-else class="absolute top-4 right-4 z-50">
+      <div v-else-if="route.path === '/login'" class="absolute top-4 right-4 z-50">
         <LanguageSelector />
       </div>
 
