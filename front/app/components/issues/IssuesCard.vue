@@ -56,24 +56,34 @@
       </div>
 
       <!-- Si l'utilisateur connecté est le créateur de l'issue et si l'issue est TERMINE -->
-      <div v-if="(issue?.createdId === user?.id) && (issue?.status === 'TERMINE')" class="flex justify-end">
+      <div v-if="(issue?.createdId === user?.id) && (issue?.status === 'TERMINE')" class="flex justify-end mt-2">
         <Button
           @click.stop="emit('requestAReopening', issue)"
           label="Demander la réouverture"
-          variant="ghost"
+          variant="outline"
           size="xs"
           color="info"
+          class="border border-blue-400 text-blue-600 hover:bg-blue-50"
         />
       </div>
 
       <!-- Si l'utilisateur connecté est l'issue manager et que l'issue est en demande de réouverture -->
-      <div v-else-if="(user?.id === issue?.categoryManagerId) && (issue?.status === 'DEMANDE_REOUVERTURE')">
+      <div v-else-if="(user?.id === issue?.categoryManagerId) && (issue?.status === 'DEMANDE_REOUVERTURE')" class="flex justify-end gap-2 mt-2">
         <Button
           @click.stop="emit('acceptReopening', issue)"
-          label="Accepter réouverture"
-          variant="ghost"
+          label="Accepter"
+          variant="outline"
           size="xs"
           color="success"
+          class="border border-green-400 text-green-600 hover:bg-green-50"
+        />
+        <Button
+          @click.stop="emit('refuseReopening', issue)"
+          label="Refuser"
+          variant="outline"
+          size="xs"
+          color="error"
+          class="border border-red-400 text-red-600 hover:bg-red-50"
         />
       </div>
   </UCard>
@@ -129,5 +139,5 @@ const getStatusBadgeClass = (status) => {
     return classes[status] || 'bg-gray-100 text-gray-800'
 }
 
-const emit = defineEmits(['delete', 'requestAReopening', 'acceptReopening'])
+const emit = defineEmits(['delete', 'requestAReopening', 'acceptReopening', 'refuseReopening'])
 </script>

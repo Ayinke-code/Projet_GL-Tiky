@@ -7,7 +7,7 @@
       </UButton>
     </div>
 
-    <!--Rebrique des affectations -->
+    <!--Rubrique des affectations -->
     <div v-if="isTeacher || isManager" class="py-12">
       <!-- Visible uniquement par les Managers -->
       <section v-if="isManager">
@@ -74,6 +74,7 @@
                         @delete="deleteValidation"
                         @requestAReopening="openReopenModal"
                         @acceptReopening="openReopenAccessModal"
+                        @refuseReopening="openRefuseReopeningModal"
                     />
                 </div>
               </div>
@@ -103,9 +104,11 @@
               <div class="overflow-visible p-2">
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   <IssuesCard v-if="user" v-for="issue in group.issues" :key="issue.id" :issue="issue" :user="user"
-                                        @delete="deleteValidation"
-                                        @requestAReopening="openReopenModal"
-                                        @acceptReopening="openReopenAccessModal"/>
+                      @delete="deleteValidation"
+                      @requestAReopening="openReopenModal"
+                      @acceptReopening="openReopenAccessModal"
+                      @refuseReopening="openRefuseReopeningModal"
+                  />
                 </div>
               </div>
             </template>
@@ -211,6 +214,40 @@
                 Confirmer
             </UButton>
         </div>
+    </Modal>
+
+    <!-- Modal permettant de refuser la demande de réouverture -->
+    <Modal
+      v-model:open="isRefuseRequestReopeningModalOpen"
+      title="Refuser la demande de réouverture"
+    >
+      <div class="space-y-4 mb-5 text-center">
+        <p class="text-sm text-gray-600">
+          Demande faite par
+          <span class="font-medium">{{ selectedIssue?.createdName }}</span>
+        </p>
+        <div class="text-left p-3 rounded-lg bg-gray-50 border">
+          <p class="text-xs text-gray-500 mb-1">Motif de la réouverture</p>
+          <p class="text-sm">{{ selectedIssue?.reopeningDescription }}</p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2">
+        <UButton
+          color="neutral"
+          variant="ghost"
+          @click="isRefuseRequestReopeningModalOpen = false"
+          class="cursor-pointer"
+        >
+          Annuler
+        </UButton>
+        <UButton
+          color="error"
+          @click="refuseReopening"
+          class="cursor-pointer"
+        >
+          Refuser
+        </UButton>
+      </div>
     </Modal>
 </template>
 
@@ -459,6 +496,21 @@ const isManager = computed(() => {
 
 const afficherSectionIncomplete = ref(false)
 
+const isRefuseRequestReopeningModalOpen = ref(false)
 
+const openRefuseReopeningModal = (issue) => {
+  selectedIssue.value = issue
+  isRefuseRequestReopeningModalOpen.value = true
+}
+
+const refuseReopening = async () => {
+  isRefuseRequestReopeningModalOpen.value = false
+  if (selectedIssue.value?.status !== "DEMANDE_REOUVERTURE") return
+  try {
+    await updateIssueStatus(selectedIssue.value?.id, "TERMINE")
+  } catch (err) {
+    error.value = err.message || 'Erreur lors du refus'
+  }
+}
 
 </script>
