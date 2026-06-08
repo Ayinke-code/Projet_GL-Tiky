@@ -493,7 +493,6 @@ const handleUnfollow = async () => {
             </svg>
             Ne plus suivre
           </button>
-
         </div>
       </div>
 
