@@ -459,25 +459,68 @@ const issueColorMap = computed(() => {
   return map
 })
 
-// Fonction pour déterminer si on doit afficher l'en-tête "Historique du ticket #X"
+
+const firstMergedMessageIndex = computed(() => messages.value.findIndex(msg => msg.isMerged))
+
+const resolveMergeTimestamp = () => {
+  const raw = issue.value?.mergedAt
+  if (!raw) return null
+
+  const value = new Date(raw).getTime()
+  return Number.isNaN(value) ? null : value
+}
+
+// Détermine si on doit afficher l'en-tête des sections d'historique fusionné
 const shouldShowMergeHeader = (msg, index) => {
-  if (!msg.isMerged) return false
+  const type = getMessageType(msg, index)
+  if (type === 'normal') return false
+
+  // Toujours afficher un header pour le premier message du flux
   if (index === 0) return true
 
-  // Si le message précédent appartient à un ticket différent
-  const prevMsg = messages.value[index - 1]
-  return prevMsg.originalIssueId !== msg.originalIssueId
+  // Afficher un header lorsqu'on change de segment (destination -> source ou inverse)
+  const prevType = getMessageType(messages.value[index - 1], index - 1)
+  return prevType !== type
 }
 
-// Fonction pour afficher le séparateur de fin de bloc fusionné
+// Détermine si on affiche la mention "Retour au ticket courant"
 const shouldShowMergeEnd = (msg, index) => {
-  if (!msg.isMerged) return false
+  const type = getMessageType(msg, index)
+  if (type === 'normal') return false
+
   const nextMsg = messages.value[index + 1]
-  // Dernier message fusionné de la liste → le "Fusion effectuée" gère ce cas
-  if (!nextMsg) return false
-  // Afficher uniquement quand on sort des messages fusionnés vers des messages normaux
-  return !nextMsg.isMerged
+
+  // Si c'est le TOUT DERNIER message de la conversation et qu'on n'est pas "normal"
+  // ça veut dire qu'il n'y a pas encore eu de messages depuis la fusion.
+  if (!nextMsg) return true
+
+  const nextType = getMessageType(nextMsg, index + 1)
+
+  // On affiche la ligne de fusion exactement au moment où on bascule vers "normal"
+  return nextType === 'normal'
 }
+
+// Fonction pour déterminer le type visuel d'un message
+const getMessageType = (msg, index = -1) => {
+  if (msg.isMerged) return 'source'
+
+  // Cas nominal: on a la date de fusion sur le ticket destination
+  const mergeDate = resolveMergeTimestamp()
+  if (mergeDate !== null) {
+    const msgDate = new Date(msg.date).getTime()
+    if (!Number.isNaN(msgDate) && msgDate < mergeDate) return 'target-before'
+  }
+
+  // Fallback robuste: si mergedAt n'est pas présent, on considère que
+  // les messages non fusionnés situés avant le premier message fusionné
+  // appartiennent à l'historique du ticket destination.
+  if (firstMergedMessageIndex.value !== -1 && index !== -1 && index < firstMergedMessageIndex.value) {
+    return 'target-before'
+  }
+
+  return 'normal'
+}
+
 </script>
 
 <template>
@@ -641,27 +684,16 @@ const shouldShowMergeEnd = (msg, index) => {
               :user="user"
               :is-mine="msg.userId === user?.id"
               :reply-to="msg.replyTo"
+              :current-issue-id="issueId"
 
-              :is-merged="msg.isMerged"
-              :original-issue-id="msg.originalIssueId"
+              :message-type="getMessageType(msg, index)"
+              :original-issue-id="msg.originalIssueId || issueId"
               :show-merge-header="shouldShowMergeHeader(msg, index)"
               :show-merge-end="shouldShowMergeEnd(msg, index)"
-              :color-index="msg.isMerged ? issueColorMap.get(msg.originalIssueId) : 0"
 
               @reply="replyingToMessage = msg"
               @download="downloadDoc"
             />
-
-            <!-- Si le dernier message était fusionné, on affiche le marqueur de fin (date de fusion) -->
-            <div v-if="messages.length > 0 && messages[messages.length - 1].isMerged" class="flex items-center gap-2 my-6">
-              <div class="h-px bg-purple-200 flex-1"></div>
-              <div class="text-[10px] font-bold text-purple-600 uppercase tracking-widest px-4 py-1.5 rounded-full bg-purple-50 border border-purple-100 flex items-center gap-1.5">
-                <UIcon name="i-lucide-git-merge" class="w-3.5 h-3.5" />
-                Fusion effectuée
-              </div>
-              <div class="h-px bg-purple-200 flex-1"></div>
-            </div>
-
             <!-- État vide -->
             <IssueEmptyMessages v-if="messages.length === 0" />
           </div>
@@ -671,6 +703,7 @@ const shouldShowMergeEnd = (msg, index) => {
             v-model="newMessage"
             v-model:messageFiles="messageFiles"
             :sending="sending"
+            :current-issue-id="issueId"
             :replying-to="replyingToMessage"
             :disabled="issue?.status === 'TERMINE' || issue?.status === 'EN_ATTENTE' || issue?.status === 'INCOMPLET'"
             :disabled-message="issue?.status === 'TERMINE'
