@@ -368,11 +368,11 @@ onMounted(async () => {
   await fetchMyInvitations()
   await fetchMyCreatedEvents()
   myParticipations.value = await fetchMyParticipations()
-  window.addEventListener('notification:received', onNotificationReceived)
+  globalThis.addEventListener('notification:received', onNotificationReceived)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('notification:received', onNotificationReceived)
+  globalThis.removeEventListener('notification:received', onNotificationReceived)
 })
 
 const switchTab = (tab) => {
@@ -408,7 +408,9 @@ const confirmCancellation = async () => {
     }
     isCancelConfirmationOpen.value = false
     exitCancelMode()
-  } catch (e) {}
+  } catch (e) {
+    console.error('Erreur lors de l\'annulation :', e)
+  }
 }
 
 // --- Méthodes Invitations ---
@@ -473,7 +475,9 @@ const loadEventStatuses = async (eventId) => {
     if (isTeacher.value) {
       possibleUsers.value = await fetchPossibleUsersInterested(eventId)
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('Erreur lors du chargement des participants :', e)
+  }
 }
 
 const viewEventStatuses = async (eventId) => {
@@ -508,7 +512,9 @@ const doAddParticipant = async (participantId) => {
     await inviteUserToEvent(activeEventIdForStatus.value, participantId)
     newParticipantId.value = ''
     await loadEventStatuses(activeEventIdForStatus.value)
-  } catch (e) {}
+  } catch (e) {
+    console.error('Erreur lors de l\'invitation :', e)
+  }
 }
 
 const handleAddParticipant = async () => {
@@ -554,7 +560,9 @@ const handleRemoveParticipant = async (participantId) => {
   try {
     await removeParticipantFromMeeting(activeEventIdForStatus.value, participantId)
     await loadEventStatuses(activeEventIdForStatus.value) // Refresh
-  } catch (e) {}
+  } catch (e) {
+    console.error('Erreur lors de la suppression du participant :', e)
+  }
 }
 
 // --- Reprogrammation ---
@@ -614,6 +622,8 @@ const handleReschedule = async () => {
       isRescheduleModalOpen.value = false
       selectedEventToReschedule.value = null
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('Erreur lors de la reprogrammation :', e)
+  }
 }
 </script>

@@ -360,9 +360,6 @@ public class NotificationService {
     }
 
     /**
-     * Convertit une entité Notification en NotificationDto
-     */
-    /**
      * Notifie un professeur qu'il a été ajouté à une catégorie.
      */
     @Transactional
