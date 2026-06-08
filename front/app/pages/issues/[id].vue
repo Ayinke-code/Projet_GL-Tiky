@@ -186,6 +186,29 @@ const connectWebSocket = () => {
   }
 }
 
+
+const refreshData = async () => {
+  try {
+    loading.value = true
+
+    // On recharge l'issue, les relations et les messages
+    issue.value = await getIssueById(issueId)
+    await fetchRelationsByIssue(issueId)
+
+    if (user?.value?.id === issue.value?.categoryManagerId) {
+      await fetchRelationPendingRequests()
+    }
+
+    // Si vous utilisez getCompleteConversation, mettez getCompleteConversation(issueId)
+    messages.value = await getIssueMessages(issueId)
+
+  } catch (err) {
+    console.error('Erreur lors du rafraîchissement :', err)
+  } finally {
+    loading.value = false
+  }
+}
+
 /**
  * Chargement initial de l'issue et des messages
  */
@@ -762,6 +785,7 @@ const shouldShowMergeHeader = (msg, index) => {
               v-if="user?.id === issue?.categoryManagerId"
               :current-issue-id="issueId"
               :current-user-id="user?.id"
+              @refresh="refreshData"
             />
           </ClientOnly>
 

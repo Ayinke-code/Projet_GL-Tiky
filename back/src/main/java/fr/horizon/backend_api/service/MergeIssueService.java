@@ -238,6 +238,12 @@ public class MergeIssueService {
         dto.setRejectionReason(request.getRejectionReason());
         dto.setSourceManagerApproved(request.getSourceManagerApproved());
         dto.setTargetManagerApproved(request.getTargetManagerApproved());
+        if (request.getSourceIssue().getManager() != null) {
+            dto.setSourceManagerId(request.getSourceIssue().getManager().getId());
+        }
+        if (request.getTargetIssue().getManager() != null) {
+            dto.setTargetManagerId(request.getTargetIssue().getManager().getId());
+        }
         return dto;
     }
 }

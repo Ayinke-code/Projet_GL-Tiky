@@ -15,4 +15,6 @@ public class MergeRequestDto {
     private String rejectionReason;
     private Boolean sourceManagerApproved;
     private Boolean targetManagerApproved;
+    private Long sourceManagerId;
+    private Long targetManagerId;
 }

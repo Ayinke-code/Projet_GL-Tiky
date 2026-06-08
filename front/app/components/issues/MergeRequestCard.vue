@@ -44,31 +44,38 @@
             </span>
           </div>
 
-          <div class="flex gap-2 pt-1">
-            <UButton
-              size="xs"
-              color="success"
-              :loading="loadingId === req.id"
-              :disabled="!!loadingId"
-              @click="openAcceptModal(req.id)"
-            >
-              <template #leading>
-                <UIcon name="i-lucide-check" class="w-3 h-3" />
-              </template>
-              Accepter
-            </UButton>
-            <UButton
-              size="xs"
-              color="error"
-              variant="soft"
-              :disabled="!!loadingId"
-              @click="openRejectModal(req.id)"
-            >
-              <template #leading>
-                <UIcon name="i-lucide-x" class="w-3 h-3" />
-              </template>
-              Refuser
-            </UButton>
+          <div class="flex items-center gap-2 pt-1">
+            <template v-if="canRespond(req)">
+              <UButton
+                size="xs"
+                color="success"
+                :loading="loadingId === req.id"
+                :disabled="!!loadingId"
+                @click="openAcceptModal(req.id)"
+              >
+                <template #leading>
+                  <UIcon name="i-lucide-check" class="w-3 h-3" />
+                </template>
+                Accepter
+              </UButton>
+              <UButton
+                size="xs"
+                color="error"
+                variant="soft"
+                :disabled="!!loadingId"
+                @click="openRejectModal(req.id)"
+              >
+                <template #leading>
+                  <UIcon name="i-lucide-x" class="w-3 h-3" />
+                </template>
+                Refuser
+              </UButton>
+            </template>
+
+            <div v-else class="text-xs text-purple-600/80 italic font-medium flex items-center gap-1.5 bg-purple-50/50 px-2 py-1 rounded">
+              <UIcon name="i-lucide-loader-2" class="w-3.5 h-3.5 animate-spin-slow" />
+              En attente de validation par l'autre responsable
+            </div>
           </div>
         </div>
       </div>
@@ -246,13 +253,7 @@ const rejectReason = ref('')
 const rejectError = ref('')
 const loadingId = ref(null)
 
-// Filtre les demandes en attente concernant le ticket courant
-const pendingMerges = computed(() =>
-  pendingRequests.value.filter(r =>
-    (r.sourceIssueId === props.currentIssueId || r.targetIssueId === props.currentIssueId)
-    && r.requestedById !== props.currentUserId
-  )
-)
+const emit = defineEmits(['refresh'])
 
 // Filtre l'historique des refus concernant le ticket courant
 const deniedMerges = computed(() =>
@@ -290,6 +291,7 @@ const handleAccept = async () => {
   try {
     const result = await respondToMergeRequest(selectedRequestId.value, true)
     closeAcceptModal()
+    emit('refresh')
     if (result?.status === 'ACCEPTED' && result?.targetIssueId) {
       await navigateTo(`/issues/${result.targetIssueId}`)
     }
@@ -314,12 +316,38 @@ const handleReject = async () => {
   try {
     await respondToMergeRequest(selectedRequestId.value, false, rejectReason.value.trim())
     closeRejectModal()
+    emit('refresh')
   } catch (e) {
     console.error(e)
     rejectError.value = 'Une erreur est survenue, veuillez réessayer.'
   } finally {
     loadingId.value = null
   }
+}
+
+// Filtre les demandes en attente concernant le ticket courant
+// Retirez le filtre restrictif pour que le manager voie ses propres requêtes "En attente"
+const pendingMerges = computed(() =>
+  pendingRequests.value.filter(r =>
+    r.sourceIssueId === props.currentIssueId || r.targetIssueId === props.currentIssueId
+  )
+)
+
+// Détermine si l'utilisateur courant peut répondre à CETTE requête spécifique
+const canRespond = (req) => {
+  // L'utilisateur ne peut pas répondre à sa propre demande (il attend la réponse de l'autre)
+  if (req.requesterId === props.currentUserId) {
+    return false
+  }
+
+  // Il peut répondre s'il n'a pas encore approuvé de son côté
+  const isSourceManager = req.sourceManagerId === props.currentUserId
+  const isTargetManager = req.targetManagerId === props.currentUserId
+
+  if (isSourceManager && !req.sourceManagerApproved) return true
+  if (isTargetManager && !req.targetManagerApproved) return true
+
+  return false
 }
 
 onMounted(() => {
