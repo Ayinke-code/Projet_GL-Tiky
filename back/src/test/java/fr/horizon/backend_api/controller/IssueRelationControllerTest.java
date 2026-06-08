@@ -71,7 +71,7 @@ class IssueRelationControllerTest {
         when(relationService.createRelation(eq(1L), any(RelationRequestDto.class), any(User.class)))
                 .thenReturn(response);
 
-        mockMvc.perform(post("/issues/1/relations")
+        mockMvc.perform(post("/issueRelations/1/relations")
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -94,7 +94,7 @@ class IssueRelationControllerTest {
         when(relationService.createRelation(eq(1L), any(RelationRequestDto.class), any(User.class)))
                 .thenReturn(null);
 
-        mockMvc.perform(post("/issues/1/relations")
+        mockMvc.perform(post("/issueRelations/1/relations")
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -115,7 +115,7 @@ class IssueRelationControllerTest {
         when(relationService.createRelation(eq(1L), any(RelationRequestDto.class), any(User.class)))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket source introuvable"));
 
-        mockMvc.perform(post("/issues/1/relations")
+        mockMvc.perform(post("/issueRelations/1/relations")
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -134,7 +134,7 @@ class IssueRelationControllerTest {
 
         when(relationService.getRelationsByIssueId(1L)).thenReturn(List.of(rel));
 
-        mockMvc.perform(get("/issues/1/relations"))
+        mockMvc.perform(get("/issueRelations/1/relations"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1));
     }
@@ -148,7 +148,7 @@ class IssueRelationControllerTest {
         when(issueFollowerService.getUserByEmail(any())).thenReturn(new User());
         doNothing().when(relationService).deleteRelation(eq(1L), any(User.class));
 
-        mockMvc.perform(delete("/issues/relations/1")
+        mockMvc.perform(delete("/issueRelations/relations/1")
                         .principal(authentication))
                 .andExpect(status().isNoContent());
 
@@ -171,7 +171,7 @@ class IssueRelationControllerTest {
         when(issueFollowerService.getUserByEmail(any())).thenReturn(new User());
         when(relationService.getPendingOfficialLinkRequests(any(User.class))).thenReturn(List.of(requestDto));
 
-        mockMvc.perform(get("/issues/relations/requests")
+        mockMvc.perform(get("/issueRelations/relations/requests")
                         .principal(authentication))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(5));
@@ -196,7 +196,7 @@ class IssueRelationControllerTest {
         when(relationService.handleOfficialLinkRequest(eq(5L), any(HandleLinkRequestDto.class), any(User.class)))
                 .thenReturn(finalRelation);
 
-        mockMvc.perform(post("/issues/relations/requests/5/handle")
+        mockMvc.perform(post("/issueRelations/relations/requests/5/handle")
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -218,7 +218,7 @@ class IssueRelationControllerTest {
         when(relationService.handleOfficialLinkRequest(eq(5L), any(HandleLinkRequestDto.class), any(User.class)))
                 .thenReturn(null);
 
-        mockMvc.perform(post("/issues/relations/requests/5/handle")
+        mockMvc.perform(post("/issueRelations/relations/requests/5/handle")
                         .principal(authentication)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
