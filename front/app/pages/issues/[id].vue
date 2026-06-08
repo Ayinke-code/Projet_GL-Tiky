@@ -468,6 +468,16 @@ const shouldShowMergeHeader = (msg, index) => {
   const prevMsg = messages.value[index - 1]
   return prevMsg.originalIssueId !== msg.originalIssueId
 }
+
+// Fonction pour afficher le séparateur de fin de bloc fusionné
+const shouldShowMergeEnd = (msg, index) => {
+  if (!msg.isMerged) return false
+  const nextMsg = messages.value[index + 1]
+  // Dernier message fusionné de la liste → le "Fusion effectuée" gère ce cas
+  if (!nextMsg) return false
+  // Afficher uniquement quand on sort des messages fusionnés vers des messages normaux
+  return !nextMsg.isMerged
+}
 </script>
 
 <template>
@@ -635,6 +645,7 @@ const shouldShowMergeHeader = (msg, index) => {
               :is-merged="msg.isMerged"
               :original-issue-id="msg.originalIssueId"
               :show-merge-header="shouldShowMergeHeader(msg, index)"
+              :show-merge-end="shouldShowMergeEnd(msg, index)"
               :color-index="msg.isMerged ? issueColorMap.get(msg.originalIssueId) : 0"
 
               @reply="replyingToMessage = msg"
@@ -658,6 +669,7 @@ const shouldShowMergeHeader = (msg, index) => {
           <!-- Zone d'envoi de message -->
           <MessageInput
             v-model="newMessage"
+            v-model:messageFiles="messageFiles"
             :sending="sending"
             :replying-to="replyingToMessage"
             :disabled="issue?.status === 'TERMINE' || issue?.status === 'EN_ATTENTE' || issue?.status === 'INCOMPLET'"

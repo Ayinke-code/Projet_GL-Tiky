@@ -1,6 +1,7 @@
 <template>
   <div class="relative mb-4">
     <div v-if="showMergeHeader" class="flex items-center gap-2 mb-3 mt-6">
+
       <div class="h-px bg-gray-200 flex-1"></div>
       <div class="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm" :class="mergeColorClasses.badge">
         <UIcon name="i-lucide-history" class="w-3 h-3" />
@@ -96,6 +97,16 @@
         </button>
       </div>
     </article>
+
+    <!-- Séparateur de fin de bloc fusionné -->
+    <div v-if="showMergeEnd" class="flex items-center gap-2 mt-4">
+      <div class="h-px flex-1" :class="mergeColorClasses.divider"></div>
+      <div class="text-[10px] font-semibold uppercase tracking-wider px-3 py-1 rounded-full flex items-center gap-1.5" :class="mergeColorClasses.endBadge">
+        <UIcon name="i-lucide-corner-down-right" class="w-3 h-3" />
+        Retour au ticket courant
+      </div>
+      <div class="h-px flex-1" :class="mergeColorClasses.divider"></div>
+    </div>
   </div>
 </template>
 
@@ -117,6 +128,7 @@ const props = defineProps({
   isMerged: { type: Boolean, default: false },
   originalIssueId: { type: Number, default: null },
   showMergeHeader: { type: Boolean, default: false },
+  showMergeEnd: { type: Boolean, default: false },
   colorIndex: { type: Number, default: 0 } // Pour alterner les couleurs
 })
 
@@ -143,7 +155,9 @@ const colorPalettes = [
     reply: 'border-emerald-300 bg-emerald-100 text-emerald-800',
     textDark: 'text-emerald-900',
     textBody: 'text-emerald-800',
-    textMuted: 'text-emerald-600'
+    textMuted: 'text-emerald-600',
+    divider: 'bg-emerald-200',
+    endBadge: 'bg-emerald-50 text-emerald-600 border border-emerald-200'
   },
   // 1 : Bleu clair
   {
@@ -152,7 +166,9 @@ const colorPalettes = [
     reply: 'border-sky-300 bg-sky-100 text-sky-800',
     textDark: 'text-sky-900',
     textBody: 'text-sky-800',
-    textMuted: 'text-sky-600'
+    textMuted: 'text-sky-600',
+    divider: 'bg-sky-200',
+    endBadge: 'bg-sky-50 text-sky-600 border border-sky-200'
   },
   // 2 : Orange clair
   {
@@ -161,7 +177,9 @@ const colorPalettes = [
     reply: 'border-amber-300 bg-amber-100 text-amber-800',
     textDark: 'text-amber-900',
     textBody: 'text-amber-800',
-    textMuted: 'text-amber-600'
+    textMuted: 'text-amber-600',
+    divider: 'bg-amber-200',
+    endBadge: 'bg-amber-50 text-amber-600 border border-amber-200'
   }
 ]
 
