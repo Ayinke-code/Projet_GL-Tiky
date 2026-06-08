@@ -74,6 +74,7 @@ public class EventService {
         Event event = buildEvent(request, user, category);
 
         assignProjectGroups(event, request);
+        validateGroupMembersAvailability(event);
 
         Event savedEvent = eventRepository.save(event);
 
@@ -129,6 +130,11 @@ public class EventService {
                 .startDate(meetingRequest.getStartDate())
                 .endDate(meetingRequest.getEndDate())
                 .build();
+
+        // Vérifier que le créateur n'a pas déjà un événement sur ce créneau
+        if (checkConflictWithAnotherEvent(user, event)) {
+            throw new EventConflictException("Conflit d'agenda : " + user.getName() + " n'est pas disponible sur ce créneau.");
+        }
 
         // dire qu'il est présent
         event.addParticipant(user, true);
@@ -461,6 +467,8 @@ public class EventService {
     public List<EventResponseDto> getMyCalendarEvents(String email) {
         User user = userService.findByEmail(email);
 
+        // Déduplication par ID : SELECT DISTINCT en JPQL peut remonter le même event plusieurs fois
+        // si une entité satisfait plusieurs conditions JOIN (créateur + participant + membre groupe).
         List<EventResponseDto> regularEvents = eventRepository.findCalendarEventsForUser(user.getId()).stream()
                 .filter(e -> {
                     // Pour les RDV (ISSUE) créés par cet utilisateur, ne pas afficher si un participant a refusé
@@ -473,6 +481,13 @@ public class EventService {
                     return true;
                 })
                 .map(this::mapToResponse)
+                .collect(Collectors.toMap(
+                        EventResponseDto::getId,
+                        dto -> dto,
+                        (a, b) -> a,          // garde le premier en cas de doublon
+                        java.util.LinkedHashMap::new
+                ))
+                .values().stream()
                 .collect(Collectors.toList());
 
         // Inclure les créneaux de disponibilité déclarés par l'utilisateur (validated=false, absents de findCalendarEventsForUser)
@@ -627,6 +642,12 @@ public class EventService {
                 .participantNames(event.getParticipants().stream()
                         .map(participant -> participant.getUser().getName())
                         .collect(Collectors.toSet()))
+                .participants(event.getParticipants().stream()
+                        .map(p -> EventResponseDto.ParticipantInfoDto.builder()
+                                .name(p.getUser().getName())
+                                .hasAccepted(p.getHasAccepted())
+                                .build())
+                        .collect(Collectors.toList()))
                 .build();
     }
 
@@ -919,7 +940,7 @@ public class EventService {
                 .description(meetingRequest.getDescription())
                 .categoryType(CategoryType.ISSUE)
                 .category(issue.getCategory())
-                .createdBy(user)
+                .createdBy(issue.getManager())
                 .issue(issue)
                 .validated(false)
                 .startDate(meetingRequest.getStartDate())
@@ -1003,6 +1024,35 @@ public class EventService {
     private Category getCategory(Long categoryId) {
         return categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new CategoryNotFoundException(categoryId));
+    }
+
+    /**
+     * Vérifie qu'aucun membre ni enseignant des groupes convoqués n'a de conflit d'agenda.
+     * Lève une EventConflictException avec la liste des personnes en conflit.
+     */
+    private void validateGroupMembersAvailability(Event event) {
+        if (event.getProjectGroups() == null || event.getProjectGroups().isEmpty()) {
+            return;
+        }
+        if (event.getStartDate() == null || event.getEndDate() == null) {
+            return;
+        }
+
+        List<String> conflicting = event.getProjectGroups().stream()
+                .flatMap(group -> Stream.concat(
+                        group.getMembers() != null ? group.getMembers().stream() : Stream.empty(),
+                        group.getTeachers() != null ? group.getTeachers().stream() : Stream.empty()))
+                .distinct()
+                .filter(u -> eventRepository.countConflictingEvents(
+                        u.getId(), null, event.getStartDate(), event.getEndDate()) > 0)
+                .map(User::getName)
+                .collect(Collectors.toList());
+
+        if (!conflicting.isEmpty()) {
+            throw new EventConflictException(
+                "Conflit d'agenda détecté pour : " + String.join(", ", conflicting)
+                + ". Ces personnes ont déjà un événement sur ce créneau.");
+        }
     }
 
     /**
