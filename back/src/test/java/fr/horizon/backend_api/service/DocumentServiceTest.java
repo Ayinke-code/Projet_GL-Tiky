@@ -1,7 +1,11 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.model.Document;
+import fr.horizon.backend_api.model.Issue;
+import fr.horizon.backend_api.model.Message;
+import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.repository.DocumentRepository;
+import fr.horizon.backend_api.repository.MessageRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,11 +15,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.core.io.Resource;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -28,6 +34,12 @@ class DocumentServiceTest {
 
     @InjectMocks
     private DocumentService documentService;
+
+    @Mock
+    private MessageRepository messageRepository;
+
+    @Mock
+    private FileStorageService fileStorageService;
 
     @TempDir
     Path tempDir;
@@ -132,5 +144,69 @@ class DocumentServiceTest {
                 .hasMessage("Document not found");
 
         verify(documentRepository, never()).delete(any());
+    }
+
+    @Test
+    void shouldStoreFilesSuccessfully() throws IOException {
+
+        Message message = new Message();
+        Issue issue = new Issue();
+        User user = new User();
+
+        message.setId(1L);
+        message.setIssue(issue);
+        message.setUser(user);
+
+        MultipartFile file = mock(MultipartFile.class);
+
+        when(messageRepository.findById(1L))
+                .thenReturn(Optional.of(message));
+
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn("file.pdf");
+        when(file.getContentType()).thenReturn("application/pdf");
+        when(file.getSize()).thenReturn(100L);
+
+        when(fileStorageService.store(file)).thenReturn("uuid.pdf");
+
+        when(documentRepository.saveAll(any()))
+                .thenAnswer(inv -> inv.getArgument(0));
+
+        var result = documentService.uploadWithMessage(1L, List.of(file));
+
+        assertThat(result).hasSize(1);
+
+        verify(fileStorageService).store(file);
+        verify(documentRepository).saveAll(any());
+    }
+
+    @Test
+    void shouldDeleteAllDocumentsByIssueIdSuccessfully() throws IOException {
+
+        Path file1 = tempDir.resolve("file1.pdf");
+        Path file2 = tempDir.resolve("file2.pdf");
+
+        Files.write(file1, "data1".getBytes());
+        Files.write(file2, "data2".getBytes());
+
+        Document doc1 = new Document();
+        doc1.setId(1L);
+        doc1.setPath(file1.toString());
+
+        Document doc2 = new Document();
+        doc2.setId(2L);
+        doc2.setPath(file2.toString());
+
+        when(documentRepository.findByIssueId(10L))
+                .thenReturn(List.of(doc1, doc2));
+
+        documentService.deleteDocumentsByIssueId(10L);
+
+        // Vérifie que les fichiers ont été supprimés
+        assertThat(Files.exists(file1)).isFalse();
+        assertThat(Files.exists(file2)).isFalse();
+
+        // Vérifie la suppression en base
+        verify(documentRepository).deleteByIssueId(10L);
     }
 }

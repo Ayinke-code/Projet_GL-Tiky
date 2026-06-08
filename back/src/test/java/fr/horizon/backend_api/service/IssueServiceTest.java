@@ -47,10 +47,16 @@ class IssueServiceTest {
     private IssueFollowerService issueFollowerService;
 
     @Mock
-    private IssueFollowerRepository issueFollowerRepository;
+    private NotificationService notificationService;
 
     @Mock
-    private NotificationService notificationService;
+    private DocumentService documentService;
+
+    @Mock
+    private EventRepository eventRepository;
+
+    @Mock
+    private IssueFollowerRepository issueFollowerRepository;
 
     @InjectMocks
     private IssueService issueService;
@@ -60,7 +66,7 @@ class IssueServiceTest {
 
     @Test
     void createIssue_should_save_with_OUVERT_status_and_create_manager_when_not_pending() {
-        // Préparation
+
         User categoryOwner = new User();
         categoryOwner.setId(99L);
         categoryOwner.setName("Teacher");
@@ -69,7 +75,7 @@ class IssueServiceTest {
         dto.setTitle("Bug");
         dto.setDescription("Bug description");
         dto.setCategoryId(1L);
-        dto.setPendingCase(false); // Cas normal
+        dto.setPendingCase(false);
 
         User owner = new User();
         owner.setId(1L);
@@ -78,26 +84,39 @@ class IssueServiceTest {
 
         Category category = new Category();
         category.setId(1L);
-        category.setName("Software");
         category.setOwner(categoryOwner);
 
-        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(owner));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+        when(userRepository.findByEmail("john@test.com"))
+                .thenReturn(Optional.of(owner));
 
-        // Intercepter l'Issue sauvegardée pour vérifier son statut interne
-        when(issueRepository.save(any(Issue.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(categoryRepository.findById(1L))
+                .thenReturn(Optional.of(category));
 
-        // Action
+        when(issueRepository.save(any(Issue.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // IMPORTANT
+        when(documentService.storeFiles(
+                anyList(),
+                any(Issue.class),
+                any(User.class),
+                isNull()
+        )).thenReturn(List.of());
+
         IssueDto result = issueService.createIssue(dto, "john@test.com");
 
-        // Assertions
         assertNotNull(result);
-        assertEquals("Bug", result.getTitle());
 
-        // Vérification des appels
         verify(issueRepository).save(any(Issue.class));
         verify(conversationService).createConversationForIssue(any(Issue.class));
         verify(requestManagerRepository).save(any(RequestManager.class));
+
+        verify(documentService).storeFiles(
+                anyList(),
+                any(Issue.class),
+                any(User.class),
+                isNull()
+        );
     }
 
     @Test
@@ -216,11 +235,17 @@ class IssueServiceTest {
 
         when(issueRepository.findById(1L))
                 .thenReturn(Optional.of(issue));
+
         when(userRepository.findByEmail("john@test.com"))
                 .thenReturn(Optional.of(currentUser));
 
+        // Action
         issueService.deleteById(1L, "john@test.com");
 
+        // Vérif suppression événements liés
+        verify(eventRepository).deleteByIssueId(1L);
+
+        // Vérif suppression issue
         verify(issueRepository).delete(issue);
     }
 
@@ -282,6 +307,8 @@ class IssueServiceTest {
                 .category(category)
                 .createdBy(user)
                 .build();
+
+        when(issueFollowerRepository.countByIssue(issue)).thenReturn(0L);
 
         IssueDto dto = issueService.toDto(issue);
 

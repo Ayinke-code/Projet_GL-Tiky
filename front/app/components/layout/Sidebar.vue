@@ -1,7 +1,7 @@
 <template>
   <aside class="w-64 bg-slate-900 text-white flex flex-col h-screen border-r border-slate-800" aria-label="Barre latérale">
     <div class="h-16 flex items-center px-6 border-b border-slate-800 font-bold text-xl tracking-wider">
-      <span class="text-indigo-400 font-extrabold text-2xl mr-2 tracking-tighter">tk.</span> Tiky
+      <span class="text-indigo-400 font-extrabold text-2xl mr-2 tracking-tighter">Tiky</span>
     </div>
 
     <ClientOnly>
@@ -38,6 +38,7 @@
           <template #content>
             <div class="mt-1 flex flex-col gap-1">
               <NuxtLink v-if="user?.id" to="/issues"
+                        id="navbar-issues"
                 class="flex items-center pl-10 pr-4 py-2 rounded-lg transition-all duration-200"
                 :class="isActive('/issues') && !isActive('/issues/followed') ? 'text-indigo-400 bg-slate-800/50' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
                 <i class="fa-solid fa-list-check w-6"></i>
@@ -57,6 +58,7 @@
         <!-- Catégories -->
         <NuxtLink
           v-if="user" to="/categories"
+          id="navbar-categories"
                   class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
                   :class="isActive('/categories') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
           <i class="fa-solid fa-folder w-6" aria-hidden="true"></i>
@@ -125,6 +127,7 @@
           Se connecter
         </button>
         <button v-else @click="logout"
+                id="btn-logout"
                 class="w-full flex items-center justify-center px-4 py-2 bg-slate-800 hover:bg-red-900/30 text-slate-400 hover:text-red-400 rounded-lg transition-all duration-200 text-sm font-medium cursor-pointer transition-all">
           <i class="fa-solid fa-arrow-right-from-bracket mr-2" aria-hidden="true"></i> Déconnexion
         </button>

@@ -127,5 +127,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
 
     /** Récupère les disponibilités déclarées par un utilisateur, triées par date de début. */
     List<Event> findByCreatedBy_IdAndCategoryTypeOrderByStartDateAsc(Long userId, CategoryType categoryType);
+
+    void deleteByIssueId(Long issueId);
 }
 

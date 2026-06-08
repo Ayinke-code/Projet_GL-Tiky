@@ -45,6 +45,10 @@ public class Document extends BaseEntity {
     private Issue issue;
 
     @ManyToOne
+    @JoinColumn(name = "id_msg")
+    private Message message;
+
+    @ManyToOne
     @JoinColumn(name = "id_user", nullable = false)
     private User uploadedBy;
 }
