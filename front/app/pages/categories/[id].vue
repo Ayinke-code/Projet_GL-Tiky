@@ -63,23 +63,34 @@
 
             <!-- Liste des followers -->
             <div v-if="category?.followers.length > 0" class="space-y-2">
-              <div v-for="user in category?.followers" :key="user.id"
+              <div v-for="follower in category?.followers" :key="follower.id"
                 class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                 <div>
                   <!-- Nom utilisateur -->
                   <p class="font-medium text-gray-900">
-                    {{ user.name }}
+                    {{ follower.name }}
                   </p>
                 </div>
 
-                <!-- Action suppression -->
-                <button v-if="!checkTeacherIssueManager(user.id)" class="text-red-500 text-sm hover:underline cursor-pointer" @click="removeFollower(user.id)">
-                  Retirer
+                <!-- Action suppression (admin ou owner) -->
+                <template v-if="isAdminOrOwner">
+                  <button v-if="!checkTeacherIssueManager(follower.id)" class="text-red-500 text-sm hover:underline cursor-pointer" @click="removeFollower(follower.id)">
+                    Retirer
+                  </button>
+
+                  <span v-else class="text-xs text-gray-400 mt-3">
+                    L'utilisateur à un ticket ouvert
+                  </span>
+                </template>
+
+                <!-- Demande de retrait (professeur abonné qui n'est pas owner) -->
+                <button
+                  v-else-if="user?.id === follower.id"
+                  class="text-orange-500 text-sm hover:underline cursor-pointer"
+                  @click="requestRemoval()">
+                  Demander à être retiré
                 </button>
 
-                <span v-else class="text-xs text-gray-400 mt-3">
-                  L'utilisateur à un ticket ouvert
-                </span>
               </div>
             </div>
 
@@ -92,8 +103,8 @@
 
         </div>
 
-        <!-- Ajout professeur -->
-        <div class="bg-white rounded-xl shadow p-6">
+        <!-- Ajout professeur (admin ou owner uniquement) -->
+        <div v-if="isAdminOrOwner" class="bg-white rounded-xl shadow p-6">
 
           <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">
             Ajouter un professeur
@@ -149,6 +160,7 @@ const {
   fetchCategoryById,
   addTeacherFollower,
   deleteTeacherFollower,
+  requestCategoryRemoval,
   error: categoriesError
 } = useCategories()
 
@@ -161,6 +173,16 @@ const { users, fetchUserByRoles } = useUsers()
  * Etat utilisateur authentifié.
  */
 const { user, ready } = useAuth()
+
+/**
+ * Vrai si l'utilisateur courant est ADMIN ou propriétaire de la catégorie.
+ */
+const isAdminOrOwner = computed(() => {
+  if (!user.value) return false
+  const isAdmin = user.value.roles?.includes('ADMIN')
+  const isOwner = user.value.id === category.value?.category?.ownerId
+  return isAdmin || isOwner
+})
 
 /**
  * ID du professeur sélectionné dans le select
@@ -219,6 +241,17 @@ onMounted(async () => {
 const removeFollower = async (id) => {
   try {
     await deleteTeacherFollower(id, category?.value?.category?.id)
+  } catch (err) {
+    console.error(err)
+  }
+}
+
+/**
+ * Envoyer une demande de retrait au propriétaire de la catégorie
+ */
+const requestRemoval = async () => {
+  try {
+    await requestCategoryRemoval(category?.value?.category?.id)
   } catch (err) {
     console.error(err)
   }
