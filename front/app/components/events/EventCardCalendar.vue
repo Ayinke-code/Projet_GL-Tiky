@@ -52,6 +52,33 @@
       <div v-if="event?.extendedProps?.description" class="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs text-slate-600 leading-relaxed italic">
         {{ event.extendedProps.description }}
       </div>
+
+      <!-- Participants -->
+      <div v-if="event?.extendedProps?.participants?.length" class="mt-1 border-t border-slate-100 pt-3">
+        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <i class="fa-solid fa-users text-xs" :class="theme.iconText"></i>
+          Participants
+        </span>
+        <div class="flex flex-col gap-1.5 mt-1.5">
+          <div
+            v-for="p in event.extendedProps.participants"
+            :key="p.name"
+            class="flex items-center justify-between"
+          >
+            <span class="text-xs text-slate-700 font-medium">{{ p.name }}</span>
+            <span
+              :class="[
+                'text-[10px] font-semibold px-2 py-0.5 rounded-full',
+                p.hasAccepted === true  ? 'bg-emerald-100 text-emerald-700' :
+                p.hasAccepted === false ? 'bg-red-100 text-red-600' :
+                                          'bg-amber-100 text-amber-700'
+              ]"
+            >
+              {{ p.hasAccepted === true ? 'Accepté' : p.hasAccepted === false ? 'Refusé' : 'En attente' }}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div v-if="event?.extendedProps?.groups?.length" class="mt-2 border-t border-slate-100 pt-3">
@@ -71,6 +98,14 @@
     </div>
 
     <div class="flex justify-end mt-4 border-t border-slate-100 pt-4 gap-2">
+      <Button
+        v-if="event?.extendedProps?.type === 'ISSUE' && event?.extendedProps?.isOwner"
+        @click="confirmCancel"
+        color="error"
+        label="Annuler ce RDV"
+        variant="subtle"
+        size="sm"
+      />
       <Button
         v-if="event?.extendedProps?.type === 'AVAILABILITY'"
         @click="confirmDelete"
@@ -101,11 +136,17 @@ const props = defineProps({
   event: Object
 })
 
-const emit = defineEmits(['close', 'delete'])
+const emit = defineEmits(['close', 'delete', 'cancel'])
 
 const confirmDelete = () => {
   if (globalThis.window?.confirm('Supprimer ce créneau de disponibilité ?')) {
     emit('delete', props.event?.id)
+  }
+}
+
+const confirmCancel = () => {
+  if (globalThis.window?.confirm('Annuler ce rendez-vous ? Les participants seront notifiés.')) {
+    emit('cancel', props.event?.id)
   }
 }
 

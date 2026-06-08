@@ -9,7 +9,7 @@ const props = defineProps({
   }
 })
 
-const { createMeeting, inviteUsersToEvent, fetchUserAvailabilities } = useEvents()
+const { createMeeting, inviteUsersToEvent, fetchUserAvailabilities, checkUpcomingMeeting } = useEvents()
 const { getIssueFollowers } = useIssueFollowers()
 const { user } = useAuth()
 
@@ -25,6 +25,9 @@ const loadingFollowers = ref(true)
 const submitting = ref(false)
 const error = ref(null)
 const success = ref(false)
+
+const hasUpcomingMeeting = ref(false)
+const loadingMeetingCheck = ref(true)
 
 // --- Contrôle de disponibilité ---
 const isAvailabilityConflictOpen = ref(false)
@@ -59,6 +62,14 @@ onMounted(async () => {
   startDate.value = formatDateTimeLocal(new Date())
 
   try {
+    hasUpcomingMeeting.value = await checkUpcomingMeeting(props.issue.id)
+  } catch (err) {
+    console.error('Erreur vérification meeting', err)
+  } finally {
+    loadingMeetingCheck.value = false
+  }
+
+  try {
     const data = await getIssueFollowers(props.issue.id)
     const myId = user?.value?.id
     followers.value = (data ?? []).filter(f => f.id !== myId)
@@ -71,7 +82,7 @@ onMounted(async () => {
 })
 
 const isAvailableForSlot = (availabilities, eventStart, eventEnd) => {
-  if (!availabilities || availabilities.length === 0) return true
+  if (!availabilities || availabilities.length === 0) return false
   const eStart = new Date(String(eventStart).replace(' ', 'T'))
   const eEnd = new Date(String(eventEnd).replace(' ', 'T'))
   return availabilities.some(avail => {
@@ -138,6 +149,7 @@ const handleSubmit = async () => {
     }
 
     success.value = true
+    hasUpcomingMeeting.value = true
     skipAvailabilityCheck.value = false
     setTimeout(() => { success.value = false }, 5000)
 
@@ -148,7 +160,7 @@ const handleSubmit = async () => {
     if (status === 400) {
       error.value = err?.data?.message || "Impossible de créer la réunion : vérifiez que la date n'est pas dans le passé."
     } else if (status === 403) {
-      error.value = err?.data?.message || "Vous n'avez pas l'autorisation d'organiser cette réunion."
+      error.value = err?.data?.error || err?.data?.message || "Vous n'avez pas l'autorisation d'organiser cette réunion."
     } else if (status === 409) {
       error.value = err?.data?.message || "Conflit d'agenda détecté pour ce créneau."
     } else {
@@ -201,7 +213,26 @@ const handleSelectSlot = async ({ startDate: slotStart, endDate: slotEnd }) => {
       </h2>
     </div>
 
-    <div class="px-5 py-6 flex flex-col items-center gap-6 text-sm w-full max-w-sm mx-auto">
+    <!-- Chargement de la vérification -->
+    <div v-if="loadingMeetingCheck" class="px-5 py-8 flex justify-center items-center gap-2 text-xs text-gray-400 italic">
+      <UIcon name="i-heroicons-arrow-path" class="animate-spin size-4" />
+      Vérification en cours…
+    </div>
+
+    <!-- RDV déjà programmé -->
+    <div v-else-if="hasUpcomingMeeting" class="px-5 py-8 flex flex-col items-center justify-center text-center gap-4 min-h-[180px]">
+      <div class="p-3 bg-violet-50 text-violet-600 rounded-full flex items-center justify-center">
+        <UIcon name="i-heroicons-calendar-days" class="size-6" />
+      </div>
+      <div class="space-y-1 max-w-[280px]">
+        <h3 class="text-sm font-semibold text-gray-900">Réunion déjà programmée</h3>
+        <p class="text-xs text-gray-500 leading-relaxed">
+          Un rendez-vous est déjà prévu ou en attente de confirmation pour ce ticket.
+        </p>
+      </div>
+    </div>
+
+    <div v-else class="px-5 py-6 flex flex-col items-center gap-6 text-sm w-full max-w-sm mx-auto">
 
       <Transition name="fade">
         <UAlert
@@ -216,15 +247,15 @@ const handleSelectSlot = async ({ startDate: slotStart, endDate: slotEnd }) => {
       </Transition>
 
       <Transition name="fade">
-        <UAlert
+        <div
           v-if="error"
-          color="red"
-          variant="soft"
-          icon="i-heroicons-exclamation-circle"
-          :title="error"
+          class="w-full flex items-start gap-2.5 bg-red-50 border border-red-300 text-red-700 rounded-xl px-4 py-3"
+          role="alert"
           aria-live="assertive"
-          class="text-center w-full"
-        />
+        >
+          <i class="fa-solid fa-circle-exclamation mt-0.5 shrink-0 text-red-500"></i>
+          <p class="text-xs font-semibold leading-snug">{{ error }}</p>
+        </div>
       </Transition>
 
       <UFormGroup
@@ -375,7 +406,7 @@ const handleSelectSlot = async ({ startDate: slotStart, endDate: slotEnd }) => {
         />
       </div>
 
-    </div>
+    </div><!-- fin v-else formulaire -->
   </div>
 
   <AvailabilityConflictModal
