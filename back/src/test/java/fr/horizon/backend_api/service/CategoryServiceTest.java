@@ -194,7 +194,7 @@ class CategoryServiceTest {
 
         user.setRoles(Set.of(Role.builder().name("TEACHER").build()));
 
-        categoryService.addFollower(10L, 1L);
+        categoryService.addFollower(10L, "1");
 
         assertThat(category.getFollowers()).contains(user);
 
@@ -205,7 +205,7 @@ class CategoryServiceTest {
     void shouldThrowWhenUserNotFoundAddFollower() {
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L))
+        assertThatThrownBy(() -> categoryService.addFollower(10L, "1"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("User not found");
     }
@@ -215,7 +215,7 @@ class CategoryServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(categoryRepository.findById(10L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L))
+        assertThatThrownBy(() -> categoryService.addFollower(10L, "1"))
                 .isInstanceOf(CategoryNotFoundException.class);
     }
 
@@ -226,7 +226,7 @@ class CategoryServiceTest {
 
         user.setRoles(Set.of(Role.builder().name("STUDENT").build()));
 
-        categoryService.addFollower(10L, 1L);
+        categoryService.addFollower(10L, "1");
 
         assertThat(category.getFollowers()).contains(user);
         verify(categoryRepository).save(category);
@@ -239,7 +239,7 @@ class CategoryServiceTest {
 
         user.setRoles(Set.of(Role.builder().name("GUEST").build()));
 
-        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L))
+        assertThatThrownBy(() -> categoryService.addFollower(10L, "1"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Only teachers or students");
     }
@@ -336,7 +336,7 @@ class CategoryServiceTest {
         user.setRoles(Set.of(Role.builder().name("TEACHER").build()));
         category.getFollowers().add(user);
 
-        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L))
+        assertThatThrownBy(() -> categoryService.addFollower(10L, "1"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("already");
     }
@@ -349,7 +349,7 @@ class CategoryServiceTest {
         user.setRoles(Set.of(Role.builder().name("TEACHER").build()));
         category.getFollowers().add(user);
 
-        categoryService.deleteFollowerById(10L, 1L);
+        categoryService.deleteFollowerById(10L, "1");
 
         assertThat(category.getFollowers()).doesNotContain(user);
 
@@ -360,7 +360,7 @@ class CategoryServiceTest {
     void shouldThrowWhenUserNotFoundDeleteFollower() {
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> categoryService.deleteFollowerById(10L, 1L))
+        assertThatThrownBy(() -> categoryService.deleteFollowerById(10L, "1"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("User not found");
     }
@@ -370,7 +370,7 @@ class CategoryServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(categoryRepository.findById(10L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> categoryService.deleteFollowerById(10L, 1L))
+        assertThatThrownBy(() -> categoryService.deleteFollowerById(10L, "1"))
                 .isInstanceOf(CategoryNotFoundException.class);
     }
 
@@ -382,7 +382,7 @@ class CategoryServiceTest {
         user.setRoles(Set.of(Role.builder().name("STUDENT").build()));
         category.getFollowers().add(user);
 
-        categoryService.deleteFollowerById(10L, 1L);
+        categoryService.deleteFollowerById(10L, "1");
 
         assertThat(category.getFollowers()).doesNotContain(user);
         verify(categoryRepository).save(category);
@@ -395,7 +395,7 @@ class CategoryServiceTest {
 
         user.setRoles(Set.of(Role.builder().name("GUEST").build()));
 
-        assertThatThrownBy(() -> categoryService.deleteFollowerById(10L, 1L))
+        assertThatThrownBy(() -> categoryService.deleteFollowerById(10L, "1"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Only teachers or students");
     }
@@ -407,7 +407,7 @@ class CategoryServiceTest {
 
         user.setRoles(Set.of(Role.builder().name("TEACHER").build()));
 
-        assertThatThrownBy(() -> categoryService.deleteFollowerById(10L, 1L))
+        assertThatThrownBy(() -> categoryService.deleteFollowerById(10L, "1"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("not a follower");
     }

@@ -38,8 +38,8 @@ public class CategoryController {
      */
     @PreAuthorize("isAuthenticated()")
     @GetMapping
-    public List<CategoryDto> getAllCategories(Authentication authentication) {
-        return categoryService.findAll(authentication.getName());
+    public List<CategoryDto> getAllCategories() {
+        return categoryService.findAll();
     }
 
     /**
@@ -55,28 +55,26 @@ public class CategoryController {
     }
 
     /**
-     * Supprime un utilisateur des followers d'une catégorie.
+     * Supprime le follower connecté d'une catégorie.
      *
-     * @param idUser identifiant de l'utilisateur
      * @param idCategory identifiant de la catégorie
      */
-    @PreAuthorize("hasAnyAuthority('ADMIN','TEACHER','STUDENT')")
-    @DeleteMapping("/followers/{idUser}/{idCategory}")
-    public void deleteCategoryFollower(@PathVariable Long idUser, @PathVariable Long idCategory) {
-        categoryService.deleteFollowerById(idCategory, idUser);
+    @PreAuthorize("isAuthenticated()")
+    @DeleteMapping("/followers/{idCategory}")
+    public void deleteCategoryFollower(@PathVariable Long idCategory, Authentication authentication) {
+        categoryService.deleteFollowerById(idCategory, authentication.getName());
     }
 
     /**
-     * Ajoute un utilisateur aux followers d'une catégorie.
+     * Ajoute le follower connecté à une catégorie.
      *
-     * @param idUser identifiant de l'utilisateur
      * @param idCategory identifiant de la catégorie
      * @return catégorie mise à jour
      */
-    @PreAuthorize("hasAnyAuthority('ADMIN','TEACHER','STUDENT')")
-    @PostMapping("/followers/{idUser}/{idCategory}")
-    public CategoryDetailsDto addCategoryFollower(@PathVariable Long idUser, @PathVariable Long idCategory) {
-        categoryService.addFollower(idCategory, idUser);
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/followers/{idCategory}")
+    public CategoryDetailsDto addCategoryFollower(@PathVariable Long idCategory, Authentication authentication) {
+        categoryService.addFollower(idCategory, authentication.getName());
         return categoryService.findById(idCategory);
     }
 
@@ -97,7 +95,7 @@ public class CategoryController {
      *
      * @param id identifiant de la catégorie
      */
-    @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER', 'STUDENT')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'TEACHER')")
     @DeleteMapping("/{id}")
     public void deleteCategory(@PathVariable Long id) {
         categoryService.deleteById(id);
@@ -112,7 +110,7 @@ public class CategoryController {
      */
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/type/{type}")
-    public List<CategoryDto> getCategoriesByType(@PathVariable CategoryType type, Authentication authentication) {
-        return categoryService.findByCategoryType(type, authentication.getName());
+    public List<CategoryDto> getCategoriesByType(@PathVariable CategoryType type) {
+        return categoryService.findByCategoryType(type);
     }
 }

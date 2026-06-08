@@ -41,16 +41,9 @@ public class CategoryService {
      * @return liste de DTO de toutes les catégories
      */
     public List<CategoryDto> findAll() {
-        return findAll(null);
-    }
-
-    public List<CategoryDto> findAll(String currentUserEmail) {
-        User currentUser = currentUserEmail == null ? null :
-                userRepository.findByEmail(currentUserEmail).orElse(null);
-
         return categoryRepository.findAll()
                 .stream()
-                .map(category -> toDto(category, currentUser))
+                .map(this::toDto)
                 .toList();
     }
 
@@ -98,10 +91,10 @@ public class CategoryService {
      * Retire un follower d'une catégorie.
      */
     @Transactional
-    public void deleteFollowerById(Long idCategory, Long idUser) {
+    public void deleteFollowerById(Long idCategory, String currentUserEmail) {
 
-        User user = userRepository.findById(idUser)
-                .orElseThrow(() -> new EntityNotFoundException("User not found " + idUser));
+        User user = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new EntityNotFoundException("User not found " + currentUserEmail));
 
         Category category = categoryRepository.findById(idCategory)
                 .orElseThrow(() -> new CategoryNotFoundException(idCategory));
@@ -110,11 +103,11 @@ public class CategoryService {
                 .stream()
                 .anyMatch(role ->
                         role.getName().equals(RoleEnum.TEACHER.value()) ||
-                        role.getName().equals(RoleEnum.STUDENT.value())
+                        role.getName().equals(RoleEnum.ADMIN.value())
                 );
 
         if (!canFollow) {
-            throw new IllegalArgumentException("Only teachers or students can be followers");
+            throw new IllegalArgumentException("Only teachers or admins can follow categories");
         }
 
         if (!category.getFollowers().contains(user)) {
@@ -130,10 +123,10 @@ public class CategoryService {
      * Ajoute un follower à une catégorie.
      */
     @Transactional
-    public void addFollower(Long idCategory, Long idUser) {
+    public void addFollower(Long idCategory, String currentUserEmail) {
 
-        User user = userRepository.findById(idUser)
-                .orElseThrow(() -> new EntityNotFoundException("User not found " + idUser));
+        User user = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new EntityNotFoundException("User not found " + currentUserEmail));
 
         Category category = categoryRepository.findById(idCategory)
                 .orElseThrow(() -> new CategoryNotFoundException(idCategory));
@@ -142,11 +135,12 @@ public class CategoryService {
                 .stream()
                 .anyMatch(role ->
                         role.getName().equals(RoleEnum.TEACHER.value()) ||
+                        role.getName().equals(RoleEnum.ADMIN.value()) ||
                         role.getName().equals(RoleEnum.STUDENT.value())
                 );
 
         if (!canFollow) {
-            throw new IllegalArgumentException("Only teachers or students can be followers");
+            throw new IllegalArgumentException("Only teachers, admins or students can follow categories");
         }
 
         if (category.getFollowers().contains(user)) {
@@ -185,16 +179,9 @@ public class CategoryService {
      * @return liste de DTO des catégories correspondant au type
      */
     public List<CategoryDto> findByCategoryType(CategoryType categoryType) {
-        return findByCategoryType(categoryType, null);
-    }
-
-    public List<CategoryDto> findByCategoryType(CategoryType categoryType, String currentUserEmail) {
-        User currentUser = currentUserEmail == null ? null :
-                userRepository.findByEmail(currentUserEmail).orElse(null);
-
         return categoryRepository.findByCategoryType(categoryType)
                 .stream()
-                .map(category -> toDto(category, currentUser))
+                .map(this::toDto)
                 .toList();
     }
 
@@ -219,7 +206,6 @@ public class CategoryService {
                 .ownerId(category.getOwner() != null ? category.getOwner().getId() : null)
                 .createdAt(category.getCreatedAt())
                 .updatedAt(category.getUpdatedAt())
-                .followedByCurrentUser(currentUser != null && category.getFollowers().contains(currentUser))
                 .build();
     }
 

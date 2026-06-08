@@ -18,5 +18,4 @@ public class CategoryDto {
     private Long ownerId;
     private java.time.LocalDateTime createdAt;
     private java.time.LocalDateTime updatedAt;
-    private Boolean followedByCurrentUser;
 }

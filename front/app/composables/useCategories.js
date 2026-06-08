@@ -128,7 +128,7 @@ export const useCategories = () => {
    */
   const followCategory = async (categoryId) => {
     if (!user?.value?.id || !categoryId) return null
-    const res = await api(`/categories/followers/${user.value.id}/${categoryId}`, {
+    const res = await api(`/categories/followers/${categoryId}`, {
       method: 'POST'
     })
     await fetchCategories()
@@ -140,7 +140,7 @@ export const useCategories = () => {
    */
   const unfollowCategory = async (categoryId) => {
     if (!user?.value?.id || !categoryId) return null
-    const res = await api(`/categories/followers/${user.value.id}/${categoryId}`, {
+    const res = await api(`/categories/followers/${categoryId}`, {
       method: 'DELETE'
     })
     await fetchCategories()
@@ -173,7 +173,7 @@ export const useCategories = () => {
    * Ajoute un follower à une catégorie.
    */
   const addFollower = async (categoryId, userId) => {
-    const res = await api(`/categories/followers/${userId}/${categoryId}`, {
+    const res = await api(`/categories/followers/${categoryId}`, {
       method: 'POST'
     })
     await fetchCategoryById(categoryId)
@@ -184,7 +184,7 @@ export const useCategories = () => {
    * Supprime un follower d'une catégorie.
    */
   const removeFollower = async (categoryId, userId) => {
-    await api(`/categories/followers/${userId}/${categoryId}`, {
+    await api(`/categories/followers/${categoryId}`, {
       method: 'DELETE'
     })
     await fetchCategoryById(categoryId)
@@ -224,7 +224,7 @@ export const useCategories = () => {
    */
   const deleteTeacherFollower = async (idUser, idCategory) => {
     if (!idUser || !idCategory) return
-    await api(`/categories/followers/${idUser}/${idCategory}`, {
+    await api(`/categories/followers/${idCategory}`, {
       method: 'DELETE'
     })
     if (category.value?.followers) {
@@ -237,7 +237,7 @@ export const useCategories = () => {
    */
   const addTeacherFollower = async (idUser, idCategory) => {
     if (!idUser || !idCategory) return
-    const res = await api(`/categories/followers/${idUser}/${idCategory}`, {
+    const res = await api(`/categories/followers/${idCategory}`, {
       method: 'POST'
     })
     category.value = res

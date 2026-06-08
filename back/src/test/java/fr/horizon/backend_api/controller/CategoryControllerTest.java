@@ -48,16 +48,14 @@ class CategoryControllerTest {
                 .subject("Backend Java")
                 .build();
 
-        when(categoryService.findAll(anyString())).thenReturn(List.of(dto));
-        when(authentication.getName()).thenReturn("user@test.com");
+        when(categoryService.findAll()).thenReturn(List.of(dto));
 
-        mockMvc.perform(get("/categories")
-                        .principal(authentication))
+        mockMvc.perform(get("/categories"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("DEV"))
                 .andExpect(jsonPath("$[0].subject").value("Backend Java"));
 
-        verify(categoryService).findAll(anyString());
+        verify(categoryService).findAll();
     }
 
     @Test
@@ -114,22 +112,27 @@ class CategoryControllerTest {
 
         CategoryDetailsDto dto = CategoryDetailsDto.builder().build();
 
+        when(authentication.getName()).thenReturn("user@test.com");
         when(categoryService.findById(1L)).thenReturn(dto);
 
-        mockMvc.perform(post("/categories/followers/10/1"))
+        mockMvc.perform(post("/categories/followers/1")
+                        .principal(authentication))
                 .andExpect(status().isOk());
 
-        verify(categoryService).addFollower(1L, 10L);
+        verify(categoryService).addFollower(1L, "user@test.com");
         verify(categoryService).findById(1L);
     }
 
     @Test
     void shouldDeleteFollower() throws Exception {
 
-        mockMvc.perform(delete("/categories/followers/10/1"))
+        when(authentication.getName()).thenReturn("user@test.com");
+
+        mockMvc.perform(delete("/categories/followers/1")
+                        .principal(authentication))
                 .andExpect(status().isOk());
 
-        verify(categoryService).deleteFollowerById(1L, 10L);
+        verify(categoryService).deleteFollowerById(1L, "user@test.com");
     }
 
 
@@ -144,18 +147,16 @@ class CategoryControllerTest {
                 .categoryType(CategoryType.AUDIT)
                 .build();
 
-        when(categoryService.findByCategoryType(eq(CategoryType.AUDIT), anyString()))
+        when(categoryService.findByCategoryType(CategoryType.AUDIT))
                 .thenReturn(List.of(audit));
-        when(authentication.getName()).thenReturn("user@test.com");
 
-        mockMvc.perform(get("/categories/type/AUDIT")
-                        .principal(authentication))
+        mockMvc.perform(get("/categories/type/AUDIT"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Test"))
                 .andExpect(jsonPath("$[0].subject").value("Audit Test"))
                 .andExpect(jsonPath("$[0].categoryType").value("AUDIT"));
 
-        verify(categoryService).findByCategoryType(eq(CategoryType.AUDIT), anyString());
+        verify(categoryService).findByCategoryType(CategoryType.AUDIT);
     }
 
     @Test
@@ -168,28 +169,24 @@ class CategoryControllerTest {
                 .categoryType(CategoryType.DEFENSE)
                 .build();
 
-        when(categoryService.findByCategoryType(eq(CategoryType.DEFENSE), anyString()))
+        when(categoryService.findByCategoryType(CategoryType.DEFENSE))
                 .thenReturn(List.of(defense));
-        when(authentication.getName()).thenReturn("user@test.com");
 
-        mockMvc.perform(get("/categories/type/DEFENSE")
-                        .principal(authentication))
+        mockMvc.perform(get("/categories/type/DEFENSE"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("PFE"))
                 .andExpect(jsonPath("$[0].categoryType").value("DEFENSE"));
 
-        verify(categoryService).findByCategoryType(eq(CategoryType.DEFENSE), anyString());
+        verify(categoryService).findByCategoryType(CategoryType.DEFENSE);
     }
 
     @Test
     void shouldGetCategoriesByType_returnsEmpty() throws Exception {
 
-        when(categoryService.findByCategoryType(eq(CategoryType.AUDIT), anyString()))
+        when(categoryService.findByCategoryType(CategoryType.AUDIT))
                 .thenReturn(List.of());
-        when(authentication.getName()).thenReturn("user@test.com");           // ← ajouter
 
-        mockMvc.perform(get("/categories/type/AUDIT")
-                        .principal(authentication))                           // ← ajouter
+        mockMvc.perform(get("/categories/type/AUDIT"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$").isEmpty());

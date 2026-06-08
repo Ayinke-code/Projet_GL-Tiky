@@ -8,10 +8,12 @@
       </div>
 
       <div class="flex flex-wrap gap-3">
-        <Button id="create-categorie-teacher" v-if="ready && user?.value?.roles?.includes(ROLE.TEACHER)" @click="isCreateModalOpen = true"
-          icon="i-lucide-plus" label="Créer une catégorie" color="secondary" size="lg" variant="solid" rounded />
-        <Button id="create-categorie-student" v-else-if="ready && user?.value?.roles?.includes(ROLE.STUDENT)" @click="isRequestCreateModalOpen = true"
-          icon="i-lucide-plus" label="Demande de catégorie" color="secondary" size="lg" variant="solid" rounded />
+        <Button id="create-categorie-teacher" v-if="ready && user?.value?.roles?.includes(ROLE.TEACHER)"
+          @click="isCreateModalOpen = true" icon="i-lucide-plus" label="Créer une catégorie" color="secondary" size="lg"
+          variant="solid" rounded />
+        <Button id="create-categorie-student" v-else-if="ready && user?.value?.roles?.includes(ROLE.STUDENT)"
+          @click="isRequestCreateModalOpen = true" icon="i-lucide-plus" label="Demande de catégorie" color="secondary"
+          size="lg" variant="solid" rounded />
       </div>
     </div>
 
@@ -29,8 +31,9 @@
             </div>
           </div>
           <div v-if="ownedCategories.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <CategoryCard v-for="cat in ownedCategories" :key="cat.id" :category="cat" :isFollowed="cat.followedByCurrentUser"
-              @click="handleClick(cat)" @follow="handleFollow(cat.id)" @unfollow="handleUnfollow(cat.id)" />
+            <CategoryCard v-for="cat in ownedCategories" :key="cat.id" :category="cat"
+              :isFollowed="isCategoryFollowed(cat.id)" @click="handleClick(cat)" @follow="handleFollow(cat.id)"
+              @unfollow="handleUnfollow(cat.id)" />
           </div>
           <div v-else class="rounded-xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
             Aucune catégorie possédée.
@@ -47,8 +50,9 @@
             </div>
           </div>
           <div v-if="followedCategories.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <CategoryCard v-for="cat in followedCategories" :key="cat.id" :category="cat" :isFollowed="cat.followedByCurrentUser"
-              @click="handleClick(cat)" @follow="handleFollow(cat.id)" @unfollow="handleUnfollow(cat.id)" />
+            <CategoryCard v-for="cat in followedCategories" :key="cat.id" :category="cat"
+              :isFollowed="isCategoryFollowed(cat.id)" @click="handleClick(cat)" @follow="handleFollow(cat.id)"
+              @unfollow="handleUnfollow(cat.id)" />
           </div>
           <div v-else class="rounded-xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
             Vous ne suivez aucune catégorie pour le moment.
@@ -65,8 +69,9 @@
             </div>
           </div>
           <div v-if="otherCategories.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <CategoryCard v-for="cat in otherCategories" :key="cat.id" :category="cat" :isFollowed="cat.followedByCurrentUser"
-              @click="handleClick(cat)" @follow="handleFollow(cat.id)" @unfollow="handleUnfollow(cat.id)" />
+            <CategoryCard v-for="cat in otherCategories" :key="cat.id" :category="cat"
+              :isFollowed="isCategoryFollowed(cat.id)" @click="handleClick(cat)" @follow="handleFollow(cat.id)"
+              @unfollow="handleUnfollow(cat.id)" />
           </div>
           <div v-else class="rounded-xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
             Aucune autre catégorie active.
@@ -83,8 +88,9 @@
             </div>
           </div>
           <div v-if="archivedCategories.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <CategoryCard v-for="cat in archivedCategories" :key="cat.id" :category="cat" :isFollowed="cat.followedByCurrentUser"
-              @click="handleClick(cat)" @follow="handleFollow(cat.id)" @unfollow="handleUnfollow(cat.id)" />
+            <CategoryCard v-for="cat in archivedCategories" :key="cat.id" :category="cat"
+              :isFollowed="isCategoryFollowed(cat.id)" @click="handleClick(cat)" @follow="handleFollow(cat.id)"
+              @unfollow="handleUnfollow(cat.id)" />
           </div>
           <div v-else class="rounded-xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500">
             Pas de catégories archivées.
@@ -99,8 +105,8 @@
         <h2 class="text-2xl font-bold text-gray-800">Demandes des étudiants</h2>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <CategoryRequestCard v-for="categoryRequest in categoryRequests.filter(r => r.status !== 'APPROVED')" :key="categoryRequest.id"
-          :categoryRequest="categoryRequest" @accept="handleAcceptCategoryRequest" />
+        <CategoryRequestCard v-for="categoryRequest in categoryRequests.filter(r => r.status !== 'APPROVED')"
+          :key="categoryRequest.id" :categoryRequest="categoryRequest" @accept="handleAcceptCategoryRequest" />
       </div>
     </div>
 
@@ -120,7 +126,8 @@
         <p class="text-indigo-600 text-sm mb-6">{{ selectedCat.name }}</p>
         <div class="text-sm text-gray-500 mb-6">Propriétaire : {{ selectedCat.ownerName }}</div>
         <div class="flex justify-end gap-3">
-          <Button @click="handleDelete(selectedCat.id)" color="error" label="Supprimer" size="lg" variant="subtle" rounded="true" />
+          <Button @click="handleDelete(selectedCat.id)" color="error" label="Supprimer" size="lg" variant="subtle"
+            rounded="true" />
         </div>
       </div>
     </Modal>
@@ -152,8 +159,12 @@ const {
   deleteCategory,
   followCategory,
   unfollowCategory,
+  getFollowedCategories,
   error: categoriesError
 } = useCategories()
+
+const followedCategoryIds = ref([])
+const isCategoryFollowed = (catId) => followedCategoryIds.value.includes(catId)
 
 const {
   categoryRequests,
@@ -171,15 +182,21 @@ const isRequestCreateModalOpen = ref(false)
 const isDetailOpen = ref(false)
 
 const ownedCategories = computed(() => categories.value.filter(cat => cat.status !== 'ARCHIVED' && cat.ownerId === user?.value?.id))
-const followedCategories = computed(() => categories.value.filter(cat => cat.status !== 'ARCHIVED' && cat.ownerId !== user?.value?.id && cat.followedByCurrentUser))
-const otherCategories = computed(() => categories.value.filter(cat => cat.status !== 'ARCHIVED' && cat.ownerId !== user?.value?.id && !cat.followedByCurrentUser))
+const followedCategories = computed(() => categories.value.filter(cat => cat.status !== 'ARCHIVED' && cat.ownerId !== user?.value?.id && isCategoryFollowed(cat.id)))
+const otherCategories = computed(() => categories.value.filter(cat => cat.status !== 'ARCHIVED' && cat.ownerId !== user?.value?.id && !isCategoryFollowed(cat.id)))
 const archivedCategories = computed(() => categories.value.filter(cat => cat.status === 'ARCHIVED'))
 
 const fetchData = async () => {
   await fetchCategoriesByType('ISSUE')
   await fetchCategoryRequests()
-}
 
+  try {
+    const followed = await getFollowedCategories()
+    followedCategoryIds.value = followed.map(cat => cat.id)
+  } catch (err) {
+    console.error("Erreur abonnements :", err)
+  }
+}
 onMounted(fetchData)
 
 const handleClick = (cat) => {
@@ -222,12 +239,18 @@ const handleAcceptCategoryRequest = async (data) => {
 const handleFollow = async (categoryId) => {
   if (!categoryId) return
   await followCategory(categoryId)
+   // Mise à jour locale
+  if (!followedCategoryIds.value.includes(categoryId)) {
+    followedCategoryIds.value.push(categoryId)
+  }
   await fetchCategoriesByType('ISSUE')
 }
 
 const handleUnfollow = async (categoryId) => {
   if (!categoryId) return
   await unfollowCategory(categoryId)
+   // Mise à jour locale
+  followedCategoryIds.value = followedCategoryIds.value.filter(id => id !== categoryId)
   await fetchCategoriesByType('ISSUE')
 }
 </script>
