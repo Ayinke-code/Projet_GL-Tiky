@@ -58,6 +58,12 @@ class IssueServiceTest {
     @Mock
     private IssueFollowerRepository issueFollowerRepository;
 
+    @Mock
+    private MergeRequestRepository mergeRequestRepository;
+
+    @Mock
+    private IssueRelationRepository issueRelationRepository;
+
     @InjectMocks
     private IssueService issueService;
 
