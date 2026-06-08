@@ -107,7 +107,10 @@ class IssueServiceTest {
 
         assertNotNull(result);
 
-        verify(issueRepository).save(any(Issue.class));
+        org.mockito.ArgumentCaptor<Issue> issueCaptor = org.mockito.ArgumentCaptor.forClass(Issue.class);
+        verify(issueRepository).save(issueCaptor.capture());
+        assertTrue(issueCaptor.getValue().isPrivate());
+
         verify(conversationService).createConversationForIssue(any(Issue.class));
         verify(requestManagerRepository).save(any(RequestManager.class));
 

@@ -162,6 +162,7 @@ public class IssueService {
                 .category(category)
                 .status(IssueStatus.EN_ATTENTE)
                 .createdBy(owner)
+                .isPrivate(true)
                 .build();
 
         if (dto.isPendingCase()) {
