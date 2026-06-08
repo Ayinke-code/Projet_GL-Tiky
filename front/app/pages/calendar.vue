@@ -26,6 +26,7 @@
         :event="selectedEvent"
         @close="isDetailOpen = false"
         @delete="handleDeleteAvailability"
+        @cancel="handleCancelMeeting"
       />
     </div>
 
@@ -116,7 +117,8 @@ import frLocale from '@fullcalendar/core/locales/fr'
 import { useEvents } from '../composables/useEvents'
 import Button from '~/components/ui/Button.vue'
 
-const { events, fetchCalendarEvents, createAvailability, deleteAvailability, error: availabilityError } = useEvents()
+const { events, fetchCalendarEvents, createAvailability, deleteAvailability, cancelEvent, error: availabilityError } = useEvents()
+const { user } = useAuth()
 
 const isDetailOpen = ref(false)
 const selectedEvent = ref(null)
@@ -207,6 +209,14 @@ const handleDeleteAvailability = async (eventId) => {
   } catch {}
 }
 
+const handleCancelMeeting = async (eventId) => {
+  try {
+    await cancelEvent(eventId)
+    isDetailOpen.value = false
+    await fetchCalendarEvents()
+  } catch {}
+}
+
 const windowPos = ref({ x: 100, y: 150 })
 let dragOffset = { x: 0, y: 0 }
 
@@ -280,7 +290,9 @@ const mappedEvents = computed(() => {
         description: evt.description,
         type: evt.categoryType,
         creator: evt.createdBy,
-        groups: evt.projectGroups
+        groups: evt.projectGroups,
+        participants: evt.participants,
+        isOwner: evt.createdBy === user.value?.name
       }
     }
   })
