@@ -36,6 +36,7 @@ public class CategoryService {
     private final UserRepository userRepository;
     private final CategoryRequestRepository categoryRequestRepository;
     private final IssueRepository issueRepository;
+    private final IssueService issueService;
 
     /**
      * Récupère toutes les catégories.
@@ -165,11 +166,11 @@ public class CategoryService {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new CategoryNotFoundException(id));
 
-        List<CategoryRequest> requests = categoryRequestRepository.findAllByCategory(category);
-        List<Issue> issues = issueRepository.findByCategoryId(category.getId());
+        // Délègue la suppression des issues et leurs dépendances
+        issueService.deleteAllByCategory(category);
 
-        issueRepository.deleteAll(issues);
-        categoryRequestRepository.deleteAll(requests);
+        // Supprime les demandes de catégorie
+        categoryRequestRepository.deleteAllByCategory(category);
 
         categoryRepository.delete(category);
     }
