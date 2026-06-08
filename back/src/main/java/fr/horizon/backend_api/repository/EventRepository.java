@@ -129,5 +129,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     List<Event> findByCreatedBy_IdAndCategoryTypeOrderByStartDateAsc(Long userId, CategoryType categoryType);
 
     void deleteByIssueId(Long issueId);
+
+    void deleteByIssueIdIn(List<Long> issueIds);
 }
 

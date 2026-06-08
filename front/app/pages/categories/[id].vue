@@ -103,39 +103,63 @@
 
         </div>
 
-        <!-- Ajout professeur (admin ou owner uniquement) -->
-        <div v-if="isAdminOrOwner" class="bg-white rounded-xl shadow p-6">
+        <div class="space-y-6">
+          <!-- Ajout professeur (admin ou owner uniquement) -->
+          <div v-if="isAdminOrOwner" class="bg-white rounded-xl shadow p-6">
 
-          <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">
-            Ajouter un professeur
-          </h2>
+            <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">
+              Ajouter un professeur
+            </h2>
 
-          <!-- Sélection professeur -->
-          <select v-model="selectedTeacherId" class="w-full border rounded-lg p-2 mb-4">
-            <option disabled value="">Sélectionner un professeur</option>
+            <!-- Sélection professeur -->
+            <select v-model="selectedTeacherId" class="w-full border rounded-lg p-2 mb-4">
+              <option disabled value="">Sélectionner un professeur</option>
 
-            <option v-for="t in availableTeachers" :key="t.id" :value="t.id" @click="selectedTeacherId = t.id">
-              {{ t.name }}
-            </option>
-          </select>
+              <option v-for="t in availableTeachers" :key="t.id" :value="t.id" @click="selectedTeacherId = t.id">
+                {{ t.name }}
+              </option>
+            </select>
 
-          <!-- Action ajout -->
-          <button
-            class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-medium disabled:opacity-50"
-            :disabled="!selectedTeacherId" :class="!selectedTeacherId ? '' : 'cursor-pointer'"
-            @click="addFollower(selectedTeacherId)">
-            Ajouter
-          </button>
+            <!-- Action ajout -->
+            <button
+              class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-medium disabled:opacity-50"
+              :disabled="!selectedTeacherId" :class="!selectedTeacherId ? '' : 'cursor-pointer'"
+              @click="addFollower(selectedTeacherId)">
+              Ajouter
+            </button>
 
-          <p class="text-xs text-gray-400 mt-3">
-            Seuls les enseignants non déjà abonnés sont affichés
-          </p>
+            <p class="text-xs text-gray-400 mt-3">
+              Seuls les enseignants non déjà abonnés sont affichés
+            </p>
+          </div>
 
+          <!-- Card : Supprimer la catégorie -->
+          <div class="bg-white rounded-xl shadow p-6 border border-red-100">
+            <h2 class="text-sm font-bold text-red-400 uppercase tracking-widest mb-1">
+              Supprimer la catégorie
+            </h2>
+            <p class="text-xs text-gray-400 mb-4">
+              La suppression est irréversible.
+            </p>
+            <button
+              class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg font-medium cursor-pointer"
+              @click="isDeleteCategoryModalOpen = true">
+              Supprimer la catégorie
+            </button>
+          </div>
         </div>
 
       </div>
     </div>
   </div>
+
+  <!-- Modal de suppression de la catégorie -->
+  <ConfirmModal
+    v-model:open="isDeleteCategoryModalOpen"
+    title="Supprimer la catégorie"
+    description="Voulez-vous vraiment supprimer cette catégorie ?"
+    @confirm="handleDelete(category?.category?.id)"
+  />
 </template>
 
 <script setup>
@@ -145,12 +169,20 @@ import { useCategories } from '~/composables/useCategories'
 import { useUsers } from '~/composables/useUsers'
 import { useAuth } from '~/composables/useAuth'
 import { ROLE } from '~/utils/roles'
+import ConfirmModal from '~/components/ui/ConfirmModal.vue'
+
+const router = useRouter()
 
 /**
  * ID de la catégorie récupéré depuis l’URL
  */
 const route = useRoute()
 const categorieId = Number(route.params.id)
+
+/**
+ * Affichage du modal de suppression de la catégorie
+ */
+const isDeleteCategoryModalOpen = ref(false)
 
 /**
  * Composable de gestion des catégories.
@@ -161,6 +193,7 @@ const {
   addTeacherFollower,
   deleteTeacherFollower,
   requestCategoryRemoval,
+  deleteCategory,
   error: categoriesError
 } = useCategories()
 
@@ -265,6 +298,21 @@ const addFollower = async (id) => {
     await addTeacherFollower(id, category?.value?.category?.id)
   } catch (err) {
     console.error(err)
+  }
+}
+
+/**
+ * Supprimer une catégorie
+ */
+const handleDelete = async (id) => {
+
+  if(!id) return
+
+  try{
+    await deleteCategory(id)
+    router.push('/categories')
+  } catch(e) {
+    console.error(e)
   }
 }
 </script>
