@@ -632,8 +632,8 @@ const handleUnfollow = async () => {
                   </div>
                 </div>
               </div>
-            </div> <!-- FIN de .px-5 py-4 -->
-          </div> <!-- FIN de la carte informations -->
+            </div>
+          </div>
 
           <!-- MEETING CARD -->
           <ClientOnly>
