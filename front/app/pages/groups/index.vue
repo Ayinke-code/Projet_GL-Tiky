@@ -47,7 +47,7 @@
                 <i :class="currentTab.icon"></i>
             </div>
             <p class="text-gray-500 text-lg">
-                Aucun groupe {{ currentTab.label.toLowerCase() }} pour le moment
+                {{ currentTab.emptyMessage }}
             </p>
         </div>
 
@@ -145,6 +145,7 @@
                         class="cursor-pointer"
                     />
                     <UButton
+                        v-if="ready && (user?.roles?.includes(ROLE.TEACHER) || user?.roles?.includes(ROLE.ADMIN))"
                         @click.stop="deleteValidation(group)"
                         variant="ghost"
                         size="xs"
@@ -254,9 +255,9 @@ const sortedTeachers = (group) => {
 }
 
 const tabs = [
-    { value: 'PROMOTION', label: 'Promotions', icon: 'fa-solid fa-users' },
-    { value: 'OPTION',  label: 'Options', icon: 'fa-solid fa-code-branch' },
-    { value: 'PROJECT', label: 'Projets', icon: 'fa-solid fa-rocket' },
+    { value: 'PROMOTION', label: 'Promotions', icon: 'fa-solid fa-users', emptyMessage: 'Aucune promotion pour le moment' },
+    { value: 'OPTION',  label: 'Options', icon: 'fa-solid fa-code-branch', emptyMessage: "Aucun groupe d'option pour le moment" },
+    { value: 'PROJECT', label: 'Projets', icon: 'fa-solid fa-rocket', emptyMessage: 'Aucun groupe de projet pour le moment' },
 ]
 
 const activeTab = ref('OPTION')

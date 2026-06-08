@@ -58,9 +58,21 @@ public class StudentGroupController {
         return ResponseEntity.ok(studentGroupService.update(id, dto, authentication.getName()));
     }
 
+    @PreAuthorize("hasAuthority('TEACHER') or hasAuthority('ADMIN')")
     @DeleteMapping("/{id}")
     public void deleteGroup(@PathVariable Long id) {
         studentGroupService.deleteById(id);
+    }
+
+    /**
+     * Retourne les groupes d'un type donné dont l'étudiant connecté est membre.
+     * Accessible par tous les rôles authentifiés.
+     */
+    @GetMapping("/my-groups")
+    public ResponseEntity<List<StudentGroupDto>> findMyGroups(
+            @RequestParam GroupType type,
+            Authentication authentication) {
+        return ResponseEntity.ok(studentGroupService.findMyGroups(authentication.getName(), type));
     }
 
     @PreAuthorize("hasAuthority('TEACHER') or hasAuthority('ADMIN')")

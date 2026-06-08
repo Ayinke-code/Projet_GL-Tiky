@@ -111,10 +111,15 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
 })
 
+const nuxtApp = useNuxtApp()
+
 watch(ready, async (isReady) => {
+  if (!process.client) return
   if (isReady && user.value?.id && wsToken.value) {
     await fetchHistory(user.value.id)
-    connectToWebSocket(user.value.id, wsToken.value)
+    connectToWebSocket(user.value.id, wsToken.value, (notif) => {
+      window.dispatchEvent(new CustomEvent('notification:received', { detail: notif }))
+    })
   }
 }, { immediate: true })
 </script>

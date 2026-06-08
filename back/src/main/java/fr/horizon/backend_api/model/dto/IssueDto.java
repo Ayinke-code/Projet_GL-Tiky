@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -36,6 +37,10 @@ public class IssueDto {
     private LocalDateTime updatedAt;
     //teacher manager
     private String teacherManagerName;
+    // demande de réouverture
+    private String reopeningDescription;
+    // documents attachés
+    private List<DocumentDto> documents;
     //follower
     private int followersCount;
 }

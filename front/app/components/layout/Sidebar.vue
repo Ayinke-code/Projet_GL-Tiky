@@ -23,12 +23,10 @@
         <UCollapsible class="w-full">
           <UButton
             class="group justify-between cursor-pointer w-full px-4 py-2.5 rounded-lg transition-all duration-200"
-            :class="isActive('/issues') || isActive('/issues/followed') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
+            :class="isActive('/issues') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'"
             variant="ghost"
             trailing-icon="i-lucide-chevron-down"
-            :ui="{
-              trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200 ml-auto'
-            }"
+            :ui="{ trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200 ml-auto' }"
             block
           >
             <div class="flex items-center">
@@ -40,15 +38,16 @@
           <template #content>
             <div class="mt-1 flex flex-col gap-1">
               <NuxtLink v-if="user?.id" to="/issues"
-                        class="flex items-center pl-10 pr-4 py-2 rounded-lg transition-all duration-200"
-                        :class="isActive('/issues') && !isActive('/issues/followed') ? 'text-indigo-400 bg-slate-800/50' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
+                        id="navbar-issues"
+                class="flex items-center pl-10 pr-4 py-2 rounded-lg transition-all duration-200"
+                :class="isActive('/issues') && !isActive('/issues/followed') ? 'text-indigo-400 bg-slate-800/50' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
                 <i class="fa-solid fa-list-check w-6"></i>
                 <span class="font-medium text-sm">Les tickets</span>
               </NuxtLink>
 
               <NuxtLink v-if="user" to="/issues/followed"
-                        class="flex items-center pl-10 pr-4 py-2 rounded-lg transition-all duration-200"
-                        :class="isActive('/issues/followed') ? 'text-indigo-400 bg-slate-800/50' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
+                class="flex items-center pl-10 pr-4 py-2 rounded-lg transition-all duration-200"
+                :class="isActive('/issues/followed') ? 'text-indigo-400 bg-slate-800/50' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
                 <i class="fa-solid fa-bell w-6"></i>
                 <span class="font-medium text-sm">Tickets suivis</span>
               </NuxtLink>
@@ -56,46 +55,67 @@
           </template>
         </UCollapsible>
 
+        <!-- Catégories -->
         <NuxtLink
           v-if="user" to="/categories"
+          id="navbar-categories"
                   class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
                   :class="isActive('/categories') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
           <i class="fa-solid fa-folder w-6" aria-hidden="true"></i>
           <span class="font-medium">Catégories</span>
         </NuxtLink>
 
-        <NuxtLink
-          v-if="user"
-          to="/groups"
+        <!-- Groupes -->
+        <NuxtLink v-if="user" to="/groups"
           class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
           :class="isActive('/groups') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
           <i class="fa-solid fa-users w-6" aria-hidden="true"></i>
           <span class="font-medium">Groupes</span>
         </NuxtLink>
 
-        <NuxtLink
-          v-if="user"
-          to="/calendar"
-          class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
-          :class="isActive('/calendar') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
-          <i class="fa-solid fa-calendar w-6" aria-hidden="true"></i>
-          <span class="font-medium">Calendrier</span>
-        </NuxtLink>
-
-        <NuxtLink
-          v-if="user?.roles?.includes('TEACHER') || user?.roles?.includes('ADMIN')"
-          to="/events"
+        <!-- Événements (teacher / admin uniquement — les étudiants voient tout dans "Mes sessions") -->
+        <NuxtLink v-if="user?.roles?.includes('TEACHER') || user?.roles?.includes('ADMIN')" to="/events"
           class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
           :class="isActive('/events') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
           <i class="fa-solid fa-calendar-days w-6" aria-hidden="true"></i>
           <span class="font-medium">Événements</span>
         </NuxtLink>
 
-        <NuxtLink v-if="user" to="/invitations"
-                  class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
-                  :class="isActive('/invitations') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
-          <i class="fa-solid fa-folder w-6"></i>
+        <!-- Calendrier (tous les rôles) -->
+        <NuxtLink v-if="user" to="/calendar"
+          class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
+          :class="isActive('/calendar') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
+          <i class="fa-solid fa-calendar w-6" aria-hidden="true"></i>
+          <span class="font-medium">Calendrier</span>
+        </NuxtLink>
+
+        <!-- Gérer mon planning (teacher / admin) -->
+        <NuxtLink
+          v-if="user?.roles?.includes('TEACHER') || user?.roles?.includes('ADMIN')"
+          to="/invitations"
+          class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
+          :class="isActive('/invitations') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
+          <i class="fa-solid fa-table-list w-6" aria-hidden="true"></i>
           <span class="font-medium">Gérer mon planning</span>
+        </NuxtLink>
+
+        <!-- Mes sessions (student) -->
+        <NuxtLink
+          v-if="user?.roles?.includes('STUDENT')"
+          to="/sessions"
+          class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
+          :class="isActive('/sessions') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
+          <i class="fa-solid fa-calendar-check w-6" aria-hidden="true"></i>
+          <span class="font-medium">Mes sessions</span>
+        </NuxtLink>
+        <!-- Mes sessions (teacher / admin) -->
+        <NuxtLink
+          v-if="user?.roles?.includes('TEACHER') || user?.roles?.includes('ADMIN')"
+          to="/sessions"
+          class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
+          :class="isActive('/sessions') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
+          <i class="fa-solid fa-calendar-check w-6" aria-hidden="true"></i>
+          <span class="font-medium">Mes sessions</span>
         </NuxtLink>
 
       </nav>
@@ -107,6 +127,7 @@
           Se connecter
         </button>
         <button v-else @click="logout"
+                id="btn-logout"
                 class="w-full flex items-center justify-center px-4 py-2 bg-slate-800 hover:bg-red-900/30 text-slate-400 hover:text-red-400 rounded-lg transition-all duration-200 text-sm font-medium cursor-pointer transition-all">
           <i class="fa-solid fa-arrow-right-from-bracket mr-2" aria-hidden="true"></i> Déconnexion
         </button>
