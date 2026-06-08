@@ -2,6 +2,14 @@
 export default defineNuxtConfig({
   // ssr: false, // Pour prod
 
+  app: {
+    head: {
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+      ]
+    }
+  },
+
   modules: [
     '@nuxt/eslint',
     '@nuxt/ui',

@@ -17,9 +17,9 @@
         <Modal v-model:open="isCreateModalOpen" title="Création de catégorie">
 
             <!-- Affichage erreur API -->
-            <Alert v-if="categoriesError" color="error" title="Erreur"
+            <Alert v-if="errorMessage" color="error" title="Erreur"
                 description="La catégorie renseigné existe déja !">
-                {{ categoriesError }}
+                {{ errorMessage }}
             </Alert>
 
             <!-- Formulaire création -->
@@ -161,6 +161,11 @@ const isRequestCreateModalOpen = ref(false)
 const isDetailOpen = ref(false)
 
 /**
+ * Message d'erreur lors de la création d'une catégorie
+ */
+const errorMessage = ref(null)
+
+/**
  * Chargement initial des catégories au montage de la page.
  */
 onMounted(async () => {
@@ -198,7 +203,10 @@ const handleClick = (cat) => {
 const handleCreate = async (data) => {
     const res = await createCategory(data)
 
-    if (!res) return
+    if(res.error) {
+        errorMessage.value = res.error;
+        return
+    }
 
     await fetchCategoriesByType('ISSUE')
     isCreateModalOpen.value = false

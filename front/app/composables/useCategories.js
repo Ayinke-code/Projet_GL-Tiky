@@ -120,8 +120,9 @@ export const useCategories = () => {
 
       return created
     } catch (e) {
-      error.value = e?.data?.message || 'UNKNOWN_ERROR'
-      return null
+      return {
+        error: `Catégorie existe déja pour le type Issue`
+      }
     }
   }
 
