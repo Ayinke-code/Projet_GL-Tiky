@@ -3,6 +3,7 @@ package fr.horizon.backend_api.repository;
 import fr.horizon.backend_api.model.MergeRequest;
 import fr.horizon.backend_api.model.enums.MergeRequestStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -36,5 +37,11 @@ public interface MergeRequestRepository extends JpaRepository<MergeRequest, Long
             @Param("sinceDate") java.time.LocalDateTime sinceDate
     );
 
-    void deleteByTargetIssue_Id(Long id);
+        @Modifying
+        @Query("""
+                        delete from MergeRequest m
+                        where m.sourceIssue.id = :issueId
+                           or m.targetIssue.id = :issueId
+                        """)
+        void deleteByIssueId(@Param("issueId") Long issueId);
 }

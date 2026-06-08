@@ -344,7 +344,7 @@ public class IssueService {
             throw new AccessDeniedException("Vous n'avez pas l'autorisation de supprimer cette issue");
         }
         // Supprimer les demande de fusion et les liens
-        mergeRequestRepository.deleteByTargetIssue_Id(id);
+        mergeRequestRepository.deleteByIssueId(id);
         issueRelationRepository.deleteByIssueId(id);
         // Supprimer les événements liés avant de supprimer l'issue
         eventRepository.deleteByIssueId(id);

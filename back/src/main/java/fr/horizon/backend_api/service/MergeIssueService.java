@@ -182,7 +182,7 @@ public class MergeIssueService {
             }
         }
 
-        // On s'assure que le ticket cible possède bien une conversation (créée si inexistante)
+        // On s'assure que le ticket cible possède bien une conversation
         Conversation targetConversation = conversationRepository.findByIssueId(target.getId())
                 .orElseGet(() -> {
                     Conversation newConv = Conversation.builder().issue(target).build();
@@ -195,10 +195,8 @@ public class MergeIssueService {
         if (sourceConversationOpt.isPresent()) {
             Conversation sourceConversation = sourceConversationOpt.get();
 
-            // On récupère tous les messages du ticket source
             List<Message> sourceMessages = messageRepository.findByConversationOrderByCreatedAtAsc(sourceConversation);
 
-            // On déplace physiquement chaque message vers la conversation du ticket cible
             for (Message msg : sourceMessages) {
                 msg.setConversation(targetConversation);
             }
@@ -209,6 +207,11 @@ public class MergeIssueService {
         // on passe la source a privé si le ticket avant était privé
         if(source.isPrivate()){
             target.setPrivate(true);
+        }
+
+        // on associe les documents de la source
+        if(!source.getDocuments().isEmpty()){
+            target.setDocuments(source.getDocuments());
         }
 
         issueRepository.save(source);
