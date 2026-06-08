@@ -124,4 +124,282 @@ class MergeIssueServiceTest {
         );
         assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
     }
+
+
+    @Test
+    void sendMergeRequest_ShouldThrowConflict_WhenSourceAlreadyMerged() {
+        sourceIssue.setMerged(true);
+
+        when(userRepository.findByEmail("test@horizon.fr"))
+                .thenReturn(Optional.of(testUser));
+        when(issueRepository.findById(10L))
+                .thenReturn(Optional.of(sourceIssue));
+        when(issueRepository.findById(20L))
+                .thenReturn(Optional.of(targetIssue));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> mergeIssueService.sendMergeRequest(10L, 20L, "test@horizon.fr")
+        );
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+    }
+
+    @Test
+    void sendMergeRequest_ShouldThrowConflict_WhenPendingRequestAlreadyExists() {
+
+        when(userRepository.findByEmail("test@horizon.fr"))
+                .thenReturn(Optional.of(testUser));
+
+        when(issueRepository.findById(10L))
+                .thenReturn(Optional.of(sourceIssue));
+
+        when(issueRepository.findById(20L))
+                .thenReturn(Optional.of(targetIssue));
+
+        when(mergeRequestRepository.existsBySourceIssueIdAndTargetIssueIdAndStatus(
+                10L,
+                20L,
+                MergeRequestStatus.PENDING))
+                .thenReturn(true);
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> mergeIssueService.sendMergeRequest(10L, 20L, "test@horizon.fr")
+        );
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+    }
+
+    @Test
+    void sendMergeRequest_ShouldMergeDirectly_WhenManagerOwnsBothIssues() {
+
+        sourceIssue.setManager(testUser);
+        targetIssue.setManager(testUser);
+
+        when(userRepository.findByEmail("test@horizon.fr"))
+                .thenReturn(Optional.of(testUser));
+
+        when(issueRepository.findById(10L))
+                .thenReturn(Optional.of(sourceIssue));
+
+        when(issueRepository.findById(20L))
+                .thenReturn(Optional.of(targetIssue));
+
+        when(conversationRepository.findByIssueId(anyLong()))
+                .thenReturn(Optional.empty());
+
+        when(conversationRepository.save(any()))
+                .thenAnswer(i -> i.getArgument(0));
+
+        when(mergeRequestRepository.save(any()))
+                .thenAnswer(i -> i.getArgument(0));
+
+        MergeRequestDto result =
+                mergeIssueService.sendMergeRequest(10L, 20L, "test@horizon.fr");
+
+        assertEquals(MergeRequestStatus.ACCEPTED, result.getStatus());
+
+        verify(issueRepository, atLeastOnce()).save(any(Issue.class));
+    }
+
+    @Test
+    void respondToMergeRequest_ShouldThrowBadRequest_WhenRejectReasonMissing() {
+
+        sourceIssue.setManager(testUser);
+
+        MergeRequest request = MergeRequest.builder()
+                .id(100L)
+                .sourceIssue(sourceIssue)
+                .targetIssue(targetIssue)
+                .requester(testUser)
+                .status(MergeRequestStatus.PENDING)
+                .build();
+
+        when(userRepository.findByEmail("test@horizon.fr"))
+                .thenReturn(Optional.of(testUser));
+
+        when(mergeRequestRepository.findById(100L))
+                .thenReturn(Optional.of(request));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> mergeIssueService.respondToMergeRequest(
+                        100L,
+                        false,
+                        "",
+                        "test@horizon.fr")
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    }
+
+    @Test
+    void respondToMergeRequest_ShouldThrowBadRequest_WhenAlreadyHandled() {
+
+        MergeRequest request = MergeRequest.builder()
+                .id(100L)
+                .status(MergeRequestStatus.ACCEPTED)
+                .sourceIssue(sourceIssue)
+                .targetIssue(targetIssue)
+                .requester(testUser)
+                .build();
+
+        when(userRepository.findByEmail("test@horizon.fr"))
+                .thenReturn(Optional.of(testUser));
+
+        when(mergeRequestRepository.findById(100L))
+                .thenReturn(Optional.of(request));
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> mergeIssueService.respondToMergeRequest(
+                        100L,
+                        true,
+                        null,
+                        "test@horizon.fr")
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+    }
+
+    @Test
+    void respondToMergeRequest_ShouldRemainPending_WhenOnlyOneManagerApproves() {
+
+        User sourceManager = new User();
+        sourceManager.setId(99L);
+
+        sourceIssue.setManager(sourceManager);
+
+        User targetManager = new User();
+        targetManager.setId(100L);
+
+        targetIssue.setManager(targetManager);
+
+        MergeRequest request = MergeRequest.builder()
+                .id(100L)
+                .status(MergeRequestStatus.PENDING)
+                .sourceIssue(sourceIssue)
+                .targetIssue(targetIssue)
+                .requester(testUser)
+                .build();
+
+        when(userRepository.findByEmail("manager@horizon.fr"))
+                .thenReturn(Optional.of(sourceManager));
+
+        when(mergeRequestRepository.findById(100L))
+                .thenReturn(Optional.of(request));
+
+        when(mergeRequestRepository.save(any()))
+                .thenAnswer(i -> i.getArgument(0));
+
+        MergeRequestDto dto =
+                mergeIssueService.respondToMergeRequest(
+                        100L,
+                        true,
+                        null,
+                        "manager@horizon.fr");
+
+        assertEquals(MergeRequestStatus.PENDING, dto.getStatus());
+        assertTrue(dto.getSourceManagerApproved());
+        assertNull(dto.getTargetManagerApproved());
+    }
+
+    @Test
+    void respondToMergeRequest_ShouldMerge_WhenSecondManagerApproves() {
+
+        User sourceManager = new User();
+        sourceManager.setId(99L);
+
+        User targetManager = new User();
+        targetManager.setId(100L);
+
+        sourceIssue.setManager(sourceManager);
+        targetIssue.setManager(targetManager);
+
+        MergeRequest request = MergeRequest.builder()
+                .id(100L)
+                .status(MergeRequestStatus.PENDING)
+                .sourceIssue(sourceIssue)
+                .targetIssue(targetIssue)
+                .requester(testUser)
+                .sourceManagerApproved(true)
+                .build();
+
+        when(userRepository.findByEmail("manager2@horizon.fr"))
+                .thenReturn(Optional.of(targetManager));
+
+        when(mergeRequestRepository.findById(100L))
+                .thenReturn(Optional.of(request));
+
+        when(conversationRepository.findByIssueId(anyLong()))
+                .thenReturn(Optional.empty());
+
+        when(conversationRepository.save(any()))
+                .thenAnswer(i -> i.getArgument(0));
+
+        when(mergeRequestRepository.save(any()))
+                .thenAnswer(i -> i.getArgument(0));
+
+        MergeRequestDto result =
+                mergeIssueService.respondToMergeRequest(
+                        100L,
+                        true,
+                        null,
+                        "manager2@horizon.fr");
+
+        assertEquals(MergeRequestStatus.ACCEPTED, result.getStatus());
+
+        verify(issueRepository, atLeastOnce()).save(any(Issue.class));
+    }
+
+    @Test
+    void getManagerRequestDto_ShouldReturnPendingRequests() {
+
+        when(userRepository.findByEmail("test@horizon.fr"))
+                .thenReturn(Optional.of(testUser));
+
+        MergeRequest request = MergeRequest.builder()
+                .id(100L)
+                .sourceIssue(sourceIssue)
+                .targetIssue(targetIssue)
+                .requester(testUser)
+                .status(MergeRequestStatus.PENDING)
+                .build();
+
+        when(mergeRequestRepository.findPendingRequestsForManager(1L))
+                .thenReturn(java.util.List.of(request));
+
+        var result = mergeIssueService.getManagerRequestDto("test@horizon.fr");
+
+        assertEquals(1, result.size());
+        assertEquals(100L, result.get(0).getId());
+    }
+
+    @Test
+    void getRecentDeniedRequests_ShouldReturnRejectedRequests() {
+
+        when(userRepository.findByEmail("test@horizon.fr"))
+                .thenReturn(Optional.of(testUser));
+
+        MergeRequest request = MergeRequest.builder()
+                .id(100L)
+                .sourceIssue(sourceIssue)
+                .targetIssue(targetIssue)
+                .requester(testUser)
+                .status(MergeRequestStatus.REJECTED)
+                .rejectionReason("Refus")
+                .build();
+
+        when(mergeRequestRepository.findDeniedRequestsForManager(
+                eq(1L),
+                any()))
+                .thenReturn(java.util.List.of(request));
+
+        var result =
+                mergeIssueService.getRecentDeniedRequests("test@horizon.fr");
+
+        assertEquals(1, result.size());
+        assertEquals(MergeRequestStatus.REJECTED, result.get(0).getStatus());
+    }
 }
