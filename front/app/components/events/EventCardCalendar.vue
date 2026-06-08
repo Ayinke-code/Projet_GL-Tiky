@@ -108,7 +108,7 @@
       />
       <Button
         v-if="event?.extendedProps?.type === 'AVAILABILITY'"
-        @click="confirmDelete"
+        @click="showDeleteModal = true"
         color="error"
         label="Supprimer"
         variant="subtle"
@@ -125,12 +125,27 @@
       />
     </div>
 
+    <ConfirmModal
+      v-model:open="showDeleteModal"
+      title="Suppression"
+      description="Supprimer ce créneau de disponibilité ?"
+      @confirm="emit('delete', event?.id)"
+    />
+
+    <ConfirmModal
+      v-model:open="showCancelModal"
+      title="Annuler le rendez-vous"
+      description="Annuler ce rendez-vous ? Les participants seront notifiés."
+      @confirm="emit('cancel', event?.id)"
+    />
+
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import Button from '~/components/ui/Button.vue'
+import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 
 const props = defineProps({
   event: Object
@@ -138,16 +153,11 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'delete', 'cancel'])
 
-const confirmDelete = () => {
-  if (globalThis.window?.confirm('Supprimer ce créneau de disponibilité ?')) {
-    emit('delete', props.event?.id)
-  }
-}
+const showDeleteModal = ref(false)
+const showCancelModal = ref(false)
 
 const confirmCancel = () => {
-  if (globalThis.window?.confirm('Annuler ce rendez-vous ? Les participants seront notifiés.')) {
-    emit('cancel', props.event?.id)
-  }
+  showCancelModal.value = true
 }
 
 const cleanTypeLabel = (type) => {
