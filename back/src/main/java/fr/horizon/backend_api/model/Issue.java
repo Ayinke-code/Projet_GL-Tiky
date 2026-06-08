@@ -46,6 +46,7 @@ public class Issue extends BaseEntity {
     @Column
     private String reopeningDescription;
 
+    // on affiche tout ceux qui sont a false, si true c'est la source des tickets
     @Builder.Default
     @Column
     private boolean merged = false;

@@ -38,8 +38,7 @@ public class MergeRequest extends BaseEntity {
     @JoinColumn(name = "handled_by_id")
     private User targetManager;
 
-    /** Motif facultatif/obligatoire saisi par le manager en cas de refus */
-    @Column(name = "rejection_reason", length = 500)
+    @Column(name = "rejection_reason")
     private String rejectionReason;
 
     @Column(name = "source_manager_approved")
