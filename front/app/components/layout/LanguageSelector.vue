@@ -1,34 +1,35 @@
 <template>
-  <UDropdown :items="items" :popper="{ placement: 'bottom-end' }">
+  <UDropdownMenu :items="items" :content="{ align: 'end' }">
     <UButton
       color="gray"
       variant="ghost"
       icon="i-heroicons-language"
-      class="text-gray-500 hover:text-blue-600 transition-colors"
+      class="text-gray-500 hover:text-blue-600 transition-colors cursor-pointer"
     >
       <span class="text-xs font-bold">{{ locale.toUpperCase() }}</span>
     </UButton>
-  </UDropdown>
+  </UDropdownMenu>
 </template>
 
 <script setup>
 const { locale, setLocale } = useI18n()
 
 const items = [
-  [{
+  {
     label: 'FR',
     icon: 'i-heroicons-language',
-    click: () => {
+    onSelect: () => {
       setLocale('fr')
       window.location.reload()
     }
-  }, {
+  },
+  {
     label: 'EN',
     icon: 'i-heroicons-language',
-    click: () => {
+    onSelect: () => {
       setLocale('en')
       window.location.reload()
     }
-  }]
+  }
 ]
 </script>

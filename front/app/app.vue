@@ -1,23 +1,19 @@
 <template>
   <div class="flex h-screen bg-gray-50">
-
     <!-- Sidebar -->
     <Sidebar v-if="!isAuthPage" />
 
     <div class="flex flex-col flex-1 relative">
-
       <!-- Header -->
       <Header v-if="!isAuthPage" />
-      <div v-else-if="route.path === '/login'" class="absolute top-4 right-4 z-50">
+      <div v-else-if="route.path === '/login'" class="fixed top-4 right-4 z-[99999]">
         <LanguageSelector />
       </div>
 
       <main class="flex-1 overflow-y-auto">
         <NuxtPage />
       </main>
-
     </div>
-
   </div>
 </template>
 
