@@ -92,42 +92,55 @@ const isAvailableForSlot = (availabilities, eventStart, eventEnd) => {
   })
 }
 
+const validateForm = () => {
+  if (!meetingName.value.trim() || !startDate.value) {
+    return 'Veuillez remplir tous les champs obligatoires.'
+  }
+  if (new Date(startDate.value) < new Date()) {
+    return "La date de début ne peut pas être dans le passé."
+  }
+  if (totalDurationMinutes.value < 15) {
+    return "La durée doit être d'au moins 15 minutes."
+  }
+  return null
+}
+
+const getConflictingFollowers = async (startObj, endObj) => {
+  const conflictList = []
+  for (const fId of selectedFollowerIds.value) {
+    const avails = await fetchUserAvailabilities(fId)
+    if (!isAvailableForSlot(avails, startObj.toISOString(), endObj.toISOString())) {
+      const follower = followers.value.find(f => f.id === fId)
+      conflictList.push({ id: fId, name: follower?.name || 'Inconnu', availabilities: avails })
+    }
+  }
+  return conflictList
+}
+
+const ERROR_MESSAGES = {
+  400: (err) => err?.data?.message || "Impossible de créer la réunion : vérifiez que la date n'est pas dans le passé.",
+  403: (err) => err?.data?.error || err?.data?.message || "Vous n'avez pas l'autorisation d'organiser cette réunion.",
+  409: (err) => err?.data?.message || "Conflit d'agenda détecté pour ce créneau.",
+}
+
 const handleSubmit = async () => {
   error.value = null
 
-  if (!meetingName.value.trim() || !startDate.value) {
-    error.value = 'Veuillez remplir tous les champs obligatoires.'
+  const validationError = validateForm()
+  if (validationError) {
+    error.value = validationError
     return
   }
 
   const startObj = new Date(startDate.value)
-
-  if (startObj < new Date()) {
-    error.value = "La date de début ne peut pas être dans le passé."
-    return
-  }
-
-  if (totalDurationMinutes.value < 15) {
-    error.value = "La durée doit être d'au moins 15 minutes."
-    return
-  }
-
   submitting.value = true
   success.value = false
 
   try {
     const endObj = new Date(startObj.getTime() + totalDurationMinutes.value * 60_000)
 
-    // Vérification de disponibilité pour les abonnés sélectionnés
     if (!skipAvailabilityCheck.value && selectedFollowerIds.value.length > 0) {
-      const conflictList = []
-      for (const fId of selectedFollowerIds.value) {
-        const avails = await fetchUserAvailabilities(fId)
-        if (!isAvailableForSlot(avails, startObj.toISOString(), endObj.toISOString())) {
-          const follower = followers.value.find(f => f.id === fId)
-          conflictList.push({ id: fId, name: follower?.name || 'Inconnu', availabilities: avails })
-        }
-      }
+      const conflictList = await getConflictingFollowers(startObj, endObj)
       if (conflictList.length > 0) {
         availabilityConflictUsers.value = conflictList
         isAvailabilityConflictOpen.value = true
@@ -156,16 +169,7 @@ const handleSubmit = async () => {
   } catch (err) {
     const status = err?.response?.status || err?.statusCode || err?.status
     console.error('[IssueMeetingProposal] handleSubmit error, status:', status, err)
-
-    if (status === 400) {
-      error.value = err?.data?.message || "Impossible de créer la réunion : vérifiez que la date n'est pas dans le passé."
-    } else if (status === 403) {
-      error.value = err?.data?.error || err?.data?.message || "Vous n'avez pas l'autorisation d'organiser cette réunion."
-    } else if (status === 409) {
-      error.value = err?.data?.message || "Conflit d'agenda détecté pour ce créneau."
-    } else {
-      error.value = err?.data?.message || "Une erreur inattendue est survenue lors de la création de la réunion."
-    }
+    error.value = ERROR_MESSAGES[status]?.(err) ?? err?.data?.message ?? "Une erreur inattendue est survenue lors de la création de la réunion."
   } finally {
     submitting.value = false
   }
@@ -356,12 +360,11 @@ const handleSelectSlot = async ({ startDate: slotStart, endDate: slotEnd }) => {
           Aucun autre abonné à inviter.
         </div>
 
-        <div
+        <fieldset
           v-else
-          role="group"
-          aria-label="Liste des abonnés à inviter"
-          class="max-h-40 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 divide-y divide-gray-100 shadow-inner w-full"
+          class="max-h-40 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 divide-y divide-gray-100 shadow-inner w-full p-0 m-0"
         >
+          <legend class="sr-only">Liste des abonnés à inviter</legend>
           <label
             v-for="follower in followers"
             :key="follower.id"
@@ -381,7 +384,7 @@ const handleSelectSlot = async ({ startDate: slotStart, endDate: slotEnd }) => {
               size="xs"
             />
           </label>
-        </div>
+        </fieldset>
       </div>
 
       <div class="pt-2 w-full flex flex-col gap-4">

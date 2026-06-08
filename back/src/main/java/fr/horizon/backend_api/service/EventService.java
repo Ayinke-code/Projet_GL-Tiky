@@ -488,7 +488,7 @@ public class EventService {
                         java.util.LinkedHashMap::new
                 ))
                 .values().stream()
-                .collect(Collectors.toList());
+                .toList();
 
         // Inclure les créneaux de disponibilité déclarés par l'utilisateur (validated=false, absents de findCalendarEventsForUser)
         List<EventResponseDto> availabilities = eventRepository
@@ -647,7 +647,7 @@ public class EventService {
                                 .name(p.getUser().getName())
                                 .hasAccepted(p.getHasAccepted())
                                 .build())
-                        .collect(Collectors.toList()))
+                        .toList())
                 .build();
     }
 
@@ -1046,7 +1046,7 @@ public class EventService {
                 .filter(u -> eventRepository.countConflictingEvents(
                         u.getId(), null, event.getStartDate(), event.getEndDate()) > 0)
                 .map(User::getName)
-                .collect(Collectors.toList());
+                .toList();
 
         if (!conflicting.isEmpty()) {
             throw new EventConflictException(

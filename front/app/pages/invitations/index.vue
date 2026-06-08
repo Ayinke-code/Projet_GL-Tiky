@@ -354,10 +354,10 @@ const rescheduleForm = ref({
   addAll: true
 })
 
-const EVENT_NOTIFICATION_TYPES = ['NEW_EVENT_INVITATION', 'UPDATE_EVENT', 'EVENT_RESPONSE', 'EVENT_CANCEL']
+const EVENT_NOTIFICATION_TYPES = new Set(['NEW_EVENT_INVITATION', 'UPDATE_EVENT', 'EVENT_RESPONSE', 'EVENT_CANCEL'])
 
 const onNotificationReceived = async (e) => {
-  if (EVENT_NOTIFICATION_TYPES.includes(e.detail?.type)) {
+  if (EVENT_NOTIFICATION_TYPES.has(e.detail?.type)) {
     await fetchMyInvitations()
     await fetchMyCreatedEvents()
   }

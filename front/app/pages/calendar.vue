@@ -357,10 +357,10 @@ const calendarOptions = reactive({
   nowIndicator: true,
 })
 
-const EVENT_NOTIFICATION_TYPES = ['NEW_EVENT_INVITATION', 'UPDATE_EVENT', 'EVENT_RESPONSE', 'EVENT_CANCEL']
+const EVENT_NOTIFICATION_TYPES = new Set(['NEW_EVENT_INVITATION', 'UPDATE_EVENT', 'EVENT_RESPONSE', 'EVENT_CANCEL'])
 
 const onNotificationReceived = async (e) => {
-  if (EVENT_NOTIFICATION_TYPES.includes(e.detail?.type)) {
+  if (EVENT_NOTIFICATION_TYPES.has(e.detail?.type)) {
     await fetchCalendarEvents()
   }
 }
@@ -541,9 +541,9 @@ onUnmounted(() => {
 :deep(.fc-daygrid-more-link) {
   font-size: 0.72rem !important;
   font-weight: 600 !important;
-  color: #6366f1 !important;
+  color: #4338ca !important; /* indigo-700 — ratio ~6.7:1 sur #eef2ff, WCAG AA ✓ */
   padding: 1px 5px;
-  background: #eef2ff;
+    background-color: #ffffff;
   border-radius: 4px;
 }
 </style>
