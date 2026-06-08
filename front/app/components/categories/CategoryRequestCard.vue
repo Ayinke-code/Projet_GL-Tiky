@@ -73,7 +73,7 @@
     <Modal v-model:open="isDetailOpen" title="Détails de la catégorie">
 
         <!-- Protection rendu -->
-        <div v-if="categoryRequest" class="rounded-xl shadow-2xl w-full max-w-lg p-6">
+        <div v-if="categoryRequest">
 
             <!-- Titre -->
             <h2 class="text-xl font-bold mb-2">
@@ -82,12 +82,12 @@
 
             <!-- Nom -->
             <p class="text-indigo-600 text-sm mb-6">
-                {{ categoryRequest.name }}
+                <span class="text-sm text-gray-500 mb-6">Nom: </span>{{ categoryRequest.name }}
             </p>
 
             <!-- Description (optionnel) -->
             <p v-if="categoryRequest?.description" class="text-indigo-600 text-sm mb-6">
-                {{ categoryRequest.description }}
+                <span class="text-sm text-gray-500 mb-6">Description: </span>{{ categoryRequest.description }}
             </p>
 
             <!-- Owner -->

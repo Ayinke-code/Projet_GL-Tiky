@@ -8,4 +8,6 @@ import java.util.List;
 public interface DocumentRepository extends JpaRepository<Document, Long> {
     List<Document> findByIssueId(Long issueId);
     void deleteByIssueId(Long issueId);
+    List<Document> findByIssueIdIn(List<Long> issueIds);
+    void deleteByIssueIdIn(List<Long> issueIds);
 }

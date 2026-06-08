@@ -996,6 +996,7 @@ const getMessageType = (msg, index = -1) => {
       </div>
     </div>
   </div>
+
   <!-- Modale de suivi -->
   <FollowModal
     v-model="showFollowModal"
