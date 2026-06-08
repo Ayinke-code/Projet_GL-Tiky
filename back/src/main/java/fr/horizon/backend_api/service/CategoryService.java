@@ -36,6 +36,7 @@ public class CategoryService {
     private final UserRepository userRepository;
     private final CategoryRequestRepository categoryRequestRepository;
     private final IssueRepository issueRepository;
+    private final NotificationService notificationService;
 
     /**
      * Récupère toutes les catégories.
@@ -152,6 +153,32 @@ public class CategoryService {
         category.getFollowers().add(user);
 
         categoryRepository.save(category);
+
+        notificationService.addedToCategoryNotification(user, category);
+    }
+
+    /**
+     * Envoie une demande de retrait d'une catégorie par un professeur au propriétaire.
+     *
+     * @param categoryId identifiant de la catégorie
+     * @param email      email du professeur demandant le retrait
+     * @throws CategoryNotFoundException si la catégorie n'existe pas
+     * @throws EntityNotFoundException   si l'utilisateur n'existe pas
+     * @throws IllegalStateException     si l'utilisateur n'est pas follower
+     */
+    @Transactional
+    public void requestRemoval(Long categoryId, String email) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new CategoryNotFoundException(categoryId));
+
+        User requester = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + email));
+
+        if (!category.getFollowers().contains(requester)) {
+            throw new IllegalStateException("User is not a follower of this category");
+        }
+
+        notificationService.categoryRemovalRequestNotification(category.getOwner(), requester, category);
     }
 
     /**
