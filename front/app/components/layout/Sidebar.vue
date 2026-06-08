@@ -1,7 +1,7 @@
 <template>
   <aside class="w-64 bg-slate-900 text-white flex flex-col h-screen border-r border-slate-800" aria-label="Barre latérale">
     <div class="h-16 flex items-center px-6 border-b border-slate-800 font-bold text-xl tracking-wider">
-      <span class="text-indigo-400 font-extrabold text-2xl mr-2 tracking-tighter">tk.</span> Tiky
+      <span class="text-indigo-400 font-extrabold text-2xl mr-2 tracking-tighter">Tiky</span>
     </div>
 
     <ClientOnly>
