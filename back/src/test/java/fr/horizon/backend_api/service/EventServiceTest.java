@@ -4,6 +4,7 @@ import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.exception.EventConflictException;
 import fr.horizon.backend_api.exception.EventNotFoundException;
 import fr.horizon.backend_api.model.*;
+import fr.horizon.backend_api.model.dto.AvailabilityRequestDto;
 import fr.horizon.backend_api.model.dto.EventInvitationResponseDto;
 import fr.horizon.backend_api.model.dto.EventRequestDto;
 import fr.horizon.backend_api.model.dto.EventResponseDto;
@@ -1722,5 +1723,286 @@ class EventServiceTest {
         user.setName(email);
         user.setRoles(Set.of(role));
         return user;
+    }
+
+    // =============================================
+    // createAvailability()
+    // =============================================
+
+    @Test
+    @DisplayName("createAvailability : crée une disponibilité avec des dates valides")
+    void createAvailability_success() {
+        User user = makeUser(1L, "user@test.fr", "STUDENT");
+        LocalDateTime start = LocalDateTime.of(2026, 6, 1, 9, 0);
+        LocalDateTime end   = LocalDateTime.of(2026, 6, 1, 11, 0);
+
+        AvailabilityRequestDto dto = AvailabilityRequestDto.builder()
+                .startDate(start).endDate(end).description("Dispo matin").build();
+
+        Category cat = Category.builder()
+                .id(99L).name("__AVAILABILITY__")
+                .categoryType(CategoryType.AVAILABILITY).build();
+
+        when(userService.findByEmail("user@test.fr")).thenReturn(user);
+        when(categoryRepository.findByNameIgnoreCase("__AVAILABILITY__"))
+                .thenReturn(Optional.of(cat));
+        when(eventRepository.save(any(Event.class))).thenAnswer(inv -> {
+            Event e = inv.getArgument(0);
+            e.setId(1L);
+            return e;
+        });
+
+        EventResponseDto result = eventService.createAvailability(dto, "user@test.fr");
+
+        assertNotNull(result);
+        verify(eventRepository).save(any(Event.class));
+    }
+
+    @Test
+    @DisplayName("createAvailability : lève IllegalArgumentException si dates nulles")
+    void createAvailability_should_throw_when_dates_null() {
+        User user = makeUser(1L, "user@test.fr", "STUDENT");
+        AvailabilityRequestDto dto = new AvailabilityRequestDto();
+
+        when(userService.findByEmail("user@test.fr")).thenReturn(user);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> eventService.createAvailability(dto, "user@test.fr"));
+
+        verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("createAvailability : lève IllegalArgumentException si fin avant début")
+    void createAvailability_should_throw_when_endDate_before_startDate() {
+        User user = makeUser(1L, "user@test.fr", "STUDENT");
+        AvailabilityRequestDto dto = AvailabilityRequestDto.builder()
+                .startDate(LocalDateTime.of(2026, 6, 1, 11, 0))
+                .endDate(LocalDateTime.of(2026, 6, 1, 9, 0)).build();
+
+        when(userService.findByEmail("user@test.fr")).thenReturn(user);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> eventService.createAvailability(dto, "user@test.fr"));
+
+        verify(eventRepository, never()).save(any());
+    }
+
+    // =============================================
+    // getMyAvailabilities()
+    // =============================================
+
+    @Test
+    @DisplayName("getMyAvailabilities : retourne la liste de disponibilités de l'utilisateur")
+    void getMyAvailabilities_success() {
+        User user = makeUser(1L, "user@test.fr", "STUDENT");
+        Category cat = Category.builder().id(99L).name("__AVAILABILITY__")
+                .categoryType(CategoryType.AVAILABILITY).build();
+        Event event = Event.builder()
+                .id(1L).name("Disponible").categoryType(CategoryType.AVAILABILITY)
+                .category(cat).createdBy(user).build();
+
+        when(userService.findByEmail("user@test.fr")).thenReturn(user);
+        when(eventRepository.findByCreatedBy_IdAndCategoryTypeOrderByStartDateAsc(1L, CategoryType.AVAILABILITY))
+                .thenReturn(List.of(event));
+
+        List<EventResponseDto> result = eventService.getMyAvailabilities("user@test.fr");
+
+        assertEquals(1, result.size());
+    }
+
+    // =============================================
+    // getUserAvailabilities()
+    // =============================================
+
+    @Test
+    @DisplayName("getUserAvailabilities : retourne les disponibilités d'un utilisateur")
+    void getUserAvailabilities_success() {
+        User user = makeUser(1L, "user@test.fr", "STUDENT");
+        Category cat = Category.builder().id(99L).name("__AVAILABILITY__")
+                .categoryType(CategoryType.AVAILABILITY).build();
+        Event event = Event.builder()
+                .id(1L).name("Disponible").categoryType(CategoryType.AVAILABILITY)
+                .category(cat).createdBy(user).build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(eventRepository.findByCreatedBy_IdAndCategoryTypeOrderByStartDateAsc(1L, CategoryType.AVAILABILITY))
+                .thenReturn(List.of(event));
+
+        List<EventResponseDto> result = eventService.getUserAvailabilities(1L);
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    @DisplayName("getUserAvailabilities : lève EntityNotFoundException si utilisateur introuvable")
+    void getUserAvailabilities_user_not_found() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class,
+                () -> eventService.getUserAvailabilities(99L));
+    }
+
+    // =============================================
+    // deleteAvailability()
+    // =============================================
+
+    @Test
+    @DisplayName("deleteAvailability : supprime une disponibilité appartenant à l'utilisateur")
+    void deleteAvailability_success() {
+        User user = makeUser(1L, "user@test.fr", "STUDENT");
+        Category cat = Category.builder().id(99L).name("__AVAILABILITY__")
+                .categoryType(CategoryType.AVAILABILITY).build();
+
+        Event event = Event.builder()
+                .id(5L).categoryType(CategoryType.AVAILABILITY)
+                .category(cat).createdBy(user).build();
+
+        when(userService.findByEmail("user@test.fr")).thenReturn(user);
+        when(eventRepository.findById(5L)).thenReturn(Optional.of(event));
+
+        eventService.deleteAvailability(5L, "user@test.fr");
+
+        verify(eventRepository).delete(event);
+    }
+
+    @Test
+    @DisplayName("deleteAvailability : lève IllegalArgumentException si l'événement n'est pas une disponibilité")
+    void deleteAvailability_should_throw_when_not_availability_type() {
+        User user = makeUser(1L, "user@test.fr", "TEACHER");
+        Category cat = Category.builder().id(10L).name("UI/UX")
+                .categoryType(CategoryType.AUDIT).build();
+
+        Event event = Event.builder()
+                .id(5L).categoryType(CategoryType.AUDIT)
+                .category(cat).createdBy(user).build();
+
+        when(userService.findByEmail("user@test.fr")).thenReturn(user);
+        when(eventRepository.findById(5L)).thenReturn(Optional.of(event));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> eventService.deleteAvailability(5L, "user@test.fr"));
+
+        verify(eventRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("deleteAvailability : lève AccessDeniedException si l'utilisateur n'est pas le créateur")
+    void deleteAvailability_should_throw_when_not_owner() {
+        User owner = makeUser(1L, "owner@test.fr", "STUDENT");
+        User other = makeUser(2L, "other@test.fr", "STUDENT");
+        Category cat = Category.builder().id(99L).name("__AVAILABILITY__")
+                .categoryType(CategoryType.AVAILABILITY).build();
+
+        Event event = Event.builder()
+                .id(5L).categoryType(CategoryType.AVAILABILITY)
+                .category(cat).createdBy(owner).build();
+
+        when(userService.findByEmail("other@test.fr")).thenReturn(other);
+        when(eventRepository.findById(5L)).thenReturn(Optional.of(event));
+
+        assertThrows(AccessDeniedException.class,
+                () -> eventService.deleteAvailability(5L, "other@test.fr"));
+
+        verify(eventRepository, never()).delete(any());
+    }
+
+    // =============================================
+    // validateGroupMembersAvailability() via create()
+    // =============================================
+
+    @Test
+    @DisplayName("create : lève EventConflictException si un membre du groupe a un conflit d'agenda")
+    void create_should_throw_EventConflictException_when_group_member_has_conflict() {
+        Role teacherRole = new Role("TEACHER");
+        User teacher = new User();
+        teacher.setId(1L); teacher.setEmail("teacher@teacher.fr");
+        teacher.setRoles(Set.of(teacherRole));
+
+        User conflictingMember = new User();
+        conflictingMember.setId(10L); conflictingMember.setName("Alice");
+
+        Category eventCategory = new Category();
+        eventCategory.setId(10L); eventCategory.setName("UI/UX");
+        eventCategory.setCategoryType(CategoryType.AUDIT);
+
+        StudentGroup group = StudentGroup.builder()
+                .id(5L).name("Projet Alpha").type(GroupType.PROJECT)
+                .category(eventCategory).createdBy(teacher)
+                .members(new HashSet<>(Set.of(conflictingMember)))
+                .teachers(new HashSet<>())
+                .build();
+
+        LocalDateTime start = LocalDateTime.of(2026, 6, 1, 9, 0);
+        LocalDateTime end   = LocalDateTime.of(2026, 6, 1, 11, 0);
+
+        EventRequestDto request = new EventRequestDto();
+        request.setCategoryId(10L);
+        request.setName("Audit avec conflit");
+        request.setStartDate(start);
+        request.setEndDate(end);
+        request.setProjectGroupIds(Set.of(5L));
+
+        when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(eventCategory));
+        when(studentGroupRepository.findAllById(Set.of(5L))).thenReturn(List.of(group));
+        when(eventRepository.countConflictingEvents(eq(10L), isNull(), eq(start), eq(end)))
+                .thenReturn(1L);
+
+        assertThrows(EventConflictException.class,
+                () -> eventService.create(request, "teacher@teacher.fr"));
+
+        verify(eventRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("create : sauvegarde si tous les membres du groupe sont disponibles")
+    void create_should_save_when_all_group_members_available() {
+        Role teacherRole = new Role("TEACHER");
+        User teacher = new User();
+        teacher.setId(1L); teacher.setName("Prof"); teacher.setEmail("teacher@teacher.fr");
+        teacher.setRoles(Set.of(teacherRole));
+
+        User member = new User();
+        member.setId(10L); member.setName("Bob");
+
+        Category eventCategory = new Category();
+        eventCategory.setId(10L); eventCategory.setName("UI/UX");
+        eventCategory.setCategoryType(CategoryType.AUDIT);
+
+        StudentGroup group = StudentGroup.builder()
+                .id(5L).name("Projet Beta").type(GroupType.PROJECT)
+                .category(eventCategory).createdBy(teacher)
+                .members(new HashSet<>(Set.of(member)))
+                .teachers(new HashSet<>())
+                .build();
+
+        LocalDateTime start = LocalDateTime.of(2026, 6, 2, 9, 0);
+        LocalDateTime end   = LocalDateTime.of(2026, 6, 2, 11, 0);
+
+        EventRequestDto request = new EventRequestDto();
+        request.setCategoryId(10L);
+        request.setName("Audit sans conflit");
+        request.setStartDate(start);
+        request.setEndDate(end);
+        request.setProjectGroupIds(Set.of(5L));
+
+        Event saved = Event.builder()
+                .id(9L).name("Audit sans conflit")
+                .categoryType(CategoryType.AUDIT).category(eventCategory)
+                .createdBy(teacher).startDate(start).endDate(end)
+                .projectGroups(Set.of(group)).build();
+
+        when(userService.findByEmail("teacher@teacher.fr")).thenReturn(teacher);
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(eventCategory));
+        when(studentGroupRepository.findAllById(Set.of(5L))).thenReturn(List.of(group));
+        when(eventRepository.countConflictingEvents(eq(10L), isNull(), eq(start), eq(end)))
+                .thenReturn(0L);
+        when(eventRepository.save(any(Event.class))).thenReturn(saved);
+
+        EventResponseDto result = eventService.create(request, "teacher@teacher.fr");
+
+        assertNotNull(result);
+        verify(eventRepository).save(any(Event.class));
     }
 }
