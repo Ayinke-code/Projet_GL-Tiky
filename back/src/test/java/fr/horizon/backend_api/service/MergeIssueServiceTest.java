@@ -42,13 +42,18 @@ class MergeIssueServiceTest {
         testUser.setId(1L);
         testUser.setEmail("test@horizon.fr");
 
+        User manager = new User();
+        manager.setId(99L);
+
         sourceIssue = new Issue();
         sourceIssue.setId(10L);
         sourceIssue.setTitle("Source Issue");
+        sourceIssue.setManager(manager);
 
         targetIssue = new Issue();
         targetIssue.setId(20L);
         targetIssue.setTitle("Target Issue");
+        targetIssue.setManager(manager);
     }
 
     @Test
