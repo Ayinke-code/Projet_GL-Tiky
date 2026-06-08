@@ -493,7 +493,7 @@ const viewEventStatuses = async (eventId) => {
 
 // --- Actions directes depuis la modale (Ajout / Suppression) ---
 const isAvailableForSlot = (availabilities, eventStart, eventEnd) => {
-  if (!availabilities || availabilities.length === 0) return true
+  if (!availabilities || availabilities.length === 0) return false
   const eStart = new Date(String(eventStart).replace(' ', 'T'))
   const eEnd = new Date(String(eventEnd).replace(' ', 'T'))
   return availabilities.some(avail => {
