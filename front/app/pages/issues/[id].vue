@@ -532,9 +532,9 @@ const handleUnfollow = async () => {
           <!-- Zone d'envoi de message -->
           <MessageInput
             v-model="newMessage"
-            v-model:messageFiles="messageFiles"
             :sending="sending"
             :replying-to="replyingToMessage"
+            :disabled="issue?.status === 'TERMINE'"
             @cancel-reply="replyingToMessage = null"
             @send="handleSend"
           />
