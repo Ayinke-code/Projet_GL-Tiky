@@ -94,8 +94,6 @@
         </div>
       </div>
 
-      <LanguageSelector />
-
       <ClientOnly>
         <div class="h-9 w-9 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
           {{ userInitial }}
@@ -112,7 +110,6 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useNotifications } from '~/composables/useNotifications.js'
 import NotificationCard from '~/components/notifications/NotificationCard.vue'
-import LanguageSelector from '~/components/layout/LanguageSelector.vue'
 
 defineEmits(['toggle-sidebar'])
 
