@@ -35,4 +35,6 @@ public interface MergeRequestRepository extends JpaRepository<MergeRequest, Long
             @Param("managerId") Long managerId,
             @Param("sinceDate") java.time.LocalDateTime sinceDate
     );
+
+    void deleteByTargetIssue_Id(Long id);
 }

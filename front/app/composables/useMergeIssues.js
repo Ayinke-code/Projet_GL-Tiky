@@ -63,7 +63,7 @@ export const useMergeIssues = () => {
     resetError()
 
     try {
-      const data = await api('/merging/requests') // (Adapté selon ton controller précédent)
+      const data = await api('/merging/requests/pending')
       pendingRequests.value = data
       return data
     } catch (e) {

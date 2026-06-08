@@ -1,16 +1,10 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.IssueNotFoundException;
-import fr.horizon.backend_api.model.Issue;
-import fr.horizon.backend_api.model.IssueFollower;
-import fr.horizon.backend_api.model.MergeRequest;
-import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.MergeRequestDto;
 import fr.horizon.backend_api.model.enums.MergeRequestStatus;
-import fr.horizon.backend_api.repository.IssueFollowerRepository;
-import fr.horizon.backend_api.repository.IssueRepository;
-import fr.horizon.backend_api.repository.MergeRequestRepository;
-import fr.horizon.backend_api.repository.UserRepository;
+import fr.horizon.backend_api.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -18,8 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +25,8 @@ public class MergeIssueService {
     private final MergeRequestRepository mergeRequestRepository;
     private final UserRepository userRepository;
     private final IssueFollowerRepository issueFollowerRepository;
+    private final ConversationRepository conversationRepository;
+    private final MessageRepository messageRepository;
 
     private static final String USER_NOT_FOUND = "Utilisateur introuvable";
 
@@ -168,6 +165,8 @@ public class MergeIssueService {
         source.setMerged(true);
         source.setMergedInto(target);
 
+        source.setMergedAt(LocalDateTime.now());
+
         source.setRejectComment("Ce ticket a été fusionné dans le ticket #" + target.getId());
 
         // Ceux qui suivaient le ticket A suivent désormais automatiquement le ticket B
@@ -183,12 +182,34 @@ public class MergeIssueService {
             }
         }
 
+        // On s'assure que le ticket cible possède bien une conversation (créée si inexistante)
+        Conversation targetConversation = conversationRepository.findByIssueId(target.getId())
+                .orElseGet(() -> {
+                    Conversation newConv = Conversation.builder().issue(target).build();
+                    return conversationRepository.save(newConv);
+                });
+
+        // On récupère la conversation du ticket source
+        Optional<Conversation> sourceConversationOpt = conversationRepository.findByIssueId(source.getId());
+
+        if (sourceConversationOpt.isPresent()) {
+            Conversation sourceConversation = sourceConversationOpt.get();
+
+            // On récupère tous les messages du ticket source
+            List<Message> sourceMessages = messageRepository.findByConversationOrderByCreatedAtAsc(sourceConversation);
+
+            // On déplace physiquement chaque message vers la conversation du ticket cible
+            for (Message msg : sourceMessages) {
+                msg.setConversation(targetConversation);
+            }
+
+            messageRepository.saveAll(sourceMessages);
+        }
+
         // on passe la source a privé si le ticket avant était privé
         if(source.isPrivate()){
             target.setPrivate(true);
         }
-
-
 
         issueRepository.save(source);
         issueRepository.save(target);

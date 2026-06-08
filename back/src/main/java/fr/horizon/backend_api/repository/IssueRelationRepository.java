@@ -4,6 +4,7 @@ import fr.horizon.backend_api.model.IssueRelation;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.RelationType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -27,4 +28,13 @@ public interface IssueRelationRepository extends JpaRepository<IssueRelation, Lo
             @Param("issue2") Long issue2,
             @Param("type") RelationType type
     );
+
+    @Modifying
+    @Query("""
+    delete from IssueRelation ir
+    where ir.targetIssue.id = :issueId
+       or ir.sourceIssue.id = :issueId
+    """)
+    void deleteByIssueId(@Param("issueId") Long issueId);
+
 }

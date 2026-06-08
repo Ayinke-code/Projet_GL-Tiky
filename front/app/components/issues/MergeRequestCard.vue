@@ -232,10 +232,8 @@
 import { ref, computed, onMounted } from 'vue'
 
 const props = defineProps({
-  currentIssueId: {
-    type: Number,
-    required: true
-  }
+  currentIssueId: { type: Number, required: true },
+  currentUserId:  { type: Number, required: true }
 })
 
 const { pendingRequests, deniedRequests, fetchPendingRequests, fetchDeniedRequests, respondToMergeRequest } = useMergeIssues()
@@ -251,7 +249,8 @@ const loadingId = ref(null)
 // Filtre les demandes en attente concernant le ticket courant
 const pendingMerges = computed(() =>
   pendingRequests.value.filter(r =>
-    r.sourceIssueId === props.currentIssueId || r.targetIssueId === props.currentIssueId
+    (r.sourceIssueId === props.currentIssueId || r.targetIssueId === props.currentIssueId)
+    && r.requestedById !== props.currentUserId
   )
 )
 
@@ -289,8 +288,11 @@ const closeRejectModal = () => {
 const handleAccept = async () => {
   loadingId.value = selectedRequestId.value
   try {
-    await respondToMergeRequest(selectedRequestId.value, true)
+    const result = await respondToMergeRequest(selectedRequestId.value, true)
     closeAcceptModal()
+    if (result?.status === 'ACCEPTED' && result?.targetIssueId) {
+      await navigateTo(`/issues/${result.targetIssueId}`)
+    }
   } catch (e) {
     console.error(e)
   } finally {

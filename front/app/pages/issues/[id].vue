@@ -397,9 +397,16 @@ const handleMerge = async () => {
   mergeLoading.value = true
   mergeError.value = null
   try {
-    await requestMerge(issueId, mergeTargetId.value)
+    const result = await requestMerge(issueId, mergeTargetId.value)
     isMergeModalOpen.value = false
     mergeTargetId.value = null
+    if (result.status === 'ACCEPTED') {
+      await navigateTo(`/issues/${result.targetIssueId}`)
+    } else {
+      await fetchRelationsByIssue(issueId)
+      await fetchRelationPendingRequests()
+      issue.value = await getIssueById(issueId)
+    }
   } catch (err) {
     mergeError.value = err?.data?.message || 'Erreur lors de la demande de fusion.'
   } finally {
@@ -414,6 +421,30 @@ const mergeCandidates = computed(() =>
     title: r.sourceIssueId === issueId ? r.targetIssueTitle : r.sourceIssueTitle
   }))
 )
+
+// On crée une Map pour attribuer une couleur unique par ID de ticket fusionné
+const issueColorMap = computed(() => {
+  const map = new Map()
+  let colorCounter = 0
+
+  messages.value.forEach(msg => {
+    if (msg.isMerged && msg.originalIssueId && !map.has(msg.originalIssueId)) {
+      map.set(msg.originalIssueId, colorCounter)
+      colorCounter++
+    }
+  })
+  return map
+})
+
+// Fonction pour déterminer si on doit afficher l'en-tête "Historique du ticket #X"
+const shouldShowMergeHeader = (msg, index) => {
+  if (!msg.isMerged) return false
+  if (index === 0) return true
+
+  // Si le message précédent appartient à un ticket différent
+  const prevMsg = messages.value[index - 1]
+  return prevMsg.originalIssueId !== msg.originalIssueId
+}
 </script>
 
 <template>
@@ -562,9 +593,11 @@ const mergeCandidates = computed(() =>
         <!-- ===== COLONNE GAUCHE : CONVERSATION ===== -->
         <div class="lg:col-span-2 space-y-4">
           <!-- Messages -->
-          <div class="space-y-3">
+          <div class="space-y-3 relative">
+            <!-- Ligne verticale décorative optionnelle pour lier les messages fusionnés -->
+            <div class="absolute left-6 top-4 bottom-4 w-px bg-gray-200 -z-10 hidden sm:block"></div>
             <IssueMessage
-              v-for="msg in messages"
+              v-for="(msg, index) in messages"
               :key="msg.id"
               :auteur="msg.auteur"
               :role="msg.role"
@@ -575,9 +608,25 @@ const mergeCandidates = computed(() =>
               :user="user"
               :is-mine="msg.userId === user?.id"
               :reply-to="msg.replyTo"
+
+              :is-merged="msg.isMerged"
+              :original-issue-id="msg.originalIssueId"
+              :show-merge-header="shouldShowMergeHeader(msg, index)"
+              :color-index="msg.isMerged ? issueColorMap.get(msg.originalIssueId) : 0"
+
               @reply="replyingToMessage = msg"
               @download="downloadDoc"
             />
+
+            <!-- Si le dernier message était fusionné, on affiche le marqueur de fin (date de fusion) -->
+            <div v-if="messages.length > 0 && messages[messages.length - 1].isMerged" class="flex items-center gap-2 my-6">
+              <div class="h-px bg-purple-200 flex-1"></div>
+              <div class="text-[10px] font-bold text-purple-600 uppercase tracking-widest px-4 py-1.5 rounded-full bg-purple-50 border border-purple-100 flex items-center gap-1.5">
+                <UIcon name="i-lucide-git-merge" class="w-3.5 h-3.5" />
+                Fusion effectuée
+              </div>
+              <div class="h-px bg-purple-200 flex-1"></div>
+            </div>
 
             <!-- État vide -->
             <IssueEmptyMessages v-if="messages.length === 0" />
@@ -709,6 +758,7 @@ const mergeCandidates = computed(() =>
             <MergeRequestCard
               v-if="user?.id === issue?.categoryManagerId"
               :current-issue-id="issueId"
+              :current-user-id="user?.id"
             />
           </ClientOnly>
 
