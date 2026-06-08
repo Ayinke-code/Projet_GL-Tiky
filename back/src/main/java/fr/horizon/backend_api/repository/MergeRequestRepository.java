@@ -19,4 +19,20 @@ public interface MergeRequestRepository extends JpaRepository<MergeRequest, Long
     @Query("SELECT m FROM MergeRequest m WHERE m.status = 'PENDING' AND " +
             "(m.sourceIssue.manager.id = :managerId OR m.targetIssue.manager.id = :managerId)")
     List<MergeRequest> findPendingRequestsForManager(@Param("managerId") Long managerId);
+
+    /**
+     * Récupère toutes les demandes de fusion refusées au cours des 30 derniers jours
+     * pour les tickets dont l'utilisateur spécifié est le manager.
+     *
+     * @param managerId Identifiant du manager concerné
+     * @param sinceDate Date limite inférieure (ex: LocalDateTime.now().minusDays(30))
+     * @return Liste des requêtes de fusion rejetées
+     */
+    @Query("SELECT m FROM MergeRequest m WHERE m.status = 'REJECTED' " +
+            "AND m.updatedAt >= :sinceDate " + // Utilise updatedAt (date de traitement du refus)
+            "AND (m.sourceIssue.manager.id = :managerId OR m.targetIssue.manager.id = :managerId)")
+    List<MergeRequest> findDeniedRequestsForManager(
+            @Param("managerId") Long managerId,
+            @Param("sinceDate") java.time.LocalDateTime sinceDate
+    );
 }

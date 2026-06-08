@@ -71,10 +71,21 @@ public class MergeIssueController {
      * @return Liste des demandes en attente avec le code 200 OK
      */
     @PreAuthorize("isAuthenticated()")
-    @GetMapping("/requests")
+    @GetMapping("/requests/pending")
     public ResponseEntity<List<MergeRequestDto>> getPendingMergeRequests(Authentication authentication) {
         String email = authentication.getName();
         List<MergeRequestDto> requests = mergeIssueService.getManagerRequestDto(email);
         return ResponseEntity.ok(requests);
     }
+
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/requests/denied")
+    public ResponseEntity<List<MergeRequestDto>> getDeniedMergeRequests(Authentication authentication) {
+        String email = authentication.getName();
+        List<MergeRequestDto> requests = mergeIssueService.getRecentDeniedRequests(email);
+        return ResponseEntity.ok(requests);
+    }
+
+
 }

@@ -145,7 +145,19 @@ public class MergeIssueService {
         return mergeRequestRepository.findPendingRequestsForManager(user.getId())
                 .stream()
                 .map(this::mapToDto)
-                .collect(Collectors.toList());
+                .toList();
+    }
+
+    public List<MergeRequestDto> getRecentDeniedRequests(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+
+        java.time.LocalDateTime thirtyDaysAgo = java.time.LocalDateTime.now().minusDays(30);
+
+        return mergeRequestRepository.findDeniedRequestsForManager(user.getId(), thirtyDaysAgo)
+                .stream()
+                .map(this::mapToDto)
+                .toList();
     }
 
     /**
@@ -171,11 +183,17 @@ public class MergeIssueService {
             }
         }
 
+        // on passe la source a privé si le ticket avant était privé
+        if(source.isPrivate()){
+            target.setPrivate(true);
+        }
+
 
 
         issueRepository.save(source);
         issueRepository.save(target);
     }
+
 
     /**
      * Helper de vérification des droits manager.

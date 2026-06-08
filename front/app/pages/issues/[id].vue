@@ -11,6 +11,7 @@ import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import IssueMeetingProposal from "~/components/issues/meeting/IssueMeetingProposal.vue";
 import IssueMeetingDemand from "~/components/issues/meeting/IssueMeetingDemand.vue";
 import IssueRelationCard from '~/components/issues/IssueRelationCard.vue'
+import MergeRequestCard from '~/components/issues/MergeRequestCard.vue'
 import { getFileIcon } from '#imports';
 
 const route = useRoute()
@@ -20,6 +21,8 @@ const { getIssueMessages, sendIssueMessage, normalizeMessage, initializeConversa
 const { followIssue, unfollowIssue, isFollowing } = useIssueFollowers()
 const { acknowledgeFollowedIssueUpdate } = useFollowedIssuesState()
 const { downloadFile, deleteFile } = useDocuments()
+const { relations, fetchRelationsByIssue, fetchPendingRequests: fetchRelationPendingRequests } = useIssueRelations()
+const { requestMerge } = useMergeIssues()
 
 const FOLLOWER_NOTIFICATION_TYPES = ['NEW_FOLLOWER', 'NEW_UNFOLLOW']
 
@@ -43,10 +46,13 @@ const replyingToMessage = ref(null)
 const sending = ref(false)
 const socket = ref(null)
 const conversationId = ref(null)
-
+const isMergeModalOpen = ref(false)
 const showFollowModal = ref(false)
 const alreadyFollowing = ref(false)
 const followSuccess = ref(false)
+const mergeTargetId = ref(null)
+const mergeLoading = ref(false)
+const mergeError = ref(null)
 
 // Contient les fichiers associés au ticket si il y en a
 const files = ref(null)
@@ -64,6 +70,17 @@ const downloadDoc = async (file) => {
     console.error(err)
   }
 }
+
+/**
+* Trouver les tickets avec lesquels on a un lien officiel
+ */
+const officialLinkCandidates = computed(() => {
+  if (!issue.value || !relations.value?.length) return []
+  return relations.value.filter(r => r.manager && !r.merged)
+})
+
+const canMerge = computed(() => officialLinkCandidates.value.length > 0)
+
 
 /**
  * Créateur du ticket peut supprimer un fichier
@@ -183,6 +200,11 @@ onMounted(async () => {
     issue.value = await getIssueById(issueId)
     // Marquer l'issue comme lue au chargement de la page
     acknowledgeFollowedIssueUpdate(issue.value)
+
+    await fetchRelationsByIssue(issueId)
+    if (user?.value?.id === issue.value?.categoryManagerId) {
+      await fetchRelationPendingRequests()
+    }
 
     alreadyFollowing.value = await isFollowing(issueId)
     const conversation = await initializeConversation(issueId)
@@ -369,6 +391,29 @@ const handleUnfollow = async () => {
     console.error(err)
   }
 }
+
+const handleMerge = async () => {
+  if (!mergeTargetId.value) return
+  mergeLoading.value = true
+  mergeError.value = null
+  try {
+    await requestMerge(issueId, mergeTargetId.value)
+    isMergeModalOpen.value = false
+    mergeTargetId.value = null
+  } catch (err) {
+    mergeError.value = err?.data?.message || 'Erreur lors de la demande de fusion.'
+  } finally {
+    mergeLoading.value = false
+  }
+}
+
+// Candidats à la fusion avec titre pour l'affichage
+const mergeCandidates = computed(() =>
+  officialLinkCandidates.value.map(r => ({
+    id: r.sourceIssueId === issueId ? r.targetIssueId : r.sourceIssueId,
+    title: r.sourceIssueId === issueId ? r.targetIssueTitle : r.sourceIssueTitle
+  }))
+)
 </script>
 
 <template>
@@ -492,6 +537,15 @@ const handleUnfollow = async () => {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
             Ne plus suivre
+          </button>
+
+          <button
+            v-if="canMerge && user?.id === issue?.categoryManagerId"
+            @click="isMergeModalOpen = true"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-purple-300 text-purple-700 bg-white hover:bg-purple-50 text-sm font-medium transition-all cursor-pointer"
+          >
+            <UIcon name="i-lucide-merge" class="w-4 h-4" />
+            Fusionner
           </button>
 
         </div>
@@ -651,6 +705,11 @@ const handleUnfollow = async () => {
               :can-create="alreadyFollowing"
               :current-user-id="user?.id"
             />
+
+            <MergeRequestCard
+              v-if="user?.id === issue?.categoryManagerId"
+              :current-issue-id="issueId"
+            />
           </ClientOnly>
 
           <slot name="sidebar-extra" />
@@ -732,6 +791,89 @@ const handleUnfollow = async () => {
     </div>
   </div>
 
+  <!-- Modal Fusion -->
+  <div
+    v-if="isMergeModalOpen"
+    class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+    @click.self="isMergeModalOpen = false; mergeTargetId = null; mergeError = null"
+  >
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+
+      <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <UIcon name="i-lucide-git-merge" class="text-purple-500 w-5 h-5" />
+          <h2 class="text-lg font-bold text-gray-800">Fusionner le ticket</h2>
+        </div>
+        <button
+          @click="isMergeModalOpen = false; mergeTargetId = null; mergeError = null"
+          class="text-gray-400 hover:text-gray-600"
+        >✕</button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <p class="text-sm text-gray-600">
+          Choisissez le ticket dans lequel fusionner
+          <span class="font-semibold text-gray-800">#{{ issueId }}</span>.
+          Cette action est <span class="font-semibold text-red-600">irréversible</span>.
+        </p>
+
+        <!-- Liste des candidats -->
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            Tickets liés officiellement
+          </label>
+          <div
+            v-for="candidate in mergeCandidates"
+            :key="candidate.id"
+            @click="mergeTargetId = candidate.id"
+            class="flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all"
+            :class="mergeTargetId === candidate.id
+            ? 'border-purple-500 bg-purple-50'
+            : 'border-gray-200 bg-white hover:border-purple-200 hover:bg-purple-50/30'"
+          >
+            <div
+              class="w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors"
+              :class="mergeTargetId === candidate.id ? 'border-purple-500 bg-purple-500' : 'border-gray-300'"
+            >
+              <div v-if="mergeTargetId === candidate.id" class="w-1.5 h-1.5 rounded-full bg-white" />
+            </div>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-gray-800">
+                Ticket #{{ candidate.id }}
+              </p>
+              <p v-if="candidate.title" class="text-xs text-gray-500 truncate">
+                {{ candidate.title }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p v-if="mergeError" class="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg p-2">
+          {{ mergeError }}
+        </p>
+
+        <div class="flex justify-end gap-2 pt-1">
+          <button
+            @click="isMergeModalOpen = false; mergeTargetId = null; mergeError = null"
+            class="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Annuler
+          </button>
+          <button
+            @click="handleMerge"
+            :disabled="!mergeTargetId || mergeLoading"
+            class="px-4 py-2 text-sm rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+          >
+            <svg v-if="mergeLoading" class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+            </svg>
+            Envoyer la demande
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
   <!-- Modale de suivi -->
   <FollowModal
     v-model="showFollowModal"

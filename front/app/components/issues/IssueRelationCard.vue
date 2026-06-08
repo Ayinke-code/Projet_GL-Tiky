@@ -21,6 +21,7 @@
 
       <div v-else class="space-y-4 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
 
+        <!-- Demandes de liens en attente (manager uniquement) -->
         <div v-if="isManager && localPendingRequests.length" class="space-y-2">
           <h3 class="text-[10px] font-bold text-orange-500 uppercase tracking-wider mb-1 flex items-center gap-1">
             <UIcon name="i-lucide-bell-ring" class="w-3 h-3" />
@@ -87,31 +88,56 @@
           <hr class="border-gray-100 my-2" />
         </div>
 
+        <!-- Relations existantes -->
         <div class="space-y-2">
           <div
             v-for="rel in visibleRelations"
             :key="rel.id"
             class="group flex items-center justify-between p-2 rounded-lg border transition-colors text-xs"
-            :class="rel.manager ? 'border-indigo-100 bg-indigo-50/30 hover:bg-indigo-50' : 'border-gray-100 bg-gray-50/50 hover:bg-gray-50'"
+            :class="rel.merged
+              ? 'border-purple-100 bg-purple-50/30'
+              : rel.manager
+                ? 'border-indigo-100 bg-indigo-50/30 hover:bg-indigo-50'
+                : 'border-gray-100 bg-gray-50/50 hover:bg-gray-50'"
           >
             <div class="min-w-0 flex-1 pr-2">
               <div class="flex items-center gap-1.5 font-medium text-gray-800">
+                <!-- Ticket courant = source -->
                 <span v-if="rel.sourceIssueId === currentIssueId" class="truncate">
-                  {{ rel.type === 'DEPENDS_ON' ? 'Dépend de :' : 'Lié à :' }}
-                  <NuxtLink :to="`/issues/${rel.targetIssueId}`" class="text-[11px] text-blue-600 hover:text-blue-800 hover:underline italic transition-colors">
-                    {{ rel.targetIssueTitle }}
-                  </NuxtLink>
+                  <template v-if="rel.merged">
+                    Fusionné avec :
+                    <span class="text-[11px] text-purple-600 italic font-medium">
+                      {{ rel.targetIssueTitle }}
+                    </span>
+                  </template>
+                  <template v-else>
+                    {{ rel.type === 'DEPENDS_ON' ? 'Dépend de :' : 'Lié à :' }}
+                    <NuxtLink :to="`/issues/${rel.targetIssueId}`" class="text-[11px] text-blue-600 hover:text-blue-800 hover:underline italic transition-colors">
+                      {{ rel.targetIssueTitle }}
+                    </NuxtLink>
+                  </template>
                 </span>
+                <!-- Ticket courant = target -->
                 <span v-else class="truncate">
-                  {{ rel.type === 'DEPENDS_ON' ? 'Requis par :' : 'Lié à :' }}
-                  <NuxtLink :to="`/issues/${rel.sourceIssueId}`" class="text-[11px] text-blue-600 hover:text-blue-800 hover:underline italic transition-colors">
-                    {{ rel.sourceIssueTitle }}
-                  </NuxtLink>
+                  <template v-if="rel.merged">
+                    Fusionné avec :
+                    <span class="text-[11px] text-purple-600 italic font-medium">
+                      {{ rel.sourceIssueTitle }}
+                    </span>
+                  </template>
+                  <template v-else>
+                    {{ rel.type === 'DEPENDS_ON' ? 'Requis par :' : 'Lié à :' }}
+                    <NuxtLink :to="`/issues/${rel.sourceIssueId}`" class="text-[11px] text-blue-600 hover:text-blue-800 hover:underline italic transition-colors">
+                      {{ rel.sourceIssueTitle }}
+                    </NuxtLink>
+                  </template>
                 </span>
               </div>
 
               <div class="mt-1 flex gap-1 flex-wrap">
+                <!-- Badge type (masqué si fusionné) -->
                 <UBadge
+                  v-if="!rel.merged"
                   size="xs"
                   :color="rel.type === 'DEPENDS_ON' ? 'error' : 'info'"
                   variant="soft"
@@ -119,8 +145,20 @@
                 >
                   {{ rel.type === 'DEPENDS_ON' ? 'Dépendance' : 'Association' }}
                 </UBadge>
+                <!-- Badge Fusionné -->
                 <UBadge
-                  v-if="rel.manager"
+                  v-if="rel.merged"
+                  size="xs"
+                  color="purple"
+                  variant="solid"
+                  class="text-[9px] px-1.5 py-0 uppercase font-bold tracking-wider"
+                >
+                  <UIcon name="i-lucide-git-merge" class="w-2.5 h-2.5 mr-0.5" />
+                  Fusion
+                </UBadge>
+                <!-- Badge Lien Officiel (si pas fusionné) -->
+                <UBadge
+                  v-else-if="rel.manager"
                   size="xs"
                   color="primary"
                   variant="solid"
@@ -129,6 +167,7 @@
                   <UIcon name="i-lucide-shield-check" class="w-2.5 h-2.5 mr-0.5" />
                   Lien Officiel
                 </UBadge>
+                <!-- Badge Votre suggestion -->
                 <UBadge
                   v-else-if="rel.createdById === props.currentUserId"
                   size="xs"
@@ -141,8 +180,9 @@
               </div>
             </div>
 
+            <!-- Bouton suppression (masqué si fusionné) -->
             <UButton
-              v-if="rel.createdById === props.currentUserId || isManager"
+              v-if="!rel.merged && (rel.createdById === props.currentUserId || isManager)"
               size="xs"
               color="error"
               variant="ghost"
