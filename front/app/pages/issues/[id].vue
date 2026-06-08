@@ -369,15 +369,6 @@ const handleUnfollow = async () => {
     console.error(err)
   }
 }
-
-// Slider sidebar
-const activeSlide = ref(0)
-const slides = computed(() => {
-  if (user?.value?.id === issue?.value?.categoryManagerId) {
-    return ['meeting-proposal', 'relations']
-  }
-  return ['meeting-demand', 'relations']
-})
 </script>
 
 <template>
@@ -644,64 +635,23 @@ const slides = computed(() => {
             </div> <!-- FIN de .px-5 py-4 -->
           </div> <!-- FIN de la carte informations -->
 
-          <!-- Slider sidebar : RDV + Relations -->
-          <div v-if="alreadyFollowing" class="relative">
-            <div class="overflow-hidden">
-              <div
-                class="flex transition-transform duration-300 ease-in-out"
-                :style="`transform: translateX(-${activeSlide * 100}%)`"
-              >
-                <!-- Slide RDV Manager -->
-                <div class="min-w-full" v-if="user?.id === issue?.categoryManagerId">
-                  <ClientOnly>
-                    <IssueMeetingProposal v-if="activeSlide === 0" :issue="issue" />
-                  </ClientOnly>
-                </div>
-                <!-- Slide RDV Demande -->
-                <div class="min-w-full" v-if="user?.id !== issue?.categoryManagerId">
-                  <ClientOnly>
-                    <IssueMeetingDemand v-if="activeSlide === 0" :issue="issue" />
-                  </ClientOnly>
-                </div>
-                <!-- Slide Relations -->
-                <div class="min-w-full">
-                  <ClientOnly>
-                    <IssueRelationCard
-                      v-if="activeSlide === 1"
-                      :current-issue-id="issueId"
-                      :current-category-id="issue.categoryId"
-                      :current-category-manager-id="issue.categoryManagerId"
-                      :can-create="alreadyFollowing"
-                      :current-user-id="user?.id"
-                    />
-                  </ClientOnly>
-                </div>
-              </div>
-            </div>
+          <!-- MEETING CARD -->
+          <ClientOnly>
+            <IssueMeetingProposal v-if="user?.id === issue?.categoryManagerId" :issue="issue" />
+            <IssueMeetingDemand v-else-if="user?.id !== issue?.categoryManagerId && user?.id !== null" :issue="issue" />
+          </ClientOnly>
 
-            <!-- Dots de navigation -->
-            <div class="flex justify-center gap-2 mt-3">
-              <button
-                v-for="(_, i) in slides"
-                :key="i"
-                @click="activeSlide = i"
-                class="w-2 h-2 rounded-full transition-all duration-200"
-                :class="activeSlide === i ? 'bg-indigo-600 w-4' : 'bg-gray-300 hover:bg-gray-400'"
-              />
-            </div>
-          </div>
-
-          <!-- Si non abonné : affichage direct sans slider -->
-          <template v-else>
-            <IssueMeetingProposal
-              v-if="user?.id === issue?.categoryManagerId && user?.id !== null"
-              :issue="issue"
+          <!-- RELATION CARD (Visible uniquement si suivi ou manager) -->
+          <ClientOnly>
+            <IssueRelationCard
+              v-if="alreadyFollowing || user?.id === issue?.categoryManagerId"
+              :current-issue-id="issueId"
+              :current-category-id="issue.categoryId"
+              :current-category-manager-id="issue.categoryManagerId"
+              :can-create="alreadyFollowing"
+              :current-user-id="user?.id"
             />
-            <IssueMeetingDemand
-              v-if="user?.id !== issue?.categoryManagerId && user?.id !== null"
-              :issue="issue"
-            />
-          </template>
+          </ClientOnly>
 
           <slot name="sidebar-extra" />
 

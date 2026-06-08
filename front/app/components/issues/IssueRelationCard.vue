@@ -36,11 +36,15 @@
             <div class="flex items-center gap-1.5 font-medium text-gray-800 mb-2">
               <span v-if="req.sourceIssueId === currentIssueId" class="truncate">
                 {{ req.type === 'DEPENDS_ON' ? 'Veut dépendre de :' : 'Veut lier à :' }}
-                <span class="text-[11px] text-gray-500 italic">{{ req.targetIssueTitle }}</span>
+                <NuxtLink :to="`/issues/${req.targetIssueId}`" class="text-[11px] text-blue-600 hover:text-blue-800 hover:underline italic transition-colors">
+                  {{ req.targetIssueTitle }}
+                </NuxtLink>
               </span>
               <span v-else class="truncate">
                 {{ req.type === 'DEPENDS_ON' ? 'Requis par :' : 'Veut lier à :' }}
-                <span class="text-[11px] text-gray-500 italic">{{ req.sourceIssueTitle }}</span>
+                <NuxtLink :to="`/issues/${req.sourceIssueId}`" class="text-[11px] text-blue-600 hover:text-blue-800 hover:underline italic transition-colors">
+                  {{ req.sourceIssueTitle }}
+                </NuxtLink>
               </span>
             </div>
 
@@ -94,11 +98,15 @@
               <div class="flex items-center gap-1.5 font-medium text-gray-800">
                 <span v-if="rel.sourceIssueId === currentIssueId" class="truncate">
                   {{ rel.type === 'DEPENDS_ON' ? 'Dépend de :' : 'Lié à :' }}
-                  <span class="text-[11px] text-gray-400 italic">{{ rel.targetIssueTitle }}</span>
+                  <NuxtLink :to="`/issues/${rel.targetIssueId}`" class="text-[11px] text-blue-600 hover:text-blue-800 hover:underline italic transition-colors">
+                    {{ rel.targetIssueTitle }}
+                  </NuxtLink>
                 </span>
                 <span v-else class="truncate">
                   {{ rel.type === 'DEPENDS_ON' ? 'Requis par :' : 'Lié à :' }}
-                  <span class="text-[11px] text-gray-400 italic">{{ rel.sourceIssueTitle }}</span>
+                  <NuxtLink :to="`/issues/${rel.sourceIssueId}`" class="text-[11px] text-blue-600 hover:text-blue-800 hover:underline italic transition-colors">
+                    {{ rel.sourceIssueTitle }}
+                  </NuxtLink>
                 </span>
               </div>
 
@@ -315,9 +323,6 @@ const rejectOptions = [
 
 const isManager = computed(() => props.currentUserId && props.currentUserId === props.currentCategoryManagerId)
 
-// Tout le monde (manager ou étudiant) voit uniquement :
-// 1. Les liens officiels validés
-// 2. Ses propres suggestions
 const visibleRelations = computed(() => {
   if (!props.currentUserId) return relations.value
   return relations.value.filter(r => r.manager || r.createdById === props.currentUserId)

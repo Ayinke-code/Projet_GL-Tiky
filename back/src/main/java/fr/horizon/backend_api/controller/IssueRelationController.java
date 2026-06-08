@@ -24,7 +24,7 @@ import java.util.List;
  * @version 1.1
  */
 @RestController
-@RequestMapping("/issues")
+@RequestMapping("/issueRelations")
 @RequiredArgsConstructor
 public class IssueRelationController {
 

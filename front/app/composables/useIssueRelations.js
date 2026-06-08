@@ -14,7 +14,7 @@ export const useIssueRelations = () => {
     loading.value = true
     error.value = null
     try {
-      const data = await api(`/issues/${issueId}/relations`)
+      const data = await api(`/issueRelations/${issueId}/relations`)
       relations.value = data
       return data
     } catch (e) {
@@ -39,7 +39,7 @@ export const useIssueRelations = () => {
     error.value = null
     loading.value = true
     try {
-      const created = await api(`/issues/${sourceId}/relations`, {
+      const created = await api(`/issueRelations/${sourceId}/relations`, {
         method: 'POST',
         body: { targetIssueId, type }
       })
@@ -64,7 +64,7 @@ export const useIssueRelations = () => {
     const api = useApi()
     error.value = null
     try {
-      await api(`/issues/relations/${relationId}`, { method: 'DELETE' })
+      await api(`/issueRelations/relations/${relationId}`, { method: 'DELETE' })
       await fetchRelationsByIssue(currentIssueId)
     } catch (e) {
       error.value = e?.data?.message || 'Impossible de supprimer la relation'
@@ -81,7 +81,7 @@ export const useIssueRelations = () => {
     loading.value = true
     error.value = null
     try {
-      const data = await api('/issues/relations/requests')
+      const data = await api('/issueRelations/relations/requests')
       pendingRequests.value = data
       return data
     } catch (e) {
@@ -100,7 +100,7 @@ export const useIssueRelations = () => {
     error.value = null
     loading.value = true
     try {
-      const result = await api(`/issues/relations/requests/${requestId}/handle`, {
+      const result = await api(`/issueRelations/relations/requests/${requestId}/handle`, {
         method: 'POST',
         body: {
           approve,
