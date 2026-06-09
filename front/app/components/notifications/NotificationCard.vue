@@ -2,10 +2,11 @@
   <div class="p-4 mb-2 rounded-lg border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-200 flex items-start gap-3 relative">
 
     <div class="flex-shrink-0 mt-0.5 z-10">
-      <label class="relative flex items-center justify-center cursor-pointer">
+      <label class="relative flex items-center justify-center cursor-pointer" aria-label="Marquer comme lu">
         <input
           type="checkbox"
           class="peer sr-only"
+          :aria-label="`Marquer la notification comme lue`"
           @change="$emit('mark-as-read', notification.id)"
         >
         <div class="w-5 h-5 rounded-full border-2 border-gray-300 peer-checked:border-[#00DC82] peer-checked:bg-[#00DC82] transition-all duration-200 flex items-center justify-center shadow-sm">
