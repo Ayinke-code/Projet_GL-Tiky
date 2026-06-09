@@ -101,11 +101,24 @@ class ScenarioTestIT extends BaseSeleniumIT{
     @Order(9)
     @Test
     @DisplayName("Scénario 1.6.1 vérifier que la messagerie est désactivé ")
-    void envoyerMessageTest(){
+    void envoyerMessageButDisableTest(){
         //préconditon
         connexion(false);
         creeTicket(false);
 
+        allerDansMessage();
+        checkMessageDisabled();
+    }
+
+    @Order(10)
+    @Test
+    @Disabled
+    @DisplayName("Scénario 1.6.1 vérifier que la messagerie est désactivé ")
+    void envoyerMessageSuccessTest(){
+        //préconditon
+        connexion(false);
+        creeTicket(false);
+        affecterManager(false);
         allerDansMessage();
         checkMessageDisabled();
     }
