@@ -449,6 +449,84 @@ public class NotificationService {
         saveAndSend(notif);
     }
 
+    public void managerAddingFollowerNotification(User user, Category category){
+        String content = category.getOwner() + " vous a ajouté dans sa catégorie "+category.getName()+". Consultez la rapidement !";
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .category(category)
+                .recipient(user)
+                .type(TypeNotification.MANAGER_ADDING_TEACHER_CATEGORY)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void teacherQuitCategoryNotification(User user, Category category){
+        String content = user.getName() + " souhaite quitter votre catégorie: "+category.getName()+". Accédez rapidement à sa demande !";
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .category(category)
+                .recipient(user)
+                .type(TypeNotification.TEACHER_QUIT_CATEGORY)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void acceptTeacherQuitCategoryNotification(User user, Category category){
+        String content = category.getOwner() + " a accepté votre demande de départ de sa catégorie: "+category.getName();
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .category(category)
+                .recipient(user)
+                .type(TypeNotification.ACCEPTED_TEACHER_QUIT_CATEGORY)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void deniedTeacherQuitCategoryNotification(User user, DeletionCategoryRequest deletionCategoryRequest){
+        Category category = deletionCategoryRequest.getCategory();
+        String content = category.getOwner() + " a refusé votre demande de départ de sa catégorie: "+category.getName()+". Au motif: "+ deletionCategoryRequest.getRejectionReason();
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .category(category)
+                .recipient(user)
+                .type(TypeNotification.DENIED_TEACHER_QUIT_CATEGORY)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+
+    @Transactional
+    public void notifyFollowersCategoryDeleted(Category category) {
+        String content = "La catégorie « " + category.getName() + " » à laquelle vous étiez abonné a été supprimée.";
+
+        for (User follower : category.getFollowers()) {
+
+            if (category.getOwner() != null && !follower.getId().equals(category.getOwner().getId())) {
+
+                Notification notif = Notification.builder()
+                        .content(content)
+                        .isRead(false)
+                        .recipient(follower)
+                        .type(TypeNotification.DELETING_CATEGORY)
+                        .build();
+
+                saveAndSend(notif);
+            }
+        }
+    }
+
 
     /**
      * Marquer une notification comme lu
@@ -486,6 +564,7 @@ public class NotificationService {
                 .type(notification.getType())
                 .isRead(notification.isRead())
                 .sendingHour(LocalDateTime.now())
+                .categoryId(notification.getCategory().getId())
                 .content(notification.getContent())
                 .officialLinkRequestId(notification.getOfficialLinkRequest() != null ? notification.getOfficialLinkRequest().getId() : null)
                 .issueId(notification.getIssue() != null ? notification.getIssue().getId() : null)
@@ -495,4 +574,6 @@ public class NotificationService {
                 .requestManagerId(notification.getRequestManager() != null ? notification.getRequestManager().getRequestId(): null)
                 .build();
     }
+
+
 }

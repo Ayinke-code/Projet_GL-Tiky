@@ -35,6 +35,7 @@ public class CategoryService {
     private final IssueRepository issueRepository;
     private final IssueService issueService;
     private final DeletionCategoryRequestRepository deletionCategoryRequestRepository;
+    private final NotificationService notificationService;
 
     /**
      * Récupère toutes les catégories.
@@ -151,6 +152,8 @@ public class CategoryService {
         category.getFollowers().add(user);
 
         categoryRepository.save(category);
+
+        notificationService.managerAddingFollowerNotification(user, category);
     }
 
     /**
@@ -163,6 +166,8 @@ public class CategoryService {
     public void deleteById(Long id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new CategoryNotFoundException(id));
+        //notification
+        notificationService.notifyFollowersCategoryDeleted(category);
 
         // Délègue la suppression des issues et leurs dépendances
         issueService.deleteAllByCategory(category);

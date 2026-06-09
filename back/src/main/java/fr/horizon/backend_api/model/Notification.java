@@ -60,6 +60,11 @@ public class Notification extends BaseEntity{
     @JoinColumn(name ="issueRelation_id")
     private IssueRelation issueRelation;
 
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name ="issueRelation_id")
+    private Category category;
+
 
 
 }

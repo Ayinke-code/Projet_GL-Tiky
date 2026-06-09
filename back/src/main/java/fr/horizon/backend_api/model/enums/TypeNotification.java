@@ -45,7 +45,16 @@ public enum TypeNotification {
     // notifier les followers de l'issue d'un lien officiel
     FOLLOWERS_LINK,
     // notifier le manager lorsque la demande est accepté
-    MANAGER_RESPONSE_LINK_REQUEST
-
+    MANAGER_RESPONSE_LINK_REQUEST,
+    // notifier un teacher qu'un manager l'a rajoute dans sa categorie
+    MANAGER_ADDING_TEACHER_CATEGORY,
+    // notifier qu'un teacher veuille partir de la category
+    TEACHER_QUIT_CATEGORY,
+    // notifier qu'un category owner a accepté le départ
+    ACCEPTED_TEACHER_QUIT_CATEGORY,
+    // notifier qu'un category owner a refusé le départ
+    DENIED_TEACHER_QUIT_CATEGORY,
+    // catégorie supprimé
+    DELETING_CATEGORY
 
 }
