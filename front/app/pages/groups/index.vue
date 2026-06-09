@@ -10,8 +10,9 @@
                 @click="showModal = true"
                 icon="i-lucide-plus"
                 label="Créer un groupe"
-                color="primary"
+                color="secondary"
                 size="lg"
+                class="rounded-full font-bold"
             />
         </div>
 
