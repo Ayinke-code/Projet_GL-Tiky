@@ -154,12 +154,10 @@ const { users, fetchUserByRoles } = useUsers()
 const { user, ready } = useAuth()
 const selectedTeacherId = ref('')
 
-// Vérifie si l'utilisateur courant est le propriétaire de la catégorie
 const isOwner = computed(() => {
   return category.value?.category?.ownerId === user.value?.id
 })
 
-// Vérifie si l'utilisateur courant est un follower de la catégorie
 const isFollower = computed(() => {
   if (!category.value?.followers || !user.value) return false
   return category.value.followers.some(f => f.id === user.value.id)
@@ -179,7 +177,6 @@ const checkTeacherIssueManager = (id) => {
   return userToCheck?.isIssueManagerInCategory ?? false
 }
 
-// Fonction utilitaire pour recharger les données (appelée après une acceptation par le manager)
 const refreshData = async () => {
   await fetchCategoryById(categorieId)
 }

@@ -175,7 +175,6 @@ const handleClick = (cat) => {
   const isOwner = user.value.name === cat.ownerName
   const isFollower = checkIfUserIsFollower(cat)
 
-  // On bloque si ce n'est ni le propriétaire, ni un follower
   if (!isOwner && !isFollower) return
 
   if (isTeacher && cat?.id) {
