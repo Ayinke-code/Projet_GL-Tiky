@@ -4,6 +4,7 @@ import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -40,6 +41,14 @@ public interface IssueRepository extends JpaRepository<Issue, Long> {
             @Param("user") User user,
             @Param("openStatuses") List<IssueStatus> openStatuses
     );
+
+    @Modifying
+    @Query("UPDATE Issue i SET i.mergedInto = null WHERE i.mergedInto.id = :issueId")
+    void clearMergedIntoReference(@Param("issueId") Long issueId);
+
+    @Modifying
+    @Query("UPDATE Issue i SET i.mergedInto = null WHERE i.mergedInto.id IN :issueIds")
+    void clearMergedIntoReferences(@Param("issueIds") List<Long> issueIds);
 
 }
 

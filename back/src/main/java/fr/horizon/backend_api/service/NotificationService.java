@@ -274,7 +274,7 @@ public class NotificationService {
     }
 
     public void closeIssueNotification(User user, Issue issue){
-        String content ="votre ticket: "+ issue.getTitle()+ " vient d'être cloturé, consultez le vite";
+        String content ="Votre ticket: "+ issue.getTitle()+ " vient d'être cloturé, consultez le vite";
 
         Notification notif = Notification.builder()
                 .isRead(false)
@@ -288,7 +288,7 @@ public class NotificationService {
     }
 
     public void openIssueNotification(User user, Issue issue){
-        String content ="votre ticket: "+ issue.getTitle()+ " vient d'être rouvert, consultez le vite";
+        String content ="Votre ticket: "+ issue.getTitle()+ " vient d'être rouvert, consultez le vite";
 
         Notification notif = Notification.builder()
                 .isRead(false)
@@ -444,6 +444,77 @@ public class NotificationService {
                 .issue(source)
                 .recipient(user)
                 .type(TypeNotification.MANAGER_RESPONSE_LINK_REQUEST)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void mergeRequestNotification(MergeRequest mergeRequest) {
+        User requester = mergeRequest.getRequester();
+
+        User targetToNotify = (mergeRequest.getSourceIssue().getManager() != null && mergeRequest.getSourceIssue().getManager().getId().equals(requester.getId()))
+                ? mergeRequest.getTargetIssue().getManager()
+                : mergeRequest.getSourceIssue().getManager();
+
+        if (targetToNotify != null) {
+            String content = requester.getName() + " souhaite fusionner son ticket: " + mergeRequest.getSourceIssue().getTitle() + " avec votre ticket: " + mergeRequest.getTargetIssue().getTitle() + ". Répondez-lui vite !";
+
+            Notification notif = Notification.builder()
+                    .content(content)
+                    .isRead(false)
+                    .mergeRequest(mergeRequest)
+                    .issue(mergeRequest.getTargetIssue())
+                    .recipient(targetToNotify)
+                    .type(TypeNotification.MERGE_REQUEST_MANAGER)
+                    .build();
+
+            saveAndSend(notif);
+        }
+    }
+
+    public void mergeRequestDeniedNotification(MergeRequest mergeRequest){
+        User requester = mergeRequest.getRequester();
+        User target = mergeRequest.getTargetManager();
+        String content = target.getName() + " a refusé votre demande de fusion entre votre ticket: "+mergeRequest.getTargetIssue().getTitle()+" et "+mergeRequest.getSourceIssue().getTitle()+". Pour motif: "+mergeRequest.getRejectionReason()+".";
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .mergeRequest(mergeRequest)
+                .issue(mergeRequest.getSourceIssue())
+                .recipient(requester)
+                .type(TypeNotification.MERGE_REQUEST_DENIED)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void mergeRequestAcceptedNotification(MergeRequest mergeRequest){
+        User requester = mergeRequest.getRequester();
+        User target = mergeRequest.getTargetManager();
+        String content = target.getName() + " a accepté votre demande de fusion entre votre ticket: "+mergeRequest.getSourceIssue().getTitle()+" et "+mergeRequest.getTargetIssue().getTitle()+". Consultez le nouveau ticket !";
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .mergeRequest(mergeRequest)
+                .issue(mergeRequest.getTargetIssue())
+                .recipient(requester)
+                .type(TypeNotification.MERGE_REQUEST_ACCEPTED)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void mergeRequestNotifieFollower(User user,Issue issue){
+        String content = "Le ticket: "+issue.getTitle()+" que vous suivez, a été fusionné, consultez le nouveau ticket rapidement !";
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.MERGE_REQUEST_FOLLOWERS)
                 .build();
 
         saveAndSend(notif);

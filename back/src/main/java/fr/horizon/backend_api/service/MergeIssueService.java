@@ -13,8 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +30,7 @@ public class MergeIssueService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final DocumentRepository documentRepository;
+    private final NotificationService notificationService;
 
     private static final String USER_NOT_FOUND = "Utilisateur introuvable";
 
@@ -78,10 +81,13 @@ public class MergeIssueService {
             mergeRequestRepository.save(request);
 
             mergeIssues(source, target);
+            notifyMergeFollowers(source, target, requester);
+
             return mapToDto(request);
         }
 
         MergeRequest saved = mergeRequestRepository.save(request);
+        notificationService.mergeRequestNotification(request);
         return mapToDto(saved);
     }
 
@@ -115,6 +121,7 @@ public class MergeIssueService {
             request.setStatus(MergeRequestStatus.REJECTED);
             request.setRejectionReason(reason);
             MergeRequest saved = mergeRequestRepository.save(request);
+            notificationService.mergeRequestDeniedNotification(request);
             return mapToDto(saved);
         }
 
@@ -127,6 +134,7 @@ public class MergeIssueService {
         if (sourceApproved && targetApproved) {
             request.setStatus(MergeRequestStatus.ACCEPTED);
             mergeIssues(request.getSourceIssue(), request.getTargetIssue());
+            notificationService.mergeRequestAcceptedNotification(request);
         }
 
         MergeRequest saved = mergeRequestRepository.save(request);
@@ -250,5 +258,38 @@ public class MergeIssueService {
             dto.setTargetManagerId(request.getTargetIssue().getManager().getId());
         }
         return dto;
+    }
+
+    /**
+     * Méthode pour notifier les followers des deux tickets fusionnés sans doublons.
+     * Exclut l'auteur de l'action ainsi que les managers de chaque ticket.
+     */
+    private void notifyMergeFollowers(Issue source, Issue target, User actor) {
+        Set<Long> excludedUserIds = new HashSet<>();
+
+        // Exclusion de l'acteur et des managers concernés
+        excludedUserIds.add(actor.getId());
+        if (source.getManager() != null) excludedUserIds.add(source.getManager().getId());
+        if (target.getManager() != null) excludedUserIds.add(target.getManager().getId());
+
+        if (source.getFollowers() != null) {
+            for (IssueFollower follower : source.getFollowers()) {
+                User user = follower.getUser();
+                if (!excludedUserIds.contains(user.getId())) {
+                    notificationService.mergeRequestNotifieFollower(user, source);
+                    excludedUserIds.add(user.getId());
+                }
+            }
+        }
+
+        if (target.getFollowers() != null) {
+            for (IssueFollower follower : target.getFollowers()) {
+                User user = follower.getUser();
+                if (!excludedUserIds.contains(user.getId())) {
+                    notificationService.mergeRequestNotifieFollower(user, target);
+                    excludedUserIds.add(user.getId());
+                }
+            }
+        }
     }
 }
