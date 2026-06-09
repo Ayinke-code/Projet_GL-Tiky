@@ -204,14 +204,25 @@ public class MergeIssueService {
             messageRepository.saveAll(sourceMessages);
         }
 
+        // on associe les documents de la source
+        if (source.getDocuments() != null && !source.getDocuments().isEmpty()) {
+            List<Document> sourceDocuments = new java.util.ArrayList<>(source.getDocuments());
+
+            for (Document doc : sourceDocuments) {
+                doc.setIssue(target);
+
+                if (target.getDocuments() == null) {
+                    target.setDocuments(new java.util.ArrayList<>());
+                }
+                target.getDocuments().add(doc);
+            }
+
+            source.getDocuments().clear();
+        }
+
         // on passe la source a privé si le ticket avant était privé
         if(source.isPrivate()){
             target.setPrivate(true);
-        }
-
-        // on associe les documents de la source
-        if(!source.getDocuments().isEmpty()){
-            target.setDocuments(source.getDocuments());
         }
 
         issueRepository.save(source);
