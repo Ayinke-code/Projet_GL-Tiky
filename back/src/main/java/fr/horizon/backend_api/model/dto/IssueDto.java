@@ -43,4 +43,6 @@ public class IssueDto {
     private List<DocumentDto> documents;
     //follower
     private int followersCount;
+    // merging
+    private LocalDateTime mergedAt;
 }

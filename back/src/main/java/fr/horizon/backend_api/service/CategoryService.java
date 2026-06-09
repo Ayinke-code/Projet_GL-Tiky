@@ -1,5 +1,6 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.exception.CategoryNameAlreadyExistsOfThisTypeException;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.*;
@@ -7,15 +8,13 @@ import fr.horizon.backend_api.model.dto.*;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.RoleEnum;
-import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.CategoryRequestRepository;
-import fr.horizon.backend_api.repository.IssueRepository;
-import fr.horizon.backend_api.repository.UserRepository;
+import fr.horizon.backend_api.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,6 +33,8 @@ public class CategoryService {
     private final UserRepository userRepository;
     private final CategoryRequestRepository categoryRequestRepository;
     private final IssueRepository issueRepository;
+    private final IssueService issueService;
+    private final DeletionCategoryRequestRepository deletionCategoryRequestRepository;
 
     /**
      * Récupère toutes les catégories.
@@ -72,6 +73,13 @@ public class CategoryService {
 
         User owner = userRepository.findById(dto.getOwnerId())
                 .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
+
+        // Check si une catégorie n'existe pas déja avec ce nom et de type ISSUE
+        if (categoryRepository.existsByNameIgnoreCaseAndCategoryType(
+                dto.getName(),
+                CategoryType.ISSUE)) {
+            throw new CategoryNameAlreadyExistsOfThisTypeException(dto.getName());
+        }
 
         Category category = Category.builder()
                 .name(dto.getName())
@@ -156,11 +164,14 @@ public class CategoryService {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new CategoryNotFoundException(id));
 
-        List<CategoryRequest> requests = categoryRequestRepository.findAllByCategory(category);
-        List<Issue> issues = issueRepository.findByCategoryId(category.getId());
+        // Délègue la suppression des issues et leurs dépendances
+        issueService.deleteAllByCategory(category);
 
-        issueRepository.deleteAll(issues);
-        categoryRequestRepository.deleteAll(requests);
+        // Supprime les demandes de catégorie
+        categoryRequestRepository.deleteAllByCategory(category);
+
+        // suppresion des demandes de désinsciption
+        deletionCategoryRequestRepository.deleteById(id);
 
         categoryRepository.delete(category);
     }
@@ -193,6 +204,9 @@ public class CategoryService {
                 .categoryType(category.getCategoryType())
                 .ownerName(category.getOwner() != null ? category.getOwner().getName() : null)
                 .ownerId(category.getOwner() != null ? category.getOwner().getId() : null)
+                .followerIds(category.getFollowers() != null ?
+                        category.getFollowers().stream().map(User::getId).collect(Collectors.toSet()) :
+                        new HashSet<>())
                 .build();
     }
 

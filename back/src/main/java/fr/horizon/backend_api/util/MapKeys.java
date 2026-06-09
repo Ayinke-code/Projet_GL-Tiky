@@ -27,6 +27,8 @@ public final class MapKeys {
     public static final String CREATED_AT = "createdAt";
     public static final String REPLY_TO_MESSAGE_ID = "replyToMessageId";
     public static final String REPLY_TO_MESSAGE = "replyToMessage";
+    public static final String IS_MERGED = "isMerged";
+    public static final String ORIGINAL_ISSUE_ID = "originalIssueId";
 
     public static final String CONVERSATION = "conversation";
     public static final String CONVERSATION_ROLE = "conversationRole";

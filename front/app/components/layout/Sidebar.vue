@@ -1,7 +1,7 @@
 <template>
   <aside class="w-64 bg-slate-900 text-white flex flex-col h-screen border-r border-slate-800" aria-label="Barre latérale">
     <div class="h-16 flex items-center px-6 border-b border-slate-800 font-bold text-xl tracking-wider">
-      <span class="text-indigo-400 font-extrabold text-2xl mr-2 tracking-tighter">tk.</span> Tiky
+      <span class="text-indigo-400 font-extrabold text-2xl mr-2 tracking-tighter">Tiky</span>
     </div>
 
     <ClientOnly>
@@ -116,6 +116,18 @@
           :class="isActive('/sessions') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
           <i class="fa-solid fa-calendar-check w-6" aria-hidden="true"></i>
           <span class="font-medium">Mes sessions</span>
+        </NuxtLink>
+        <!-- Mes sessions (teacher / admin) -->
+        <NuxtLink
+          v-if="user?.roles?.includes('ADMIN')"
+          to="/admin"
+          class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200 mt-5"
+          :class="isActive('/admin')
+            ? 'bg-purple-600 text-white shadow-lg'
+            : 'text-purple-300 hover:bg-purple-900/30 hover:text-white'"
+        >
+          <i class="fa-solid fa-shield-halved w-6" aria-hidden="true"></i>
+          <span class="font-medium">Administration</span>
         </NuxtLink>
 
       </nav>

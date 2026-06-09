@@ -3,7 +3,7 @@
     <UCard class="max-w-2xl mx-auto">
       <template #header>
         <div class="flex items-center gap-2">
-          <UButton to="/issues" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
+          <UButton to="/issues" variant="ghost" color="secondary" icon="i-lucide-arrow-left" size="sm" />
           <h1 class="text-2xl font-bold">Créer un ticket</h1>
         </div>
       </template>
@@ -72,10 +72,10 @@
 
         <!-- Boutons -->
         <div class="flex gap-2 justify-end pt-4 border-t">
-          <UButton to="/issues" id="btn-issue-cancel" variant="outline" icon="i-lucide-x">
+          <UButton to="/issues" id="btn-issue-cancel" color="error" variant="outline" icon="i-lucide-x">
             Annuler
           </UButton>
-          <UButton type="submit" id= "btn-issue-create" icon="i-lucide-check" :loading="submitting" class="cursor-pointer">
+          <UButton type="submit" id="btn-issue-create" color="secondary" icon="i-lucide-check" :loading="submitting" class="cursor-pointer">
             Créer
           </UButton>
         </div>

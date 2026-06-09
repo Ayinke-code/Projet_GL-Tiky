@@ -21,7 +21,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -110,6 +109,32 @@ public class DocumentService {
         }
 
         documentRepository.deleteByIssueId(issueId);
+    }
+
+    /**
+     * Supprime tous les documents d'une liste d'issue
+     */
+    @Transactional
+    public void deleteDocumentsByIssueIdIn(List<Long> issueIds) {
+        List<Document> documents = documentRepository.findByIssueIdIn(issueIds);
+
+        if (documents.isEmpty()) return;
+
+        for (Document document : documents) {
+            try {
+                Path filePath = Paths.get(document.getPath());
+                if (Files.exists(filePath)) {
+                    Files.delete(filePath);
+                }
+            } catch (IOException e) {
+                throw new DocumentDeletionException(
+                        "Erreur lors de la suppression du fichier : " + document.getStoredName(),
+                        e
+                );
+            }
+        }
+
+        documentRepository.deleteByIssueIdIn(issueIds);
     }
 
     /**

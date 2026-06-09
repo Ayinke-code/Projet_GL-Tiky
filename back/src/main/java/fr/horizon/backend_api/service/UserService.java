@@ -6,19 +6,19 @@ import fr.horizon.backend_api.exception.RoleNotFoundException;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
-import fr.horizon.backend_api.model.dto.UserDto;
-import fr.horizon.backend_api.model.dto.UserFollowerDto;
-import fr.horizon.backend_api.model.dto.UserRefDto;
-import fr.horizon.backend_api.model.dto.UserRequestDto;
+import fr.horizon.backend_api.model.dto.*;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -44,7 +44,10 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final IssueRepository issueRepository;
     private final CategoryRepository categoryRepository;
+    private final CategoryService categoryService;
     private final JwtToken jwtToken;
+
+    private final EntityManager entityManager;
 
     /**
      * Crée et persiste un nouvel utilisateur.
@@ -137,8 +140,51 @@ public class UserService {
      *
      * @param id identifiant utilisateur
      */
+    @Transactional
     public void deleteById(Long id) {
-        userRepository.deleteById(id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Utilisateur introuvable"));
+
+        // Supprime uniquement les catégories de type ISSUE dont l'utilisateur est owner
+        List<Category> ownedCategories = categoryRepository.findAllByOwnerAndCategoryType(user, CategoryType.ISSUE);
+        for (Category category : ownedCategories) {
+            categoryService.deleteById(category.getId());
+        }
+
+        entityManager.flush();
+        entityManager.clear();
+
+        userRepository.delete(user);
+    }
+
+    /**
+     * Met à jour les rôles d'un utilisateur existant.
+     *
+     * @param id  identifiant de l'utilisateur
+     * @param dto DTO contenant la nouvelle liste de rôles (noms)
+     * @return utilisateur mis à jour sous forme de DTO
+     * @throws EntityNotFoundException  si l'utilisateur n'existe pas
+     * @throws RoleNotFoundException    si un rôle fourni n'existe pas en base
+     */
+    public UserDto updateUserRoles(Long id, UpdateRolesDto dto) {
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Utilisateur introuvable"));
+
+        if (dto.getRoles() == null || dto.getRoles().isEmpty()) {
+            throw new InvalidUserRolesException("L'utilisateur doit avoir au moins un rôle");
+        }
+
+        List<Role> roles = roleRepository.findByNameIn(dto.getRoles());
+
+        if (roles.size() != new HashSet<>(dto.getRoles()).size()) {
+            throw new RoleNotFoundException();
+        }
+
+        user.setRoles(new HashSet<>(roles));
+        userRepository.save(user);
+
+        return toDto(user);
     }
 
     /**
