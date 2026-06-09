@@ -120,7 +120,7 @@ class ScenarioTestIT extends BaseSeleniumIT{
         creeTicket(false);
         affecterManager(false);
         allerDansMessage();
-        checkMessageDisabled();
+        envoyerMessage();
     }
 
     @Order(4)
