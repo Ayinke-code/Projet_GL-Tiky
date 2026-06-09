@@ -352,6 +352,9 @@ public class IssueService {
         // Supprime tous les documents liés à l'issue qui va être supprimé
         documentService.deleteDocumentsByIssueId(id);
 
+        // suppresion du lien de fusion
+        issueRepository.clearMergedIntoReference(id);
+
         issueRepository.delete(issue);
     }
 
@@ -376,6 +379,9 @@ public class IssueService {
 
         // Supprime tous les documents liés en une seule requête
         documentService.deleteDocumentsByIssueIdIn(issueIds);
+
+        // suppresion du lien de fusion
+        issueRepository.clearMergedIntoReferences(issueIds);
 
         // Supprime toutes les issues en une seule requête
         issueRepository.deleteAll(issues);

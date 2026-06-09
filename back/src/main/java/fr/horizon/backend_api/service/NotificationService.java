@@ -449,26 +449,32 @@ public class NotificationService {
         saveAndSend(notif);
     }
 
-    public void mergeRequestNotification(MergeRequest mergeRequest){
+    public void mergeRequestNotification(MergeRequest mergeRequest) {
         User requester = mergeRequest.getRequester();
-        User target = mergeRequest.getTargetManager();
-        String content = requester.getName() +" souhaite fusionner son ticket: "+mergeRequest.getSourceIssue().getTitle()+ " avec votre ticket: " + mergeRequest.getTargetIssue().getTitle()+". Répondez lui vite !";
 
-        Notification notif = Notification.builder()
-                .content(content)
-                .isRead(false)
-                .issue(mergeRequest.getTargetIssue())
-                .recipient(target)
-                .type(TypeNotification.MERGE_REQUEST_MANAGER)
-                .build();
+        User targetToNotify = (mergeRequest.getSourceIssue().getManager() != null && mergeRequest.getSourceIssue().getManager().getId().equals(requester.getId()))
+                ? mergeRequest.getTargetIssue().getManager()
+                : mergeRequest.getSourceIssue().getManager();
 
-        saveAndSend(notif);
+        if (targetToNotify != null) {
+            String content = requester.getName() + " souhaite fusionner son ticket: " + mergeRequest.getSourceIssue().getTitle() + " avec votre ticket: " + mergeRequest.getTargetIssue().getTitle() + ". Répondez-lui vite !";
+
+            Notification notif = Notification.builder()
+                    .content(content)
+                    .isRead(false)
+                    .issue(mergeRequest.getTargetIssue())
+                    .recipient(targetToNotify)
+                    .type(TypeNotification.MERGE_REQUEST_MANAGER)
+                    .build();
+
+            saveAndSend(notif);
+        }
     }
 
     public void mergeRequestDeniedNotification(MergeRequest mergeRequest){
         User requester = mergeRequest.getRequester();
         User target = mergeRequest.getTargetManager();
-        String content = target + "a refusé votre demande de fusion entre votre ticket: "+mergeRequest.getTargetIssue()+" et "+mergeRequest.getSourceIssue()+". Pour motif: "+mergeRequest.getRejectionReason()+".";
+        String content = target.getName() + " a refusé votre demande de fusion entre votre ticket: "+mergeRequest.getTargetIssue().getTitle()+" et "+mergeRequest.getSourceIssue().getTitle()+". Pour motif: "+mergeRequest.getRejectionReason()+".";
 
         Notification notif = Notification.builder()
                 .content(content)
@@ -484,7 +490,7 @@ public class NotificationService {
     public void mergeRequestAcceptedNotification(MergeRequest mergeRequest){
         User requester = mergeRequest.getRequester();
         User target = mergeRequest.getTargetManager();
-        String content = target + "a accepté votre demande de fusion entre votre ticket: "+mergeRequest.getTargetIssue()+" et "+mergeRequest.getSourceIssue()+". Consultez le nouveau ticket !";
+        String content = target.getName() + " a accepté votre demande de fusion entre votre ticket: "+mergeRequest.getSourceIssue().getTitle()+" et "+mergeRequest.getTargetIssue().getTitle()+". Consultez le nouveau ticket !";
 
         Notification notif = Notification.builder()
                 .content(content)
