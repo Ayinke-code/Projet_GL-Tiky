@@ -23,4 +23,5 @@ public class NotificationDto {
     private String eventCategory;
     private LocalDateTime sendingHour;
     private Long requestManagerId;
+    private Long officialLinkRequestId;
 }

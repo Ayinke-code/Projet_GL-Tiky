@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -335,6 +336,57 @@ public class NotificationService {
         saveAndSend(notif);
     }
 
+    /**
+     * Notifier le manager lorsque d'une demande de lien est fait (cas étudiant)
+     */
+    @Transactional
+    public void newLinkRequestNotification(User user, OfficialLinkRequest officialLinkRequest) {
+        Issue userIssue = officialLinkRequest.getTargetIssue();
+        Issue otherIssue = officialLinkRequest.getSourceIssue();
+
+        boolean isUserManagerOfSource = officialLinkRequest.getSourceIssue().getManager() != null
+                && officialLinkRequest.getSourceIssue().getManager().getId().equals(user.getId());
+
+        if (isUserManagerOfSource) {
+            userIssue = officialLinkRequest.getSourceIssue();
+            otherIssue = officialLinkRequest.getTargetIssue();
+        }
+
+        String content = "Plusieurs utilisateurs ont lié votre ticket: " + userIssue.getTitle() +
+                " avec le ticket: " + otherIssue.getTitle() + ". Consultez-le vite !";
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .officialLinkRequest(officialLinkRequest)
+                .issue(userIssue)
+                .recipient(user)
+                .type(TypeNotification.SUBSCRIBERS_NEW_LINK)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    @Transactional
+    public void newLinkRequestManagerNotification(User user, OfficialLinkRequest officialLinkRequest, User target){
+        String content = user.getName() + " demande une liaison entre votre ticket: "+ officialLinkRequest.getTargetIssue()+ " et " + officialLinkRequest.getSourceIssue();
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .officialLinkRequest(officialLinkRequest)
+                .issue(officialLinkRequest.getTargetIssue())
+                .recipient(target)
+                .type(TypeNotification.MANAGER_LINK_REQUEST)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+
+    @Transactional
+    public void followersNewLinkNotification()
+
 
     /**
      * Marquer une notification comme lu
@@ -373,6 +425,7 @@ public class NotificationService {
                 .isRead(notification.isRead())
                 .sendingHour(LocalDateTime.now())
                 .content(notification.getContent())
+                .officialLinkRequestId(notification.getOfficialLinkRequest() != null ? notification.getOfficialLinkRequest().getId() : null)
                 .issueId(notification.getIssue() != null ? notification.getIssue().getId() : null)
                 .eventId(notification.getEvent() != null ? notification.getEvent().getId() : null)
                 .eventCategory(notification.getEvent() != null && notification.getEvent().getCategoryType() != null

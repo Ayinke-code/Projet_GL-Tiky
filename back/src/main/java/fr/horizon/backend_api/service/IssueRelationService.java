@@ -30,6 +30,7 @@ public class IssueRelationService {
     private final IssueRepository issueRepository;
     private final IssueFollowerRepository issueFollowerRepository;
     private final OfficialLinkRequestRepository linkRequestRepository;
+    private final NotificationService notificationService;
 
     private static final int OFFICIAL_LINK_THRESHOLD = 5;
 
@@ -51,7 +52,7 @@ public class IssueRelationService {
 
         boolean isManagerOfBoth = isSourceManager && isTargetManager;
 
-        // --- SCÉNARIO 2 : L'utilisateur est étudiant ou gère les DEUX tickets ---
+        // --- SCÉNARIO 2 : L'utilisateur gère les DEUX tickets ---
         if (!isManagerOfBoth) {
             ensureStudentFollowsSource(user, source);
         }
@@ -145,6 +146,10 @@ public class IssueRelationService {
                     .build();
 
             linkRequestRepository.save(request);
+
+            notificationService.newLinkRequestNotification(source.getManager(), request);
+            notificationService.newLinkRequestNotification(target.getManager(), request);
+
         }
     }
 
@@ -153,9 +158,6 @@ public class IssueRelationService {
      * Le côté du manager initiateur est automatiquement marqué comme approuvé.
      */
     private void createOrUpdateDirectManagerRequest(Issue source, Issue target, RelationType type, boolean isSourceManager, boolean isTargetManager) {
-        // Vérifie si une demande similaire est déjà en cours
-        // Note : Il faudrait idéalement une méthode dans votre repository pour récupérer la demande existante au lieu d'un simple exists()
-        // Pour l'exemple, on crée une nouvelle demande directement.
 
         OfficialLinkRequest request = OfficialLinkRequest.builder()
                 .sourceIssue(source)
@@ -166,6 +168,7 @@ public class IssueRelationService {
                 .targetManagerApproved(isTargetManager ? true : null)
                 .build();
 
+        notificationService.newLinkRequestManagerNotification(source.getManager(), request, target.getManager());
         linkRequestRepository.save(request);
     }
 
@@ -270,6 +273,7 @@ public class IssueRelationService {
         int linkCount = relationRepository.countNonManagerRelationsByType(source.getId(), target.getId(), type);
         if (linkCount >= OFFICIAL_LINK_THRESHOLD) {
             createOfficialLinkRequestIfNotExists(source, target, type);
+
         }
     }
 
