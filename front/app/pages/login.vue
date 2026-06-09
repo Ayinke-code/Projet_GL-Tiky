@@ -26,16 +26,16 @@
           <!-- Language switcher -->
           <div class="flex items-center gap-2">
             <button
-              @click="setLocale('fr')"
               :class="{ 'font-bold': locale === 'fr' }"
               class="px-3 py-1 rounded text-sm border"
+              @click="setLocale('fr')"
             >
               fr
             </button>
             <button
-              @click="setLocale('en')"
               :class="{ 'font-bold': locale === 'en' }"
               class="px-3 py-1 rounded text-sm border"
+              @click="setLocale('en')"
             >
               en
             </button>
@@ -43,8 +43,8 @@
         </div>
 
         <LoginForms
-          @submit="handleLogin"
           :error="error"
+          @submit="handleLogin"
         />
       </div>
     </div>

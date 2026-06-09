@@ -11,8 +11,8 @@
 
   <!-- Form -->
   <form
-    @submit.prevent="onSubmit"
     class="space-y-4"
+    @submit.prevent="onSubmit"
   >
     <!-- Email/Username -->
     <div>
@@ -22,8 +22,8 @@
       <input
         v-model="form.email"
         type="text"
-        :placeholder="t('login_page.email_placeholder')"
         id="input-email"
+        :placeholder="t('login_page.email_placeholder')"
         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
         required
       >
@@ -37,8 +37,8 @@
       <input
         v-model="form.password"
         type="password"
-        :placeholder="t('login_page.password_label')"
         id="input-password"
+        :placeholder="t('login_page.password_label')"
         class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
         required
       >
@@ -55,8 +55,8 @@
     <!-- Submit Button -->
     <button
       type="submit"
-      :disabled="!form.email || !form.password"
       id="btn-connexion"
+      :disabled="!form.email || !form.password"
       class="w-full px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition duration-200 cursor-pointer"
     >
       {{ t('login_page.login_button') }}

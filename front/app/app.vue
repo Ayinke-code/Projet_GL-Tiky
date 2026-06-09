@@ -6,9 +6,6 @@
     <div class="flex flex-col flex-1 relative">
       <!-- Header -->
       <Header v-if="!isAuthPage" />
-      <div v-else-if="route.path === '/login'" class="fixed top-4 right-4 z-[99999]">
-        <LanguageSelector />
-      </div>
 
       <main class="flex-1 overflow-y-auto">
         <NuxtPage />
@@ -20,7 +17,6 @@
 <script setup>
 import Header from '~/components/layout/Header.vue'
 import Sidebar from '~/components/layout/Sidebar.vue'
-import LanguageSelector from '~/components/layout/LanguageSelector.vue'
 
 const route = useRoute()
 const { startSync, stopSync } = useIssueSync()

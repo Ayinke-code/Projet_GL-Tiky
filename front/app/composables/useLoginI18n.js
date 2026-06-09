@@ -1,15 +1,12 @@
 import { ref } from 'vue'
-import en from '~/i18n/locales/en.json'
-import fr from '~/i18n/locales/fr.json'
-
+import en from '../../i18n/locales/en.json'
+import fr from '../../i18n/locales/fr.json'
 const messages = {
   en,
   fr
 }
-
 // shared reactive locale across imports
 const locale = ref('fr')
-
 function t(path) {
   if (!path) return ''
   const parts = path.split('.')
@@ -20,7 +17,6 @@ function t(path) {
   }
   return node ?? path
 }
-
 export function useLoginI18n() {
   return {
     locale,
@@ -28,4 +24,3 @@ export function useLoginI18n() {
     setLocale: (l) => { locale.value = l }
   }
 }
-
