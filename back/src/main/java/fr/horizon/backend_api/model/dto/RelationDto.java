@@ -22,4 +22,5 @@ public class RelationDto {
     private LocalDateTime createdAt;
     private boolean manager;
     private Long createdById;
+    private boolean merged;
 }

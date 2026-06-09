@@ -234,6 +234,13 @@ public class IssueRelationService {
      * Convertit une entité IssueRelation en DTO de transfert.
      */
     private RelationDto mapToDto(IssueRelation relation) {
+
+        Issue source = relation.getSourceIssue();
+        Issue target = relation.getTargetIssue();
+
+        boolean merged = (source.isMerged() && source.getMergedInto() != null && source.getMergedInto().getId().equals(target.getId()))
+                || (target.isMerged() && target.getMergedInto() != null && target.getMergedInto().getId().equals(source.getId()));
+
         RelationDto dto = new RelationDto();
         dto.setId(relation.getId());
         dto.setSourceIssueId(relation.getSourceIssue().getId());
@@ -244,6 +251,7 @@ public class IssueRelationService {
         dto.setManager(relation.isManager());
         dto.setCreatedById(relation.getCreatedBy() != null ? relation.getCreatedBy().getId() : null);
         dto.setCreatedAt(relation.getCreatedAt());
+        dto.setMerged(merged);
         return dto;
     }
 

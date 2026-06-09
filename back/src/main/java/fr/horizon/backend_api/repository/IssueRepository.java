@@ -30,9 +30,12 @@ public interface IssueRepository extends JpaRepository<Issue, Long> {
     );
 
     @Query("SELECT DISTINCT i FROM Issue i " +
-            "WHERE i.createdBy = :user " +
-            "OR (i.isPrivate = false AND i.status IN :openStatuses) " +
-            "OR i.id IN (SELECT f.issue.id FROM IssueFollower f WHERE f.user = :user)")
+            "WHERE i.merged = false " +
+            "AND (" +
+            "   i.createdBy = :user " +
+            "   OR (i.isPrivate = false AND i.status IN :openStatuses) " +
+            "   OR i.id IN (SELECT f.issue.id FROM IssueFollower f WHERE f.user = :user)" +
+            ")")
     List<Issue> findDisplayableIssues(
             @Param("user") User user,
             @Param("openStatuses") List<IssueStatus> openStatuses
