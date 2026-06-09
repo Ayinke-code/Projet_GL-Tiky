@@ -246,6 +246,33 @@ const uiConfig = computed(() => {
         iconPath: 'M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244'
       }
 
+    // --- FUSIONS DE TICKETS ---
+    case 'MERGE_REQUEST_MANAGER':
+      return {
+        title: 'Demande de Fusion',
+        textColor: 'text-orange-500',
+        iconPath: 'M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75'
+      }
+    case 'MERGE_REQUEST_DENIED':
+      return {
+        title: 'Fusion Refusée',
+        textColor: 'text-red-500',
+        iconPath: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'
+      }
+    case 'MERGE_REQUEST_ACCEPTED':
+      return {
+        title: 'Fusion Acceptée',
+        textColor: 'text-emerald-500',
+        iconPath: 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+      }
+
+    case 'MERGE_REQUEST_FOLLOWERS':
+      return {
+        title: 'Ticket Fusionné',
+        textColor: 'text-violet-600',
+        iconPath: 'M4.5 4.5l7.5 7.5 7.5-7.5M12 12v7.5'
+      }
+
     // ---CATEGORIES ---
     case 'MANAGER_ADDING_TEACHER_CATEGORY':
       return {

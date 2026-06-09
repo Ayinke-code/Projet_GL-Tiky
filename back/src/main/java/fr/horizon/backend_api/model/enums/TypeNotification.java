@@ -46,6 +46,14 @@ public enum TypeNotification {
     FOLLOWERS_LINK,
     // notifier le manager lorsque la demande est accepté
     MANAGER_RESPONSE_LINK_REQUEST,
+    // notifie le manager lorsqu'un autre manager veut fusionner
+    MERGE_REQUEST_MANAGER,
+    //notifie le manager d'un refus de fusion
+    MERGE_REQUEST_DENIED,
+    //notifie le manager d'une acceptation de fusion
+    MERGE_REQUEST_ACCEPTED,
+    // notifie les followers
+    MERGE_REQUEST_FOLLOWERS,
     // notifier un teacher qu'un manager l'a rajoute dans sa categorie
     MANAGER_ADDING_TEACHER_CATEGORY,
     // notifier qu'un teacher veuille partir de la category

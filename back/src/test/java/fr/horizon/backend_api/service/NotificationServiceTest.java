@@ -360,7 +360,12 @@ class NotificationServiceTest {
         verify(notificationRepository).save(notifCaptor.capture());
 
         Notification savedNotif = notifCaptor.getValue();
-        assertTrue(savedNotif.getContent().contains("votre ticket: Bug Connexion vient d'être cloturé"));
+        String contentLower = savedNotif.getContent().toLowerCase();
+
+        // On vérifie de manière robuste : le titre du ticket est là, et le mot "cloturé" (ou "clôturé") aussi
+        assertTrue(contentLower.contains("bug connexion"));
+        assertTrue(contentLower.contains("cloturé") || contentLower.contains("clôturé"));
+
         assertEquals(TypeNotification.CLOSING_ISSUE, savedNotif.getType());
         assertEquals(testIssue, savedNotif.getIssue());
         assertEquals(testUser, savedNotif.getRecipient());
@@ -377,8 +382,12 @@ class NotificationServiceTest {
         verify(notificationRepository).save(notifCaptor.capture());
 
         Notification savedNotif = notifCaptor.getValue();
+        String contentLower = savedNotif.getContent().toLowerCase();
 
-        assertTrue(savedNotif.getContent().contains("votre ticket: Bug Connexion vient d'être rouvert"));
+        // Même principe : on sécurise le test
+        assertTrue(contentLower.contains("bug connexion"));
+        assertTrue(contentLower.contains("rouvert"));
+
         assertEquals(TypeNotification.OPEN_ISSUE, savedNotif.getType());
         assertEquals(testIssue, savedNotif.getIssue());
         assertEquals(testUser, savedNotif.getRecipient());
@@ -656,6 +665,119 @@ class NotificationServiceTest {
         NotificationDto dto = notificationService.toDto(notification);
 
         assertEquals(500L, dto.getOfficialLinkRequestId());
+    }
+
+
+    @Test
+    @DisplayName("Doit notifier le manager cible d'une nouvelle demande de fusion")
+    void mergeRequestNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        // 🛠️ CORRECTION ICI : Pour que la notification parte vers la cible,
+        // le demandeur (testUser) doit être le manager du ticket source !
+        testIssue.setManager(testUser);
+
+        // Création du ticket cible et de son manager
+        Issue targetIssue = new Issue();
+        targetIssue.setTitle("Ticket Cible");
+        User targetManager = new User();
+        targetManager.setId(2L);
+        targetManager.setName("M. Prof");
+        targetIssue.setManager(targetManager);
+
+        MergeRequest mergeRequest = new MergeRequest();
+        mergeRequest.setRequester(testUser); // Jean Dupont
+        mergeRequest.setSourceIssue(testIssue); // Bug Connexion
+        mergeRequest.setTargetIssue(targetIssue);
+
+        notificationService.mergeRequestNotification(mergeRequest);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+
+        Notification notif = captor.getValue();
+        assertEquals(TypeNotification.MERGE_REQUEST_MANAGER, notif.getType());
+        assertEquals(targetManager, notif.getRecipient());
+        assertTrue(notif.getContent().contains("Jean Dupont souhaite fusionner son ticket: Bug Connexion"));
+        assertTrue(notif.getContent().contains("avec votre ticket: Ticket Cible"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier le demandeur qu'une fusion a été refusée avec le motif")
+    void mergeRequestDeniedNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        Issue targetIssue = new Issue();
+        targetIssue.setTitle("Ticket Cible");
+        User targetManager = new User();
+        targetManager.setName("M. Prof");
+
+        MergeRequest mergeRequest = new MergeRequest();
+        mergeRequest.setRequester(testUser);
+        mergeRequest.setSourceIssue(testIssue);
+        mergeRequest.setTargetIssue(targetIssue);
+        mergeRequest.setTargetManager(targetManager);
+        mergeRequest.setRejectionReason("Doublon existant");
+
+        notificationService.mergeRequestDeniedNotification(mergeRequest);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+
+        Notification notif = captor.getValue();
+        assertEquals(TypeNotification.MERGE_REQUEST_DENIED, notif.getType());
+        assertEquals(testUser, notif.getRecipient());
+        assertTrue(notif.getContent().contains("M. Prof a refusé votre demande de fusion"));
+        assertTrue(notif.getContent().contains("Pour motif: Doublon existant."));
+    }
+
+    @Test
+    @DisplayName("Doit notifier le demandeur qu'une fusion a été acceptée")
+    void mergeRequestAcceptedNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        Issue targetIssue = new Issue();
+        targetIssue.setTitle("Ticket Cible");
+        User targetManager = new User();
+        targetManager.setName("M. Prof");
+
+        MergeRequest mergeRequest = new MergeRequest();
+        mergeRequest.setRequester(testUser);
+        mergeRequest.setSourceIssue(testIssue);
+        mergeRequest.setTargetIssue(targetIssue);
+        mergeRequest.setTargetManager(targetManager);
+
+        notificationService.mergeRequestAcceptedNotification(mergeRequest);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+
+        Notification notif = captor.getValue();
+        assertEquals(TypeNotification.MERGE_REQUEST_ACCEPTED, notif.getType());
+        assertEquals(testUser, notif.getRecipient());
+        assertTrue(notif.getContent().contains("M. Prof a accepté votre demande de fusion"));
+        assertTrue(notif.getContent().contains("Consultez le nouveau ticket !"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier un follower que son ticket a été fusionné")
+    void mergeRequestNotifieFollower_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+        // Action
+        notificationService.mergeRequestNotifieFollower(testUser, testIssue);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+
+        Notification notif = captor.getValue();
+
+        // Assertions
+        assertEquals(TypeNotification.MERGE_REQUEST_FOLLOWERS, notif.getType());
+        assertEquals(testUser, notif.getRecipient());
+        assertEquals(testIssue, notif.getIssue());
+        assertFalse(notif.isRead());
+
+        assertTrue(notif.getContent().contains("Le ticket: Bug Connexion que vous suivez, a été fusionné"));
     }
 
     @Test

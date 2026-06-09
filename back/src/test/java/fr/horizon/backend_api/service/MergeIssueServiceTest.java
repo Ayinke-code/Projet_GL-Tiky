@@ -29,6 +29,7 @@ class MergeIssueServiceTest {
     @Mock private ConversationRepository conversationRepository;
     @Mock private MessageRepository messageRepository;
     @Mock private DocumentRepository documentRepository;
+    @Mock private NotificationService notificationService;
 
     @InjectMocks
     private MergeIssueService mergeIssueService;
