@@ -13,7 +13,7 @@ import lombok.*;
 @AllArgsConstructor
 @Table(name = "deletion_category_request")
 public class DeletionCategoryRequest extends BaseEntity{
-
+sdfdsfsdfsdfsd
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

@@ -10,6 +10,6 @@ public class DeletionCategoryRequestDto {
         private Long requesterId;
         private Long validatorId;
         private Long categoryId;
-        private String status;
+        private String status;dsfsdfsdfsd
         private String rejectionReason;
 }
