@@ -1,12 +1,9 @@
 package fr.horizon.backend_api.service;
 
-import fr.horizon.backend_api.model.Event;
-import fr.horizon.backend_api.model.Issue;
-import fr.horizon.backend_api.model.Notification;
-import fr.horizon.backend_api.model.RequestManager;
-import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.NotificationDto;
 import fr.horizon.backend_api.model.enums.CategoryType;
+import fr.horizon.backend_api.model.enums.LinkRejectionReason;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.model.enums.TypeNotification;
 import fr.horizon.backend_api.repository.NotificationRepository;
@@ -55,6 +52,7 @@ class NotificationServiceTest {
         testUser.setName("Jean Dupont");
 
         User targetTeacher = new User();
+        targetTeacher.setId(2L);
         targetTeacher.setName("M. Prof");
 
         testIssue = new Issue();
@@ -473,5 +471,189 @@ class NotificationServiceTest {
         assertNull(dto.getIssueId());
         assertNull(dto.getEventId());
         assertNull(dto.getRequestManagerId());
+    }
+
+    @Test
+    @DisplayName("Doit notifier les abonnés lorsqu'une demande de liaison est créée")
+    void newLinkRequestNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class)))
+                .thenAnswer(i -> i.getArgument(0));
+
+        OfficialLinkRequest request = new OfficialLinkRequest();
+        request.setSourceIssue(testIssue);
+
+        Issue targetIssue = new Issue();
+        targetIssue.setId(11L);
+        targetIssue.setTitle("Autre Ticket");
+
+        request.setTargetIssue(targetIssue);
+
+        notificationService.newLinkRequestNotification(testUser, request);
+
+        ArgumentCaptor<Notification> captor =
+                ArgumentCaptor.forClass(Notification.class);
+
+        verify(notificationRepository).save(captor.capture());
+
+        Notification notif = captor.getValue();
+
+        assertEquals(TypeNotification.SUBSCRIBERS_NEW_LINK, notif.getType());
+        assertTrue(notif.getContent().contains("Bug Connexion"));
+        assertTrue(notif.getContent().contains("Autre Ticket"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier un manager d'une demande de liaison")
+    void newLinkRequestManagerNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class)))
+                .thenAnswer(i -> i.getArgument(0));
+
+        User target = new User();
+        target.setId(99L);
+        target.setName("Manager cible");
+
+        OfficialLinkRequest request = new OfficialLinkRequest();
+        request.setSourceIssue(testIssue);
+
+        Issue targetIssue = new Issue();
+        targetIssue.setTitle("Ticket B");
+        request.setTargetIssue(targetIssue);
+
+        notificationService.newLinkRequestManagerNotification(
+                testUser,
+                request,
+                target
+        );
+
+        ArgumentCaptor<Notification> captor =
+                ArgumentCaptor.forClass(Notification.class);
+
+        verify(notificationRepository).save(captor.capture());
+
+        Notification notif = captor.getValue();
+
+        assertEquals(TypeNotification.MANAGER_LINK_REQUEST, notif.getType());
+        assertEquals(target, notif.getRecipient());
+        assertTrue(notif.getContent().contains("Jean Dupont"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier les followers lorsqu'une liaison est créée")
+    void followersNewLinkNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class)))
+                .thenAnswer(i -> i.getArgument(0));
+
+        Issue otherIssue = new Issue();
+        otherIssue.setId(99L);
+        otherIssue.setTitle("Ticket lié");
+
+        IssueRelation relation = new IssueRelation();
+        relation.setSourceIssue(testIssue);
+        relation.setTargetIssue(otherIssue);
+
+        notificationService.followersNewLinkNotification(
+                testUser,
+                testIssue,
+                relation
+        );
+
+        ArgumentCaptor<Notification> captor =
+                ArgumentCaptor.forClass(Notification.class);
+
+        verify(notificationRepository).save(captor.capture());
+
+        Notification notif = captor.getValue();
+
+        assertEquals(TypeNotification.FOLLOWERS_LINK, notif.getType());
+        assertTrue(notif.getContent().contains("Ticket lié"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier l'acceptation d'une demande de liaison")
+    void linkIssueResponseNotification_ShouldSendAcceptedResponse() {
+        when(notificationRepository.save(any(Notification.class)))
+                .thenAnswer(i -> i.getArgument(0));
+
+        OfficialLinkRequest request = new OfficialLinkRequest();
+        request.setSourceIssue(testIssue);
+
+        Issue targetIssue = new Issue();
+        User targetManager = new User();
+        targetManager.setId(3L);
+        targetManager.setName("Marie Martin");
+        targetIssue.setManager(targetManager);
+
+        request.setTargetIssue(targetIssue);
+        request.setApproved(true);
+
+        notificationService.linkIssueResponseNotification(
+                testUser,
+                request
+        );
+
+        ArgumentCaptor<Notification> captor =
+                ArgumentCaptor.forClass(Notification.class);
+
+        verify(notificationRepository).save(captor.capture());
+
+        assertTrue(captor.getValue()
+                .getContent()
+                .contains("a accepté votre demande de liaison"));
+
+        assertEquals(
+                TypeNotification.MANAGER_RESPONSE_LINK_REQUEST,
+                captor.getValue().getType()
+        );
+    }
+
+    @Test
+    @DisplayName("Doit notifier un refus avec motif DUPLICATE_RELATION")
+    void linkIssueResponseNotification_ShouldSendDeniedResponseWithReason() {
+        when(notificationRepository.save(any(Notification.class)))
+                .thenAnswer(i -> i.getArgument(0));
+
+        OfficialLinkRequest request = new OfficialLinkRequest();
+        request.setSourceIssue(testIssue);
+
+        Issue targetIssue = new Issue();
+        User targetManager = new User();
+        targetManager.setId(3L);
+        targetManager.setName("Marie Martin");
+        targetIssue.setManager(targetManager);
+
+        request.setTargetIssue(targetIssue);
+        request.setApproved(false);
+        request.setRejectionReason(LinkRejectionReason.DUPLICATE_RELATION);
+
+        notificationService.linkIssueResponseNotification(
+                testUser,
+                request
+        );
+
+        ArgumentCaptor<Notification> captor =
+                ArgumentCaptor.forClass(Notification.class);
+
+        verify(notificationRepository).save(captor.capture());
+
+        String content = captor.getValue().getContent();
+
+        assertTrue(content.contains("a refusé votre demande"));
+        assertTrue(content.contains("Lien en doublon ou redondant"));
+    }
+
+    @Test
+    @DisplayName("Doit mapper officialLinkRequestId dans le DTO")
+    void toDto_ShouldMapOfficialLinkRequestId() {
+        OfficialLinkRequest request = new OfficialLinkRequest();
+        request.setId(500L);
+
+        Notification notification = Notification.builder()
+                .id(1L)
+                .officialLinkRequest(request)
+                .build();
+
+        NotificationDto dto = notificationService.toDto(notification);
+
+        assertEquals(500L, dto.getOfficialLinkRequestId());
     }
 }

@@ -43,6 +43,9 @@ class IssueRelationServiceTest {
     @Mock
     private OfficialLinkRequestRepository linkRequestRepository;
 
+    @Mock
+    private NotificationService notificationService;
+
     @InjectMocks
     private IssueRelationService relationService;
 
