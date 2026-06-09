@@ -45,7 +45,7 @@
               multiple
               accept="application/pdf,image/png,image/jpeg,.jpg,.jpeg,.docx,.xlsx"
               :dropzone="true"
-              label="Lâchez vos fichiers ici"
+              label="Déposez vos fichiers ici"
               description="PDF, PNG, JPG, JPEG, DOCX, XLSX (max. 10Mo)"
               icon="i-lucide-image"
               highlight
