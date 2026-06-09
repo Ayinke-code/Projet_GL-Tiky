@@ -24,7 +24,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useDeletionCategoryRequest } from '~/composables/useDeletionCategoryRequests.js'
 
 const props = defineProps({
@@ -40,6 +40,19 @@ const isChecking = ref(true)
 const isLoading = ref(false)
 const isPending = ref(false)
 
+const LEAVE_RESPONSE_TYPES = ['ACCEPTED_TEACHER_QUIT_CATEGORY', 'DENIED_TEACHER_QUIT_CATEGORY']
+
+const onNotificationReceived = async (e) => {
+  if (LEAVE_RESPONSE_TYPES.includes(e.detail?.type) && e.detail?.categoryId === props.categoryId) {
+    try {
+      const hasPending = await checkPendingRequest(props.categoryId)
+      isPending.value = hasPending
+    } catch (error) {
+      console.error(error)
+    }
+  }
+}
+
 onMounted(async () => {
   try {
     const hasPending = await checkPendingRequest(props.categoryId)
@@ -49,6 +62,11 @@ onMounted(async () => {
   } finally {
     isChecking.value = false
   }
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
 })
 
 const submitRequest = async () => {

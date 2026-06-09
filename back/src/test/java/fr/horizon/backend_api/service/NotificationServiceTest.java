@@ -20,6 +20,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -777,5 +778,139 @@ class NotificationServiceTest {
         assertFalse(notif.isRead());
 
         assertTrue(notif.getContent().contains("Le ticket: Bug Connexion que vous suivez, a été fusionné"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier un utilisateur qu'il a été ajouté à une catégorie")
+    void managerAddingFollowerNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        Category category = new Category();
+        category.setName("Mathématiques");
+        User owner = new User();
+        owner.setName("M. Dupont");
+        category.setOwner(owner);
+
+        notificationService.managerAddingFollowerNotification(testUser, category);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+
+        Notification notif = captor.getValue();
+        assertEquals(TypeNotification.MANAGER_ADDING_TEACHER_CATEGORY, notif.getType());
+        assertEquals(testUser, notif.getRecipient());
+        assertEquals(category, notif.getCategory());
+
+        String contentLower = notif.getContent().toLowerCase();
+        assertTrue(contentLower.contains("m. dupont"));
+        assertTrue(contentLower.contains("mathématiques"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier le owner qu'un teacher souhaite quitter sa catégorie")
+    void teacherQuitCategoryNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        Category category = new Category();
+        category.setName("Mathématiques");
+
+        notificationService.teacherQuitCategoryNotification(testUser, category);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+
+        Notification notif = captor.getValue();
+        assertEquals(TypeNotification.TEACHER_QUIT_CATEGORY, notif.getType());
+        assertEquals(testUser, notif.getRecipient());
+
+        String contentLower = notif.getContent().toLowerCase();
+        assertTrue(contentLower.contains("jean dupont"));
+        assertTrue(contentLower.contains("mathématiques"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier un teacher que sa demande de départ a été acceptée")
+    void acceptTeacherQuitCategoryNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        Category category = new Category();
+        category.setName("Mathématiques");
+        User owner = new User();
+        owner.setName("M. Dupont");
+        category.setOwner(owner);
+
+        notificationService.acceptTeacherQuitCategoryNotification(testUser, category);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+
+        Notification notif = captor.getValue();
+        assertEquals(TypeNotification.ACCEPTED_TEACHER_QUIT_CATEGORY, notif.getType());
+        assertEquals(testUser, notif.getRecipient());
+
+        String contentLower = notif.getContent().toLowerCase();
+        assertTrue(contentLower.contains("m. dupont"));
+        assertTrue(contentLower.contains("accepté"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier un teacher que sa demande de départ a été refusée avec motif")
+    void deniedTeacherQuitCategoryNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        Category category = new Category();
+        category.setName("Mathématiques");
+        User owner = new User();
+        owner.setName("M. Dupont");
+        category.setOwner(owner);
+
+        DeletionCategoryRequest request = new DeletionCategoryRequest();
+        request.setCategory(category);
+        request.setRejectionReason("Besoin de vous pour le jury");
+
+        notificationService.deniedTeacherQuitCategoryNotification(testUser, request);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+
+        Notification notif = captor.getValue();
+        assertEquals(TypeNotification.DENIED_TEACHER_QUIT_CATEGORY, notif.getType());
+        assertEquals(testUser, notif.getRecipient());
+
+        String contentLower = notif.getContent().toLowerCase();
+        assertTrue(contentLower.contains("refusé"));
+        assertTrue(contentLower.contains("besoin de vous pour le jury"));
+    }
+
+    @Test
+    @DisplayName("Doit notifier uniquement les followers (et ignorer le owner) lors de la suppression d'une catégorie")
+    void notifyFollowersCategoryDeleted_ShouldSaveAndSendToFollowersOnly() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        Category category = new Category();
+        category.setName("Physique");
+
+        User owner = new User();
+        owner.setId(10L);
+        category.setOwner(owner);
+
+        User follower1 = new User();
+        follower1.setId(11L);
+
+        User followerOwner = new User();
+        followerOwner.setId(10L);
+
+        category.setFollowers(Set.of(follower1, followerOwner));
+
+        notificationService.notifyFollowersCategoryDeleted(category);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+
+        verify(notificationRepository, times(1)).save(captor.capture());
+
+        Notification notif = captor.getValue();
+        assertEquals(TypeNotification.DELETING_CATEGORY, notif.getType());
+        assertEquals(follower1, notif.getRecipient());
+        assertTrue(notif.getContent().toLowerCase().contains("physique"));
     }
 }

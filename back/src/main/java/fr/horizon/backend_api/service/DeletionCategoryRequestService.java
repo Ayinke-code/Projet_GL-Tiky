@@ -24,6 +24,7 @@ public class DeletionCategoryRequestService {
     private final CategoryRepository categoryRepository;
     private final CategoryService categoryService;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     private static final String USER_NF = "User not found";
 
@@ -52,7 +53,11 @@ public class DeletionCategoryRequestService {
                 .status(CategoryRequestStatus.PENDING)
                 .build();
 
-        return mapToDto(deletionCategoryRequestRepository.save(request));
+        DeletionCategoryRequest saved = deletionCategoryRequestRepository.save(request);
+
+        notificationService.teacherQuitCategoryNotification(category.getOwner(), category);
+
+        return mapToDto(saved);
     }
 
 
@@ -74,7 +79,11 @@ public class DeletionCategoryRequestService {
         request.setStatus(CategoryRequestStatus.APPROVED);
         request.setValidator(validator);
 
-        return mapToDto(deletionCategoryRequestRepository.save(request));
+        DeletionCategoryRequest saved = deletionCategoryRequestRepository.save(request);
+
+        notificationService.acceptTeacherQuitCategoryNotification(request.getRequester(), request.getCategory());
+
+        return mapToDto(saved);
     }
 
     @Transactional
@@ -92,7 +101,11 @@ public class DeletionCategoryRequestService {
         request.setValidator(validator);
         request.setRejectionReason(rejectionReason);
 
-        return mapToDto(deletionCategoryRequestRepository.save(request));
+        DeletionCategoryRequest saved = deletionCategoryRequestRepository.save(request);
+
+        notificationService.deniedTeacherQuitCategoryNotification(request.getRequester(), request);
+
+        return mapToDto(saved);
     }
 
 

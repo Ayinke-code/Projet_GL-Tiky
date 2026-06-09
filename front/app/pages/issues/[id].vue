@@ -23,10 +23,14 @@ const { acknowledgeFollowedIssueUpdate } = useFollowedIssuesState()
 const { downloadFile, deleteFile } = useDocuments()
 const { relations, fetchRelationsByIssue, fetchPendingRequests: fetchRelationPendingRequests } = useIssueRelations()
 const { requestMerge, pendingRequests, fetchPendingRequests } = useMergeIssues()
-const FOLLOWER_NOTIFICATION_TYPES = ['NEW_FOLLOWER', 'NEW_UNFOLLOW']
+const ISSUE_REFRESH_NOTIFICATION_TYPES = [
+  'NEW_FOLLOWER', 'NEW_UNFOLLOW',
+  'VALIDE_ISSUE', 'INCOMPLETE_ISSUE', 'CLOSING_ISSUE',
+  'OPEN_ISSUE', 'NEW_OPEN_ISSUE', 'ACCEPTED_OPEN_ISSUE',
+]
 
 const onNotificationReceived = async (e) => {
-  if (FOLLOWER_NOTIFICATION_TYPES.includes(e.detail?.type) && e.detail?.issueId === issueId) {
+  if (ISSUE_REFRESH_NOTIFICATION_TYPES.includes(e.detail?.type) && e.detail?.issueId === issueId) {
     const updated = await getIssueById(issueId).catch(() => null)
     if (updated) issue.value = updated
   }
