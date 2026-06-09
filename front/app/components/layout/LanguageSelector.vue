@@ -1,5 +1,8 @@
 <template>
-  <UDropdownMenu :items="items" :content="{ align: 'end' }">
+  <UDropdownMenu
+    :items="items"
+    :content="{ align: 'end' }"
+  >
     <UButton
       color="gray"
       variant="ghost"
@@ -20,7 +23,6 @@ const items = [
     icon: 'i-heroicons-language',
     onSelect: () => {
       setLocale('fr')
-      window.location.reload()
     }
   },
   {
@@ -28,7 +30,6 @@ const items = [
     icon: 'i-heroicons-language',
     onSelect: () => {
       setLocale('en')
-      window.location.reload()
     }
   }
 ]
