@@ -2,15 +2,50 @@
   <div class="min-h-screen flex items-center justify-center bg-default">
     <div class="w-full max-w-md">
       <div class="p-6 space-y-4 rounded-xl bg-elevated shadow-lg border border-default">
-        <NuxtLink
-          to="/"
-          class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 transition-all"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-        </NuxtLink>
-        <LoginForms @submit="handleLogin" :error="error" />
+        <div class="flex items-center justify-between">
+          <NuxtLink
+            to="/"
+            class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 transition-all"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+          </NuxtLink>
+
+          <!-- Language switcher -->
+          <div class="flex items-center gap-2">
+            <button
+              @click="setLocale('fr')"
+              :class="{ 'font-bold': locale === 'fr' }"
+              class="px-3 py-1 rounded text-sm border"
+            >
+              fr
+            </button>
+            <button
+              @click="setLocale('en')"
+              :class="{ 'font-bold': locale === 'en' }"
+              class="px-3 py-1 rounded text-sm border"
+            >
+              en
+            </button>
+          </div>
+        </div>
+
+        <LoginForms
+          @submit="handleLogin"
+          :error="error"
+        />
       </div>
     </div>
   </div>
@@ -21,7 +56,16 @@ import LoginForms from '~/components/forms/LoginForms.vue'
 import { useAuth } from '~/composables/useAuth'
 
 const { login } = useAuth()
-const { t } = useI18n()
+const { t, locale } = useI18n()
+
+/**
+ * Change current locale (language)
+ * @param {string} loc 'fr' or 'en'
+ */
+const setLocale = (loc) => {
+  // locale is a Ref
+  locale.value = loc
+}
 
 /**
  * Message d’erreur affiché à l’utilisateur (UI state).

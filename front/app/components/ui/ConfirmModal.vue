@@ -38,11 +38,11 @@ watch(open, (value, oldValue) => {
     <template #footer>
       <div class="flex justify-end gap-2">
         <UButton color="neutral" variant="ghost" @click="open = false" class="cursor-pointer">
-          {{ $t('confirm_modal.cancel') }}
+          Annuler
         </UButton>
 
         <UButton color="error" @click="emit('confirm'); open = false" class="cursor-pointer">
-          {{ $t('confirm_modal.confirm') }}
+          Confirmer
         </UButton>
       </div>
     </template>

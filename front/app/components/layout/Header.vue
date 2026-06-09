@@ -1,10 +1,10 @@
 <template>
-  <header class="h-16 bg-white shadow-sm flex items-center justify-between px-4 md:px-8" :aria-label="$t('header_label')">
+  <header class="h-16 bg-white shadow-sm flex items-center justify-between px-4 md:px-8" aria-label="Haut de page">
     <div class="flex items-center">
       <button
         @click="$emit('toggle-sidebar')"
         class="md:hidden mr-4 text-gray-500 hover:text-gray-700 focus:outline-none"
-        :aria-label="$t('sidebar.toggle')"
+        aria-label="Afficher/Masquer la barre latérale"
       >
         <i class="fa-solid fa-bars text-xl"></i>
       </button>
@@ -52,7 +52,7 @@
         >
           <div class="p-3 border-b border-gray-100 bg-white flex justify-between items-center">
             <h3 class="font-semibold text-gray-800">
-              {{ $t('notifications') }}
+              Notifications
             </h3>
           </div>
 
@@ -76,10 +76,10 @@
                 />
               </svg>
               <p class="text-gray-600 text-sm font-medium">
-                {{ $t('no_notifications') }}
+                Aucune notification
               </p>
               <p class="text-gray-400 text-xs mt-1">
-                {{ $t('up_to_date') }}
+                Vous êtes à jour !
               </p>
             </div>
 

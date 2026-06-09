@@ -98,9 +98,6 @@ const { ready, user } = useAuth()
 const { createIssue } = useIssues()
 const { fetchCategoriesByType, categories } = useCategories()
 
-/**
- * État UI
- */
 const submitting = ref(false)
 const loadingCategories = ref(true)
 const error = ref(null)
