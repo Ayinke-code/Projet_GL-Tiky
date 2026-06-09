@@ -369,7 +369,7 @@ public class NotificationService {
 
     @Transactional
     public void newLinkRequestManagerNotification(User user, OfficialLinkRequest officialLinkRequest, User target){
-        String content = user.getName() + " demande une liaison entre votre ticket: "+ officialLinkRequest.getTargetIssue()+ " et " + officialLinkRequest.getSourceIssue();
+        String content = user.getName() + " demande une liaison entre votre ticket: "+ officialLinkRequest.getTargetIssue().getTitle()+ " et " + officialLinkRequest.getSourceIssue().getTitle();
 
         Notification notif = Notification.builder()
                 .content(content)

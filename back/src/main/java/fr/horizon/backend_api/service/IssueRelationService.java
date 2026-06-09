@@ -119,11 +119,12 @@ public class IssueRelationService {
             officialRelation.setManager(true);
             officialRelation.setCreatedBy(managerUser);
 
-            notifyFollowersExcludingManagerAndActor(officialRelation.getSourceIssue(), officialRelation, managerUser);
-            notifyFollowersExcludingManagerAndActor(officialRelation.getTargetIssue(), officialRelation, managerUser);
-
-
             IssueRelation saved = relationRepository.save(officialRelation);
+
+            notifyFollowersExcludingManagerAndActor(officialRelation.getSourceIssue(), saved, managerUser);
+            notifyFollowersExcludingManagerAndActor(officialRelation.getTargetIssue(), saved, managerUser);
+
+
             return mapToDto(saved);
         } else {
             // Un seul a approuvé, on sauvegarde l'état en attendant l'autre manager
