@@ -2,7 +2,7 @@
   <div class="p-8 pb-8 min-h-screen bg-gray-50">
 
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">Invitations & Rendez-vous</h1>
+      <h1 class="text-2xl font-bold text-gray-800">Gérer mon planning</h1>
     </div>
 
     <Alert v-if="error" color="error" title="Erreur système" class="mb-6">

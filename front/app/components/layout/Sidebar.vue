@@ -89,14 +89,14 @@
           <span class="font-medium">Calendrier</span>
         </NuxtLink>
 
-        <!-- Invitations & Rendez-vous (teacher / admin) -->
+        <!-- Gérer mon planning (teacher / admin) -->
         <NuxtLink
           v-if="user?.roles?.includes('TEACHER') || user?.roles?.includes('ADMIN')"
           to="/invitations"
           class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200"
           :class="isActive('/invitations') ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 hover:text-white'">
           <i class="fa-solid fa-table-list w-6" aria-hidden="true"></i>
-          <span class="font-medium">Invitations & Rendez-vous</span>
+          <span class="font-medium">Gérer mon planning</span>
         </NuxtLink>
 
         <!-- Mes sessions (student) -->
