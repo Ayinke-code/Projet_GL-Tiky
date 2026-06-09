@@ -236,7 +236,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
   currentIssueId: { type: Number, required: true },
@@ -350,8 +350,22 @@ const canRespond = (req) => {
   return false
 }
 
+const MERGE_NOTIFICATION_TYPES = ['MERGE_REQUEST_MANAGER', 'MERGE_REQUEST_DENIED', 'MERGE_REQUEST_ACCEPTED']
+
+const onNotificationReceived = async (e) => {
+  if (MERGE_NOTIFICATION_TYPES.includes(e.detail?.type) && e.detail?.issueId === props.currentIssueId) {
+    await fetchPendingRequests()
+    await fetchDeniedRequests()
+  }
+}
+
 onMounted(() => {
   fetchPendingRequests()
   fetchDeniedRequests()
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
 })
 </script>

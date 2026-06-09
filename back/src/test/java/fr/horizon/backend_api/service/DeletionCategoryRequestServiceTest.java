@@ -36,6 +36,9 @@ class DeletionCategoryRequestServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private NotificationService notificationService;
+
     @InjectMocks
     private DeletionCategoryRequestService service;
 

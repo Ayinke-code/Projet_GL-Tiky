@@ -109,7 +109,7 @@ import CategoryRequestForms from '~/components/forms/CategoryRequestForms.vue'
 import Separator from '~/components/ui/Separator.vue'
 import CategoryRequestCard from '~/components/categories/CategoryRequestCard.vue'
 
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useCategories } from '~/composables/useCategories'
 import Button from '~/components/ui/Button.vue'
 import { ROLE } from '~/utils/roles'
@@ -143,9 +143,22 @@ const isRequestCreateModalOpen = ref(false)
 const isDetailOpen = ref(false)
 const errorMessage = ref(null)
 
+const CATEGORY_LIST_NOTIFICATION_TYPES = ['DELETING_CATEGORY', 'MANAGER_ADDING_TEACHER_CATEGORY']
+
+const onNotificationReceived = async (e) => {
+  if (CATEGORY_LIST_NOTIFICATION_TYPES.includes(e.detail?.type)) {
+    await fetchCategoriesByType('ISSUE')
+  }
+}
+
 onMounted(async () => {
   await fetchCategoriesByType('ISSUE')
   await fetchCategoryRequests()
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
 })
 
 /**
