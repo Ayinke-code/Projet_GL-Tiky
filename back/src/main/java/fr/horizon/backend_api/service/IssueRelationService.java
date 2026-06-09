@@ -19,7 +19,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +32,7 @@ public class IssueRelationService {
     private final IssueRepository issueRepository;
     private final IssueFollowerRepository issueFollowerRepository;
     private final OfficialLinkRequestRepository linkRequestRepository;
+    private final NotificationService notificationService;
 
     private static final int OFFICIAL_LINK_THRESHOLD = 5;
 
@@ -51,7 +54,7 @@ public class IssueRelationService {
 
         boolean isManagerOfBoth = isSourceManager && isTargetManager;
 
-        // --- SCÉNARIO 2 : L'utilisateur est étudiant ou gère les DEUX tickets ---
+        // --- SCÉNARIO 2 : L'utilisateur gère les DEUX tickets ---
         if (!isManagerOfBoth) {
             ensureStudentFollowsSource(user, source);
         }
@@ -94,6 +97,8 @@ public class IssueRelationService {
             request.setApproved(false);
             request.setRejectionReason(dto.getRejectionReason());
             linkRequestRepository.save(request);
+
+            notifyOtherManagerOfResponse(request, isSourceManager, managerUser);
             return null;
         }
 
@@ -119,6 +124,11 @@ public class IssueRelationService {
             officialRelation.setCreatedBy(managerUser);
 
             IssueRelation saved = relationRepository.save(officialRelation);
+
+            notifyOtherManagerOfResponse(request, isSourceManager, managerUser);
+            notifyAllUniqueFollowers(officialRelation.getSourceIssue(), officialRelation.getTargetIssue(), officialRelation, managerUser);
+
+
             return mapToDto(saved);
         } else {
             // Un seul a approuvé, on sauvegarde l'état en attendant l'autre manager
@@ -145,6 +155,10 @@ public class IssueRelationService {
                     .build();
 
             linkRequestRepository.save(request);
+
+            notificationService.newLinkRequestNotification(source.getManager(), request);
+            notificationService.newLinkRequestNotification(target.getManager(), request);
+
         }
     }
 
@@ -153,9 +167,6 @@ public class IssueRelationService {
      * Le côté du manager initiateur est automatiquement marqué comme approuvé.
      */
     private void createOrUpdateDirectManagerRequest(Issue source, Issue target, RelationType type, boolean isSourceManager, boolean isTargetManager) {
-        // Vérifie si une demande similaire est déjà en cours
-        // Note : Il faudrait idéalement une méthode dans votre repository pour récupérer la demande existante au lieu d'un simple exists()
-        // Pour l'exemple, on crée une nouvelle demande directement.
 
         OfficialLinkRequest request = OfficialLinkRequest.builder()
                 .sourceIssue(source)
@@ -166,6 +177,7 @@ public class IssueRelationService {
                 .targetManagerApproved(isTargetManager ? true : null)
                 .build();
 
+        notificationService.newLinkRequestManagerNotification(source.getManager(), request, target.getManager());
         linkRequestRepository.save(request);
     }
 
@@ -270,6 +282,7 @@ public class IssueRelationService {
         int linkCount = relationRepository.countNonManagerRelationsByType(source.getId(), target.getId(), type);
         if (linkCount >= OFFICIAL_LINK_THRESHOLD) {
             createOfficialLinkRequestIfNotExists(source, target, type);
+
         }
     }
 
@@ -281,7 +294,10 @@ public class IssueRelationService {
         relation.setManager(isManager);
         relation.setCreatedBy(user);
 
-        return relationRepository.saveAndFlush(relation);
+        IssueRelation savedRelation = relationRepository.saveAndFlush(relation);
+
+        notifyAllUniqueFollowers(savedRelation.getSourceIssue(), savedRelation.getTargetIssue(), savedRelation, user);
+        return  savedRelation;
     }
 
     private Issue getIssueOrThrow(Long issueId, String label) {
@@ -323,5 +339,47 @@ public class IssueRelationService {
 
     private boolean isManagerOf(Issue issue, User user) {
         return issue.getManager() != null && issue.getManager().getId().equals(user.getId());
+    }
+
+    /**
+     * Méthode utilitaire pour notifier les followers des deux tickets liés.
+     * Garantit qu'un utilisateur qui suit les DEUX tickets ne recevra qu'UNE seule notification.
+     * Exclut également les managers des deux tickets et la personne qui déclenche l'action.
+     */
+    private void notifyAllUniqueFollowers(Issue source, Issue target, IssueRelation relation, User actor) {
+        List<User> sourceFollowers = issueFollowerRepository.findUsersByIssueId(source.getId());
+        List<User> targetFollowers = issueFollowerRepository.findUsersByIssueId(target.getId());
+
+        Set<Long> processedUserIds = new HashSet<>();
+
+        processedUserIds.add(actor.getId());
+        if (source.getManager() != null) processedUserIds.add(source.getManager().getId());
+        if (target.getManager() != null) processedUserIds.add(target.getManager().getId());
+
+        for (User follower : sourceFollowers) {
+            if (!processedUserIds.contains(follower.getId())) {
+                notificationService.followersNewLinkNotification(follower, source, relation);
+                processedUserIds.add(follower.getId());
+            }
+        }
+
+        for (User follower : targetFollowers) {
+            if (!processedUserIds.contains(follower.getId())) {
+                notificationService.followersNewLinkNotification(follower, target, relation);
+                processedUserIds.add(follower.getId());
+            }
+        }
+    }
+
+    /**
+     * Notifie l'autre manager du résultat de la demande de liaison (acceptée ou refusée).
+     */
+    private void notifyOtherManagerOfResponse(OfficialLinkRequest request, boolean isSourceManager, User managerUser) {
+        User otherManager = isSourceManager ? request.getTargetIssue().getManager() : request.getSourceIssue().getManager();
+
+        // On s'assure que l'autre manager existe, et on évite de s'auto-notifier si on gère les deux tickets
+        if (otherManager != null && !otherManager.getId().equals(managerUser.getId())) {
+            notificationService.linkIssueResponseNotification(otherManager, request);
+        }
     }
 }
