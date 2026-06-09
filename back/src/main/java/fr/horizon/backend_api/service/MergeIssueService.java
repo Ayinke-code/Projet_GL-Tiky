@@ -27,6 +27,7 @@ public class MergeIssueService {
     private final IssueFollowerRepository issueFollowerRepository;
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
+    private final DocumentRepository documentRepository;
 
     private static final String USER_NOT_FOUND = "Utilisateur introuvable";
 
@@ -205,18 +206,8 @@ public class MergeIssueService {
         }
 
         // on associe les documents de la source
-        if (source.getDocuments() != null && !source.getDocuments().isEmpty()) {
-            List<Document> sourceDocuments = new java.util.ArrayList<>(source.getDocuments());
-
-            for (Document doc : sourceDocuments) {
-                doc.setIssue(target);
-
-                if (target.getDocuments() == null) {
-                    target.setDocuments(new java.util.ArrayList<>());
-                }
-                target.getDocuments().add(doc);
-            }
-
+        documentRepository.moveDocumentsToNewIssue(source, target);
+        if (source.getDocuments() != null) {
             source.getDocuments().clear();
         }
 
