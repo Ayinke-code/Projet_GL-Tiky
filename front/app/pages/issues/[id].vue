@@ -22,8 +22,7 @@ const { followIssue, unfollowIssue, isFollowing } = useIssueFollowers()
 const { acknowledgeFollowedIssueUpdate } = useFollowedIssuesState()
 const { downloadFile, deleteFile } = useDocuments()
 const { relations, fetchRelationsByIssue, fetchPendingRequests: fetchRelationPendingRequests } = useIssueRelations()
-const { requestMerge } = useMergeIssues()
-
+const { requestMerge, pendingRequests, fetchPendingRequests } = useMergeIssues()
 const FOLLOWER_NOTIFICATION_TYPES = ['NEW_FOLLOWER', 'NEW_UNFOLLOW']
 
 const onNotificationReceived = async (e) => {
@@ -76,7 +75,19 @@ const downloadDoc = async (file) => {
  */
 const officialLinkCandidates = computed(() => {
   if (!issue.value || !relations.value?.length) return []
-  return relations.value.filter(r => r.manager && !r.merged)
+  const pendingMergeTargetIds = new Set(
+    pendingRequests.value
+      .filter(req => req.sourceIssueId === issueId || req.targetIssueId === issueId)
+      .map(req => req.sourceIssueId === issueId ? req.targetIssueId : req.sourceIssueId)
+  )
+
+  return relations.value.filter(r => {
+    if (!r.manager || r.merged) return false
+
+    const otherTicketId = r.sourceIssueId === issueId ? r.targetIssueId : r.sourceIssueId
+
+    return !pendingMergeTargetIds.has(otherTicketId)
+  })
 })
 
 const canMerge = computed(() => officialLinkCandidates.value.length > 0)
@@ -197,6 +208,7 @@ const refreshData = async () => {
 
     if (user?.value?.id === issue.value?.categoryManagerId) {
       await fetchRelationPendingRequests()
+      await fetchPendingRequests()
     }
 
     // Si vous utilisez getCompleteConversation, mettez getCompleteConversation(issueId)
@@ -227,6 +239,7 @@ onMounted(async () => {
     await fetchRelationsByIssue(issueId)
     if (user?.value?.id === issue.value?.categoryManagerId) {
       await fetchRelationPendingRequests()
+      await fetchPendingRequests()
     }
 
     alreadyFollowing.value = await isFollowing(issueId)
