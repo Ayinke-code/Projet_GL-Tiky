@@ -18,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -76,7 +75,7 @@ public class CategoryService {
         User owner = userRepository.findById(dto.getOwnerId())
                 .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
 
-        // Check si une catégorie n'existe pas déja avec ce nom et de type ISSUE
+        // Check si une catégorie n'existe pas déjà avec ce nom et de type ISSUE
         if (categoryRepository.existsByNameIgnoreCaseAndCategoryType(
                 dto.getName(),
                 CategoryType.ISSUE)) {
@@ -86,7 +85,6 @@ public class CategoryService {
         Category category = Category.builder()
                 .name(dto.getName())
                 .subject(dto.getSubject())
-                //correction
                 .categoryType(CategoryType.ISSUE)
                 .status(CategoryStatus.ACTIVE)
                 .owner(owner)
@@ -203,10 +201,6 @@ public class CategoryService {
      * @return DTO contenant les informations publiques de la catégorie
      */
     private CategoryDto toDto(Category category) {
-        return toDto(category, null);
-    }
-
-    private CategoryDto toDto(Category category, User currentUser) {
         return CategoryDto.builder()
                 .id(category.getId())
                 .name(category.getName())
