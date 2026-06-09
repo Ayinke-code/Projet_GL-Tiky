@@ -14,4 +14,6 @@ public interface DeletionCategoryRequestRepository extends JpaRepository<Deletio
     boolean existsByCategoryAndRequesterAndStatus(Category category, User requester, CategoryRequestStatus status);
 
     List<DeletionCategoryRequest> findByCategory_Owner_IdAndStatus(Long ownerId, CategoryRequestStatus status);
+
+    void deleteAllByCategory(Category category);
 }

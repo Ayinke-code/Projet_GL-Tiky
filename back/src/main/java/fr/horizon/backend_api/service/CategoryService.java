@@ -8,10 +8,7 @@ import fr.horizon.backend_api.model.dto.*;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.RoleEnum;
-import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.CategoryRequestRepository;
-import fr.horizon.backend_api.repository.IssueRepository;
-import fr.horizon.backend_api.repository.UserRepository;
+import fr.horizon.backend_api.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -37,6 +34,7 @@ public class CategoryService {
     private final CategoryRequestRepository categoryRequestRepository;
     private final IssueRepository issueRepository;
     private final IssueService issueService;
+    private final DeletionCategoryRequestRepository deletionCategoryRequestRepository;
 
     /**
      * Récupère toutes les catégories.
@@ -171,6 +169,9 @@ public class CategoryService {
 
         // Supprime les demandes de catégorie
         categoryRequestRepository.deleteAllByCategory(category);
+
+        // Supprime les demandes de désinscription 
+        deletionCategoryRequestRepository.deleteAllByCategory(category);
 
         categoryRepository.delete(category);
     }
