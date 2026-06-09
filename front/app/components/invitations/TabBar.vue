@@ -23,17 +23,6 @@
     >
       <span class="i-lucide-users"></span> Suivi des présences
     </button>
-
-    <button
-      v-else
-      @click="$emit('switch', 'demands')"
-      :class="[
-        activeTab === 'demands' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200',
-        'px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2'
-      ]"
-    >
-      <span class="i-lucide-send"></span> Mes demandes
-    </button>
   </div>
 </template>
 

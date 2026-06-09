@@ -54,6 +54,33 @@
 
       <!-- Available slots per user -->
       <div v-for="u in conflictUsers" :key="'slots-' + u.id" class="flex flex-col gap-2">
+
+        <!-- Conflits d'agenda (events déjà planifiés) -->
+        <template v-if="u.busySlots && u.busySlots.length > 0">
+          <p class="text-xs font-bold text-red-600 uppercase tracking-wider flex items-center gap-1.5">
+            <i class="fa-solid fa-calendar-xmark text-red-500"></i>
+            Agenda chargé{{ conflictUsers.length > 1 ? ` — ${u.name}` : '' }}
+          </p>
+          <div class="flex flex-col gap-1.5">
+            <div
+              v-for="busy in u.busySlots"
+              :key="'busy-' + busy.id"
+              class="flex items-center gap-2.5 bg-red-50 border border-red-200 rounded-lg px-3 py-2"
+            >
+              <i class="fa-solid fa-calendar-xmark text-red-400 text-xs shrink-0"></i>
+              <div class="flex-1 min-w-0">
+                <span class="text-xs font-semibold text-red-800 capitalize block">
+                  {{ busy.name }} · {{ formatAvailDate(busy.startDate) }}
+                </span>
+                <span class="text-xs text-red-600">
+                  {{ formatAvailTime(busy.startDate) }} → {{ formatAvailTime(busy.endDate) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Disponibilités déclarées -->
         <p class="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5">
           <i class="fa-solid fa-calendar-days text-teal-500"></i>
           Créneaux déclarés{{ conflictUsers.length > 1 ? ` — ${u.name}` : '' }}
@@ -110,7 +137,9 @@ const props = defineProps({
   open: { type: Boolean, required: true },
   conflictUsers: { type: Array, default: () => [] },
   /** Si true, un bouton "Choisir" apparaît sur les créneaux communs */
-  selectable: { type: Boolean, default: false }
+  selectable: { type: Boolean, default: false },
+  /** Durée prévue du RDV en minutes — utilisée pour filtrer et afficher les créneaux */
+  durationMinutes: { type: Number, default: 0 }
 })
 
 const emit = defineEmits(['update:open', 'cancel', 'proceed', 'select-slot'])
@@ -121,21 +150,42 @@ const openModel = computed({
 })
 
 /**
- * Calcule l'intersection des disponibilités de tous les utilisateurs en conflit.
- * Retourne un tableau de { start: Date, end: Date }.
+ * Soustrait un créneau "busy" d'une liste d'intervalles.
+ * Ex: [7h-12h] - [9h-10h] = [7h-9h, 10h-12h]
+ */
+const subtractInterval = (intervals, busy) => {
+  const result = []
+  for (const iv of intervals) {
+    if (busy.end <= iv.start || busy.start >= iv.end) {
+      // Pas de chevauchement — conserver tel quel
+      result.push(iv)
+    } else {
+      // Partie avant le busy
+      if (iv.start < busy.start) result.push({ start: iv.start, end: busy.start })
+      // Partie après le busy
+      if (iv.end > busy.end) result.push({ start: busy.end, end: iv.end })
+    }
+  }
+  return result
+}
+
+/**
+ * Calcule l'intersection des disponibilités de tous les utilisateurs en conflit,
+ * puis soustrait les créneaux déjà occupés (AUDIT, DEFENSE, RDV).
+ * Ne retient que les créneaux suffisamment longs pour la durée du RDV.
+ * Retourne un tableau de { start: Date, end: Date } où end = start + durationMinutes.
  */
 const commonSlots = computed(() => {
   if (props.conflictUsers.length === 0) return []
 
   const toDate = (str) => new Date(String(str).replace(' ', 'T'))
 
-  // Intervalles initiaux = créneaux du premier utilisateur
+  // Étape 1 : intersection des disponibilités déclarées
   let intervals = (props.conflictUsers[0].availabilities ?? []).map(a => ({
     start: toDate(a.startDate),
     end: toDate(a.endDate)
   }))
 
-  // Intersection avec chaque utilisateur suivant
   for (let i = 1; i < props.conflictUsers.length; i++) {
     const userSlots = (props.conflictUsers[i].availabilities ?? []).map(a => ({
       start: toDate(a.startDate),
@@ -147,12 +197,30 @@ const commonSlots = computed(() => {
       for (const slot of userSlots) {
         const overlapStart = new Date(Math.max(iv.start.getTime(), slot.start.getTime()))
         const overlapEnd = new Date(Math.min(iv.end.getTime(), slot.end.getTime()))
-        if (overlapStart < overlapEnd) {
-          next.push({ start: overlapStart, end: overlapEnd })
-        }
+        if (overlapStart < overlapEnd) next.push({ start: overlapStart, end: overlapEnd })
       }
     }
     intervals = next
+  }
+
+  // Étape 2 : soustraire les créneaux déjà occupés (AUDIT, DEFENSE, RDV) de chaque utilisateur
+  for (const u of props.conflictUsers) {
+    for (const busy of (u.busySlots ?? [])) {
+      intervals = subtractInterval(intervals, {
+        start: toDate(busy.startDate),
+        end: toDate(busy.endDate)
+      })
+    }
+  }
+
+  // Étape 3 : ne garder que les créneaux >= durée du RDV et recadrer la fin
+  if (props.durationMinutes > 0) {
+    return intervals
+      .filter(slot => (slot.end.getTime() - slot.start.getTime()) >= props.durationMinutes * 60_000)
+      .map(slot => ({
+        start: slot.start,
+        end: new Date(slot.start.getTime() + props.durationMinutes * 60_000)
+      }))
   }
 
   return intervals

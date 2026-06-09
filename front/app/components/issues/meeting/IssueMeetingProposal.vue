@@ -9,7 +9,7 @@ const props = defineProps({
   }
 })
 
-const { createMeeting, inviteUsersToEvent, fetchUserAvailabilities, checkUpcomingMeeting } = useEvents()
+const { createMeeting, inviteUsersToEvent, fetchUserAvailabilities, fetchUserBusySlots, checkUpcomingMeeting } = useEvents()
 const { getIssueFollowers } = useIssueFollowers()
 const { user } = useAuth()
 
@@ -109,9 +109,34 @@ const getConflictingFollowers = async (startObj, endObj) => {
   const conflictList = []
   for (const fId of selectedFollowerIds.value) {
     const avails = await fetchUserAvailabilities(fId)
-    if (!isAvailableForSlot(avails, startObj.toISOString(), endObj.toISOString())) {
+
+    // Calculer la plage couvrant les dispos déclarées + le créneau demandé
+    // pour récupérer TOUS les events qui pourraient chevaucher les créneaux proposés
+    const allDates = avails.flatMap(a => [
+      new Date(String(a.startDate).replace(' ', 'T')),
+      new Date(String(a.endDate).replace(' ', 'T'))
+    ])
+    allDates.push(startObj, endObj)
+    const rangeStart = new Date(Math.min(...allDates.map(d => d.getTime())))
+    const rangeEnd = new Date(Math.max(...allDates.map(d => d.getTime())))
+
+    const busySlots = await fetchUserBusySlots(fId, rangeStart.toISOString(), rangeEnd.toISOString())
+
+    const hasAvailabilityConflict = !isAvailableForSlot(avails, startObj.toISOString(), endObj.toISOString())
+    const hasAgendaConflict = busySlots.some(b => {
+      const bStart = new Date(String(b.startDate).replace(' ', 'T'))
+      const bEnd = new Date(String(b.endDate).replace(' ', 'T'))
+      return bStart < endObj && bEnd > startObj
+    })
+
+    if (hasAvailabilityConflict || hasAgendaConflict) {
       const follower = followers.value.find(f => f.id === fId)
-      conflictList.push({ id: fId, name: follower?.name || 'Inconnu', availabilities: avails })
+      conflictList.push({
+        id: fId,
+        name: follower?.name || 'Inconnu',
+        availabilities: avails,
+        busySlots  // couvre toute la plage des dispos → soustraction correcte dans le modal
+      })
     }
   }
   return conflictList
@@ -186,17 +211,13 @@ const cancelAvailabilityCheck = () => {
   skipAvailabilityCheck.value = false
 }
 
-const handleSelectSlot = async ({ startDate: slotStart, endDate: slotEnd }) => {
+const handleSelectSlot = async ({ startDate: slotStart }) => {
   isAvailabilityConflictOpen.value = false
 
   const start = new Date(slotStart)
-  const end = new Date(slotEnd)
-  const diffMin = Math.round((end.getTime() - start.getTime()) / 60000)
 
-  // Mettre à jour le formulaire avec le créneau choisi
+  // Met à jour uniquement l'heure de début — la durée prévue reste inchangée
   startDate.value = formatDateTimeLocal(start)
-  durationHours.value = Math.floor(diffMin / 60)
-  durationMinutes.value = diffMin % 60
 
   // Attendre que Vue applique les mises à jour réactives avant de soumettre
   await nextTick()
@@ -416,6 +437,7 @@ const handleSelectSlot = async ({ startDate: slotStart, endDate: slotEnd }) => {
     v-model:open="isAvailabilityConflictOpen"
     :conflictUsers="availabilityConflictUsers"
     :selectable="true"
+    :durationMinutes="totalDurationMinutes"
     @proceed="proceedDespiteConflicts"
     @cancel="cancelAvailabilityCheck"
     @select-slot="handleSelectSlot"
