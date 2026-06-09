@@ -260,6 +260,13 @@ const uiConfig = computed(() => {
         iconPath: 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
       }
 
+    case 'MERGE_REQUEST_FOLLOWERS':
+      return {
+        title: 'Ticket Fusionné',
+        textColor: 'text-violet-600',
+        iconPath: 'M4.5 4.5l7.5 7.5 7.5-7.5M12 12v7.5'
+      }
+
     default:
       return {
         title: 'Notification',

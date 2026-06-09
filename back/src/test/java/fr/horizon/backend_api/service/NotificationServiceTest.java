@@ -748,4 +748,25 @@ class NotificationServiceTest {
         assertTrue(notif.getContent().contains("M. Prof a accepté votre demande de fusion"));
         assertTrue(notif.getContent().contains("Consultez le nouveau ticket !"));
     }
+
+    @Test
+    @DisplayName("Doit notifier un follower que son ticket a été fusionné")
+    void mergeRequestNotifieFollower_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+        // Action
+        notificationService.mergeRequestNotifieFollower(testUser, testIssue);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+
+        Notification notif = captor.getValue();
+
+        // Assertions
+        assertEquals(TypeNotification.MERGE_REQUEST_FOLLOWERS, notif.getType());
+        assertEquals(testUser, notif.getRecipient());
+        assertEquals(testIssue, notif.getIssue());
+        assertFalse(notif.isRead());
+
+        assertTrue(notif.getContent().contains("Le ticket: Bug Connexion que vous suivez, a été fusionné"));
+    }
 }

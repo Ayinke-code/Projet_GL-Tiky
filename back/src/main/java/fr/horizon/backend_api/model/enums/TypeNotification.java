@@ -52,6 +52,8 @@ public enum TypeNotification {
     MERGE_REQUEST_DENIED,
     //notifie le manager d'une acceptation de fusion
     MERGE_REQUEST_ACCEPTED,
+    // notifie les followers
+    MERGE_REQUEST_FOLLOWERS
 
 
 
