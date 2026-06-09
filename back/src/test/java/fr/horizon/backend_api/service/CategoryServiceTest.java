@@ -41,6 +41,9 @@ class CategoryServiceTest {
     @Mock
     private IssueRepository issueRepository;
 
+    @Mock
+    private IssueService issueService;
+
     @InjectMocks
     private CategoryService categoryService;
 
@@ -127,29 +130,13 @@ class CategoryServiceTest {
     @Test
     void shouldDeleteCategory() {
 
-        List<CategoryRequest> requests = List.of(
-                CategoryRequest.builder().id(1L).build(),
-                CategoryRequest.builder().id(2L).build()
-        );
-
-        List<Issue> issues = List.of(
-                Issue.builder().id(1L).build(),
-                Issue.builder().id(2L).build()
-        );
-
         when(categoryRepository.findById(10L))
                 .thenReturn(Optional.of(category));
 
-        when(categoryRequestRepository.findAllByCategory(category))
-                .thenReturn(requests);
-
-        when(issueRepository.findByCategoryId(10L))
-                .thenReturn(issues);
-
         categoryService.deleteById(10L);
 
-        verify(issueRepository).deleteAll(issues);
-        verify(categoryRequestRepository).deleteAll(requests);
+        verify(issueService).deleteAllByCategory(category);
+        verify(categoryRequestRepository).deleteAllByCategory(category);
         verify(categoryRepository).delete(category);
     }
 

@@ -63,12 +63,22 @@ export const useCategories = () => {
       subject: payload.subject,
       ownerId: user.value.id
     }
-    const created = await api('/categories', {
-      method: 'POST',
-      body: values
-    })
-    await fetchCategories()
-    return created
+
+    try {
+      const created = await api('/categories', {
+        method: 'POST',
+        body: values
+      })
+
+      // refresh local state
+      await fetchCategories()
+
+      return created
+    } catch (e) {
+      return {
+        error: `Catégorie existe déja pour le type Issue`
+      }
+    }
   }
 
   /**

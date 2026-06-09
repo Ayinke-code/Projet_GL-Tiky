@@ -1,5 +1,6 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.exception.CategoryNameAlreadyExistsOfThisTypeException;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.*;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -34,6 +36,7 @@ public class CategoryService {
     private final UserRepository userRepository;
     private final CategoryRequestRepository categoryRequestRepository;
     private final IssueRepository issueRepository;
+    private final IssueService issueService;
 
     /**
      * Récupère toutes les catégories.
@@ -72,6 +75,13 @@ public class CategoryService {
 
         User owner = userRepository.findById(dto.getOwnerId())
                 .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
+
+        // Check si une catégorie n'existe pas déja avec ce nom et de type ISSUE
+        if (categoryRepository.existsByNameIgnoreCaseAndCategoryType(
+                dto.getName(),
+                CategoryType.ISSUE)) {
+            throw new CategoryNameAlreadyExistsOfThisTypeException(dto.getName());
+        }
 
         Category category = Category.builder()
                 .name(dto.getName())
@@ -164,11 +174,11 @@ public class CategoryService {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new CategoryNotFoundException(id));
 
-        List<CategoryRequest> requests = categoryRequestRepository.findAllByCategory(category);
-        List<Issue> issues = issueRepository.findByCategoryId(category.getId());
+        // Délègue la suppression des issues et leurs dépendances
+        issueService.deleteAllByCategory(category);
 
-        issueRepository.deleteAll(issues);
-        categoryRequestRepository.deleteAll(requests);
+        // Supprime les demandes de catégorie
+        categoryRequestRepository.deleteAllByCategory(category);
 
         categoryRepository.delete(category);
     }

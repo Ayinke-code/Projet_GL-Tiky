@@ -352,6 +352,32 @@ public class IssueService {
     }
 
     /**
+     * Deletes all issues associated with the given category,
+     * along with their related events and documents.
+     *
+     * @param category the category whose issues must be deleted
+     */
+    @Transactional
+    public void deleteAllByCategory(Category category) {
+        List<Issue> issues = issueRepository.findByCategoryId(category.getId());
+
+        if (issues.isEmpty()) return;
+
+        List<Long> issueIds = issues.stream()
+                .map(Issue::getId)
+                .toList();
+
+        // Supprime tous les événements liés en une seule requête
+        eventRepository.deleteByIssueIdIn(issueIds);
+
+        // Supprime tous les documents liés en une seule requête
+        documentService.deleteDocumentsByIssueIdIn(issueIds);
+
+        // Supprime toutes les issues en une seule requête
+        issueRepository.deleteAll(issues);
+    }
+
+    /**
      * Met à jour une issue lorsqu'elle est corrigé suite à une issue imcomplète et relance une demande de manager/validation
      *
      * @param email identifiant de l'utilisateur

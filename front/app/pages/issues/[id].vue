@@ -493,7 +493,6 @@ const handleUnfollow = async () => {
             </svg>
             Ne plus suivre
           </button>
-
         </div>
       </div>
 
@@ -532,9 +531,12 @@ const handleUnfollow = async () => {
           <!-- Zone d'envoi de message -->
           <MessageInput
             v-model="newMessage"
-            v-model:messageFiles="messageFiles"
             :sending="sending"
             :replying-to="replyingToMessage"
+            :disabled="issue?.status === 'TERMINE' || issue?.status === 'EN_ATTENTE' || issue?.status === 'INCOMPLET'"
+            :disabled-message="issue?.status === 'TERMINE'
+              ? 'Ce ticket est terminé — la messagerie est désactivée.'
+              : 'Ce ticket est en attente de validation — la messagerie sera disponible une fois le ticket ouvert.'"
             @cancel-reply="replyingToMessage = null"
             @send="handleSend"
           />

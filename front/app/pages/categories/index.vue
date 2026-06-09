@@ -1,11 +1,17 @@
 <template>
   <div class="p-8 pb-8 min-h-screen bg-gray-50">
 
-    <div class="flex flex-col gap-4 md:flex-row justify-between items-start md:items-center mb-8">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-800">Gestion des catégories</h1>
-        <p class="text-sm text-gray-600 mt-2">Mes catégories, abonnements, autres catégories et archives.</p>
-      </div>
+        <!-- Header page -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-gray-800">Gestion des Catégories</h1>
+
+            <!-- Bouton ouverture modal création pour les professeur -->
+            <Button id = "create-categorie-teacher" v-if="ready && user?.roles?.includes(ROLE.TEACHER)" @click="isCreateModalOpen = true"
+                icon="i-lucide-plus" label="Créer une catégorie" color="secondary" size="lg" variant="solid" rounded />
+            <!-- Bouton ouverture modal demande de création pour les étudiants -->
+            <Button id = "create-categorie-student" v-else-if="ready && user?.roles?.includes(ROLE.STUDENT)" @click="isRequestCreateModalOpen = true"
+                icon="i-lucide-plus" label="Demande de catégorie" color="secondary" size="lg" variant="solid" rounded />
+        </div>
 
       <div class="flex flex-wrap gap-3">
         <Button id="create-categorie-teacher" v-if="ready && user?.value?.roles?.includes(ROLE.TEACHER)"
@@ -17,6 +23,11 @@
       </div>
     </div>
 
+            <!-- Affichage erreur API -->
+            <Alert v-if="errorMessage" color="error" title="Erreur"
+                description="La catégorie renseigné existe déja !">
+                {{ errorMessage }}
+            </Alert>
     <Alert v-if="categoriesError" color="error" title="Erreur" description="Impossible de charger les catégories.">
       {{ categoriesError }}
     </Alert>
@@ -181,6 +192,18 @@ const isCreateModalOpen = ref(false)
 const isRequestCreateModalOpen = ref(false)
 const isDetailOpen = ref(false)
 
+/**
+ * Message d'erreur lors de la création d'une catégorie
+ */
+const errorMessage = ref(null)
+
+/**
+ * Chargement initial des catégories au montage de la page.
+ */
+onMounted(async () => {
+    await fetchCategoriesByType('ISSUE')
+    await fetchCategoryRequests()
+})
 const ownedCategories = computed(() => categories.value.filter(cat => cat.status !== 'ARCHIVED' && cat.ownerId === user?.value?.id))
 const followedCategories = computed(() => categories.value.filter(cat => cat.status !== 'ARCHIVED' && cat.ownerId !== user?.value?.id && isCategoryFollowed(cat.id)))
 const otherCategories = computed(() => categories.value.filter(cat => cat.status !== 'ARCHIVED' && cat.ownerId !== user?.value?.id && !isCategoryFollowed(cat.id)))
@@ -210,6 +233,15 @@ const handleClick = (cat) => {
 }
 
 const handleCreate = async (data) => {
+    const res = await createCategory(data)
+
+    if(res.error) {
+        errorMessage.value = res.error;
+        return
+    }
+
+    await fetchCategoriesByType('ISSUE')
+    isCreateModalOpen.value = false
   const res = await createCategory(data)
   if (!res) return
   isCreateModalOpen.value = false
