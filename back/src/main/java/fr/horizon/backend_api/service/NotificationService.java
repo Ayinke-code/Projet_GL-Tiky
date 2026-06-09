@@ -450,7 +450,7 @@ public class NotificationService {
     }
 
     public void managerAddingFollowerNotification(User user, Category category){
-        String content = category.getOwner() + " vous a ajouté dans sa catégorie "+category.getName()+". Consultez la rapidement !";
+        String content = category.getOwner().getName() + " vous a ajouté dans sa catégorie "+category.getName()+". Consultez la rapidement !";
 
         Notification notif = Notification.builder()
                 .content(content)
@@ -478,7 +478,7 @@ public class NotificationService {
     }
 
     public void acceptTeacherQuitCategoryNotification(User user, Category category){
-        String content = category.getOwner() + " a accepté votre demande de départ de sa catégorie: "+category.getName();
+        String content = category.getOwner().getName() + " a accepté votre demande de départ de sa catégorie: "+category.getName();
 
         Notification notif = Notification.builder()
                 .content(content)
@@ -493,7 +493,7 @@ public class NotificationService {
 
     public void deniedTeacherQuitCategoryNotification(User user, DeletionCategoryRequest deletionCategoryRequest){
         Category category = deletionCategoryRequest.getCategory();
-        String content = category.getOwner() + " a refusé votre demande de départ de sa catégorie: "+category.getName()+". Au motif: "+ deletionCategoryRequest.getRejectionReason();
+        String content = category.getOwner().getName() + " a refusé votre demande de départ de sa catégorie: "+category.getName()+". Au motif: "+ deletionCategoryRequest.getRejectionReason();
 
         Notification notif = Notification.builder()
                 .content(content)
@@ -564,8 +564,7 @@ public class NotificationService {
                 .type(notification.getType())
                 .isRead(notification.isRead())
                 .sendingHour(LocalDateTime.now())
-                .categoryId(notification.getCategory().getId())
-                .content(notification.getContent())
+                .categoryId(notification.getCategory() != null ? notification.getCategory().getId() : null)                .content(notification.getContent())
                 .officialLinkRequestId(notification.getOfficialLinkRequest() != null ? notification.getOfficialLinkRequest().getId() : null)
                 .issueId(notification.getIssue() != null ? notification.getIssue().getId() : null)
                 .eventId(notification.getEvent() != null ? notification.getEvent().getId() : null)

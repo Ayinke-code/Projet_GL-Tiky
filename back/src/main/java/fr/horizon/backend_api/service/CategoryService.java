@@ -176,7 +176,7 @@ public class CategoryService {
         categoryRequestRepository.deleteAllByCategory(category);
 
         // suppresion des demandes de désinsciption
-        deletionCategoryRequestRepository.deleteById(id);
+        deletionCategoryRequestRepository.deleteAllByCategory(category);
 
         categoryRepository.delete(category);
     }

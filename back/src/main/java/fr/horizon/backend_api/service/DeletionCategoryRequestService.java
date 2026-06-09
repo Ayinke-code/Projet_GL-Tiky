@@ -55,7 +55,7 @@ public class DeletionCategoryRequestService {
 
         DeletionCategoryRequest saved = deletionCategoryRequestRepository.save(request);
 
-        notificationService.teacherQuitCategoryNotification(requester, category);
+        notificationService.teacherQuitCategoryNotification(category.getOwner(), category);
 
         return mapToDto(saved);
     }
