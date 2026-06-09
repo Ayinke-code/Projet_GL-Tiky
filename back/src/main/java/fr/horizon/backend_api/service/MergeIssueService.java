@@ -28,6 +28,7 @@ public class MergeIssueService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final DocumentRepository documentRepository;
+    private final NotificationService notificationService;
 
     private static final String USER_NOT_FOUND = "Utilisateur introuvable";
 
@@ -82,6 +83,7 @@ public class MergeIssueService {
         }
 
         MergeRequest saved = mergeRequestRepository.save(request);
+        notificationService.mergeRequestNotification(request);
         return mapToDto(saved);
     }
 
@@ -115,6 +117,7 @@ public class MergeIssueService {
             request.setStatus(MergeRequestStatus.REJECTED);
             request.setRejectionReason(reason);
             MergeRequest saved = mergeRequestRepository.save(request);
+            notificationService.mergeRequestDeniedNotification(request);
             return mapToDto(saved);
         }
 
@@ -127,6 +130,7 @@ public class MergeIssueService {
         if (sourceApproved && targetApproved) {
             request.setStatus(MergeRequestStatus.ACCEPTED);
             mergeIssues(request.getSourceIssue(), request.getTargetIssue());
+            notificationService.mergeRequestAcceptedNotification(request);
         }
 
         MergeRequest saved = mergeRequestRepository.save(request);

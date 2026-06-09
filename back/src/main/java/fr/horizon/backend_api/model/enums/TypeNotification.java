@@ -45,7 +45,14 @@ public enum TypeNotification {
     // notifier les followers de l'issue d'un lien officiel
     FOLLOWERS_LINK,
     // notifier le manager lorsque la demande est accepté
-    MANAGER_RESPONSE_LINK_REQUEST
+    MANAGER_RESPONSE_LINK_REQUEST,
+    // notifie le manager lorsqu'un autre manager veut fusionner
+    MERGE_REQUEST_MANAGER,
+    //notifie le manager d'un refus de fusion
+    MERGE_REQUEST_DENIED,
+    //notifie le manager d'une acceptation de fusion
+    MERGE_REQUEST_ACCEPTED,
+
 
 
 }
