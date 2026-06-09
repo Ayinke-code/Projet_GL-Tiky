@@ -5,7 +5,7 @@
         <h1 class="text-3xl font-bold text-black">
           Tickets suivis
         </h1>
-        <UButton to="/issues" variant="outline" icon="i-lucide-arrow-left">
+        <UButton to="/issues" color="secondary" variant="outline" size="lg" class="rounded-full font-bold" icon="i-lucide-arrow-left">
           Retour aux tickets
         </UButton>
       </div>
