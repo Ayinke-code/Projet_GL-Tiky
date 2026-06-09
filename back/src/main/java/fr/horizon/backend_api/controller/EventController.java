@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -336,6 +337,21 @@ public class EventController {
     public ResponseEntity<List<EventResponseDto>> getUserAvailabilities(@PathVariable Long userId) {
         List<EventResponseDto> response = eventService.getUserAvailabilities(userId);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Retourne les events (AUDIT, DEFENSE, RDV) d'un utilisateur qui chevauchent un créneau donné.
+     * Utilisé par le front pour détecter les conflits d'agenda avant de proposer un RDV.
+     * GET /events/users/{userId}/busy-slots?start=...&end=...
+     */
+    @GetMapping("/users/{userId}/busy-slots")
+    public ResponseEntity<List<EventResponseDto>> getUserBusySlots(
+            @PathVariable Long userId,
+            @RequestParam String start,
+            @RequestParam String end) {
+        LocalDateTime startDt = LocalDateTime.parse(start);
+        LocalDateTime endDt = LocalDateTime.parse(end);
+        return ResponseEntity.ok(eventService.getUserBusySlots(userId, startDt, endDt));
     }
 }
 
