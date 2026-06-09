@@ -3,6 +3,7 @@ package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.NotificationDto;
+import fr.horizon.backend_api.model.enums.LinkRejectionReason;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.model.enums.TypeNotification;
 import fr.horizon.backend_api.repository.NotificationRepository;
@@ -14,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +28,7 @@ public class NotificationService {
     private static final String NEW_TICKET_CATEGORIE_MESSAGE = "Un nouveau ticket a été dans votre catégorie, affectez-le rapidement à un professeur !";
     private static final String INCOMPLET_TICKET_MESSAGE = "Votre ticket a été marqué incomplet, complétez-le rapidement !";
     private static final String DEMANDE_MANAGER_MESSAGE = "Vous avez reçu une nouvelle demande de manager";
+    private static final String MESSAGE_CONSULTE = ". Consultez-le vite !";
 
 
     /**
@@ -172,7 +173,7 @@ public class NotificationService {
             }
 
             default ->
-                    content = "Vous avez été invité à un événement " + formattedDate + ". Consultez-le vite !";
+                    content = "Vous avez été invité à un événement " + formattedDate + MESSAGE_CONSULTE;
         }
 
         Notification notif = Notification.builder()
@@ -353,7 +354,7 @@ public class NotificationService {
         }
 
         String content = "Plusieurs utilisateurs ont lié votre ticket: " + userIssue.getTitle() +
-                " avec le ticket: " + otherIssue.getTitle() + ". Consultez-le vite !";
+                " avec le ticket: " + otherIssue.getTitle() + MESSAGE_CONSULTE;
 
         Notification notif = Notification.builder()
                 .content(content)
@@ -393,7 +394,7 @@ public class NotificationService {
 
         String content = "Le ticket que vous suivez: " + issue.getTitle() +
                 " est maintenant lié au ticket: " + otherIssue.getTitle() +
-                ". Consultez-le vite !";
+                MESSAGE_CONSULTE;
 
         Notification notif = Notification.builder()
                 .content(content)
@@ -402,6 +403,47 @@ public class NotificationService {
                 .issue(issue)
                 .recipient(user)
                 .type(TypeNotification.FOLLOWERS_LINK)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    @Transactional
+    public void linkIssueResponseNotification(User user, OfficialLinkRequest request) {
+        Issue source = request.getSourceIssue();
+        Issue target = request.getTargetIssue();
+
+        User responder = (source.getManager() != null && source.getManager().getId().equals(user.getId()))
+                ? target.getManager()
+                : source.getManager();
+
+        String responderName = (responder != null) ? responder.getName() : "Un manager";
+        String content;
+
+        if (Boolean.TRUE.equals(request.getApproved())) {
+            content = responderName + " a accepté votre demande de liaison ! Les tickets sont maintenant liés.";
+        } else {
+            content = responderName + " a refusé votre demande de liaison entre les tickets.";
+
+            LinkRejectionReason reason = request.getRejectionReason();
+            if (reason != null) {
+                String reasonLabel = switch (reason) {
+                    case DUPLICATE_RELATION -> "Lien en doublon ou redondant";
+                    case IRRELEVANT -> "Tickets sans lien réel (non pertinent)";
+                    case WRONG_RELATION_TYPE -> "Type de relation incorrect";
+                    case OTHER -> "Autre raison";
+                };
+                content += " Motif : " + reasonLabel + ".";
+            }
+        }
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .officialLinkRequest(request)
+                .issue(source)
+                .recipient(user)
+                .type(TypeNotification.MANAGER_RESPONSE_LINK_REQUEST)
                 .build();
 
         saveAndSend(notif);

@@ -43,7 +43,9 @@ public enum TypeNotification {
     // Manager demade de lien a un autre manager
     MANAGER_LINK_REQUEST,
     // notifier les followers de l'issue d'un lien officiel
-    FOLLOWERS_LINK
+    FOLLOWERS_LINK,
+    // notifier le manager lorsque la demande est accepté
+    MANAGER_RESPONSE_LINK_REQUEST
 
 
 }
