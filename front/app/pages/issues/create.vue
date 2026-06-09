@@ -14,14 +14,14 @@
           <label class="block text-sm font-medium text-gray-700">Titre *</label>
           <input id= "input-issue-title" v-model="form.title" type="text" placeholder="Entrez le titre du ticket"
                  class="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-                 required />
+                 required color="info"/>
         </div>
 
         <!-- Description -->
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">Description *</label>
           <UTextarea v-model="form.description" id="input-issue-description" placeholder="Décrivez le ticket en détail..." :rows="6"
-                     class="w-full" required />
+                     class="w-full" required color="info"/>
         </div>
 
         <!-- Catégorie -->
@@ -165,6 +165,12 @@ const handleCreateIssue = async () => {
       pendingCase: form.isPending,
       files: files.value
     })
+
+    // Erreur si l'espace disque dépassera la limite après l'upload
+    if(result?.status === 507) {
+      error.value = "Le stockage de document sur serveur va dépasser la limite autorisé, veuillez contacter l'administrateur !"
+      return
+    }
 
     if (!result) return
 

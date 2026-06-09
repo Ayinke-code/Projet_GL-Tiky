@@ -95,7 +95,7 @@ export const useIssues = () => {
             return created
         } catch (e) {
             error.value = e?.data?.message || 'CREATE_ISSUE_ERROR'
-            return null
+            return e
         }
     }
 
