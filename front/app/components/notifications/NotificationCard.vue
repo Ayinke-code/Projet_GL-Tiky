@@ -89,7 +89,7 @@ const targetUrl = computed(() => {
     }
   }
 
-  if ((props.notification.type === 'MANAGER_ADDING_TEACHER_CATEGORY' ||
+  if ((props.notification.type === 'MANAGER_ADDING_TEACHER_CATEGORY' || props.notification.type === 'TEACHER_QUIT_CATEGORY' ||
       props.notification.type === 'DENIED_TEACHER_QUIT_CATEGORY') &&
     props.notification.categoryId) {
     return `/categories/${props.notification.categoryId}`
