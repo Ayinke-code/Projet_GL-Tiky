@@ -1,6 +1,6 @@
 export const useDeletionCategoryRequest = () => {
   const api = useApi()
-  const basePath = '/api/deletion-category-requests'
+  const basePath = '/deletion-category-requests'
 
   /**
    * Crée une demande de désinscription pour le follower connecté

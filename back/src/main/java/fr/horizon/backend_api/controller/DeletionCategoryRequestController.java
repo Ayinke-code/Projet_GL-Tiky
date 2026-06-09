@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/deletion-category-requests")
+@RequestMapping("/deletion-category-requests")
 @RequiredArgsConstructor
 public class DeletionCategoryRequestController {
 
