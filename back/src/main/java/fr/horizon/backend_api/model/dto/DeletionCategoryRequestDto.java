@@ -12,6 +12,4 @@ public class DeletionCategoryRequestDto {
         private Long categoryId;
         private String status;
         private String rejectionReason;
-
-        private String test;
 }

@@ -143,7 +143,7 @@
   </div>
 
   <!-- Modal de suppression de la catégorie -->
-  <ConfirmModal 
+  <ConfirmModal
     v-model:open="isDeleteCategoryModalOpen"
     title="Supprimer la catégorie"
     description="Voulez-vous vraiment supprimer cette catégorie ?"
@@ -284,4 +284,4 @@ const handleDelete = async (id) => {
 }
 </script>
 
-aaa
+
