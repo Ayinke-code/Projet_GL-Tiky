@@ -37,4 +37,7 @@ public class DeletionCategoryRequest extends BaseEntity{
     @Column(nullable = false)
     private CategoryRequestStatus status = CategoryRequestStatus.PENDING;
 
+    @Column
+    private String test;
+
 }
