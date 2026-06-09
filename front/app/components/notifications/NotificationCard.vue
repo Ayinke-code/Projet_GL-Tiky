@@ -173,7 +173,7 @@ const uiConfig = computed(() => {
         iconPath: 'M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
       }
 
-
+    // --- RÉOUVERTURE ET CLÔTURE ---
     case 'NEW_OPEN_ISSUE':
       return {
         title: 'Demande de réouverture',
@@ -186,14 +186,12 @@ const uiConfig = computed(() => {
         textColor: 'text-emerald-600',
         iconPath: 'M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z'
       }
-
     case 'OPEN_ISSUE':
       return {
         title: 'Ticket Réouvert',
         textColor: 'text-sky-600',
         iconPath: 'M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z'
       }
-
     case 'CLOSING_ISSUE':
       return {
         title: 'Ticket Clôturé',
@@ -201,6 +199,7 @@ const uiConfig = computed(() => {
         iconPath: 'M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z'
       }
 
+    // --- ABONNEMENTS ---
     case 'NEW_FOLLOWER':
       return {
         title: 'Nouvel Abonné',
@@ -212,6 +211,26 @@ const uiConfig = computed(() => {
         title: 'Désabonnement',
         textColor: 'text-slate-400',
         iconPath: 'M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.375 21c-2.331 0-4.512-.645-6.375-1.765z'
+      }
+
+    // --- LIAISONS DE TICKETS ---
+    case 'SUBSCRIBERS_NEW_LINK':
+      return {
+        title: 'Liaison Suggérée',
+        textColor: 'text-violet-600',
+        iconPath: 'M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244'
+      }
+    case 'MANAGER_LINK_REQUEST':
+      return {
+        title: 'Demande de Liaison',
+        textColor: 'text-fuchsia-600',
+        iconPath: 'M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244'
+      }
+    case 'FOLLOWERS_LINK':
+      return {
+        title: 'Tickets Liés',
+        textColor: 'text-blue-500',
+        iconPath: 'M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244'
       }
 
     default:
