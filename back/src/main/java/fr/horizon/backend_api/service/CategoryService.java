@@ -103,11 +103,12 @@ public class CategoryService {
                 .stream()
                 .anyMatch(role ->
                         role.getName().equals(RoleEnum.TEACHER.value()) ||
-                        role.getName().equals(RoleEnum.ADMIN.value())
+                        role.getName().equals(RoleEnum.ADMIN.value()) ||
+                        role.getName().equals(RoleEnum.STUDENT.value())
                 );
 
         if (!canFollow) {
-            throw new IllegalArgumentException("Only teachers or admins can follow categories");
+            throw new IllegalArgumentException("Only teachers, admins or students can follow categories");
         }
 
         if (!category.getFollowers().contains(user)) {
