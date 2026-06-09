@@ -31,6 +31,7 @@ class ScenarioTestIT extends BaseSeleniumIT{
     private static final String CATEGORIE_PROPRIETAIRE = "Propriétaire";
 
     private static final String MESSAGE = "MESSAGE TEST";
+    private static final String MESSAGE_DISABLE_TCHAT = "Ce ticket est en attente de validation — la messagerie sera disponible une fois le ticket ouvert.";
 
     @BeforeEach
     void initTitreUnique() {
@@ -99,14 +100,14 @@ class ScenarioTestIT extends BaseSeleniumIT{
 
     @Order(9)
     @Test
-    @DisplayName("Scénario 1.6.1 envoyer un message")
+    @DisplayName("Scénario 1.6.1 vérifier que la messagerie est désactivé ")
     void envoyerMessageTest(){
         //préconditon
         connexion(false);
         creeTicket(false);
 
         allerDansMessage();
-        envoyerMessage();
+        checkMessageDisabled();
     }
 
     @Order(4)
@@ -327,6 +328,12 @@ class ScenarioTestIT extends BaseSeleniumIT{
         WebElement messageSend = driver.findElement(By.id("issue-message-"+MESSAGE));
 
         Assertions.assertEquals(MESSAGE, messageSend.getText().trim(), "le message a pas été envoyé");
+    }
+
+    private void checkMessageDisabled(){
+        WebElement textDisableMessage = driver.findElement(By.id("disabled-message-banner"));
+
+        Assertions.assertTrue(textDisableMessage.getText().trim().contains(MESSAGE_DISABLE_TCHAT));
     }
 
     private void affecterManager(boolean self){
