@@ -582,6 +582,19 @@ public class EventService {
     }
 
     /**
+     * Retourne les events (AUDIT, DEFENSE, RDV) d'un utilisateur qui chevauchent un créneau.
+     * Utilisé côté front pour détecter les conflits d'agenda avant de proposer un RDV.
+     */
+    public List<EventResponseDto> getUserBusySlots(Long userId, LocalDateTime start, LocalDateTime end) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+        return eventRepository.findBusyEventsForUser(userId, start, end)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    /**
      * Supprime une disponibilité appartenant à l'utilisateur connecté.
      *
      * @param id    identifiant de l'event AVAILABILITY
