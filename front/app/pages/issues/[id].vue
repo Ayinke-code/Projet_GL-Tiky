@@ -818,7 +818,7 @@ const getMessageType = (msg, index = -1) => {
           <!-- RELATION CARD (Visible uniquement si suivi ou manager) -->
           <ClientOnly>
             <IssueRelationCard
-              v-if="alreadyFollowing || user?.id === issue?.categoryManagerId"
+              v-if="issue"
               :current-issue-id="issueId"
               :current-category-id="issue.categoryId"
               :current-category-manager-id="issue.categoryManagerId"
