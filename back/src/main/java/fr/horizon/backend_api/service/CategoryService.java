@@ -17,8 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -203,9 +203,6 @@ public class CategoryService {
                 .categoryType(category.getCategoryType())
                 .ownerName(category.getOwner() != null ? category.getOwner().getName() : null)
                 .ownerId(category.getOwner() != null ? category.getOwner().getId() : null)
-                .followerIds(category.getFollowers() != null ?
-                        category.getFollowers().stream().map(User::getId).collect(Collectors.toSet()) :
-                        new HashSet<>())
                 .build();
     }
 
