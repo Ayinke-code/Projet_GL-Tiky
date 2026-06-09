@@ -2,6 +2,8 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.service.NotificationService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -52,15 +54,17 @@ public class AuthController {
         LoginResponse loginResponse = authService.login(loginRequest);
 
         // Stock le token dans un Cookie en HTTPOnly
-        Cookie cookie = new Cookie("token", loginResponse.getToken());
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge((int) (expiration / 1000));
+        ResponseCookie cookie = ResponseCookie.from("token", loginResponse.getToken())
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")                     // protection CSRF, d'ou la désactivation dans le JwtAuthentificationFilter
+                .path("/")
+                .maxAge(expiration / 1000)
+                .build();
 
-        response.addCookie(cookie);
-
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .build();
     }
 
     /**
@@ -85,15 +89,17 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletResponse response) {
 
-        Cookie cookie = new Cookie("token", null);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(0); // supprime le cookie
+        ResponseCookie cookie = ResponseCookie.from("token", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("Strict")
+                .path("/")
+                .maxAge(0) // supprime le cookie
+                .build();
 
-        response.addCookie(cookie);
-
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .build();
     }
 
 }
