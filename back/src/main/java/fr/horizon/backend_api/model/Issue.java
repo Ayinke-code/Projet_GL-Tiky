@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -45,6 +46,18 @@ public class Issue extends BaseEntity {
 
     @Column
     private String reopeningDescription;
+
+    @Column(name = "merged_at")
+    private LocalDateTime mergedAt;
+
+    // on affiche tout ceux qui sont a false, si true c'est la source des tickets
+    @Builder.Default
+    @Column
+    private boolean merged = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "merged_into_id")
+    private Issue mergedInto;
 
     @ManyToOne
     @JoinColumn(name = "category_id", nullable = false)

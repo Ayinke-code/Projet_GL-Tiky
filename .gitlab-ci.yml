@@ -41,7 +41,7 @@ build-backend:
   artifacts:
     paths:
       - back/target/*.jar
-    expire_in: 1 days
+    expire_in: 1 hour
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
     - if: $CI_COMMIT_BRANCH == "main"
@@ -67,7 +67,7 @@ build-frontend-dev:
   artifacts:
     paths:
       - front/.output/public/
-    expire_in: 1 days
+    expire_in: 1 hour
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -92,7 +92,7 @@ build-frontend-prod:
   artifacts:
     paths:
       - front/.output/public/
-    expire_in: 1 days
+    expire_in: 1 hour
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
 
@@ -103,13 +103,13 @@ unit-test:
     - cd back
     - mvn $MAVEN_CLI_OPTS test
   artifacts:
-    when: always
+    when: on_failure
     reports:
       junit:
         - back/target/surefire-reports/TEST-*.xml
     paths:
       - back/target/surefire-reports/
-    expire_in: 1 days
+    expire_in: 1 hour
   dependencies:
     - build-backend
   rules:
@@ -291,11 +291,6 @@ selenium-test-dev:
     - cd back
     - mvn $MAVEN_CLI_OPTS test-compile failsafe:integration-test failsafe:verify
         -Dwebdriver.chrome.driver=/usr/bin/chromedriver
-  artifacts:
-    when: always
-    paths:
-      - back/target/selenium-reports/
-    expire_in: 1 days
   dependencies:
     - build-backend
   rules:
@@ -323,11 +318,6 @@ selenium-test-prod:
     - cd back
     - mvn $MAVEN_CLI_OPTS test-compile failsafe:integration-test failsafe:verify
         -Dwebdriver.chrome.driver=/usr/bin/chromedriver
-  artifacts:
-    when: always
-    paths:
-      - back/target/selenium-reports/
-    expire_in: 1 days
   dependencies:
     - build-backend
   rules:

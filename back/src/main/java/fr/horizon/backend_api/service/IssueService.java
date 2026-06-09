@@ -47,6 +47,8 @@ public class IssueService {
     private final NotificationService notificationService;
     private final DocumentService documentService;
     private final EventRepository eventRepository;
+    private final MergeRequestRepository mergeRequestRepository;
+    private final IssueRelationRepository issueRelationRepository;
 
     private static final String USER_NOT_FOUND = "User not found";
 
@@ -341,14 +343,48 @@ public class IssueService {
         if (!canDeleteIssue(issue, currentUser)) {
             throw new AccessDeniedException("Vous n'avez pas l'autorisation de supprimer cette issue");
         }
-
+        // Supprimer les demande de fusion et les liens
+        mergeRequestRepository.deleteByIssueId(id);
+        issueRelationRepository.deleteByIssueId(id);
         // Supprimer les événements liés avant de supprimer l'issue
         eventRepository.deleteByIssueId(id);
 
         // Supprime tous les documents liés à l'issue qui va être supprimé
         documentService.deleteDocumentsByIssueId(id);
 
+        // suppresion du lien de fusion
+        issueRepository.clearMergedIntoReference(id);
+
         issueRepository.delete(issue);
+    }
+
+    /**
+     * Deletes all issues associated with the given category,
+     * along with their related events and documents.
+     *
+     * @param category the category whose issues must be deleted
+     */
+    @Transactional
+    public void deleteAllByCategory(Category category) {
+        List<Issue> issues = issueRepository.findByCategoryId(category.getId());
+
+        if (issues.isEmpty()) return;
+
+        List<Long> issueIds = issues.stream()
+                .map(Issue::getId)
+                .toList();
+
+        // Supprime tous les événements liés en une seule requête
+        eventRepository.deleteByIssueIdIn(issueIds);
+
+        // Supprime tous les documents liés en une seule requête
+        documentService.deleteDocumentsByIssueIdIn(issueIds);
+
+        // suppresion du lien de fusion
+        issueRepository.clearMergedIntoReferences(issueIds);
+
+        // Supprime toutes les issues en une seule requête
+        issueRepository.deleteAll(issues);
     }
 
     /**

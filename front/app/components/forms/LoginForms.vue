@@ -2,7 +2,7 @@
   <!-- Header -->
   <div class="text-center mb-8">
     <div class="text-4xl font-bold text-indigo-600 mb-2">
-      <span>tk.</span> Tiky
+      <span>Tiky</span>
     </div>
     <p class="text-gray-600">Connectez-vous à votre compte</p>
   </div>

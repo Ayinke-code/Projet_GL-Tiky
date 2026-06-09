@@ -126,5 +126,7 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     void removeGroupFromAllEvents(@Param("groupId") Long groupId);
 
     void deleteByIssueId(Long issueId);
+
+    void deleteByIssueIdIn(List<Long> issueIds);
 }
 
