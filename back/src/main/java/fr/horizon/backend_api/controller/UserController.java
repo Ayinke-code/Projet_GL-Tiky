@@ -2,10 +2,7 @@ package fr.horizon.backend_api.controller;
 
 import java.util.List;
 
-import fr.horizon.backend_api.model.dto.UserDto;
-import fr.horizon.backend_api.model.dto.UserFollowerDto;
-import fr.horizon.backend_api.model.dto.UserRefDto;
-import fr.horizon.backend_api.model.dto.UserRequestDto;
+import fr.horizon.backend_api.model.dto.*;
 import fr.horizon.backend_api.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -64,6 +61,16 @@ public class UserController {
         userService.deleteById(id);
     }
 
+    /**
+     * Modifie les rôles d'un utilisateur.
+     *
+     * @param dto données de modification de rôles d'utilisateur
+     * @return utilisateur créé sous forme de DTO
+     */
+    @PostMapping("/{id}/roles")
+    public UserDto updateRolesUser(@PathVariable Long id, @Valid @RequestBody UpdateRolesDto dto) {
+        return userService.updateUserRoles(id, dto);
+    }
 
     /**
      * Retourne la liste des teachers
