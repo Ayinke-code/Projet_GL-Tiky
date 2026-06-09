@@ -102,7 +102,7 @@ public class DeletionCategoryRequestService {
         return deletionCategoryRequestRepository.findByCategory_Owner_IdAndStatus(managerId, CategoryRequestStatus.PENDING)
                 .stream()
                 .map(this::mapToDto)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Transactional(readOnly = true)
