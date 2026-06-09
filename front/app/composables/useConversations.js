@@ -44,6 +44,9 @@ export const useConversations = () => {
 
     return {
       id: msg.id,
+      issueId: msg.issueId ?? null,
+      isMerged: Boolean(msg.isMerged),
+      originalIssueId: msg.originalIssueId ?? null,
       userId: user?.id ?? null,
       auteur: user?.name || 'Anonyme',
       role: user?.role || ROLE.STUDENT,

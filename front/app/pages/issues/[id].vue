@@ -11,6 +11,7 @@ import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import IssueMeetingProposal from "~/components/issues/meeting/IssueMeetingProposal.vue";
 import IssueMeetingDemand from "~/components/issues/meeting/IssueMeetingDemand.vue";
 import IssueRelationCard from '~/components/issues/IssueRelationCard.vue'
+import MergeRequestCard from '~/components/issues/MergeRequestCard.vue'
 import { getFileIcon } from '#imports';
 
 const route = useRoute()
@@ -20,6 +21,8 @@ const { getIssueMessages, sendIssueMessage, normalizeMessage, initializeConversa
 const { followIssue, unfollowIssue, isFollowing } = useIssueFollowers()
 const { acknowledgeFollowedIssueUpdate } = useFollowedIssuesState()
 const { downloadFile, deleteFile } = useDocuments()
+const { relations, fetchRelationsByIssue, fetchPendingRequests: fetchRelationPendingRequests } = useIssueRelations()
+const { requestMerge } = useMergeIssues()
 
 const FOLLOWER_NOTIFICATION_TYPES = ['NEW_FOLLOWER', 'NEW_UNFOLLOW']
 
@@ -43,10 +46,13 @@ const replyingToMessage = ref(null)
 const sending = ref(false)
 const socket = ref(null)
 const conversationId = ref(null)
-
+const isMergeModalOpen = ref(false)
 const showFollowModal = ref(false)
 const alreadyFollowing = ref(false)
 const followSuccess = ref(false)
+const mergeTargetId = ref(null)
+const mergeLoading = ref(false)
+const mergeError = ref(null)
 
 // Contient les fichiers associés au ticket si il y en a
 const files = ref(null)
@@ -64,6 +70,17 @@ const downloadDoc = async (file) => {
     console.error(err)
   }
 }
+
+/**
+* Trouver les tickets avec lesquels on a un lien officiel
+ */
+const officialLinkCandidates = computed(() => {
+  if (!issue.value || !relations.value?.length) return []
+  return relations.value.filter(r => r.manager && !r.merged)
+})
+
+const canMerge = computed(() => officialLinkCandidates.value.length > 0)
+
 
 /**
  * Créateur du ticket peut supprimer un fichier
@@ -169,6 +186,29 @@ const connectWebSocket = () => {
   }
 }
 
+
+const refreshData = async () => {
+  try {
+    loading.value = true
+
+    // On recharge l'issue, les relations et les messages
+    issue.value = await getIssueById(issueId)
+    await fetchRelationsByIssue(issueId)
+
+    if (user?.value?.id === issue.value?.categoryManagerId) {
+      await fetchRelationPendingRequests()
+    }
+
+    // Si vous utilisez getCompleteConversation, mettez getCompleteConversation(issueId)
+    messages.value = await getIssueMessages(issueId)
+
+  } catch (err) {
+    console.error('Erreur lors du rafraîchissement :', err)
+  } finally {
+    loading.value = false
+  }
+}
+
 /**
  * Chargement initial de l'issue et des messages
  */
@@ -183,6 +223,11 @@ onMounted(async () => {
     issue.value = await getIssueById(issueId)
     // Marquer l'issue comme lue au chargement de la page
     acknowledgeFollowedIssueUpdate(issue.value)
+
+    await fetchRelationsByIssue(issueId)
+    if (user?.value?.id === issue.value?.categoryManagerId) {
+      await fetchRelationPendingRequests()
+    }
 
     alreadyFollowing.value = await isFollowing(issueId)
     const conversation = await initializeConversation(issueId)
@@ -369,6 +414,113 @@ const handleUnfollow = async () => {
     console.error(err)
   }
 }
+
+const handleMerge = async () => {
+  if (!mergeTargetId.value) return
+  mergeLoading.value = true
+  mergeError.value = null
+  try {
+    const result = await requestMerge(issueId, mergeTargetId.value)
+    isMergeModalOpen.value = false
+    mergeTargetId.value = null
+    if (result.status === 'ACCEPTED') {
+      await navigateTo(`/issues/${result.targetIssueId}`)
+    } else {
+      await fetchRelationsByIssue(issueId)
+      await fetchRelationPendingRequests()
+      issue.value = await getIssueById(issueId)
+    }
+  } catch (err) {
+    mergeError.value = err?.data?.message || 'Erreur lors de la demande de fusion.'
+  } finally {
+    mergeLoading.value = false
+  }
+}
+
+// Candidats à la fusion avec titre pour l'affichage
+const mergeCandidates = computed(() =>
+  officialLinkCandidates.value.map(r => ({
+    id: r.sourceIssueId === issueId ? r.targetIssueId : r.sourceIssueId,
+    title: r.sourceIssueId === issueId ? r.targetIssueTitle : r.sourceIssueTitle
+  }))
+)
+
+// On crée une Map pour attribuer une couleur unique par ID de ticket fusionné
+const issueColorMap = computed(() => {
+  const map = new Map()
+  let colorCounter = 0
+
+  messages.value.forEach(msg => {
+    if (msg.isMerged && msg.originalIssueId && !map.has(msg.originalIssueId)) {
+      map.set(msg.originalIssueId, colorCounter)
+      colorCounter++
+    }
+  })
+  return map
+})
+
+
+const firstMergedMessageIndex = computed(() => messages.value.findIndex(msg => msg.isMerged))
+
+const resolveMergeTimestamp = () => {
+  const raw = issue.value?.mergedAt
+  if (!raw) return null
+
+  const value = new Date(raw).getTime()
+  return Number.isNaN(value) ? null : value
+}
+
+// Détermine si on doit afficher l'en-tête des sections d'historique fusionné
+const shouldShowMergeHeader = (msg, index) => {
+  const type = getMessageType(msg, index)
+  if (type === 'normal') return false
+
+  // Toujours afficher un header pour le premier message du flux
+  if (index === 0) return true
+
+  // Afficher un header lorsqu'on change de segment (destination -> source ou inverse)
+  const prevType = getMessageType(messages.value[index - 1], index - 1)
+  return prevType !== type
+}
+
+// Détermine si on affiche la mention "Retour au ticket courant"
+const shouldShowMergeEnd = (msg, index) => {
+  const type = getMessageType(msg, index)
+  if (type === 'normal') return false
+
+  const nextMsg = messages.value[index + 1]
+
+  // Si c'est le TOUT DERNIER message de la conversation et qu'on n'est pas "normal"
+  // ça veut dire qu'il n'y a pas encore eu de messages depuis la fusion.
+  if (!nextMsg) return true
+
+  const nextType = getMessageType(nextMsg, index + 1)
+
+  // On affiche la ligne de fusion exactement au moment où on bascule vers "normal"
+  return nextType === 'normal'
+}
+
+// Fonction pour déterminer le type visuel d'un message
+const getMessageType = (msg, index = -1) => {
+  if (msg.isMerged) return 'source'
+
+  // Cas nominal: on a la date de fusion sur le ticket destination
+  const mergeDate = resolveMergeTimestamp()
+  if (mergeDate !== null) {
+    const msgDate = new Date(msg.date).getTime()
+    if (!Number.isNaN(msgDate) && msgDate < mergeDate) return 'target-before'
+  }
+
+  // Fallback robuste: si mergedAt n'est pas présent, on considère que
+  // les messages non fusionnés situés avant le premier message fusionné
+  // appartiennent à l'historique du ticket destination.
+  if (firstMergedMessageIndex.value !== -1 && index !== -1 && index < firstMergedMessageIndex.value) {
+    return 'target-before'
+  }
+
+  return 'normal'
+}
+
 </script>
 
 <template>
@@ -493,6 +645,16 @@ const handleUnfollow = async () => {
             </svg>
             Ne plus suivre
           </button>
+
+          <button
+            v-if="canMerge && user?.id === issue?.categoryManagerId"
+            @click="isMergeModalOpen = true"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-purple-300 text-purple-700 bg-white hover:bg-purple-50 text-sm font-medium transition-all cursor-pointer"
+          >
+            <UIcon name="i-lucide-merge" class="w-4 h-4" />
+            Fusionner
+          </button>
+
         </div>
       </div>
 
@@ -507,9 +669,11 @@ const handleUnfollow = async () => {
         <!-- ===== COLONNE GAUCHE : CONVERSATION ===== -->
         <div class="lg:col-span-2 space-y-4">
           <!-- Messages -->
-          <div class="space-y-3">
+          <div class="space-y-3 relative">
+            <!-- Ligne verticale décorative optionnelle pour lier les messages fusionnés -->
+            <div class="absolute left-6 top-4 bottom-4 w-px bg-gray-200 -z-10 hidden sm:block"></div>
             <IssueMessage
-              v-for="msg in messages"
+              v-for="(msg, index) in messages"
               :key="msg.id"
               :auteur="msg.auteur"
               :role="msg.role"
@@ -520,10 +684,16 @@ const handleUnfollow = async () => {
               :user="user"
               :is-mine="msg.userId === user?.id"
               :reply-to="msg.replyTo"
+              :current-issue-id="issueId"
+
+              :message-type="getMessageType(msg, index)"
+              :original-issue-id="msg.originalIssueId || issueId"
+              :show-merge-header="shouldShowMergeHeader(msg, index)"
+              :show-merge-end="shouldShowMergeEnd(msg, index)"
+
               @reply="replyingToMessage = msg"
               @download="downloadDoc"
             />
-
             <!-- État vide -->
             <IssueEmptyMessages v-if="messages.length === 0" />
           </div>
@@ -533,6 +703,7 @@ const handleUnfollow = async () => {
             v-model="newMessage"
             v-model:messageFiles="messageFiles"
             :sending="sending"
+            :current-issue-id="issueId"
             :replying-to="replyingToMessage"
             :disabled="issue?.status === 'TERMINE' || issue?.status === 'EN_ATTENTE' || issue?.status === 'INCOMPLET'"
             :disabled-message="issue?.status === 'TERMINE'
@@ -647,12 +818,19 @@ const handleUnfollow = async () => {
           <!-- RELATION CARD (Visible uniquement si suivi ou manager) -->
           <ClientOnly>
             <IssueRelationCard
-              v-if="alreadyFollowing || user?.id === issue?.categoryManagerId"
+              v-if="issue"
               :current-issue-id="issueId"
               :current-category-id="issue.categoryId"
               :current-category-manager-id="issue.categoryManagerId"
               :can-create="alreadyFollowing"
               :current-user-id="user?.id"
+            />
+
+            <MergeRequestCard
+              v-if="user?.id === issue?.categoryManagerId"
+              :current-issue-id="issueId"
+              :current-user-id="user?.id"
+              @refresh="refreshData"
             />
           </ClientOnly>
 
@@ -732,6 +910,90 @@ const handleUnfollow = async () => {
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Modal Fusion -->
+  <div
+    v-if="isMergeModalOpen"
+    class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+    @click.self="isMergeModalOpen = false; mergeTargetId = null; mergeError = null"
+  >
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+
+      <div class="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <UIcon name="i-lucide-git-merge" class="text-purple-500 w-5 h-5" />
+          <h2 class="text-lg font-bold text-gray-800">Fusionner le ticket</h2>
+        </div>
+        <button
+          @click="isMergeModalOpen = false; mergeTargetId = null; mergeError = null"
+          class="text-gray-400 hover:text-gray-600"
+        >✕</button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <p class="text-sm text-gray-600">
+          Choisissez le ticket dans lequel fusionner
+          <span class="font-semibold text-gray-800">#{{ issueId }}</span>.
+          Cette action est <span class="font-semibold text-red-600">irréversible</span>.
+        </p>
+
+        <!-- Liste des candidats -->
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            Tickets liés officiellement
+          </label>
+          <div
+            v-for="candidate in mergeCandidates"
+            :key="candidate.id"
+            @click="mergeTargetId = candidate.id"
+            class="flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all"
+            :class="mergeTargetId === candidate.id
+            ? 'border-purple-500 bg-purple-50'
+            : 'border-gray-200 bg-white hover:border-purple-200 hover:bg-purple-50/30'"
+          >
+            <div
+              class="w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors"
+              :class="mergeTargetId === candidate.id ? 'border-purple-500 bg-purple-500' : 'border-gray-300'"
+            >
+              <div v-if="mergeTargetId === candidate.id" class="w-1.5 h-1.5 rounded-full bg-white" />
+            </div>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-gray-800">
+                Ticket #{{ candidate.id }}
+              </p>
+              <p v-if="candidate.title" class="text-xs text-gray-500 truncate">
+                {{ candidate.title }}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p v-if="mergeError" class="text-xs text-red-500 bg-red-50 border border-red-100 rounded-lg p-2">
+          {{ mergeError }}
+        </p>
+
+        <div class="flex justify-end gap-2 pt-1">
+          <button
+            @click="isMergeModalOpen = false; mergeTargetId = null; mergeError = null"
+            class="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Annuler
+          </button>
+          <button
+            @click="handleMerge"
+            :disabled="!mergeTargetId || mergeLoading"
+            class="px-4 py-2 text-sm rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+          >
+            <svg v-if="mergeLoading" class="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+            </svg>
+            Envoyer la demande
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 

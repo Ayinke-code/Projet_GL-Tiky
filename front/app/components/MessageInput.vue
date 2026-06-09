@@ -115,7 +115,7 @@ const props = defineProps({
   messageFiles: { type: Array, default: () => [] },
   sending: { type: Boolean, default: false },
   replyingTo: { type: Object, default: null },
-    disabled: { type: Boolean, default: false },
+  disabled: { type: Boolean, default: false },
   disabledMessage: { type: String, default: 'La messagerie est désactivée.' }
 })
 
