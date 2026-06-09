@@ -66,7 +66,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { useLoginI18n } from '~/composables/useLoginI18n'
 
 const { error } = defineProps({
   error: {
@@ -75,7 +75,7 @@ const { error } = defineProps({
   }
 })
 
-const { t } = useI18n()
+const { t } = useLoginI18n()
 
 const emit = defineEmits(['submit'])
 

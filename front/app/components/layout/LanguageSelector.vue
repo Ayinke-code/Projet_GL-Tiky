@@ -12,7 +12,8 @@
 </template>
 
 <script setup>
-const { locale, setLocale } = useI18n()
+import { useLoginI18n } from '~/composables/useLoginI18n'
+const { locale, setLocale } = useLoginI18n()
 
 const items = [
   {

@@ -54,18 +54,12 @@
 <script setup>
 import LoginForms from '~/components/forms/LoginForms.vue'
 import { useAuth } from '~/composables/useAuth'
+import { useLoginI18n } from '~/composables/useLoginI18n'
 
 const { login } = useAuth()
-const { t, locale } = useI18n()
+const { t, locale, setLocale } = useLoginI18n()
 
-/**
- * Change current locale (language)
- * @param {string} loc 'fr' or 'en'
- */
-const setLocale = (loc) => {
-  // locale is a Ref
-  locale.value = loc
-}
+// setLocale provided by composable
 
 /**
  * Message d’erreur affiché à l’utilisateur (UI state).
