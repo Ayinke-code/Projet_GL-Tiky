@@ -7,14 +7,9 @@ import lombok.Data;
 @Builder
 public class DeletionCategoryRequestDto {
         private Long id;
-
         private Long requesterId;
-
         private Long validatorId;
-
         private Long categoryId;
-
         private String status;
-
         private String rejectionReason;
 }
