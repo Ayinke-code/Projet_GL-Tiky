@@ -1,7 +1,7 @@
 {
   "login_page": {
     "connect_to_account": "Connectez-vous à votre compte",
-    "email_placeholder": "exemple{'@'}email.com",
+    "email_placeholder": "exemple@gmail.com",
     "email_label": "Email ou nom d'utilisateur",
     "password_label": "Mot de passe",
     "login_button": "Se connecter",

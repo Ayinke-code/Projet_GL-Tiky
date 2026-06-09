@@ -36,7 +36,7 @@
   },
   "login_page": {
     "connect_to_account": "Log in to your account",
-    "email_placeholder": "example{'@'}email.com",
+    "email_placeholder": "example@email.com",
     "email_label": "Email or username",
     "password_label": "Password",
     "login_button": "Login",

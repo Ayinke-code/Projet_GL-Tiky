@@ -23,23 +23,7 @@
             </svg>
           </NuxtLink>
 
-          <!-- Language switcher -->
-          <div class="flex items-center gap-2">
-            <button
-              :class="{ 'font-bold': locale === 'fr' }"
-              class="px-3 py-1 rounded text-sm border"
-              @click="setLocale('fr')"
-            >
-              fr
-            </button>
-            <button
-              :class="{ 'font-bold': locale === 'en' }"
-              class="px-3 py-1 rounded text-sm border"
-              @click="setLocale('en')"
-            >
-              en
-            </button>
-          </div>
+          <LanguageSelector />
         </div>
 
         <LoginForms
@@ -55,9 +39,10 @@
 import LoginForms from '~/components/forms/LoginForms.vue'
 import { useAuth } from '~/composables/useAuth'
 import { useLoginI18n } from '~/composables/useLoginI18n'
+import LanguageSelector from '~/components/layout/LanguageSelector.vue'
 
 const { login } = useAuth()
-const { t, locale, setLocale } = useLoginI18n()
+const { t } = useLoginI18n()
 
 // setLocale provided by composable
 
