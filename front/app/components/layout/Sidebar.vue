@@ -117,6 +117,18 @@
           <i class="fa-solid fa-calendar-check w-6" aria-hidden="true"></i>
           <span class="font-medium">Mes sessions</span>
         </NuxtLink>
+        <!-- Mes sessions (teacher / admin) -->
+        <NuxtLink
+          v-if="user?.roles?.includes('ADMIN')"
+          to="/admin"
+          class="flex items-center px-4 py-2.5 rounded-lg transition-all duration-200 mt-5"
+          :class="isActive('/admin')
+            ? 'bg-purple-600 text-white shadow-lg'
+            : 'text-purple-300 hover:bg-purple-900/30 hover:text-white'"
+        >
+          <i class="fa-solid fa-shield-halved w-6" aria-hidden="true"></i>
+          <span class="font-medium">Administration</span>
+        </NuxtLink>
 
       </nav>
 
