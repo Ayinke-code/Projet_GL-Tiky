@@ -161,7 +161,7 @@ export const useConversations = () => {
     } catch (e) {
       console.error('Error sending message:', e)
       error.value = e?.data?.message || e?.message || 'UNKNOWN_ERROR'
-      throw e
+      return e
     }
   }
 

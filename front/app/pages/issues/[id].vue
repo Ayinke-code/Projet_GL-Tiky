@@ -23,10 +23,14 @@ const { acknowledgeFollowedIssueUpdate } = useFollowedIssuesState()
 const { downloadFile, deleteFile } = useDocuments()
 const { relations, fetchRelationsByIssue, fetchPendingRequests: fetchRelationPendingRequests } = useIssueRelations()
 const { requestMerge, pendingRequests, fetchPendingRequests } = useMergeIssues()
-const FOLLOWER_NOTIFICATION_TYPES = ['NEW_FOLLOWER', 'NEW_UNFOLLOW']
+const ISSUE_REFRESH_NOTIFICATION_TYPES = [
+  'NEW_FOLLOWER', 'NEW_UNFOLLOW',
+  'VALIDE_ISSUE', 'INCOMPLETE_ISSUE', 'CLOSING_ISSUE',
+  'OPEN_ISSUE', 'NEW_OPEN_ISSUE', 'ACCEPTED_OPEN_ISSUE',
+]
 
 const onNotificationReceived = async (e) => {
-  if (FOLLOWER_NOTIFICATION_TYPES.includes(e.detail?.type) && e.detail?.issueId === issueId) {
+  if (ISSUE_REFRESH_NOTIFICATION_TYPES.includes(e.detail?.type) && e.detail?.issueId === issueId) {
     const updated = await getIssueById(issueId).catch(() => null)
     if (updated) issue.value = updated
   }
@@ -381,6 +385,13 @@ const handleSend = async () => {
   sending.value = true
   try {
     const sentMessage = await sendIssueMessage(issueId, newMessage.value, messageFiles.value, replyingToMessage.value?.id ?? null)
+
+    // Erreur si l'espace disque dépassera la limite après l'upload
+    if(sentMessage?.status === 507){
+      error.value = "Le stockage de document sur serveur va dépasser la limite autorisé, veuillez contacter l'administrateur !"
+      return
+    }
+
     if (!messages.value.find((m) => m.id === sentMessage.id)) {
       messages.value.push(sentMessage)
     }
@@ -547,11 +558,6 @@ const getMessageType = (msg, index = -1) => {
         </svg>
         <span class="text-sm">Chargement du ticket...</span>
       </div>
-    </div>
-
-    <!-- Erreur -->
-    <div v-else-if="error" class="p-8">
-      <UAlert color="red" :description="error" />
     </div>
 
     <!-- Contenu principal -->
@@ -724,6 +730,16 @@ const getMessageType = (msg, index = -1) => {
               : 'Ce ticket est en attente de validation — la messagerie sera disponible une fois le ticket ouvert.'"
             @cancel-reply="replyingToMessage = null"
             @send="handleSend"
+          />
+
+          <!-- Erreur -->
+          <UAlert v-if="error"
+            color="error"
+            class="mt-4"
+            title="Erreur : "
+            :description="error"
+            icon="material-symbols:error"
+            variant="subtle"
           />
         </div>
 

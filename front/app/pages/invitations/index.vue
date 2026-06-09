@@ -2,7 +2,7 @@
   <div class="p-8 pb-8 min-h-screen bg-gray-50">
 
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">Gestion des Invitations</h1>
+      <h1 class="text-2xl font-bold text-gray-800">Gérer mon planning</h1>
     </div>
 
     <Alert v-if="error" color="error" title="Erreur système" class="mb-6">
@@ -299,27 +299,27 @@ const pendingIssueInvitations = computed(() =>
 const pendingNonIssueInvitations = computed(() => myPendingInvitations.value)
 
 const tabDescription = computed(() => isTeacher.value
-  ? "Gérez vos réunions : suivez les réponses des invités ou reprogrammez un créneau à tout moment."
+  ? "Suivez les réponses des invités ou reprogrammez un créneau à tout moment."
   : "Suivez l'état de vos demandes de rendez-vous et relancez les enseignants si besoin."
 )
 const emptyIcon = computed(() => isTeacher.value ? 'i-lucide-calendar-x' : 'i-lucide-send')
-const emptyTitle = computed(() => isTeacher.value ? 'Aucun événement' : 'Aucune demande')
+const emptyTitle = computed(() => isTeacher.value ? 'Aucun rendez-vous' : 'Aucune demande')
 const emptyDesc = computed(() => isTeacher.value
-  ? 'Vous n\'avez organisé aucun événement pour le moment.'
+  ? 'Vous n\'avez organisé aucun rendez-vous pour le moment.'
   : 'Vous n\'avez fait aucune demande de rendez-vous pour le moment.'
 )
 
 const cancelActionLabel = computed(() => {
-  if (!isCancelMode.value) return isTeacher.value ? "Annuler un événement" : "Annuler une demande"
-  if (selectedEventIds.value.length > 1) return isTeacher.value ? "Annuler des événements" : "Annuler des demandes"
-  return isTeacher.value ? "Annuler l'événement" : "Annuler la demande"
+  if (!isCancelMode.value) return isTeacher.value ? "Annuler un rendez-vous" : "Annuler une demande"
+  if (selectedEventIds.value.length > 1) return isTeacher.value ? "Annuler des rendez-vous" : "Annuler des demandes"
+  return isTeacher.value ? "Annuler le rendez-vous" : "Annuler la demande"
 })
 
 const confirmCancelText = computed(() => {
   if (selectedEventIds.value.length > 1) {
-    return `ces ${selectedEventIds.value.length} ${isTeacher.value ? 'événements' : 'demandes'}`
+    return `ces ${selectedEventIds.value.length} ${isTeacher.value ? 'rendez-vous' : 'demandes'}`
   }
-  return isTeacher.value ? 'cet événement' : 'cette demande'
+  return isTeacher.value ? 'ce rendez-vous' : 'cette demande'
 })
 
 // --- États des modales ---
