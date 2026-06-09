@@ -35,7 +35,7 @@ public class DeletionCategoryRequestController {
     /**
      * Accepte une demande (pour le manager connecté)
      */
-    @PatchMapping("/{requestId}/accept")
+    @PutMapping("/{requestId}/accept")
     public ResponseEntity<DeletionCategoryRequestDto> acceptRequest(
             @PathVariable Long requestId,
             Authentication authentication) {
@@ -49,7 +49,7 @@ public class DeletionCategoryRequestController {
     /**
      * Refuse une demande avec un motif (pour le manager connecté)
      */
-    @PatchMapping("/{requestId}/reject")
+    @PutMapping("/{requestId}/reject")
     public ResponseEntity<DeletionCategoryRequestDto> rejectRequest(
             @PathVariable Long requestId,
             @RequestBody Map<String, String> body,
@@ -73,5 +73,19 @@ public class DeletionCategoryRequestController {
         List<DeletionCategoryRequestDto> pendingRequests = deletionCategoryRequestService.getPendingRequestsForManager(managerId);
 
         return ResponseEntity.ok(pendingRequests);
+    }
+
+    /**
+     * Vérifie si l'utilisateur connecté a déjà une demande en attente pour cette catégorie
+     */
+    @GetMapping("/category/{categoryId}/has-pending")
+    public ResponseEntity<Boolean> hasPendingRequest(
+            @PathVariable Long categoryId,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+        boolean hasPending = deletionCategoryRequestService.hasPendingRequest(categoryId, email);
+
+        return ResponseEntity.ok(hasPending);
     }
 }

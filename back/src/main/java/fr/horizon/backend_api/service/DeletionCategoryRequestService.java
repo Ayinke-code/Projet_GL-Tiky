@@ -105,6 +105,18 @@ public class DeletionCategoryRequestService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public boolean hasPendingRequest(Long categoryId, String email) {
+        User requester = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(USER_NF));
+
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new CategoryNotFoundException(categoryId));
+
+        return deletionCategoryRequestRepository.existsByCategoryAndRequesterAndStatus(
+                category, requester, CategoryRequestStatus.PENDING);
+    }
+
 
     private DeletionCategoryRequestDto mapToDto(DeletionCategoryRequest entity) {
         if (entity == null) return null;

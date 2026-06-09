@@ -26,7 +26,7 @@ public class DeletionCategoryRequest extends BaseEntity{
     @JoinColumn(name = "validator_id")
     private User validator;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
 
