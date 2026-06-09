@@ -445,6 +445,28 @@ export const useEvents = () => {
   }
 
   /**
+   * Récupère les events (AUDIT, DEFENSE, RDV) d'un utilisateur qui chevauchent un créneau.
+   * GET /events/users/{userId}/busy-slots?start=...&end=...
+   *
+   * @param {number} userId - L'ID de l'utilisateur cible
+   * @param {string} start  - ISO datetime de début (format: YYYY-MM-DDTHH:mm:ss)
+   * @param {string} end    - ISO datetime de fin
+   * @returns {Promise<Array>} Liste des events conflictuels
+   */
+  const fetchUserBusySlots = async (userId, start, end) => {
+    try {
+      const toLocal = (isoStr) => isoStr.substring(0, 19) // retire le Z ou le timezone
+      const data = await api(`/events/users/${userId}/busy-slots`, {
+        params: { start: toLocal(start), end: toLocal(end) }
+      })
+      return Array.isArray(data) ? data : []
+    } catch (e) {
+      console.error('[fetchUserBusySlots]', e)
+      return []
+    }
+  }
+
+  /**
    * Supprime une disponibilité appartenant à l'utilisateur connecté.
    * DELETE /events/availability/{id}
    *
@@ -490,6 +512,7 @@ export const useEvents = () => {
     createAvailability,
     fetchMyAvailabilities,
     fetchUserAvailabilities,
+    fetchUserBusySlots,
     deleteAvailability
   }
 }
