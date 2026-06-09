@@ -18,7 +18,6 @@ import fr.horizon.backend_api.model.dto.LoginResponse;
 import fr.horizon.backend_api.model.dto.UserDto;
 import fr.horizon.backend_api.service.AuthService;
 import fr.horizon.backend_api.service.UserService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
