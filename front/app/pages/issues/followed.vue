@@ -99,8 +99,10 @@ const handleDelete = async () => {
   }
 }
 
+const FOLLOWED_NOTIFICATION_TYPES = ['NEW_FOLLOWER', 'NEW_UNFOLLOW', 'MERGE_REQUEST_FOLLOWERS']
+
 const onNotificationReceived = async (e) => {
-  if (e.detail?.type === 'NEW_FOLLOWER' || e.detail?.type === 'NEW_UNFOLLOW') {
+  if (FOLLOWED_NOTIFICATION_TYPES.includes(e.detail?.type)) {
     await refreshFollowedIssues()
   }
 }

@@ -70,7 +70,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useDeletionCategoryRequest } from '~/composables/useDeletionCategoryRequests.js'
 
 const props = defineProps({
@@ -107,8 +107,19 @@ const fetchRequests = async () => {
   }
 }
 
+const onNotificationReceived = async (e) => {
+  if (e.detail?.type === 'TEACHER_QUIT_CATEGORY' && e.detail?.categoryId === props.categoryId) {
+    await fetchRequests()
+  }
+}
+
 onMounted(() => {
   fetchRequests()
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
 })
 
 const handleAccept = async (id) => {

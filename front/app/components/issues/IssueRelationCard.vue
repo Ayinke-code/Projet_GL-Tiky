@@ -297,7 +297,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import Modal from '~/components/ui/Modal.vue'
 
@@ -400,6 +400,22 @@ const hasMyApproval = (req) => {
   return false
 }
 
+const RELATION_NOTIFICATION_TYPES = ['MANAGER_LINK_REQUEST', 'MANAGER_RESPONSE_LINK_REQUEST', 'SUBSCRIBERS_NEW_LINK', 'FOLLOWERS_LINK']
+
+const onNotificationReceived = async (e) => {
+  if (RELATION_NOTIFICATION_TYPES.includes(e.detail?.type)) {
+
+    setTimeout(async () => {
+      await fetchRelationsByIssue(props.currentIssueId)
+
+      if (isManager.value) {
+        await fetchPendingRequests()
+      }
+    }, 300)
+
+  }
+}
+
 onMounted(async () => {
   await fetchRelationsByIssue(props.currentIssueId)
   if (!issues.value.length) {
@@ -408,6 +424,11 @@ onMounted(async () => {
   if (isManager.value) {
     await fetchPendingRequests()
   }
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
 })
 
 const handleSubmit = async () => {

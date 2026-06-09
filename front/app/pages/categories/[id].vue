@@ -126,7 +126,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCategories } from '~/composables/useCategories'
 import { useUsers } from '~/composables/useUsers'
@@ -181,9 +181,27 @@ const refreshData = async () => {
   await fetchCategoryById(categorieId)
 }
 
+const CATEGORY_NOTIFICATION_TYPES = [
+  'MANAGER_ADDING_TEACHER_CATEGORY',
+  'TEACHER_QUIT_CATEGORY',
+  'ACCEPTED_TEACHER_QUIT_CATEGORY',
+  'DENIED_TEACHER_QUIT_CATEGORY',
+]
+
+const onNotificationReceived = async (e) => {
+  if (CATEGORY_NOTIFICATION_TYPES.includes(e.detail?.type) && e.detail?.categoryId === categorieId) {
+    await refreshData()
+  }
+}
+
 onMounted(async () => {
   await fetchCategoryById(categorieId)
   await fetchUserByRoles([ROLE.TEACHER])
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
 })
 
 const removeFollower = async (id) => {
