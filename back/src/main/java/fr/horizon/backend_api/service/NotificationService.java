@@ -385,7 +385,27 @@ public class NotificationService {
 
 
     @Transactional
-    public void followersNewLinkNotification()
+    public void followersNewLinkNotification(User user, Issue issue, IssueRelation issueRelation) {
+
+        Issue otherIssue = issue.getId().equals(issueRelation.getSourceIssue().getId())
+                ? issueRelation.getTargetIssue()
+                : issueRelation.getSourceIssue();
+
+        String content = "Le ticket que vous suivez: " + issue.getTitle() +
+                " est maintenant lié au ticket: " + otherIssue.getTitle() +
+                ". Consultez-le vite !";
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .issueRelation(issueRelation)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.FOLLOWERS_LINK)
+                .build();
+
+        saveAndSend(notif);
+    }
 
 
     /**

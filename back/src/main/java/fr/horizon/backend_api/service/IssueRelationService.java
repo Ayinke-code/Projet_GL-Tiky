@@ -119,6 +119,10 @@ public class IssueRelationService {
             officialRelation.setManager(true);
             officialRelation.setCreatedBy(managerUser);
 
+            notifyFollowersExcludingManagerAndActor(officialRelation.getSourceIssue(), officialRelation, managerUser);
+            notifyFollowersExcludingManagerAndActor(officialRelation.getTargetIssue(), officialRelation, managerUser);
+
+
             IssueRelation saved = relationRepository.save(officialRelation);
             return mapToDto(saved);
         } else {
@@ -285,7 +289,12 @@ public class IssueRelationService {
         relation.setManager(isManager);
         relation.setCreatedBy(user);
 
-        return relationRepository.saveAndFlush(relation);
+        IssueRelation savedRelation = relationRepository.saveAndFlush(relation);
+
+        notifyFollowersExcludingManagerAndActor(source, savedRelation, user);
+        notifyFollowersExcludingManagerAndActor(target, savedRelation, user);
+
+        return  savedRelation;
     }
 
     private Issue getIssueOrThrow(Long issueId, String label) {
@@ -327,5 +336,22 @@ public class IssueRelationService {
 
     private boolean isManagerOf(Issue issue, User user) {
         return issue.getManager() != null && issue.getManager().getId().equals(user.getId());
+    }
+
+    /**
+     * Méthode utilitaire pour notifier les followers d'un ticket,
+     * en excluant le manager actuel et la personne qui a déclenché l'action.
+     */
+    private void notifyFollowersExcludingManagerAndActor(Issue issue, IssueRelation relation, User actor) {
+        List<User> followers = issueFollowerRepository.findUsersByIssueId(issue.getId());
+
+        for (User follower : followers) {
+            boolean isManagerOfIssue = issue.getManager() != null && issue.getManager().getId().equals(follower.getId());
+            boolean isTheActor = follower.getId().equals(actor.getId());
+
+            if (!isManagerOfIssue && !isTheActor) {
+                notificationService.followersNewLinkNotification(follower, issue, relation);
+            }
+        }
     }
 }

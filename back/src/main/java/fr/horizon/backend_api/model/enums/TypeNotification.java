@@ -41,5 +41,9 @@ public enum TypeNotification {
     // utilsaiteur atteigne 5 liens => demande officiel
     SUBSCRIBERS_NEW_LINK,
     // Manager demade de lien a un autre manager
-    MANAGER_LINK_REQUEST
+    MANAGER_LINK_REQUEST,
+    // notifier les followers de l'issue d'un lien officiel
+    FOLLOWERS_LINK
+
+
 }

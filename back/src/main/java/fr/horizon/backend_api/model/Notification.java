@@ -55,6 +55,11 @@ public class Notification extends BaseEntity{
     @JoinColumn(name ="officialLinkRequest_id")
     private OfficialLinkRequest officialLinkRequest;
 
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name ="issueRelation_id")
+    private IssueRelation issueRelation;
+
 
 
 }
