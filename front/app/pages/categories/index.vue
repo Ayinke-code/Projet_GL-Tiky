@@ -44,6 +44,7 @@
         :category="cat"
         :is-followed="checkIfUserIsFollower(cat)"
         @click="handleClick(cat)"
+        @follow="handleFollow(cat?.id, user?.id)"
       />
 
     </div>
@@ -120,6 +121,7 @@ const {
   fetchCategoriesByType,
   createCategory,
   deleteCategory,
+  addTeacherFollower,
   error: categoriesError
 } = useCategories()
 
@@ -226,5 +228,14 @@ const handleAcceptCategoryRequest = async (data) => {
   if (!res) return
   await fetchCategoriesByType('ISSUE')
   await fetchCategoryRequests()
+}
+
+/**
+ * Ajoute un utilisateur en tant que suiveur de la catégorie
+ */
+const handleFollow = async (idCat, idUser) => {
+  if(!(idCat && idUser)) return
+  const res = await addTeacherFollower(idUser, idCat)
+  if (!res) return
 }
 </script>
