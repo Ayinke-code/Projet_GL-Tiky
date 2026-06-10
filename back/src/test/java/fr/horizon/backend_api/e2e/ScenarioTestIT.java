@@ -223,13 +223,6 @@ class ScenarioTestIT extends BaseSeleniumIT{
                 )
         );
 
-        WebElement btnCategorie = wait.until(
-                ExpectedConditions.elementToBeClickable(By.xpath("//*[@id=\"__nuxt\"]/div/div/main/div/div[4]/div[1]/div/button"))
-        );
-        btnCategorie.click();
-
-
-
         WebElement statutNouveauTicket = wait.until(
                 ExpectedConditions.visibilityOfElementLocated(By.id("issue-card-statut-" + ticketTitle))
         );
