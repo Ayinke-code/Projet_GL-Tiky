@@ -1,0 +1,169 @@
+{
+  "welcome": "Welcome",
+  "login": "Login",
+  "logout": "Logout",
+  "notifications": "Notifications",
+  "no_notifications": "No notifications",
+  "profile": "Profile",
+  "language": "Language",
+  "tickets_followed": "Followed tickets",
+  "return_to_tickets": "Back to tickets",
+  "up_to_date": "You are up to date!",
+  "no_followed_tickets": "You are not following any tickets at the moment",
+  "see_all_tickets": "See all tickets",
+  "no_category": "No category",
+  "status": {
+    "open": "Open",
+    "pending": "Pending",
+    "incomplete": "Incomplete",
+    "finished": "Finished"
+  },
+  "header_label": "Header",
+  "sidebar": {
+    "toggle": "Toggle sidebar",
+    "main_label": "Sidebar",
+    "nav_label": "Main navigation",
+    "my_space": "My space",
+    "activities": "Activities",
+    "tickets": "Tickets",
+    "all_tickets": "All tickets",
+    "followed_tickets": "Followed tickets",
+    "categories": "Categories",
+    "groups": "Groups",
+    "calendar": "Calendar",
+    "events": "Events",
+    "manage_planning": "Manage my planning"
+  },
+  "login_page": {
+    "connect_to_account": "Log in to your account",
+    "email_placeholder": "example@email.com",
+    "email_label": "Email or username",
+    "password_label": "Password",
+    "login_button": "Login",
+    "error_fill_fields": "Please fill in all fields.",
+    "error_invalid_email": "Invalid email address.",
+    "error_password_length": "Password must be at least 8 characters long.",
+    "error_incorrect": "Incorrect email or password."
+  },
+  "home": {
+    "tagline_start": "The",
+    "tagline_highlight": "academic management platform",
+    "description": "Follow your tickets, organize your categories, and schedule audits & presentations in one place.",
+    "rights_reserved": "All rights reserved",
+    "welcome_back": "Welcome",
+    "login_prompt": "Log in to access your space and find all your academic activities.",
+    "access_restricted": "Access restricted to members of the institution",
+    "features": {
+      "tickets": {
+        "label": "Ticket & Tracking",
+        "desc": "Submit and track the progress of your issues."
+      },
+      "categories": {
+        "label": "Categories",
+        "desc": "Organize your subjects and subscribe to those that interest you."
+      },
+      "events": {
+        "label": "Audits & Presentations",
+        "desc": "Schedule and manage academic events."
+      }
+    }
+  },
+  "issue_modal": {
+    "title": "Issue detail",
+    "field_title": "Title",
+    "created_by": "Created by",
+    "category": "Category",
+    "description": "Description",
+    "error_loading": "Impossible to load ticket details.",
+    "close": "Close"
+  },
+  "confirm_modal": {
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "issue_detail": {
+    "author_manager": "Author & Manager",
+    "author": "Author",
+    "manager_in_charge": "Manager in charge",
+    "unknown": "Unknown",
+    "back_to_tickets": "Back to tickets",
+    "ticket_number": "Ticket #{id}",
+    "private": "Private",
+    "public": "Public",
+    "mark_resolved": "Mark Resolved",
+    "reopen": "Reopen",
+    "make_public": "Make Public",
+    "make_private": "Make Private",
+    "follow": "Follow",
+    "unfollow": "Unfollow",
+    "follow_success": "You are now following this ticket!",
+    "conversation": "Conversation",
+    "no_messages": "No messages yet.",
+    "write_message": "Write a message...",
+    "replying_to": "Replying to:",
+    "cancel_reply": "Cancel",
+    "send": "Send",
+    "details": "Details",
+    "created_at": "Created at",
+    "manager": "Manager",
+    "me": "Me",
+    "not_defined": "Not defined",
+    "followers": "Followers",
+    "error_access_revoked": "You no longer have access to this ticket (switched to private).",
+    "modal_confirm": "Confirm",
+    "modal_resolve_text": "Are you sure you want to mark this ticket as {status} ?",
+    "modal_visibility_title": "Change visibility",
+    "modal_visibility_text": "Do you want to make this ticket {visibility} ?",
+    "modal_reopen_title": "Reopening request",
+    "modal_reopen_text": "Do you really want to reopen this ticket ?",
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
+  "tickets_followed_page": {
+    "error_loading_console": "Error loading followed issues:"
+  },
+  "tickets_page": {
+    "title": "Tickets",
+    "create_button": "Create a ticket",
+    "no_tickets": "No tickets at the moment",
+    "create_first_ticket": "Create the first ticket",
+    "your_categories": "Your categories",
+    "your_tickets": "Your tickets",
+    "others": "Others",
+    "delete_confirm_title": "Delete ticket",
+    "delete_confirm_desc": "Do you really want to delete this ticket? This action is irreversible.",
+    "delete_confirm_cancel": "Cancel",
+    "delete_confirm_submit": "Delete",
+    "error_deleting": "Error while deleting",
+    "error_loading": "Error while loading",
+    "error_loading_console": "Error loading issues:"
+  },
+  "incomplete_issues": {
+    "title": "Requests to complete",
+    "actions_required": "{count} action(s) required",
+    "empty_state": "You have no requests requiring corrections or pending.",
+    "category": "Category",
+    "refused_for": "Refused for",
+    "draft": "Draft",
+    "current_description": "Your current description",
+    "correct_request": "Correct the request",
+    "finalize_request": "Finalize the request",
+    "remaining_issues": "And {count} other request(s) pending... Resolve these to see the next ones.",
+    "modal_update_title": "Update request",
+    "modal_finalize_title": "Finalize request",
+    "to_correct": "To correct",
+    "incomplete_ticket": "Incomplete ticket",
+    "finalize_info": "Update your ticket information to definitely submit it to a supervisor.",
+    "form": {
+      "title": "Title",
+      "title_placeholder": "Issue title",
+      "description": "Description",
+      "description_placeholder": "Detail your problem...",
+      "category": "Category",
+      "category_placeholder": "Select a category",
+      "cancel": "Cancel",
+      "submit": "Submit",
+      "updating": "Updating..."
+    }
+  }
+}
