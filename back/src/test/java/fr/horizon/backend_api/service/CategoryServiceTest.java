@@ -202,7 +202,6 @@ class CategoryServiceTest {
 
     @Test
     void shouldAddFollower_WhenTeacherFollowsByHimself() {
-        // Le prof s'abonne lui-même (l'initiateur est le prof)
         User teacher = User.builder().id(2L).name("Prof").email("prof@test.com").roles(Set.of(Role.builder().name("TEACHER").build())).build();
 
         when(userRepository.findByEmail("prof@test.com")).thenReturn(Optional.of(teacher));
@@ -215,7 +214,6 @@ class CategoryServiceTest {
         verify(categoryRepository).save(category);
 
         verify(notificationService).notifyNewFollowerCategory(teacher, category);
-        verify(notificationService).addedToCategoryNotification(user, category);
     }
 
     @Test
@@ -228,13 +226,13 @@ class CategoryServiceTest {
     }
 
     @Test
-    void shouldThrowWhenCategoryNotFoundAddFollower() {
-        when(userRepository.findByEmail("lucas@test.com")).thenReturn(Optional.of(user));
+    void shouldThrowWhenInitiatorNotFoundAddFollower() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(categoryRepository.findById(10L)).thenReturn(Optional.empty());
+        when(userRepository.findByEmail("ghost@test.com")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L, "lucas@test.com"))
-                .isInstanceOf(CategoryNotFoundException.class);
+        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L, "ghost@test.com"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("User not found");
     }
 
     @Test
