@@ -36,7 +36,6 @@ public class CategoryService {
     private final IssueService issueService;
     private final DeletionCategoryRequestRepository deletionCategoryRequestRepository;
     private final NotificationService notificationService;
-    private final NotificationService notificationService;
 
     /**
      * Récupère toutes les catégories.
@@ -180,7 +179,7 @@ public class CategoryService {
 
         notificationService.categoryRemovalRequestNotification(category.getOwner(), requester, category);
 
-        notificationService.managerAddingFollowerNotification(user, category);
+        notificationService.managerAddingFollowerNotification(requester, category);
     }
 
     /**

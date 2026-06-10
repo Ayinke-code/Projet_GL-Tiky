@@ -53,9 +53,6 @@ class CategoryServiceTest {
     @Mock
     private DeletionCategoryRequestRepository deletionCategoryRequestRepository;
 
-    @Mock
-    private NotificationService notificationService;
-
     @InjectMocks
     private CategoryService categoryService;
 
