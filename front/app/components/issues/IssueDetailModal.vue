@@ -7,23 +7,39 @@
 
       <div v-else-if="issueDetail" class="space-y-4">
         <div class="space-y-1">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Titre</p>
-          <p class="text-gray-900 font-medium">{{ issueDetail.title }}</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            Titre
+          </p>
+          <p class="text-gray-900 font-medium">
+            {{ issueDetail.title }}
+          </p>
         </div>
-        <div class="border-t border-gray-100"/>
+        <div class="border-t border-gray-100" />
         <div class="space-y-1">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Créé par</p>
-          <p class="text-gray-700 text-sm">{{ issueDetail.createdName }}</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            Créé par
+          </p>
+          <p class="text-gray-700 text-sm">
+            {{ issueDetail.createdName }}
+          </p>
         </div>
-        <div class="border-t border-gray-100"/>
+        <div class="border-t border-gray-100" />
         <div class="space-y-1">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Catégorie</p>
-          <UBadge color="primary" variant="soft">{{ issueDetail.categoryName }}</UBadge>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            Catégorie
+          </p>
+          <UBadge color="primary" variant="soft">
+            {{ issueDetail.categoryName }}
+          </UBadge>
         </div>
-        <div class="border-t border-gray-100"/>
+        <div class="border-t border-gray-100" />
         <div class="space-y-1">
-          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Description</p>
-          <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">{{ issueDetail.description }}</p>
+          <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            Description
+          </p>
+          <p class="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+            {{ issueDetail.description }}
+          </p>
         </div>
       </div>
 
@@ -53,6 +69,6 @@ const emit = defineEmits(['update:open'])
 
 const isOpen = computed({
   get: () => props.open,
-  set: (value) => emit('update:open', value)
+  set: value => emit('update:open', value)
 })
 </script>

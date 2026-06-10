@@ -133,10 +133,14 @@ public class CategoryService {
      * Ajoute un follower à une catégorie.
      */
     @Transactional
-    public void addFollower(Long idCategory, String currentUserEmail) {
+    public void addFollower(Long idCategory, Long idUser, String initiator, String currentUserEmail) {
+
 
         User user = userRepository.findByEmail(currentUserEmail)
                 .orElseThrow(() -> new EntityNotFoundException("User not found " + currentUserEmail));
+
+        User actor = userRepository.findByEmail(initiator)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         Category category = categoryRepository.findById(idCategory)
                 .orElseThrow(() -> new CategoryNotFoundException(idCategory));
@@ -161,7 +165,11 @@ public class CategoryService {
 
         categoryRepository.save(category);
 
-        notificationService.addedToCategoryNotification(user, category);
+        if (actor.getId().equals(category.getOwner().getId())) {
+            notificationService.managerAddingFollowerNotification(user, category);
+        } else if (actor.getId().equals(user.getId())) {
+            notificationService.notifyNewFollowerCategory(user, category);
+        }
     }
 
     /**

@@ -73,10 +73,10 @@ public class CategoryController {
      * @param idCategory identifiant de la catégorie
      * @return catégorie mise à jour
      */
-    @PreAuthorize("isAuthenticated()")
-    @PostMapping("/followers/{idCategory}")
-    public CategoryDetailsDto addCategoryFollower(@PathVariable Long idCategory, Authentication authentication) {
-        categoryService.addFollower(idCategory, authentication.getName());
+    @PreAuthorize("hasAnyAuthority('ADMIN','TEACHER')")
+    @PostMapping("/followers/{idUser}/{idCategory}")
+    public CategoryDetailsDto addCategoryFollower(@PathVariable Long idUser, @PathVariable Long idCategory, Authentication authentication) {
+        categoryService.addFollower(idCategory, idUser, authentication.getName());
         return categoryService.findById(idCategory);
     }
 

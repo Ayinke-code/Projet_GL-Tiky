@@ -1,0 +1,13 @@
+{
+  "login_page": {
+    "connect_to_account": "Connectez-vous à votre compte",
+    "email_placeholder": "exemple@gmail.com",
+    "email_label": "Email ou nom d'utilisateur",
+    "password_label": "Mot de passe",
+    "login_button": "Se connecter",
+    "error_fill_fields": "Veuillez remplir tous les champs.",
+    "error_invalid_email": "Adresse email invalide.",
+    "error_password_length": "Le mot de passe doit contenir au moins 8 caractères.",
+    "error_incorrect": "Email ou mot de passe incorrect."
+  }
+}
