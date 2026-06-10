@@ -9,7 +9,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.net.Authenticator;
 import java.util.List;
 
 import fr.horizon.backend_api.model.enums.CategoryType;
