@@ -28,7 +28,7 @@ class ScenarioTestIT extends BaseSeleniumIT{
 
     private static final String TITRE_CATEGORIE= "categorie-test";
     private static final String SUBJECT_CATEGORIE= "sujet-test";
-    private static final String CATEGORIE_PROPRIETAIRE = "Propriétaire";
+    private static final String CATEGORIE_PROPRIETAIRE = "PROPRIÉTAIRE";
 
     private static final String MESSAGE = "MESSAGE TEST";
     private static final String MESSAGE_DISABLE_TCHAT = "Ce ticket est en attente de validation — la messagerie sera disponible une fois le ticket ouvert.";

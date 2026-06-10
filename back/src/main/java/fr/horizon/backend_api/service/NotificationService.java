@@ -25,10 +25,10 @@ public class NotificationService {
 
 
     private static final String VALIDATE_TICKET_MESSAGE = "Votre ticket vient d'être validé";
-    private static final String NEW_TICKET_CATEGORIE_MESSAGE = "Un nouveau ticket a été dans votre catégorie, affectez-le rapidement à un professeur !";
-    private static final String INCOMPLET_TICKET_MESSAGE = "Votre ticket a été marqué incomplet, complétez-le rapidement !";
+    private static final String NEW_TICKET_CATEGORIE_MESSAGE = "Un nouveau ticket a été crée dans votre catégorie, affectez-le rapidement à un professeur !";
+    private static final String INCOMPLET_TICKET_MESSAGE = "Votre ticket a été marqué comme incomplet, complétez-le rapidement !";
     private static final String DEMANDE_MANAGER_MESSAGE = "Vous avez reçu une nouvelle demande de manager";
-    private static final String MESSAGE_CONSULTE = ". Consultez-le vite !";
+    private static final String MESSAGE_CONSULTE = ". Consultez-le rapidement !";
 
 
     /**
@@ -130,7 +130,7 @@ public class NotificationService {
         if (requestManager.getStatus() == RequestManagerStatus.ACCEPTED) {
             content = "Votre demande a été acceptée par " + teacherName + ". Le ticket " + issueId + " est maintenant ouvert !";
         } else if (requestManager.getStatus() == RequestManagerStatus.DENIED) {
-            content = "Votre demande a été refusée par " + teacherName + ". Demandez vite à un autre professeur.";
+            content = "Votre demande a été refusée par " + teacherName + ". Demandez rapidement à un autre professeur.";
         } else {
             return;
         }
@@ -162,14 +162,14 @@ public class NotificationService {
 
         switch (event.getCategoryType()) {
             case AUDIT ->
-                    content = "Vous avez un audit prévu " + formattedDate + " avec votre groupe. Consultez vite votre calendrier !";
+                    content = "Vous avez un audit prévu " + formattedDate + " avec votre groupe. Consultez votre calendrier dès maintenant !";
 
             case DEFENSE ->
-                    content = "Vous avez une soutenance prévue " + formattedDate + ". Consultez vite votre calendrier !";
+                    content = "Vous avez une soutenance prévue " + formattedDate + ". Consultez votre calendrier dès maintenant !";
 
             case ISSUE -> {
                 String issueName = (event.getIssue() != null) ? "« " + event.getIssue().getTitle() + " »" : "";
-                content = "Vous avez un rendez-vous à propos du ticket " + issueName + ". Confirmez vite votre présence !";
+                content = "Vous avez un rendez-vous à propos du ticket " + issueName + ". Confirmez rapidement votre présence !";
             }
 
             default ->
@@ -196,7 +196,7 @@ public class NotificationService {
 
         String issueName = (event.getIssue() != null) ? " « " + event.getIssue().getTitle() + " »" : "";
 
-        String content = "L'heure du rendez-vous pour le ticket" + issueName + " a été modifiée. Vérifiez les nouveaux horaires rapidement !";
+        String content = "L'heure du rendez-vous pour le ticket: " + issueName + " a été modifiée. Vérifiez les nouveaux horaires rapidement !";
 
         Notification notif = Notification.builder()
                 .content(content)
@@ -234,7 +234,7 @@ public class NotificationService {
     }
 
     public void cancelEventNotification(User user, Event event){
-        String content = event.getName()+ "a été annulé, consultez votre calendrier !";
+        String content = event.getName()+ " a été annulé, consultez votre calendrier !";
         Notification notif = Notification.builder()
                 .content(content)
                 .isRead(false)
@@ -246,7 +246,7 @@ public class NotificationService {
     }
 
     public void reopeningDemandNotification(User user, Issue issue){
-        String content = issue.getCreatedBy().getName() + " demande une réouverture du ticket: "+ issue.getTitle()+". Répondez-lui vite !";
+        String content = issue.getCreatedBy().getName() + " demande une réouverture du ticket: "+ issue.getTitle()+". Répondez-lui rapidement !";
 
         Notification notif = Notification.builder()
                 .isRead(false)
@@ -260,7 +260,7 @@ public class NotificationService {
     }
 
     public void reopeningDemandAcceptedNotification(User user, Issue issue){
-        String content = issue.getManager().getName() + " a accepté votre demande, votre ticket: "+ issue.getTitle()+ " est de nouveau disponible. Consultez le rapidement !";
+        String content = issue.getManager().getName() + " a accepté votre demande, votre ticket: "+ issue.getTitle()+ " est de nouveau disponible. Consultez-le rapidement !";
 
         Notification notif = Notification.builder()
                 .isRead(false)
@@ -274,7 +274,7 @@ public class NotificationService {
     }
 
     public void closeIssueNotification(User user, Issue issue){
-        String content ="Votre ticket: "+ issue.getTitle()+ " vient d'être cloturé, consultez le vite";
+        String content ="Votre ticket: "+ issue.getTitle()+ " vient d'être clôturé, consultez le rapidement";
 
         Notification notif = Notification.builder()
                 .isRead(false)
@@ -288,7 +288,7 @@ public class NotificationService {
     }
 
     public void openIssueNotification(User user, Issue issue){
-        String content ="Votre ticket: "+ issue.getTitle()+ " vient d'être rouvert, consultez le vite";
+        String content ="Votre ticket: "+ issue.getTitle()+ " vient d'être rouvert, consultez-le rapidement";
 
         Notification notif = Notification.builder()
                 .isRead(false)
@@ -457,7 +457,7 @@ public class NotificationService {
                 : mergeRequest.getSourceIssue().getManager();
 
         if (targetToNotify != null) {
-            String content = requester.getName() + " souhaite fusionner son ticket: " + mergeRequest.getSourceIssue().getTitle() + " avec votre ticket: " + mergeRequest.getTargetIssue().getTitle() + ". Répondez-lui vite !";
+            String content = requester.getName() + " souhaite fusionner son ticket: " + mergeRequest.getSourceIssue().getTitle() + " avec votre ticket: " + mergeRequest.getTargetIssue().getTitle() + ". Répondez-lui rapidement !";
 
             Notification notif = Notification.builder()
                     .content(content)
@@ -475,7 +475,7 @@ public class NotificationService {
     public void mergeRequestDeniedNotification(MergeRequest mergeRequest){
         User requester = mergeRequest.getRequester();
         User target = mergeRequest.getTargetManager();
-        String content = target.getName() + " a refusé votre demande de fusion entre votre ticket: "+mergeRequest.getTargetIssue().getTitle()+" et "+mergeRequest.getSourceIssue().getTitle()+". Pour motif: "+mergeRequest.getRejectionReason()+".";
+        String content = target.getName() + " a refusé votre demande de fusion entre votre ticket: "+mergeRequest.getTargetIssue().getTitle()+" et "+mergeRequest.getSourceIssue().getTitle()+". Pour le motif suivant: "+mergeRequest.getRejectionReason()+".";
 
         Notification notif = Notification.builder()
                 .content(content)
@@ -507,7 +507,7 @@ public class NotificationService {
     }
 
     public void mergeRequestNotifieFollower(User user,Issue issue){
-        String content = "Le ticket: "+issue.getTitle()+" que vous suivez, a été fusionné, consultez le nouveau ticket rapidement !";
+        String content = "Le ticket: "+issue.getTitle()+" que vous suivez a été fusionné, consultez le nouveau ticket rapidement !";
 
         Notification notif = Notification.builder()
                 .content(content)
@@ -521,7 +521,7 @@ public class NotificationService {
     }
 
     public void managerAddingFollowerNotification(User user, Category category){
-        String content = category.getOwner().getName() + " vous a ajouté dans sa catégorie "+category.getName()+". Consultez la rapidement !";
+        String content = category.getOwner().getName() + " vous a ajouté à sa catégorie "+category.getName()+". Consultez-la rapidement !";
 
         Notification notif = Notification.builder()
                 .content(content)
@@ -578,7 +578,6 @@ public class NotificationService {
     }
 
 
-    @Transactional
     public void notifyFollowersCategoryDeleted(Category category) {
         String content = "La catégorie « " + category.getName() + " » à laquelle vous étiez abonné a été supprimée.";
 
@@ -596,6 +595,20 @@ public class NotificationService {
                 saveAndSend(notif);
             }
         }
+    }
+
+    public void notifyNewFollowerCategory(User user,Category category){
+        String content = user.getName() + " s'est abonné à votre catégorie: "+category.getName();
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .category(category)
+                .recipient(category.getOwner())
+                .type(TypeNotification.NEW_FOLLOWER_CATEGORY)
+                .build();
+
+        saveAndSend(notif);
     }
 
 

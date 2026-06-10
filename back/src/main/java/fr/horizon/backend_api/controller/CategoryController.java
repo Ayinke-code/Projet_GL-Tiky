@@ -76,8 +76,8 @@ public class CategoryController {
      */
     @PreAuthorize("hasAnyAuthority('ADMIN','TEACHER')")
     @PostMapping("/followers/{idUser}/{idCategory}")
-    public CategoryDetailsDto addCategoryFollower(@PathVariable Long idUser, @PathVariable Long idCategory) {
-        categoryService.addFollower(idCategory, idUser);
+    public CategoryDetailsDto addCategoryFollower(@PathVariable Long idUser, @PathVariable Long idCategory, Authentication authentication) {
+        categoryService.addFollower(idCategory, idUser, authentication.getName());
         return categoryService.findById(idCategory);
     }
 

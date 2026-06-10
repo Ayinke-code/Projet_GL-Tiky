@@ -67,6 +67,8 @@ public enum TypeNotification {
     // notifier qu'un category owner a refusé le départ
     DENIED_TEACHER_QUIT_CATEGORY,
     // catégorie supprimé
-    DELETING_CATEGORY
+    DELETING_CATEGORY,
+    // new follower category
+    NEW_FOLLOWER_CATEGORY,
 
 }

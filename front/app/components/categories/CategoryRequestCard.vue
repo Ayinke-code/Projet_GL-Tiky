@@ -20,12 +20,6 @@
                     <span>
                         {{ formatDateTime(categoryRequest.createdAt) }}
                     </span>
-
-                    <span class="w-1 h-1 rounded-full bg-gray-400"></span>
-
-                    <span>
-                        ID #{{ categoryRequest.id }}
-                    </span>
                 </div>
             </div>
 
@@ -35,7 +29,7 @@
                     :id="'category-card-proprio-'+categoryRequest.name"
                     class="text-[10px] bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-bold border border-blue-200">
                     <i class="fa-solid fa-crown mr-1"></i>
-                    Propriétaire
+                  PROPRIÉTAIRE
                 </div>
             </template>
 
