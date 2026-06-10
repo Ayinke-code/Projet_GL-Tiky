@@ -274,6 +274,7 @@ selenium-test-dev:
   stage: selenium
   variables:
     FRONT_URL: $FRONT_URL_DEV
+    DEFAULT_PASSWORD: $DEFAULT_PASSWORD
   needs:
     - deploy_dev
     - build-backend
@@ -301,6 +302,7 @@ selenium-test-prod:
   stage: selenium
   variables:
     FRONT_URL: $FRONT_URL_PROD
+    DEFAULT_PASSWORD: $DEFAULT_PASSWORD
   needs:
     - deploy_prod
     - build-backend
