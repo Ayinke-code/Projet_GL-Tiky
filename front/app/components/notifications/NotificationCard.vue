@@ -2,10 +2,11 @@
   <div class="p-4 mb-2 rounded-lg border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-200 flex items-start gap-3 relative">
 
     <div class="flex-shrink-0 mt-0.5 z-10">
-      <label class="relative flex items-center justify-center cursor-pointer">
+      <label class="relative flex items-center justify-center cursor-pointer" aria-label="Marquer comme lu">
         <input
           type="checkbox"
           class="peer sr-only"
+          :aria-label="`Marquer la notification comme lue`"
           @change="$emit('mark-as-read', notification.id)"
         >
         <div class="w-5 h-5 rounded-full border-2 border-gray-300 peer-checked:border-[#00DC82] peer-checked:bg-[#00DC82] transition-all duration-200 flex items-center justify-center shadow-sm">
@@ -87,6 +88,18 @@ const targetUrl = computed(() => {
     } else {
       return '/calendar'
     }
+  }
+
+  if (props.notification.type === 'ADDED_TO_CATEGORY' || props.notification.type === 'CATEGORY_REMOVAL_REQUEST') {
+    if (props.notification.categoryId) {
+      return `/categories/${props.notification.categoryId}`
+    }
+  }
+
+  if ((props.notification.type === 'MANAGER_ADDING_TEACHER_CATEGORY' || props.notification.type === 'TEACHER_QUIT_CATEGORY' ||
+      props.notification.type === 'DENIED_TEACHER_QUIT_CATEGORY') &&
+    props.notification.categoryId) {
+    return `/categories/${props.notification.categoryId}`
   }
 
   if (props.notification.issueId && !props.notification.eventId) {
@@ -173,7 +186,7 @@ const uiConfig = computed(() => {
         iconPath: 'M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
       }
 
-
+    // --- RÉOUVERTURE ET CLÔTURE ---
     case 'NEW_OPEN_ISSUE':
       return {
         title: 'Demande de réouverture',
@@ -186,14 +199,12 @@ const uiConfig = computed(() => {
         textColor: 'text-emerald-600',
         iconPath: 'M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z'
       }
-
     case 'OPEN_ISSUE':
       return {
         title: 'Ticket Réouvert',
         textColor: 'text-sky-600',
         iconPath: 'M13.5 10.5V6.75a4.5 4.5 0 119 0v3.75M3.75 21.75h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H3.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z'
       }
-
     case 'CLOSING_ISSUE':
       return {
         title: 'Ticket Clôturé',
@@ -201,6 +212,7 @@ const uiConfig = computed(() => {
         iconPath: 'M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z'
       }
 
+    // --- ABONNEMENTS ---
     case 'NEW_FOLLOWER':
       return {
         title: 'Nouvel Abonné',
@@ -212,6 +224,106 @@ const uiConfig = computed(() => {
         title: 'Désabonnement',
         textColor: 'text-slate-400',
         iconPath: 'M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.375 21c-2.331 0-4.512-.645-6.375-1.765z'
+      }
+
+    case 'ADDED_TO_CATEGORY':
+      return {
+        title: 'Ajout à une catégorie',
+        textColor: 'text-indigo-600',
+        iconPath: 'M12 10.5v6m3-3H9m4.06-7.19l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z'
+      }
+
+    case 'CATEGORY_REMOVAL_REQUEST':
+      return {
+        title: 'Demande de retrait',
+        textColor: 'text-orange-600',
+        iconPath: 'M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.375 21c-2.331 0-4.512-.645-6.375-1.765z'
+      }
+
+    // --- LIAISONS DE TICKETS ---
+    case 'SUBSCRIBERS_NEW_LINK':
+      return {
+        title: 'Liaison Suggérée',
+        textColor: 'text-violet-600',
+        iconPath: 'M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244'
+      }
+    case 'MANAGER_LINK_REQUEST':
+      return {
+        title: 'Demande de Liaison',
+        textColor: 'text-fuchsia-600',
+        iconPath: 'M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244'
+      }
+    case 'FOLLOWERS_LINK':
+      return {
+        title: 'Tickets Liés',
+        textColor: 'text-blue-500',
+        iconPath: 'M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244'
+      }
+
+    case 'MANAGER_RESPONSE_LINK_REQUEST':
+      return {
+        title: 'Réponse à la liaison',
+        textColor: 'text-indigo-600',
+        iconPath: 'M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244'
+      }
+
+    // --- FUSIONS DE TICKETS ---
+    case 'MERGE_REQUEST_MANAGER':
+      return {
+        title: 'Demande de Fusion',
+        textColor: 'text-orange-500',
+        iconPath: 'M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75'
+      }
+    case 'MERGE_REQUEST_DENIED':
+      return {
+        title: 'Fusion Refusée',
+        textColor: 'text-red-500',
+        iconPath: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'
+      }
+    case 'MERGE_REQUEST_ACCEPTED':
+      return {
+        title: 'Fusion Acceptée',
+        textColor: 'text-emerald-500',
+        iconPath: 'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+      }
+
+    case 'MERGE_REQUEST_FOLLOWERS':
+      return {
+        title: 'Ticket Fusionné',
+        textColor: 'text-violet-600',
+        iconPath: 'M4.5 4.5l7.5 7.5 7.5-7.5M12 12v7.5'
+      }
+
+    // ---CATEGORIES ---
+    case 'MANAGER_ADDING_TEACHER_CATEGORY':
+      return {
+        title: 'Ajout à une Catégorie',
+        textColor: 'text-sky-500',
+        iconPath: 'M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z'
+      }
+    case 'TEACHER_QUIT_CATEGORY':
+      return {
+        title: 'Demande de Départ',
+        textColor: 'text-orange-500',
+        iconPath: 'M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75'
+      }
+    case 'ACCEPTED_TEACHER_QUIT_CATEGORY':
+      return {
+        title: 'Départ Accepté',
+        textColor: 'text-emerald-600',
+        iconPath: 'M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z'
+      }
+    case 'DENIED_TEACHER_QUIT_CATEGORY':
+      return {
+        title: 'Départ Refusé',
+        textColor: 'text-red-500',
+        iconPath: 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636'
+      }
+    case 'DELETING_CATEGORY':
+      return {
+        title: 'Catégorie Supprimée',
+        textColor: 'text-red-600',
+        iconPath: 'M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0'
       }
 
     default:

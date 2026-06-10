@@ -1,9 +1,6 @@
 <template>
   <UCard
-    :class="[
-      'hover:shadow-md transition cursor-pointer',
-      isUpdated ? 'bg-green-50 border-green-200 shadow-sm' : ''
-    ]"
+    class="hover:shadow-md transition cursor-pointer"
     @click="navigateTo(`/issues/${issue.id}`)"
   >
     <!-- HEADER -->
@@ -33,12 +30,7 @@
       </div>
 
       <!-- DATE -->
-      <div
-        :class="[
-          'text-[11px] whitespace-nowrap',
-          isUpdated ? 'text-green-600 font-bold' : 'text-gray-500'
-        ]"
-      >
+      <div class="text-[11px] whitespace-nowrap text-gray-500">
         {{ formatDateTime(issue.createdAt) }}
       </div>
     </div>
@@ -76,6 +68,13 @@
           color="success"
         />
       </div>
+
+      <!-- Badge "New" : uniquement pour les étudiants (ni créateur, ni manager), tant que l'issue suivie a été mise à jour -->
+      <div v-if="showNewBadge" class="flex justify-end">
+        <UBadge class="font-bold rounded-full" color="info" variant="solid" icon="entypo:new" size="md">
+          Nouveau
+        </UBadge>
+      </div>
   </UCard>
 </template>
 
@@ -100,6 +99,24 @@ const canDelete = computed(() => {
 
 const { isFollowedIssueUpdated } = useFollowedIssuesState()
 const isUpdated = computed(() => isFollowedIssueUpdated(props.issue?.id))
+
+/**
+ * L'utilisateur courant est-il le créateur du ticket ?
+ */
+const isCreator = computed(() => props.issue?.createdId === props.user?.id)
+
+/**
+ * L'utilisateur courant est-il le manager de la catégorie du ticket ?
+ */
+const isManager = computed(() => props.user?.id === props.issue?.categoryManagerId)
+
+/**
+ * Badge "Nouveau" : visible uniquement pour les étudiants
+ * (ni créateur, ni manager) lorsque l'issue suivie a été mise à jour.
+ */
+const showNewBadge = computed(() =>
+  isUpdated.value && !isCreator.value && !isManager.value
+)
 
 /**
  * Labels statuts

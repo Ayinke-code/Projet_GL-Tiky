@@ -1,25 +1,15 @@
 <template>
-  <!--
-    Carte de catégorie avec styles dynamiques :
-    - Si l'utilisateur peut accéder à la catégorie :
-        → fond bleu clair + curseur pointer
-    - Sinon :
-        → fond blanc (lecture seule)
-    - Interaction : déclenche un événement "click" vers le parent
-  -->
   <div
     class="border-l-4 rounded-lg shadow-sm p-5 hover:shadow-lg transition-all group border-gray-200 relative overflow-hidden"
     :class="[
       borderClass,
-      category.status === 'ARCHIVED'
-        ? 'grayscale opacity-60'
-        : '',
+      category.status === 'ARCHIVED' ? 'grayscale opacity-60' : '',
       canAccessCategory ? 'cursor-pointer bg-blue-50' : 'bg-white'
-    ]" @click="$emit('click')">
+    ]" @click="canAccessCategory ? $emit('click') : null">
 
     <!-- Archive overlay -->
     <div v-if="category.status === 'ARCHIVED'"
-      class="absolute inset-0 bg-white/10 flex items-center justify-center z-10 pointer-events-none">
+         class="absolute inset-0 bg-white/10 flex items-center justify-center z-10 pointer-events-none">
       <span
         class="text-red-600 text-5xl font-black rotate-[-20deg] opacity-40 border-8 border-red-600 p-4 rounded-xl tracking-widest">
         ARCHIVE
@@ -40,6 +30,7 @@
 
       <div v-if="category.status !== 'ARCHIVED'" class="flex gap-2">
 
+        <template v-if="category.ownerName === user?.name">
             <template v-if="category.ownerId === user?.value?.id">
           <div class="text-[10px] bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-bold border border-amber-200">
             <i class="fa-solid fa-crown mr-1"></i> PROPRIÉTAIRE
@@ -48,12 +39,15 @@
 
         <template v-else>
 
-          <button v-if="isFollowed" @click.stop="confirmUnfollow"
-            class="text-[10px] bg-emerald-600 text-white px-3 py-1 rounded-full font-bold hover:bg-red-600 transition-colors">
+          <!-- Le follower voit le statut "Suivi" -->
+          <span v-if="isFollowed"
+                class="text-[10px] bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full font-bold border border-emerald-200">
             <i class="fa-solid fa-check mr-1"></i>
             Suivi
-          </button>
+          </span>
 
+          <button v-else-if="isTeacher" @click.stop="$emit('follow')"
+                  class="text-[10px] bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-bold hover:bg-indigo-600 hover:text-white transition-colors cursor-pointer">
           <button v-else-if="canFollow"
             @click.stop="$emit('follow')"
             class="text-[10px] bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-bold hover:bg-indigo-600 hover:text-white">
@@ -72,7 +66,6 @@
       <div class="flex items-center">
         <i class="fa-solid fa-user-tie mr-2 text-indigo-400"></i>
 
-        <!-- Si l'utilisateur est propriétaire de la catégorie -->
         <span v-if="user?.name === category.ownerName">
           <span
             :id="'category-card-proprio-' + category.name.replace(/\s+/g, '-')"
@@ -108,30 +101,17 @@ import { computed } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { ROLE } from '~/utils/roles'
 
-/**
- * Récupération de l'utilisateur connecté.
- */
 const { user, ready } = useAuth()
 
-/**
- * Events émis par la carte catégorie.
- *
- * - click : ouverture du détail
- * - follow : suivre la catégorie
- * - unfollow : arrêter de suivre
- */
 const emit = defineEmits(['click', 'follow', 'unfollow'])
 
-/**
- * Props du composant.
- *
- * @property category  Catégorie affichée
- * @property isFollowed Indique si la catégorie est suivie
- */
 const props = defineProps({
   category: Object,
   isFollowed: Boolean
 })
+
+const isTeacher = user.value.roles?.includes(ROLE.TEACHER)
+const isOwner = user.value.name === props.category.ownerName
 
 const canFollow = computed(() => {
   return ready && user?.value?.roles?.some(role =>
@@ -140,15 +120,14 @@ const canFollow = computed(() => {
 })
 
 /**
- * Vérifie si l'utilisateur peut accéder à la catégorie.
- * Autorisé uniquement si :
- * - l'utilisateur est chargé
- * - l'utilisateur a le rôle TEACHER
- * - l'utilisateur est le propriétaire de la catégorie
+ * Vérifie si l'utilisateur peut accéder au détail de la catégorie.
+ * Autorisée si Teacher ET (Propriétaire OU Follower).
  */
 const canAccessCategory = computed(() => {
   if (!ready || !user?.value) return false
 
+  // Accessible si propriétaire OU si l'utilisateur suit la catégorie
+  return isTeacher && (isOwner || props.isFollowed)
   const isTeacherRole =
     user.value.roles?.includes(ROLE.TEACHER)
 
@@ -158,31 +137,11 @@ const canAccessCategory = computed(() => {
   return isTeacherRole && isOwner
 })
 
-/**
- * Demande confirmation avant de ne plus suivre
- * une catégorie.
- */
-const confirmUnfollow = () => {
-  if (confirm(`Arrêter de suivre "${props.category.subject}" ?`)) {
-    emit('unfollow')
-  }
-}
-
-/**
- * Formate une date au format français.
- *
- * @param date date à formatter
- * @returns date formatée
- */
 const formatDate = (date) => {
   if (!date) return ''
   return new Date(date).toLocaleString('fr-FR')
 }
 
-/**
- * Génère dynamiquement une couleur de bordure
- * selon l'id de la catégorie.
- */
 const borderClass = computed(() => {
   const colors = [
     'border-indigo-500',

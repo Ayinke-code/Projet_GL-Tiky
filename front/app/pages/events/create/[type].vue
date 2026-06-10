@@ -335,7 +335,7 @@ const handleSubmit = async () => {
     await createEvent(payload)
     router.push('/events')
   } catch (e) {
-    submitError.value = e?.data?.message || 'Une erreur est survenue lors de la création.'
+    submitError.value = e?.data?.error || e?.data?.message || 'Une erreur est survenue lors de la création.'
   } finally {
     submitting.value = false
   }

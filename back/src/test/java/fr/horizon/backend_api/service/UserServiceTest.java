@@ -1,15 +1,21 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.InvalidUserRolesException;
+import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.dto.UpdateRolesDto;
 import fr.horizon.backend_api.model.dto.UserDto;
+import fr.horizon.backend_api.model.dto.UserFollowerDto;
 import fr.horizon.backend_api.model.dto.UserRequestDto;
+import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.TeacherType;
+import fr.horizon.backend_api.repository.CategoryRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.RoleRepository;
 import fr.horizon.backend_api.repository.UserRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,9 +25,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import jakarta.persistence.EntityNotFoundException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,6 +52,12 @@ class UserServiceTest {
 
     @Mock
     private IssueRepository issueRepository;
+
+    @Mock
+    private CategoryRepository categoryRepository;
+
+    @Mock
+    private EntityManager entityManager;
 
     @InjectMocks
     private UserService userService;
@@ -241,10 +255,15 @@ class UserServiceTest {
 
     @Test
     void deleteById_should_call_repository() {
+        User user = User.builder().id(1L).build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(categoryRepository.findAllByOwnerAndCategoryType(user, CategoryType.ISSUE))
+                .thenReturn(List.of());
 
         userService.deleteById(1L);
 
-        verify(userRepository).deleteById(1L);
+        verify(userRepository).delete(user);
     }
 
     @Test
@@ -327,5 +346,112 @@ class UserServiceTest {
 
         assertEquals(TeacherType.OPTION_LEADER, result.getTeacherType());
         assertEquals("Paul MARTIN", result.getName());
+    }
+
+    @Test
+    void updateUserRoles_should_update_roles_when_valid() {
+
+        Role adminRole = new Role();
+        adminRole.setName("ADMIN");
+
+        User user = User.builder()
+                .id(1L)
+                .name("John")
+                .email("john@test.com")
+                .roles(new HashSet<>())
+                .build();
+
+        UpdateRolesDto dto = UpdateRolesDto.builder()
+                .roles(List.of("ADMIN"))
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(roleRepository.findByNameIn(List.of("ADMIN"))).thenReturn(List.of(adminRole));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(issueRepository.existsByCreatedByIdAndStatus(any(), any())).thenReturn(false);
+
+        UserDto result = userService.updateUserRoles(1L, dto);
+
+        assertEquals(Set.of("ADMIN"), result.getRoles());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void updateUserRoles_should_replace_existing_roles() {
+
+        Role teacherRole = new Role();
+        teacherRole.setName("TEACHER");
+
+        Role studentRole = new Role();
+        studentRole.setName("STUDENT");
+
+        User user = User.builder()
+                .id(1L)
+                .email("john@test.com")
+                .roles(new HashSet<>(Set.of(studentRole))) // rôle initial : STUDENT
+                .build();
+
+        UpdateRolesDto dto = UpdateRolesDto.builder()
+                .roles(List.of("TEACHER"))
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(roleRepository.findByNameIn(List.of("TEACHER"))).thenReturn(List.of(teacherRole));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(issueRepository.existsByCreatedByIdAndStatus(any(), any())).thenReturn(false);
+
+        UserDto result = userService.updateUserRoles(1L, dto);
+
+        // STUDENT doit avoir été remplacé par TEACHER
+        assertEquals(Set.of("TEACHER"), result.getRoles());
+    }
+
+    @Test
+    void getAllTeachersWithCategoryDetail_should_mark_followers_correctly() {
+        Role teacherRole = new Role("TEACHER");
+        teacherRole.setId(1L);
+
+        User teacher1 = new User();
+        teacher1.setId(10L);
+        teacher1.setName("Alice");
+
+        User teacher2 = new User();
+        teacher2.setId(11L);
+        teacher2.setName("Bob");
+
+        Category category = new Category();
+        category.setId(5L);
+        category.setName("Option IA");
+        category.setFollowers(Set.of(teacher1));
+
+        when(roleRepository.findByName("TEACHER")).thenReturn(Optional.of(teacherRole));
+        when(categoryRepository.findById(5L)).thenReturn(Optional.of(category));
+        when(userRepository.getAllByRoles(Set.of(teacherRole))).thenReturn(List.of(teacher1, teacher2));
+
+        List<UserFollowerDto> result = userService.getAllTeachersWithCategoryDetail(5L);
+
+        assertEquals(2, result.size());
+        UserFollowerDto dto1 = result.stream().filter(d -> d.getId().equals(10L)).findFirst().orElseThrow();
+        UserFollowerDto dto2 = result.stream().filter(d -> d.getId().equals(11L)).findFirst().orElseThrow();
+        assertTrue(dto1.isFollower());
+        assertFalse(dto2.isFollower());
+    }
+
+    @Test
+    void getAllTeachersWithCategoryDetail_should_throw_when_teacher_role_not_found() {
+        when(roleRepository.findByName("TEACHER")).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class,
+                () -> userService.getAllTeachersWithCategoryDetail(1L));
+    }
+
+    @Test
+    void getAllTeachersWithCategoryDetail_should_throw_when_category_not_found() {
+        Role teacherRole = new Role("TEACHER");
+        when(roleRepository.findByName("TEACHER")).thenReturn(Optional.of(teacherRole));
+        when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class,
+                () -> userService.getAllTeachersWithCategoryDetail(99L));
     }
 }

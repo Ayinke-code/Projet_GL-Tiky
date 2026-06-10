@@ -2,7 +2,7 @@
   <div class="p-8">
     <div class="flex justify-between items-center mb-8">
       <h1 class="text-3xl font-bold text-black">Tickets</h1>
-      <UButton to="/issues/create" id= "btn-create-issue" icon="i-lucide-plus" size="lg">
+      <UButton to="/issues/create" id="btn-create-issue" icon="i-lucide-plus" size="lg" color="secondary" class="rounded-full font-bold">
         Créer un ticket
       </UButton>
     </div>
@@ -51,66 +51,153 @@
       </UButton>
     </div>
 
+    <!-- Affichage des Issues -->
     <template v-else>
-      <!-- Les issues dont l'utilisateur est categoryOwner -->
-      <div v-if="Object.keys(ownedIssuesByCategory).length > 0">
-        <h2 class="text-xl font-bold text-black mb-3">Vos catégories</h2>
 
-        <div v-for="(group, categoryId) in ownedIssuesByCategory" :key="categoryId" class="mb-4">
-          <!-- Composant collapse pour ouvrir/fermer l'affichage des issues de la catégorie -->
-          <UCollapsible class="w-full">
+      <!-- Barre de recherche + filtres + tri -->
+      <div class="bg-white p-4 mb-6 rounded-2xl shadow-sm border border-gray-100">
 
-            <!-- Bouton / Header -->
-            <UButton class="group justify-between cursor-pointer" color="neutral" variant="subtle"
-                     trailing-icon="i-lucide-chevron-down" :label="group.name" :ui="{
-                                trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200'
-                            }" block />
+        <div class="flex flex-col lg:flex-row gap-3 lg:items-center">
 
-            <!-- Contenu affiché quand ouvert -->
-            <template #content>
-              <div class="overflow-visible p-2">
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    <IssuesCard v-if="user" v-for="issue in group.issues" :key="issue.id" :issue="issue" :user="user"
-                        @delete="deleteValidation"
-                        @requestAReopening="openReopenModal"
-                        @acceptReopening="openReopenAccessModal"
-                    />
-                </div>
-              </div>
+          <!-- Recherche -->
+          <UInput
+            v-model="searchQuery"
+            icon="i-lucide-search"
+            placeholder="Rechercher un ticket (titre, description, catégorie)..."
+            size="lg"
+            class="flex-1"
+            color="neutral"
+          >
+            <template v-if="searchQuery" #trailing>
+              <UButton
+                color="neutral"
+                variant="link"
+                icon="i-lucide-x"
+                aria-label="Effacer la recherche"
+                @click="searchQuery = ''"
+              />
             </template>
+          </UInput>
 
-          </UCollapsible>
+          <!-- Filtre par statut -->
+          <USelectMenu
+            v-model="selectedStatuses"
+            :items="statusItems"
+            value-key="value"
+            multiple
+            icon="i-lucide-filter"
+            placeholder="Statut"
+            size="lg"
+            class="w-full lg:w-48"
+          />
+
+          <!-- Filtre par catégorie -->
+          <USelectMenu
+            v-model="selectedCategories"
+            :items="categoryItems"
+            value-key="value"
+            multiple
+            icon="i-lucide-folder"
+            placeholder="Catégorie"
+            size="lg"
+            class="w-full lg:w-56"
+          />
+
+          <!-- Tri -->
+          <USelect
+            v-model="sortBy"
+            :items="sortItems"
+            value-key="value"
+            icon="i-lucide-arrow-up-down"
+            size="lg"
+            class="w-full lg:w-48"
+            color="neutral"
+          />
+        </div>
+
+        <!-- Mes catégories + réinitialiser -->
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+
+          <!-- Toggle "Mes catégories" -->
+          <UButton
+            v-if="canOwnCategories"
+            :color="onlyMyCategories ? 'primary' : 'neutral'"
+            :variant="onlyMyCategories ? 'solid' : 'subtle'"
+            icon="i-lucide-user-check"
+            size="sm"
+            class="cursor-pointer"
+            @click="onlyMyCategories = !onlyMyCategories"
+          >
+            Mes catégories
+          </UButton>
+
+          <UButton
+            v-if="hasActiveFilters"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-rotate-ccw"
+            size="sm"
+            class="cursor-pointer"
+            @click="clearFilters"
+          >
+            Réinitialiser
+          </UButton>
+
+          <span class="text-sm text-gray-500 ml-auto">
+            {{ totalFilteredCount }} ticket{{ totalFilteredCount > 1 ? 's' : '' }}
+            <template v-if="hasActiveFilters">sur {{ issues.length }}</template>
+          </span>
+        </div>
+
+        <!-- Chips des filtres actifs -->
+        <div v-if="selectedStatuses.length || selectedCategories.length" class="mt-3 flex flex-wrap items-center gap-2">
+          <UBadge
+            v-for="status in selectedStatuses"
+            :key="`chip-status-${status}`"
+            :color="STATUS_META[status]?.color || 'neutral'"
+            variant="soft"
+            class="cursor-pointer"
+            @click="removeStatus(status)"
+          >
+            {{ STATUS_META[status]?.label || status }}
+            <UIcon name="i-lucide-x" class="ml-1" />
+          </UBadge>
+
+          <UBadge
+            v-for="catId in selectedCategories"
+            :key="`chip-cat-${catId}`"
+            color="neutral"
+            variant="soft"
+            class="cursor-pointer"
+            @click="removeCategory(catId)"
+          >
+            {{ categoryNameById[catId] || catId }}
+            <UIcon name="i-lucide-x" class="ml-1" />
+          </UBadge>
         </div>
       </div>
 
-      <!-- Séparateur -->
-      <template v-if="Object.keys(otherIssuesByCategory).length > 0 && Object.keys(ownedIssuesByCategory).length > 0">
-        <Separator class="p-5" />
-      </template>
+      <!-- Aucun résultat après filtrage -->
+      <div v-if="totalFilteredCount === 0" class="text-center py-12">
+        <p class="text-gray-500 text-lg">Aucun ticket ne correspond à votre recherche</p>
+        <UButton variant="outline" class="mt-4 cursor-pointer" @click="clearFilters">
+          Réinitialiser les filtres
+        </UButton>
+      </div>
 
-      <!-- Les autres issues groupées par catégorie -->
-      <div v-if="Object.keys(otherIssuesByCategory).length > 0">
-        <h2 v-if="Object.keys(ownedIssuesByCategory).length === 0" class="text-xl font-bold text-black mb-3">Vos tickets</h2>
-        <h2 v-else class="text-xl font-bold text-black mb-3">Autres</h2>
-
-        <div v-for="(group, categoryId) in otherIssuesByCategory" :key="categoryId" class="mb-4">
-          <UCollapsible class="w-full">
-            <UButton class="group justify-between cursor-pointer" color="neutral" variant="subtle"
-                     trailing-icon="i-lucide-chevron-down" :label="group.name" :ui="{
-                                trailingIcon: 'group-data-[state=open]:rotate-180 transition-transform duration-200'
-                            }" block />
-            <template #content>
-              <div class="overflow-visible p-2">
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  <IssuesCard v-if="user" v-for="issue in group.issues" :key="issue.id" :issue="issue" :user="user"
-                                        @delete="deleteValidation"
-                                        @requestAReopening="openReopenModal"
-                                        @acceptReopening="openReopenAccessModal"/>
-                </div>
-              </div>
-            </template>
-          </UCollapsible>
-        </div>
+      <!-- Grille de tous les tickets filtrés -->
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <template v-if="user">
+          <IssuesCard
+            v-for="issue in displayedIssues"
+            :key="issue.id"
+            :issue="issue"
+            :user="user"
+            @delete="deleteValidation"
+            @requestAReopening="openReopenModal"
+            @acceptReopening="openReopenAccessModal"
+          />
+        </template>
       </div>
     </template>
 
@@ -217,24 +304,21 @@
 <script setup lang="js">
 /**
  * Page liste des issues
- * - affichage liste
+ * - affichage en grille
+ * - recherche + filtres (statut / catégorie) + tri
  * - suppression avec modal de confirmation
  */
 
 import IssuesCard from '~/components/issues/IssuesCard.vue'
 import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 import { computed } from 'vue'
-import Separator from '~/components/ui/Separator.vue'
 import AssignationManager from '~/components/assignation/AssignationManager.vue'
 import AssignationTeacher from '~/components/assignation/AssignationTeacher.vue'
 import IncompleteIssuesList from '~/components/layout/IncompleteIssuesList.vue'
 import Modal from '~/components/ui/Modal.vue'
 
 const { ready, user } = useAuth()
-const { issues, getDisplayableIssues, fetchIssues, deleteIssue, requestOpening, updateIssueStatus, error } = useIssues()
-const { refreshFollowedIssues } = useFollowedIssuesState()
-
-const nuxtApp = useNuxtApp()
+const { issues, getDisplayableIssues, deleteIssue, requestOpening, updateIssueStatus, error } = useIssues()
 
 /**
  * State UI
@@ -270,6 +354,150 @@ const selectedIssue = ref(null)
  * Description de la réouverture
  */
 const reopenDescription = ref(null)
+
+/** Recherche et filtre */
+/** Texte de recherche libre */
+const searchQuery = ref('')
+
+/** Statuts sélectionnés (tableau de codes statut) */
+const selectedStatuses = ref([])
+
+/** Catégories sélectionnées (tableau d'ids de catégorie) */
+const selectedCategories = ref([])
+
+/** N'afficher que les tickets de mes catégories (catégorie dont je suis responsable) */
+const onlyMyCategories = ref(false)
+
+/** Critère de tri courant */
+const sortBy = ref('default')
+
+const sortItems = [
+  { value: 'default', label: 'Tri par défaut' },
+  { value: 'title-asc', label: 'Titre (A → Z)' },
+  { value: 'title-desc', label: 'Titre (Z → A)' },
+  { value: 'status', label: 'Par statut' },
+  { value: 'category', label: 'Par catégorie' },
+]
+
+/**
+ * Métadonnées d'affichage des statuts (nom + couleur du badge).
+ * Les statuts inconnus sont de couleur neutre.
+ */
+const STATUS_META = {
+  OUVERT: { label: 'Ouvert', color: 'info' },
+  EN_COURS: { label: 'En cours', color: 'warning' },
+  EN_ATTENTE: { label: 'En attente', color: 'warning' },
+  INCOMPLET: { label: 'Incomplet', color: 'neutral' },
+  TERMINE: { label: 'Terminé', color: 'success' },
+  DEMANDE_REOUVERTURE: { label: 'Demande de réouverture', color: 'secondary' },
+}
+
+/** L'utilisateur est-il responsable d'au moins une catégorie ? */
+const canOwnCategories = computed(() =>
+  issues.value.some(issue => issue.categoryOwnerId === user.value?.id)
+)
+
+/** Liste des statuts réellement présents dans les tickets */
+const statusItems = computed(() => {
+  const set = new Set(issues.value.map(i => i.status).filter(Boolean))
+  return [...set].map(value => ({
+    value,
+    label: STATUS_META[value]?.label || value,
+  }))
+})
+
+/** Liste des catégories présentes dans les tickets */
+const categoryItems = computed(() => {
+  const map = new Map()
+  for (const issue of issues.value) {
+    if (issue.categoryId != null && !map.has(issue.categoryId)) {
+      map.set(issue.categoryId, issue.categoryName)
+    }
+  }
+  return [...map].map(([value, label]) => ({ value, label }))
+})
+
+/** Accès rapide nom de catégorie par id */
+const categoryNameById = computed(() =>
+  Object.fromEntries(categoryItems.value.map(c => [c.value, c.label]))
+)
+
+/** Au moins un filtre est actif ? */
+const hasActiveFilters = computed(() =>
+  searchQuery.value.trim() !== '' ||
+  selectedStatuses.value.length > 0 ||
+  selectedCategories.value.length > 0 ||
+  onlyMyCategories.value
+)
+
+/**
+ * Issues après application de la recherche et des filtres.
+ */
+const filteredIssues = computed(() => {
+  let result = issues.value
+
+  const q = searchQuery.value.trim().toLowerCase()
+  if (q) {
+    result = result.filter(issue =>
+      issue.title?.toLowerCase().includes(q) ||
+      issue.description?.toLowerCase().includes(q) ||
+      issue.categoryName?.toLowerCase().includes(q)
+    )
+  }
+
+  if (selectedStatuses.value.length) {
+    result = result.filter(issue => selectedStatuses.value.includes(issue.status))
+  }
+
+  if (selectedCategories.value.length) {
+    result = result.filter(issue => selectedCategories.value.includes(issue.categoryId))
+  }
+
+  if (onlyMyCategories.value) {
+    result = result.filter(issue => issue.categoryOwnerId === user.value?.id)
+  }
+
+  return result
+})
+
+/**
+ * Issues filtrées puis triées (utilisé pour l'affichage de la grille).
+ */
+const displayedIssues = computed(() => {
+  const list = [...filteredIssues.value]
+
+  switch (sortBy.value) {
+    case 'title-asc':
+      return list.sort((a, b) => (a.title || '').localeCompare(b.title || ''))
+    case 'title-desc':
+      return list.sort((a, b) => (b.title || '').localeCompare(a.title || ''))
+    case 'status':
+      return list.sort((a, b) => (a.status || '').localeCompare(b.status || ''))
+    case 'category':
+      return list.sort((a, b) => (a.categoryName || '').localeCompare(b.categoryName || ''))
+    default:
+      return list
+  }
+})
+
+/** Nombre total de tickets visibles après filtrage */
+const totalFilteredCount = computed(() => filteredIssues.value.length)
+
+/** Réinitialise tous les filtres */
+const clearFilters = () => {
+  searchQuery.value = ''
+  selectedStatuses.value = []
+  selectedCategories.value = []
+  onlyMyCategories.value = false
+}
+
+const removeStatus = (status) => {
+  selectedStatuses.value = selectedStatuses.value.filter(s => s !== status)
+}
+
+const removeCategory = (catId) => {
+  selectedCategories.value = selectedCategories.value.filter(c => c !== catId)
+}
 
 /**
  * Affiche le modal de description de la demande de réouverture
@@ -314,63 +542,6 @@ const acceptReopening = async () => {
         error.value = err.message || 'Erreur lors de la suppression'
     }
 }
-
-// Issues appartenant à l’utilisateur connecté
-// Filtre sur le champ categoryOwnerId
-const ownedIssues = computed(() => {
-  return issues.value.filter(
-    issue => issue.categoryOwnerId === user.value.id
-  )
-})
-
-/*
- * Regroupement des issues du user par catégorie
- * Clé utilisée : categoryId
- */
-const ownedIssuesByCategory = computed(() => {
-  return ownedIssues.value.reduce((groups, issue) => {
-    const key = issue.categoryId
-
-    if (!groups[key]) {
-      groups[key] = {
-        name: issue.categoryName,
-        issues: []
-      }
-    }
-
-    groups[key].issues.push(issue)
-
-    return groups
-  }, {})
-})
-
-// Les autres issues n'appartenant pas à l'utilisateur connecté
-const otherIssues = computed(() => {
-  return issues.value.filter(
-    issue => issue.categoryOwnerId !== user.value.id
-  )
-})
-
-/*
- * Regroupement des autres issues par catégorie
- */
-const otherIssuesByCategory = computed(() => {
-  return otherIssues.value.reduce((groups, issue) => {
-    const key = issue.categoryId
-
-    if (!groups[key]) {
-      groups[key] = {
-        name: issue.categoryName,
-        issues: []
-      }
-    }
-
-    groups[key].issues.push(issue)
-
-    return groups
-  }, {})
-})
-
 
 /**
  * Ouvre modal suppression
@@ -448,14 +619,14 @@ onUnmounted(() => {
   window.removeEventListener('notification:received', onNotificationReceived)
 })
 
-const isTeacher = computed(() => {
-  return user.value?.roles?.includes('TEACHER') || user.value?.roles?.includes('ADMIN') || false
-})
+const isTeacher = computed(() =>
+  user.value?.roles?.includes('TEACHER') || user.value?.roles?.includes('ADMIN') || false
+)
 
-const isManager = computed(() => {
-  // Il est manager s'il possède des catégories ou s'il est admin
-  return Object.keys(ownedIssuesByCategory.value).length > 0 || user.value?.roles?.includes('ADMIN') || false
-})
+const isManager = computed(() =>
+  // Manager s'il possède des catégories ou s'il est admin
+  canOwnCategories.value || user.value?.roles?.includes('ADMIN') || false
+)
 
 const afficherSectionIncomplete = ref(false)
 

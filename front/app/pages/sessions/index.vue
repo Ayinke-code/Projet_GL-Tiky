@@ -8,8 +8,8 @@
         <p class="text-sm text-gray-400 mt-1">Vos événements et rencontres planifiés</p>
       </div>
 
-      <!-- Filtre passé / à venir -->
-      <div class="flex gap-2">
+      <!-- Filtre passé / à venir (teacher/admin uniquement, ou onglet sessions étudiant) -->
+      <div v-if="!isStudent || studentTab === 'sessions'" class="flex gap-2">
         <button
           v-for="f in filters"
           :key="f.value"
@@ -24,6 +24,31 @@
       </div>
     </div>
 
+    <!-- Onglets étudiant : Mes sessions / Mes invitations -->
+    <div v-if="isStudent" class="flex space-x-1 bg-gray-200/80 p-1.5 rounded-xl w-fit mb-8">
+      <button
+        @click="studentTab = 'sessions'"
+        :class="[
+          studentTab === 'sessions' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200',
+          'px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2'
+        ]"
+      >
+        <i class="fa-solid fa-calendar-check"></i> Mes sessions
+      </button>
+      <button
+        @click="studentTab = 'invitations'"
+        :class="[
+          studentTab === 'invitations' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200',
+          'px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2'
+        ]"
+      >
+        <i class="fa-solid fa-envelope"></i> Mes invitations
+        <span v-if="allPendingInvitations.length > 0" class="ml-1 bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-xs">
+          {{ allPendingInvitations.length }}
+        </span>
+      </button>
+    </div>
+
     <!-- Chargement -->
     <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <USkeleton v-for="n in 6" :key="n" class="h-48 rounded-2xl" />
@@ -35,148 +60,229 @@
       <p>{{ error }}</p>
     </div>
 
-    <!-- Aucune session -->
-    <div v-else-if="filteredSessions.length === 0" class="text-center py-20">
-      <div class="text-gray-200 text-6xl mb-4">
-        <i class="fa-solid fa-calendar-xmark"></i>
+    <!-- Vue ÉTUDIANT : onglet Mes sessions -->
+    <template v-else-if="isStudent && studentTab === 'sessions'">
+      <div v-if="filteredSessions.length === 0" class="text-center py-20">
+        <div class="text-gray-200 text-6xl mb-4"><i class="fa-solid fa-calendar-xmark"></i></div>
+        <p class="text-gray-400 text-lg">
+          {{ activeFilter === 'upcoming' ? 'Aucune session à venir' : 'Aucune session passée' }}
+        </p>
       </div>
-      <p class="text-gray-400 text-lg">
-        {{ activeFilter === 'upcoming' ? 'Aucune session à venir' : 'Aucune session passée' }}
-      </p>
-    </div>
-
-    <!-- Grille des sessions -->
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-      <div
-        v-for="session in filteredSessions"
-        :key="session.id"
-        @click="openDetail(session)"
-        class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer flex flex-col gap-3"
-        :class="isPast(session.endDate) ? 'opacity-70' : ''"
-      >
-        <!-- Type + badge statut -->
-        <div class="flex items-start justify-between gap-2">
-          <span
-            class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
-            :class="typeStyle(session.categoryType).badge"
-          >
-            <i :class="typeStyle(session.categoryType).icon" class="text-[9px]"></i>
-            {{ typeLabel(session.categoryType) }}
-          </span>
-          <!-- Badge participation (TICKET uniquement) -->
-          <template v-if="session.categoryType === 'ISSUE'">
-            <span v-if="session.myParticipationStatus === false"
-              class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
-              <i class="fa-solid fa-circle-xmark text-[8px]"></i>
-              {{ session.createdBy === user?.name ? 'RDV refusé' : 'Refusé' }}
-            </span>
-            <span v-else-if="session.myParticipationStatus === null"
-              class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
-              <i class="fa-solid fa-hourglass-half text-[8px]"></i>
-              {{ session.createdBy === user?.name ? 'En attente' : 'En attente' }}
-            </span>
-            <span v-else
-              class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
-              <i class="fa-solid fa-circle-check text-[8px]"></i>
-              {{ session.createdBy === user?.name ? 'RDV confirmé' : 'Accepté' }}
-            </span>
-          </template>
-        </div>
-
-        <!-- Nom de l'événement -->
-        <div>
-          <h3 class="text-base font-bold text-gray-900 leading-tight">{{ session.name }}</h3>
-          <p v-if="session.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ session.description }}</p>
-        </div>
-
-        <!-- Dates & heures -->
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         <div
-          v-if="session.startDate"
-          class="rounded-xl px-3 py-2.5 text-xs"
-          :class="typeStyle(session.categoryType).bg"
+          v-for="session in filteredSessions"
+          :key="session.id"
+          @click="openDetail(session)"
+          class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer flex flex-col gap-3"
+          :class="isPast(session.endDate) ? 'opacity-70' : ''"
         >
-          <div class="flex items-center gap-1.5 font-semibold mb-1.5">
-            <i class="fa-solid fa-calendar-days text-[10px]"></i>
-            <span class="capitalize">{{ formatDate(session.startDate) }}</span>
+          <div class="flex items-start justify-between gap-2">
+            <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full" :class="typeStyle(session.categoryType).badge">
+              <i :class="typeStyle(session.categoryType).icon" class="text-[9px]"></i>
+              {{ typeLabel(session.categoryType) }}
+            </span>
+            <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
+              <i class="fa-solid fa-circle-check text-[8px]"></i> Confirmé
+            </span>
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div class="flex flex-col gap-0.5">
-              <span class="uppercase tracking-wide text-[9px] opacity-60 font-semibold">Début</span>
-              <span class="flex items-center gap-1 font-medium">
-                <i class="fa-solid fa-clock text-[10px]"></i>
-                {{ formatTime(session.startDate) }}
-              </span>
+          <div>
+            <h3 class="text-base font-bold text-gray-900 leading-tight">{{ session.name }}</h3>
+            <p v-if="session.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ session.description }}</p>
+          </div>
+          <div v-if="session.startDate" class="rounded-xl px-3 py-2.5 text-xs" :class="typeStyle(session.categoryType).bg">
+            <div class="flex items-center gap-1.5 font-semibold mb-1.5">
+              <i class="fa-solid fa-calendar-days text-[10px]"></i>
+              <span class="capitalize">{{ formatDate(session.startDate) }}</span>
             </div>
-            <div class="flex flex-col gap-0.5">
-              <span class="uppercase tracking-wide text-[9px] opacity-60 font-semibold">Fin</span>
-              <span class="flex items-center gap-1 font-medium">
-                <i class="fa-regular fa-clock text-[10px]"></i>
-                {{ formatTime(session.endDate) }}
-              </span>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="flex flex-col gap-0.5">
+                <span class="uppercase tracking-wide text-[9px] opacity-60 font-semibold">Début</span>
+                <span class="flex items-center gap-1 font-medium"><i class="fa-solid fa-clock text-[10px]"></i>{{ formatTime(session.startDate) }}</span>
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <span class="uppercase tracking-wide text-[9px] opacity-60 font-semibold">Fin</span>
+                <span class="flex items-center gap-1 font-medium"><i class="fa-regular fa-clock text-[10px]"></i>{{ formatTime(session.endDate) }}</span>
+              </div>
             </div>
           </div>
-        </div>
-
-        <!-- Groupe + enseignants -->
-        <div v-if="myGroups(session).length" class="space-y-1.5">
-          <div
-            v-for="g in myGroups(session)"
-            :key="g.id"
-            class="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 text-xs"
-          >
-            <p class="font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
-              <i class="fa-solid fa-rocket text-[10px] text-slate-400"></i>
-              {{ g.name }}
-              <span v-if="g.categoryName" class="text-slate-400 font-normal">· {{ g.categoryName }}</span>
-            </p>
-            <div v-if="Array.from(g.teachers ?? []).length" class="flex flex-wrap gap-1">
-              <span
-                v-for="teacher in [...(g.teachers ?? [])].sort((a, b) => (a.teacherType === 'OPTION_LEADER' ? -1 : b.teacherType === 'OPTION_LEADER' ? 1 : 0))"
-                :key="teacher.name"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium"
-                :class="teacher.teacherType === 'OPTION_LEADER'
-                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                  : 'bg-violet-50 text-violet-700 border border-violet-100'"
-              >
-                <i v-if="teacher.teacherType === 'OPTION_LEADER'" class="fa-solid fa-star text-[8px]"></i>
-                <i v-else class="fa-solid fa-chalkboard-teacher text-[9px]"></i>
-                {{ teacher.name }}
-              </span>
+          <div v-if="myGroups(session).length" class="space-y-1.5">
+            <div v-for="g in myGroups(session)" :key="g.id" class="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 text-xs">
+              <p class="font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
+                <i class="fa-solid fa-rocket text-[10px] text-slate-400"></i>{{ g.name }}
+                <span v-if="g.categoryName" class="text-slate-400 font-normal">· {{ g.categoryName }}</span>
+              </p>
             </div>
           </div>
-        </div>
-
-        <!-- Boutons accepter / refuser (RDV en attente uniquement, non passé, destinataire uniquement) -->
-        <div
-          v-if="session.categoryType === 'ISSUE' && session.myParticipationStatus === null && session.createdBy !== user?.name && !isPast(session.endDate)"
-          class="flex gap-2 mt-auto pt-1"
-          @click.stop
-        >
-          <UButton
-            size="xs" color="success" variant="soft" icon="i-lucide-check"
-            :loading="pendingResponse === session.id + '-accept'"
-            @click.stop="respond(session, true)"
-          >Accepter</UButton>
-          <UButton
-            size="xs" color="error" variant="soft" icon="i-lucide-x"
-            :loading="pendingResponse === session.id + '-refuse'"
-            @click.stop="respond(session, false)"
-          >Refuser</UButton>
-        </div>
-
-        <!-- Bouton supprimer (prof / admin, sessions passées uniquement) -->
-        <div
-          v-if="isTeacherOrAdmin && isPast(session.endDate)"
-          class="flex justify-end mt-auto pt-1"
-          @click.stop
-        >
-          <UButton
-            size="xs" color="error" variant="ghost" icon="i-lucide-trash-2"
-            @click.stop="openDeleteConfirm(session)"
-          ></UButton>
         </div>
       </div>
-    </div>
+    </template>
+
+    <!-- Vue ÉTUDIANT : onglet Mes invitations -->
+    <template v-else-if="isStudent && studentTab === 'invitations'">
+      <div v-if="allPendingInvitations.length === 0" class="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-dashed border-gray-300 text-gray-500">
+        <i class="fa-solid fa-inbox text-5xl mb-4 text-gray-200"></i>
+        <p class="text-lg font-medium text-gray-700">Aucune invitation en attente</p>
+        <p class="text-sm">Vous n'avez aucune invitation pour le moment.</p>
+      </div>
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Invitations non-ISSUE (AUDIT, DEFENSE, MEETING) -->
+        <InvitationCard
+          v-for="invitation in pendingNonIssueInvitations"
+          :key="'inv-' + invitation.id"
+          :invitation="invitation"
+          @accept="handleAcceptInvitation"
+          @decline="openDeclineInvitationModal"
+        />
+        <!-- RDV ISSUE en attente -->
+        <div
+          v-for="rdv in pendingIssueRdvs"
+          :key="'rdv-' + rdv.id"
+          class="bg-white rounded-2xl shadow-sm border border-amber-200 p-5 hover:shadow-md transition-all flex flex-col gap-3"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full" :class="typeStyle(rdv.categoryType).badge">
+              <i :class="typeStyle(rdv.categoryType).icon" class="text-[9px]"></i>
+              {{ typeLabel(rdv.categoryType) }}
+            </span>
+            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">En attente</span>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-gray-900 leading-tight">{{ rdv.name }}</h3>
+            <p v-if="rdv.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ rdv.description }}</p>
+          </div>
+          <div v-if="rdv.startDate" class="rounded-xl bg-amber-50 px-3 py-2.5 text-xs">
+            <div class="flex items-center gap-1.5 font-semibold mb-1.5 text-amber-900 capitalize">
+              <i class="fa-solid fa-calendar-days text-[10px]"></i>{{ formatDate(rdv.startDate) }}
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="flex flex-col gap-0.5">
+                <span class="uppercase tracking-wide text-[9px] opacity-60">Début</span>
+                <span class="font-medium">{{ formatTime(rdv.startDate) }}</span>
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <span class="uppercase tracking-wide text-[9px] opacity-60">Fin</span>
+                <span class="font-medium">{{ formatTime(rdv.endDate) }}</span>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400"><i class="fa-solid fa-user mr-1"></i>Demande de {{ rdv.createdBy }}</p>
+          <div class="flex gap-2 mt-auto pt-1" @click.stop>
+            <UButton size="xs" color="success" variant="soft" icon="i-lucide-check"
+              :loading="pendingResponse === rdv.id + '-accept'"
+              @click.stop="respond(rdv, true)">Accepter</UButton>
+            <UButton size="xs" color="error" variant="soft" icon="i-lucide-x"
+              :loading="pendingResponse === rdv.id + '-refuse'"
+              @click.stop="respond(rdv, false)">Refuser</UButton>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Vue TEACHER / ADMIN : comportement existant -->
+    <template v-else-if="!isStudent">
+      <!-- Aucune session -->
+      <div v-if="filteredSessions.length === 0" class="text-center py-20">
+        <div class="text-gray-200 text-6xl mb-4"><i class="fa-solid fa-calendar-xmark"></i></div>
+        <p class="text-gray-400 text-lg">
+          {{ activeFilter === 'upcoming' ? 'Aucune session à venir' : 'Aucune session passée' }}
+        </p>
+      </div>
+      <!-- Grille des sessions -->
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div
+          v-for="session in filteredSessions"
+          :key="session.id"
+          @click="openDetail(session)"
+          class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:border-indigo-200 transition-all cursor-pointer flex flex-col gap-3"
+          :class="isPast(session.endDate) ? 'opacity-70' : ''"
+        >
+          <!-- Type + badge statut -->
+          <div class="flex items-start justify-between gap-2">
+            <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full" :class="typeStyle(session.categoryType).badge">
+              <i :class="typeStyle(session.categoryType).icon" class="text-[9px]"></i>
+              {{ typeLabel(session.categoryType) }}
+            </span>
+            <template v-if="session.categoryType === 'ISSUE'">
+              <span v-if="session.myParticipationStatus === false" class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200">
+                <i class="fa-solid fa-circle-xmark text-[8px]"></i>
+                {{ session.createdBy === user?.name ? 'RDV refusé' : 'Refusé' }}
+              </span>
+              <span v-else-if="session.myParticipationStatus === null" class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200">
+                <i class="fa-solid fa-hourglass-half text-[8px]"></i>En attente
+              </span>
+              <span v-else class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200">
+                <i class="fa-solid fa-circle-check text-[8px]"></i>
+                {{ session.createdBy === user?.name ? 'RDV confirmé' : 'Accepté' }}
+              </span>
+            </template>
+          </div>
+          <!-- Nom -->
+          <div>
+            <h3 class="text-base font-bold text-gray-900 leading-tight">{{ session.name }}</h3>
+            <p v-if="session.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ session.description }}</p>
+          </div>
+          <!-- Dates -->
+          <div v-if="session.startDate" class="rounded-xl px-3 py-2.5 text-xs" :class="typeStyle(session.categoryType).bg">
+            <div class="flex items-center gap-1.5 font-semibold mb-1.5">
+              <i class="fa-solid fa-calendar-days text-[10px]"></i>
+              <span class="capitalize">{{ formatDate(session.startDate) }}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="flex flex-col gap-0.5">
+                <span class="uppercase tracking-wide text-[9px] opacity-60 font-semibold">Début</span>
+                <span class="flex items-center gap-1 font-medium"><i class="fa-solid fa-clock text-[10px]"></i>{{ formatTime(session.startDate) }}</span>
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <span class="uppercase tracking-wide text-[9px] opacity-60 font-semibold">Fin</span>
+                <span class="flex items-center gap-1 font-medium"><i class="fa-regular fa-clock text-[10px]"></i>{{ formatTime(session.endDate) }}</span>
+              </div>
+            </div>
+          </div>
+          <!-- Groupes -->
+          <div v-if="myGroups(session).length" class="space-y-1.5">
+            <div v-for="g in myGroups(session)" :key="g.id" class="rounded-xl bg-slate-50 border border-slate-100 px-3 py-2 text-xs">
+              <p class="font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
+                <i class="fa-solid fa-rocket text-[10px] text-slate-400"></i>{{ g.name }}
+                <span v-if="g.categoryName" class="text-slate-400 font-normal">· {{ g.categoryName }}</span>
+              </p>
+              <div v-if="Array.from(g.teachers ?? []).length" class="flex flex-wrap gap-1">
+                <span
+                  v-for="teacher in [...(g.teachers ?? [])].sort((a, b) => (a.teacherType === 'OPTION_LEADER' ? -1 : b.teacherType === 'OPTION_LEADER' ? 1 : 0))"
+                  :key="teacher.name"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium"
+                  :class="teacher.teacherType === 'OPTION_LEADER' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-violet-50 text-violet-700 border border-violet-100'"
+                >
+                  <i v-if="teacher.teacherType === 'OPTION_LEADER'" class="fa-solid fa-star text-[8px]"></i>
+                  <i v-else class="fa-solid fa-chalkboard-teacher text-[9px]"></i>
+                  {{ teacher.name }}
+                </span>
+              </div>
+            </div>
+          </div>
+          <!-- Boutons accepter / refuser (ISSUE en attente, non passé) -->
+          <div v-if="session.categoryType === 'ISSUE' && session.myParticipationStatus === null && session.createdBy !== user?.name && !isPast(session.endDate)"
+            class="flex gap-2 mt-auto pt-1" @click.stop>
+            <UButton size="xs" color="success" variant="soft" icon="i-lucide-check"
+              :loading="pendingResponse === session.id + '-accept'"
+              @click.stop="respond(session, true)">Accepter</UButton>
+            <UButton size="xs" color="error" variant="soft" icon="i-lucide-x"
+              :loading="pendingResponse === session.id + '-refuse'"
+              @click.stop="respond(session, false)">Refuser</UButton>
+          </div>
+          <!-- Bouton supprimer (teacher/admin, sessions passées) -->
+          <div v-if="isTeacherOrAdmin && isPast(session.endDate)" class="flex justify-end mt-auto pt-1" @click.stop>
+            <UButton size="xs" color="error" variant="ghost" icon="i-lucide-trash-2" @click.stop="openDeleteConfirm(session)"></UButton>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Modal de refus invitation (étudiant) -->
+    <DeclineModal
+      v-model:open="isDeclineInvitationModalOpen"
+      v-model:reason="declineInvitationReason"
+      @confirm="handleDeclineInvitation"
+    />
 
     <!-- Modal de confirmation de suppression -->
     <UModal v-model:open="deleteConfirmOpen" title="Supprimer la session" :ui="{ width: 'sm:max-w-md' }">
@@ -351,21 +457,29 @@
 definePageMeta({ ssr: false })
 
 import { formatDate, formatTime } from '~/utils/helpers'
+import InvitationCard from '~/components/invitations/InvitationCard.vue'
+import DeclineModal from '~/components/invitations/DeclineModal.vue'
 
 const api = useApi()
 const { user } = useAuth()
+const { myPendingInvitations, fetchMyInvitations, respondToInvitation } = useEvents()
 
 const loading = ref(false)
 const error = ref(null)
 const sessions = ref([])
 const activeFilter = ref('upcoming')
+const studentTab = ref('sessions')
 const detailOpen = ref(false)
 const selectedSession = ref(null)
 const pendingResponse = ref(null)
 const deleteConfirmOpen = ref(false)
 const sessionToDelete = ref(null)
 const deleting = ref(false)
+const isDeclineInvitationModalOpen = ref(false)
+const declineInvitationReason = ref('')
+const invitationToDecline = ref(null)
 
+const isStudent = computed(() => user.value?.roles?.includes('STUDENT') && !user.value?.roles?.includes('TEACHER') && !user.value?.roles?.includes('ADMIN'))
 const isTeacherOrAdmin = computed(() =>
   user.value?.roles?.includes('TEACHER') || user.value?.roles?.includes('ADMIN')
 )
@@ -380,6 +494,9 @@ const loadSessions = async () => {
   error.value = null
   try {
     sessions.value = await api('/events/my-sessions')
+    if (isStudent.value) {
+      await fetchMyInvitations()
+    }
   } catch (e) {
     error.value = e?.data?.message ?? 'Impossible de charger vos sessions.'
   } finally {
@@ -451,11 +568,69 @@ const isToday  = (date) => {
   return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate()
 }
 
-const filteredSessions = computed(() =>
-  sessions.value.filter(s =>
+const filteredSessions = computed(() => {
+  if (isStudent.value) {
+    // Pour les étudiants : onglet "sessions" = sessions acceptées filtrées par date
+    return sessions.value.filter(s =>
+      s.myParticipationStatus === true &&
+      (activeFilter.value === 'upcoming' ? !isPast(s.endDate) : isPast(s.endDate))
+    )
+  }
+  return sessions.value.filter(s =>
     activeFilter.value === 'upcoming' ? !isPast(s.endDate) : isPast(s.endDate)
   )
+})
+
+/** RDV ISSUE en attente (étudiant) */
+const pendingIssueRdvs = computed(() =>
+  sessions.value.filter(s =>
+    s.categoryType === 'ISSUE' &&
+    s.myParticipationStatus === null &&
+    s.createdBy !== user.value?.name
+  )
 )
+
+/** Invitations non-ISSUE en attente (AUDIT, DEFENSE, MEETING) */
+const pendingNonIssueInvitations = computed(() =>
+  (myPendingInvitations.value ?? []).filter(inv => inv.categoryType !== 'ISSUE')
+)
+
+/** Toutes les invitations en attente pour l'étudiant */
+const allPendingInvitations = computed(() => [
+  ...pendingIssueRdvs.value,
+  ...pendingNonIssueInvitations.value
+])
+
+/** Accepter une invitation non-ISSUE */
+const handleAcceptInvitation = async (eventId) => {
+  try {
+    await respondToInvitation(eventId, true)
+    await loadSessions()
+  } catch (e) {
+    console.error('Erreur acceptation invitation', e)
+  }
+}
+
+/** Ouvrir le modal de refus pour une invitation non-ISSUE */
+const openDeclineInvitationModal = (invitation) => {
+  invitationToDecline.value = invitation
+  isDeclineInvitationModalOpen.value = true
+}
+
+/** Confirmer le refus d'une invitation non-ISSUE */
+const handleDeclineInvitation = async () => {
+  if (!invitationToDecline.value) return
+  try {
+    await respondToInvitation(invitationToDecline.value.id, false, declineInvitationReason.value)
+    await fetchMyInvitations()
+  } catch (e) {
+    console.error('Erreur refus invitation', e)
+  } finally {
+    isDeclineInvitationModalOpen.value = false
+    declineInvitationReason.value = ''
+    invitationToDecline.value = null
+  }
+}
 
 /** Groupes de la session qui contiennent l'étudiant courant (simplifié : on affiche tous) */
 const myGroups = (session) => session.projectGroups ?? []

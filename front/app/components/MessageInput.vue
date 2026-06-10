@@ -3,6 +3,7 @@
     <!-- Bandeau ticket terminé -->
     <div
       v-if="disabled"
+      id="disabled-message-banner"
       class="rounded-2xl border border-gray-200 bg-gray-50 p-4 shadow-sm text-center text-sm text-gray-500 flex items-center justify-center gap-2"
     >
       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -115,7 +116,7 @@ const props = defineProps({
   messageFiles: { type: Array, default: () => [] },
   sending: { type: Boolean, default: false },
   replyingTo: { type: Object, default: null },
-    disabled: { type: Boolean, default: false },
+  disabled: { type: Boolean, default: false },
   disabledMessage: { type: String, default: 'La messagerie est désactivée.' }
 })
 

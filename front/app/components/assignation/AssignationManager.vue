@@ -65,14 +65,19 @@
                   :disabled="!selectedTeachers[req.id] || loadingIds.has(req.id)"
                   :loading="loadingIds.has(req.id)"
                   @click="openConfirm(req)"
+                  color="green"
+                  variant="outline"
+                  class="transition-all duration-200 hover:bg-green-600 hover:text-white border-2 border-green-500 text-green-600 font-bold"
                 />
                 <UButton
                   label="Incomplet"
                   icon="i-heroicons-x-mark"
-                  class="bg-red-600 hover:bg-red-700 text-white border-0"
                   :disabled="loadingIncompleteIds.has(req.id)"
                   :loading="loadingIncompleteIds.has(req.id)"
                   @click="openIncompleteConfirm(req)"
+                  color="red"
+                  variant="outline"
+                  class="transition-all duration-200 hover:bg-red-600 hover:text-white border-2 border-red-500 text-red-600 font-bold"
                 />
               </div>
             </div>

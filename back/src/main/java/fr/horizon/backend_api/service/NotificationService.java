@@ -3,6 +3,7 @@ package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.NotificationDto;
+import fr.horizon.backend_api.model.enums.LinkRejectionReason;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
 import fr.horizon.backend_api.model.enums.TypeNotification;
 import fr.horizon.backend_api.repository.NotificationRepository;
@@ -27,6 +28,7 @@ public class NotificationService {
     private static final String NEW_TICKET_CATEGORIE_MESSAGE = "Un nouveau ticket a été dans votre catégorie, affectez-le rapidement à un professeur !";
     private static final String INCOMPLET_TICKET_MESSAGE = "Votre ticket a été marqué incomplet, complétez-le rapidement !";
     private static final String DEMANDE_MANAGER_MESSAGE = "Vous avez reçu une nouvelle demande de manager";
+    private static final String MESSAGE_CONSULTE = ". Consultez-le vite !";
 
 
     /**
@@ -171,7 +173,7 @@ public class NotificationService {
             }
 
             default ->
-                    content = "Vous avez été invité à un événement " + formattedDate + ". Consultez-le vite !";
+                    content = "Vous avez été invité à un événement " + formattedDate + MESSAGE_CONSULTE;
         }
 
         Notification notif = Notification.builder()
@@ -272,7 +274,7 @@ public class NotificationService {
     }
 
     public void closeIssueNotification(User user, Issue issue){
-        String content ="votre ticket: "+ issue.getTitle()+ " vient d'être cloturé, consultez le vite";
+        String content ="Votre ticket: "+ issue.getTitle()+ " vient d'être cloturé, consultez le vite";
 
         Notification notif = Notification.builder()
                 .isRead(false)
@@ -286,7 +288,7 @@ public class NotificationService {
     }
 
     public void openIssueNotification(User user, Issue issue){
-        String content ="votre ticket: "+ issue.getTitle()+ " vient d'être rouvert, consultez le vite";
+        String content ="Votre ticket: "+ issue.getTitle()+ " vient d'être rouvert, consultez le vite";
 
         Notification notif = Notification.builder()
                 .isRead(false)
@@ -335,6 +337,267 @@ public class NotificationService {
         saveAndSend(notif);
     }
 
+    /**
+     * Notifier le manager lorsque d'une demande de lien est fait (cas étudiant)
+     */
+    @Transactional
+    public void newLinkRequestNotification(User user, OfficialLinkRequest officialLinkRequest) {
+        Issue userIssue = officialLinkRequest.getTargetIssue();
+        Issue otherIssue = officialLinkRequest.getSourceIssue();
+
+        boolean isUserManagerOfSource = officialLinkRequest.getSourceIssue().getManager() != null
+                && officialLinkRequest.getSourceIssue().getManager().getId().equals(user.getId());
+
+        if (isUserManagerOfSource) {
+            userIssue = officialLinkRequest.getSourceIssue();
+            otherIssue = officialLinkRequest.getTargetIssue();
+        }
+
+        String content = "Plusieurs utilisateurs ont lié votre ticket: " + userIssue.getTitle() +
+                " avec le ticket: " + otherIssue.getTitle() + MESSAGE_CONSULTE;
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .officialLinkRequest(officialLinkRequest)
+                .issue(userIssue)
+                .recipient(user)
+                .type(TypeNotification.SUBSCRIBERS_NEW_LINK)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    @Transactional
+    public void newLinkRequestManagerNotification(User user, OfficialLinkRequest officialLinkRequest, User target){
+        String content = user.getName() + " demande une liaison entre votre ticket: "+ officialLinkRequest.getTargetIssue().getTitle()+ " et " + officialLinkRequest.getSourceIssue().getTitle();
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .officialLinkRequest(officialLinkRequest)
+                .issue(officialLinkRequest.getTargetIssue())
+                .recipient(target)
+                .type(TypeNotification.MANAGER_LINK_REQUEST)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+
+    @Transactional
+    public void followersNewLinkNotification(User user, Issue issue, IssueRelation issueRelation) {
+
+        Issue otherIssue = issue.getId().equals(issueRelation.getSourceIssue().getId())
+                ? issueRelation.getTargetIssue()
+                : issueRelation.getSourceIssue();
+
+        String content = "Le ticket que vous suivez: " + issue.getTitle() +
+                " est maintenant lié au ticket: " + otherIssue.getTitle() +
+                MESSAGE_CONSULTE;
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .issueRelation(issueRelation)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.FOLLOWERS_LINK)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    @Transactional
+    public void linkIssueResponseNotification(User user, OfficialLinkRequest request) {
+        Issue source = request.getSourceIssue();
+        Issue target = request.getTargetIssue();
+
+        User responder = (source.getManager() != null && source.getManager().getId().equals(user.getId()))
+                ? target.getManager()
+                : source.getManager();
+
+        String responderName = (responder != null) ? responder.getName() : "Un manager";
+        String content;
+
+        if (Boolean.TRUE.equals(request.getApproved())) {
+            content = responderName + " a accepté votre demande de liaison ! Les tickets sont maintenant liés.";
+        } else {
+            content = responderName + " a refusé votre demande de liaison entre les tickets.";
+
+            LinkRejectionReason reason = request.getRejectionReason();
+            if (reason != null) {
+                String reasonLabel = switch (reason) {
+                    case DUPLICATE_RELATION -> "Lien en doublon ou redondant";
+                    case IRRELEVANT -> "Tickets sans lien réel (non pertinent)";
+                    case WRONG_RELATION_TYPE -> "Type de relation incorrect";
+                    case OTHER -> "Autre raison";
+                };
+                content += " Motif : " + reasonLabel + ".";
+            }
+        }
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .officialLinkRequest(request)
+                .issue(source)
+                .recipient(user)
+                .type(TypeNotification.MANAGER_RESPONSE_LINK_REQUEST)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void mergeRequestNotification(MergeRequest mergeRequest) {
+        User requester = mergeRequest.getRequester();
+
+        User targetToNotify = (mergeRequest.getSourceIssue().getManager() != null && mergeRequest.getSourceIssue().getManager().getId().equals(requester.getId()))
+                ? mergeRequest.getTargetIssue().getManager()
+                : mergeRequest.getSourceIssue().getManager();
+
+        if (targetToNotify != null) {
+            String content = requester.getName() + " souhaite fusionner son ticket: " + mergeRequest.getSourceIssue().getTitle() + " avec votre ticket: " + mergeRequest.getTargetIssue().getTitle() + ". Répondez-lui vite !";
+
+            Notification notif = Notification.builder()
+                    .content(content)
+                    .isRead(false)
+                    .mergeRequest(mergeRequest)
+                    .issue(mergeRequest.getTargetIssue())
+                    .recipient(targetToNotify)
+                    .type(TypeNotification.MERGE_REQUEST_MANAGER)
+                    .build();
+
+            saveAndSend(notif);
+        }
+    }
+
+    public void mergeRequestDeniedNotification(MergeRequest mergeRequest){
+        User requester = mergeRequest.getRequester();
+        User target = mergeRequest.getTargetManager();
+        String content = target.getName() + " a refusé votre demande de fusion entre votre ticket: "+mergeRequest.getTargetIssue().getTitle()+" et "+mergeRequest.getSourceIssue().getTitle()+". Pour motif: "+mergeRequest.getRejectionReason()+".";
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .mergeRequest(mergeRequest)
+                .issue(mergeRequest.getSourceIssue())
+                .recipient(requester)
+                .type(TypeNotification.MERGE_REQUEST_DENIED)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void mergeRequestAcceptedNotification(MergeRequest mergeRequest){
+        User requester = mergeRequest.getRequester();
+        User target = mergeRequest.getTargetManager();
+        String content = target.getName() + " a accepté votre demande de fusion entre votre ticket: "+mergeRequest.getSourceIssue().getTitle()+" et "+mergeRequest.getTargetIssue().getTitle()+". Consultez le nouveau ticket !";
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .mergeRequest(mergeRequest)
+                .issue(mergeRequest.getTargetIssue())
+                .recipient(requester)
+                .type(TypeNotification.MERGE_REQUEST_ACCEPTED)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void mergeRequestNotifieFollower(User user,Issue issue){
+        String content = "Le ticket: "+issue.getTitle()+" que vous suivez, a été fusionné, consultez le nouveau ticket rapidement !";
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .issue(issue)
+                .recipient(user)
+                .type(TypeNotification.MERGE_REQUEST_FOLLOWERS)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void managerAddingFollowerNotification(User user, Category category){
+        String content = category.getOwner().getName() + " vous a ajouté dans sa catégorie "+category.getName()+". Consultez la rapidement !";
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .category(category)
+                .recipient(user)
+                .type(TypeNotification.MANAGER_ADDING_TEACHER_CATEGORY)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void teacherQuitCategoryNotification(User user, Category category){
+        String content = user.getName() + " souhaite quitter votre catégorie: "+category.getName()+". Accédez rapidement à sa demande !";
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .category(category)
+                .recipient(user)
+                .type(TypeNotification.TEACHER_QUIT_CATEGORY)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void acceptTeacherQuitCategoryNotification(User user, Category category){
+        String content = category.getOwner().getName() + " a accepté votre demande de départ de sa catégorie: "+category.getName();
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .category(category)
+                .recipient(user)
+                .type(TypeNotification.ACCEPTED_TEACHER_QUIT_CATEGORY)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+    public void deniedTeacherQuitCategoryNotification(User user, DeletionCategoryRequest deletionCategoryRequest){
+        Category category = deletionCategoryRequest.getCategory();
+        String content = category.getOwner().getName() + " a refusé votre demande de départ de sa catégorie: "+category.getName()+". Au motif: "+ deletionCategoryRequest.getRejectionReason();
+
+        Notification notif = Notification.builder()
+                .content(content)
+                .isRead(false)
+                .category(category)
+                .recipient(user)
+                .type(TypeNotification.DENIED_TEACHER_QUIT_CATEGORY)
+                .build();
+
+        saveAndSend(notif);
+    }
+
+
+    @Transactional
+    public void notifyFollowersCategoryDeleted(Category category) {
+        String content = "La catégorie « " + category.getName() + " » à laquelle vous étiez abonné a été supprimée.";
+
+        for (User follower : category.getFollowers()) {
+
+            if (category.getOwner() != null && !follower.getId().equals(category.getOwner().getId())) {
+
+                Notification notif = Notification.builder()
+                        .content(content)
+                        .isRead(false)
+                        .recipient(follower)
+                        .type(TypeNotification.DELETING_CATEGORY)
+                        .build();
+
+                saveAndSend(notif);
+            }
+        }
+    }
+
 
     /**
      * Marquer une notification comme lu
@@ -360,8 +623,33 @@ public class NotificationService {
     }
 
     /**
-     * Convertit une entité Notification en NotificationDto
+     * Notifie un professeur qu'il a été ajouté à une catégorie.
      */
+    @Transactional
+    public void addedToCategoryNotification(User teacher, Category category) {
+        Notification notif = Notification.builder()
+                .type(TypeNotification.ADDED_TO_CATEGORY)
+                .content("Vous avez été ajouté à la catégorie \"" + category.getName() + "\".")
+                .recipient(teacher)
+                .category(category)
+                .build();
+        saveAndSend(notif);
+    }
+
+    /**
+     * Notifie le propriétaire d'une catégorie qu'un professeur souhaite en être retiré.
+     */
+    @Transactional
+    public void categoryRemovalRequestNotification(User owner, User requester, Category category) {
+        Notification notif = Notification.builder()
+                .type(TypeNotification.CATEGORY_REMOVAL_REQUEST)
+                .content(requester.getName() + " souhaite être retiré de la catégorie \"" + category.getName() + "\".")
+                .recipient(owner)
+                .category(category)
+                .build();
+        saveAndSend(notif);
+    }
+
     public NotificationDto toDto(Notification notification) {
         if (notification == null) {
             return null;
@@ -372,12 +660,14 @@ public class NotificationService {
                 .type(notification.getType())
                 .isRead(notification.isRead())
                 .sendingHour(LocalDateTime.now())
-                .content(notification.getContent())
+                .categoryId(notification.getCategory() != null ? notification.getCategory().getId() : null)                .content(notification.getContent())
+                .officialLinkRequestId(notification.getOfficialLinkRequest() != null ? notification.getOfficialLinkRequest().getId() : null)
                 .issueId(notification.getIssue() != null ? notification.getIssue().getId() : null)
                 .eventId(notification.getEvent() != null ? notification.getEvent().getId() : null)
                 .eventCategory(notification.getEvent() != null && notification.getEvent().getCategoryType() != null
                         ? notification.getEvent().getCategoryType().name() : null)
                 .requestManagerId(notification.getRequestManager() != null ? notification.getRequestManager().getRequestId(): null)
+                .categoryId(notification.getCategory() != null ? notification.getCategory().getId() : null)
                 .build();
     }
 }

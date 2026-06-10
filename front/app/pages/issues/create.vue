@@ -3,7 +3,7 @@
     <UCard class="max-w-2xl mx-auto">
       <template #header>
         <div class="flex items-center gap-2">
-          <UButton to="/issues" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
+          <UButton to="/issues" variant="ghost" color="secondary" icon="i-lucide-arrow-left" size="sm" />
           <h1 class="text-2xl font-bold">Créer un ticket</h1>
         </div>
       </template>
@@ -14,14 +14,14 @@
           <label class="block text-sm font-medium text-gray-700">Titre *</label>
           <input id= "input-issue-title" v-model="form.title" type="text" placeholder="Entrez le titre du ticket"
                  class="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-                 required />
+                 required color="info"/>
         </div>
 
         <!-- Description -->
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700">Description *</label>
           <UTextarea v-model="form.description" id="input-issue-description" placeholder="Décrivez le ticket en détail..." :rows="6"
-                     class="w-full" required />
+                     class="w-full" required color="info"/>
         </div>
 
         <!-- Catégorie -->
@@ -45,7 +45,7 @@
               multiple
               accept="application/pdf,image/png,image/jpeg,.jpg,.jpeg,.docx,.xlsx"
               :dropzone="true"
-              label="Lâchez vos fichiers ici"
+              label="Déposez vos fichiers ici"
               description="PDF, PNG, JPG, JPEG, DOCX, XLSX (max. 10Mo)"
               icon="i-lucide-image"
               highlight
@@ -72,10 +72,10 @@
 
         <!-- Boutons -->
         <div class="flex gap-2 justify-end pt-4 border-t">
-          <UButton to="/issues" id="btn-issue-cancel" variant="outline" icon="i-lucide-x">
+          <UButton to="/issues" id="btn-issue-cancel" color="error" variant="outline" icon="i-lucide-x">
             Annuler
           </UButton>
-          <UButton type="submit" id= "btn-issue-create" icon="i-lucide-check" :loading="submitting" class="cursor-pointer">
+          <UButton type="submit" id="btn-issue-create" color="secondary" icon="i-lucide-check" :loading="submitting" class="cursor-pointer">
             Créer
           </UButton>
         </div>
@@ -165,6 +165,12 @@ const handleCreateIssue = async () => {
       pendingCase: form.isPending,
       files: files.value
     })
+
+    // Erreur si l'espace disque dépassera la limite après l'upload
+    if(result?.status === 507) {
+      error.value = "Le stockage de document sur serveur va dépasser la limite autorisé, veuillez contacter l'administrateur !"
+      return
+    }
 
     if (!result) return
 

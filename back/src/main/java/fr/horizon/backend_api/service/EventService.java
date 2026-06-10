@@ -3,6 +3,7 @@ package fr.horizon.backend_api.service;
 import fr.horizon.backend_api.exception.EventConflictException;
 import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.*;
+import fr.horizon.backend_api.model.dto.AvailabilityRequestDto;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Event;
 import fr.horizon.backend_api.model.StudentGroup;
@@ -72,7 +73,14 @@ public class EventService {
 
         Event event = buildEvent(request, user, category);
 
+        // Vérifier que le créateur (TEACHER/ADMIN) est lui-même disponible sur ce créneau
+        if (isRestrictedCategory(category) && checkConflictWithAnotherEvent(user, event)) {
+            throw new EventConflictException(
+                "Conflit d'agenda : " + user.getName() + " n'est pas disponible sur ce créneau.");
+        }
+
         assignProjectGroups(event, request);
+        validateGroupMembersAvailability(event);
 
         Event savedEvent = eventRepository.save(event);
 
@@ -128,6 +136,11 @@ public class EventService {
                 .startDate(meetingRequest.getStartDate())
                 .endDate(meetingRequest.getEndDate())
                 .build();
+
+        // Vérifier que le créateur n'a pas déjà un événement sur ce créneau
+        if (checkConflictWithAnotherEvent(user, event)) {
+            throw new EventConflictException("Conflit d'agenda : " + user.getName() + " n'est pas disponible sur ce créneau.");
+        }
 
         // dire qu'il est présent
         event.addParticipant(user, true);
@@ -460,7 +473,9 @@ public class EventService {
     public List<EventResponseDto> getMyCalendarEvents(String email) {
         User user = userService.findByEmail(email);
 
-        return eventRepository.findCalendarEventsForUser(user.getId()).stream()
+        // Déduplication par ID : SELECT DISTINCT en JPQL peut remonter le même event plusieurs fois
+        // si une entité satisfait plusieurs conditions JOIN (créateur + participant + membre groupe).
+        List<EventResponseDto> regularEvents = eventRepository.findCalendarEventsForUser(user.getId()).stream()
                 .filter(e -> {
                     // Pour les RDV (ISSUE) créés par cet utilisateur, ne pas afficher si un participant a refusé
                     if (CategoryType.ISSUE.equals(e.getCategoryType())
@@ -472,7 +487,134 @@ public class EventService {
                     return true;
                 })
                 .map(this::mapToResponse)
+                .collect(Collectors.toMap(
+                        EventResponseDto::getId,
+                        dto -> dto,
+                        (a, b) -> a,          // garde le premier en cas de doublon
+                        java.util.LinkedHashMap::new
+                ))
+                .values().stream()
                 .toList();
+
+        // Inclure les créneaux de disponibilité déclarés par l'utilisateur (validated=false, absents de findCalendarEventsForUser)
+        List<EventResponseDto> availabilities = eventRepository
+                .findByCreatedBy_IdAndCategoryTypeOrderByStartDateAsc(user.getId(), CategoryType.AVAILABILITY)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+
+        return Stream.concat(regularEvents.stream(), availabilities.stream()).toList();
+    }
+
+    /**
+     * Déclare une plage de disponibilité pour l'utilisateur connecté.
+     * L'event créé est de type AVAILABILITY, validated=false, sans participants.
+     *
+     * @param request données de la disponibilité (startDate, endDate, description)
+     * @param email   email de l'utilisateur connecté
+     * @return le DTO de l'event créé
+     */
+    @Transactional
+    public EventResponseDto createAvailability(AvailabilityRequestDto request, String email) {
+        User user = userService.findByEmail(email);
+
+        if (request.getStartDate() == null || request.getEndDate() == null) {
+            throw new IllegalArgumentException("Les dates de début et de fin sont obligatoires.");
+        }
+        if (!request.getEndDate().isAfter(request.getStartDate())) {
+            throw new IllegalArgumentException("La date de fin doit être postérieure à la date de début.");
+        }
+
+        // Catégorie système dédiée aux disponibilités (créée une seule fois si absente)
+        Category availabilityCategory = categoryRepository.findByNameIgnoreCase("__AVAILABILITY__")
+                .orElseGet(() -> categoryRepository.save(
+                        Category.builder()
+                                .name("__AVAILABILITY__")
+                                .subject("Disponibilité")
+                                .categoryType(CategoryType.AVAILABILITY)
+                                .build()
+                ));
+
+        Event event = Event.builder()
+                .name("Disponible")
+                .description(request.getDescription())
+                .categoryType(CategoryType.AVAILABILITY)
+                .category(availabilityCategory)
+                .createdBy(user)
+                .validated(false)
+                .startDate(request.getStartDate())
+                .endDate(request.getEndDate())
+                .build();
+
+        return mapToResponse(eventRepository.save(event));
+    }
+
+    /**
+     * Récupère toutes les disponibilités déclarées par l'utilisateur connecté.
+     *
+     * @param email email de l'utilisateur connecté
+     * @return liste de DTOs triée par date de début croissante
+     */
+    public List<EventResponseDto> getMyAvailabilities(String email) {
+        User user = userService.findByEmail(email);
+        return eventRepository
+                .findByCreatedBy_IdAndCategoryTypeOrderByStartDateAsc(user.getId(), CategoryType.AVAILABILITY)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    /**
+     * Récupère toutes les disponibilités déclarées par un utilisateur donné.
+     * Accessible pour vérifier la disponibilité avant d'envoyer une invitation.
+     *
+     * @param userId L'ID de l'utilisateur cible
+     * @return liste de DTOs triée par date de début croissante
+     */
+    public List<EventResponseDto> getUserAvailabilities(Long userId) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+        return eventRepository
+                .findByCreatedBy_IdAndCategoryTypeOrderByStartDateAsc(userId, CategoryType.AVAILABILITY)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    /**
+     * Retourne les events (AUDIT, DEFENSE, RDV) d'un utilisateur qui chevauchent un créneau.
+     * Utilisé côté front pour détecter les conflits d'agenda avant de proposer un RDV.
+     */
+    public List<EventResponseDto> getUserBusySlots(Long userId, LocalDateTime start, LocalDateTime end) {
+        userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND));
+        return eventRepository.findBusyEventsForUser(userId, start, end)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    /**
+     * Supprime une disponibilité appartenant à l'utilisateur connecté.
+     *
+     * @param id    identifiant de l'event AVAILABILITY
+     * @param email email de l'utilisateur connecté
+     * @throws EntityNotFoundException si l'event n'existe pas
+     * @throws AccessDeniedException   si l'utilisateur n'est pas le créateur
+     * @throws IllegalArgumentException si l'event n'est pas de type AVAILABILITY
+     */
+    @Transactional
+    public void deleteAvailability(Long id, String email) {
+        User user = userService.findByEmail(email);
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new EventNotFoundException(id));
+        if (!CategoryType.AVAILABILITY.equals(event.getCategoryType())) {
+            throw new IllegalArgumentException("Cet événement n'est pas une disponibilité.");
+        }
+        if (!event.getCreatedBy().getId().equals(user.getId())) {
+            throw new AccessDeniedException("Vous ne pouvez supprimer que vos propres disponibilités.");
+        }
+        eventRepository.delete(event);
     }
 
     /**
@@ -509,7 +651,7 @@ public class EventService {
                 .name(event.getName())
                 .description(event.getDescription())
                 .categoryType(event.getCategoryType())
-                .categoryName(event.getCategory().getName())
+                .categoryName(event.getCategory() != null ? event.getCategory().getName() : null)
                 .createdBy(event.getCreatedBy().getName())
                 .createdAt(event.getCreatedAt())
                 .startDate(event.getStartDate())
@@ -519,6 +661,12 @@ public class EventService {
                 .participantNames(event.getParticipants().stream()
                         .map(participant -> participant.getUser().getName())
                         .collect(Collectors.toSet()))
+                .participants(event.getParticipants().stream()
+                        .map(p -> EventResponseDto.ParticipantInfoDto.builder()
+                                .name(p.getUser().getName())
+                                .hasAccepted(p.getHasAccepted())
+                                .build())
+                        .toList())
                 .build();
     }
 
@@ -535,7 +683,7 @@ public class EventService {
                 .name(event.getName())
                 .description(event.getDescription())
                 .categoryType(event.getCategoryType())
-                .categoryName(event.getCategory().getName())
+                .categoryName(event.getCategory() != null ? event.getCategory().getName() : null)
                 .createdBy(event.getCreatedBy().getName())
                 .createdAt(event.getCreatedAt())
                 .startDate(event.getStartDate())
@@ -811,12 +959,18 @@ public class EventService {
                 .description(meetingRequest.getDescription())
                 .categoryType(CategoryType.ISSUE)
                 .category(issue.getCategory())
-                .createdBy(user)
+                .createdBy(issue.getManager())
                 .issue(issue)
                 .validated(false)
                 .startDate(meetingRequest.getStartDate())
                 .endDate(meetingRequest.getEndDate())
                 .build();
+
+        // Vérifier que le demandeur est disponible sur ce créneau
+        if (checkConflictWithAnotherEvent(user, event)) {
+            throw new EventConflictException(
+                "Conflit d'agenda : " + user.getName() + " n'est pas disponible sur ce créneau.");
+        }
 
         event.addParticipant(user, true);
         Event saved = eventRepository.save(event);
@@ -895,6 +1049,35 @@ public class EventService {
     private Category getCategory(Long categoryId) {
         return categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new CategoryNotFoundException(categoryId));
+    }
+
+    /**
+     * Vérifie qu'aucun membre ni enseignant des groupes convoqués n'a de conflit d'agenda.
+     * Lève une EventConflictException avec la liste des personnes en conflit.
+     */
+    private void validateGroupMembersAvailability(Event event) {
+        if (event.getProjectGroups() == null || event.getProjectGroups().isEmpty()) {
+            return;
+        }
+        if (event.getStartDate() == null || event.getEndDate() == null) {
+            return;
+        }
+
+        List<String> conflicting = event.getProjectGroups().stream()
+                .flatMap(group -> Stream.concat(
+                        group.getMembers() != null ? group.getMembers().stream() : Stream.empty(),
+                        group.getTeachers() != null ? group.getTeachers().stream() : Stream.empty()))
+                .distinct()
+                .filter(u -> eventRepository.countConflictingEvents(
+                        u.getId(), null, event.getStartDate(), event.getEndDate()) > 0)
+                .map(User::getName)
+                .toList();
+
+        if (!conflicting.isEmpty()) {
+            throw new EventConflictException(
+                "Conflit d'agenda détecté pour : " + String.join(", ", conflicting)
+                + ". Ces personnes ont déjà un événement sur ce créneau.");
+        }
     }
 
     /**

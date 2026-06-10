@@ -241,6 +241,7 @@ public class DataInitializer implements CommandLineRunner {
                 .map(existing -> {
                     existing.setName(name);
                     existing.setTeacherType(teacherType);
+                    existing.setRoles(roles);
                     return userRepository.save(existing);
                 })
                 .orElseGet(() -> userRepository.save(

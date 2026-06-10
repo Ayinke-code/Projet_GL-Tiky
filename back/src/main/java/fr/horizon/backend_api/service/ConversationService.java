@@ -272,10 +272,19 @@ public class ConversationService {
 
     private Map<String, Object> toMessageMap(Message message) {
         Map<String, Object> messageMap = new HashMap<>();
+        Long conversationIssueId = message.getConversation() != null && message.getConversation().getIssue() != null
+                ? message.getConversation().getIssue().getId()
+                : null;
+        Long messageIssueId = message.getIssue() != null ? message.getIssue().getId() : null;
+        boolean isMerged = conversationIssueId != null && messageIssueId != null && !conversationIssueId.equals(messageIssueId);
+
         messageMap.put(MapKeys.ID, message.getId());
         messageMap.put(MapKeys.CONTENT, message.getContent());
+        messageMap.put(MapKeys.ISSUE_ID, messageIssueId);
         messageMap.put(MapKeys.USER, toUserMap(message.getUser()));
         messageMap.put(MapKeys.CREATED_AT, message.getCreatedAt());
+        messageMap.put(MapKeys.IS_MERGED, isMerged);
+        messageMap.put(MapKeys.ORIGINAL_ISSUE_ID, isMerged ? messageIssueId : null);
         messageMap.put(MapKeys.REPLY_TO_MESSAGE_ID, message.getReplyTo() != null ? message.getReplyTo().getId() : null);
         messageMap.put(MapKeys.REPLY_TO_MESSAGE, message.getReplyTo() != null ? toMessageSummaryMap(message.getReplyTo()) : null);
         messageMap.put(MapKeys.DOCUMENTS, toDocumentList(message.getDocuments()));

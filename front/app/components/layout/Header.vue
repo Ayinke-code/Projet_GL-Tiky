@@ -22,9 +22,9 @@
 
           <span
             v-if="unreadCount > 0"
-            class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center"
+            class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[1rem] h-4 flex items-center justify-center px-1"
           >
-            {{ unreadCount > 99 ? '99+' : unreadCount }}
+            {{ unreadCount > 99 ? '+99' : unreadCount }}
           </span>
         </button>
 

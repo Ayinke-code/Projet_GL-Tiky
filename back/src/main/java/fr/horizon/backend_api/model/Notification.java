@@ -24,8 +24,9 @@ public class Notification extends BaseEntity{
     @Column
     private TypeNotification type;
 
+    @Builder.Default
     @Column(nullable = false)
-    private boolean isRead=false;
+    private boolean isRead = false;
 
     @Column(nullable = false)
     private String content;
@@ -49,6 +50,25 @@ public class Notification extends BaseEntity{
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recipient_id", nullable = false)
     private User recipient;
+
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name = "category_id")
+    private Category category;
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name ="officialLinkRequest_id")
+    private OfficialLinkRequest officialLinkRequest;
+
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name ="issueRelation_id")
+    private IssueRelation issueRelation;
+
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name ="mergeRequest_id")
+    private MergeRequest mergeRequest;
 
 
 

@@ -388,6 +388,103 @@ export const useEvents = () => {
     }
   }
 
+  /**
+   * Déclare une plage de disponibilité pour l'utilisateur connecté.
+   * POST /events/availability
+   *
+   * @param {{ startDate: string, endDate: string, description?: string }} payload
+   */
+  const createAvailability = async (payload) => {
+    error.value = null
+    try {
+      const result = await api('/events/availability', {
+        method: 'POST',
+        body: payload
+      })
+      await fetchCalendarEvents()
+      return result
+    } catch (e) {
+      const status = e?.response?.status ?? e?.statusCode
+      error.value = e?.data?.error || e?.data?.message || `Erreur serveur (${status ?? 'réseau'})`
+      console.error('[createAvailability]', status, e?.data)
+      throw e
+    }
+  }
+
+  /**
+   * Récupère toutes les disponibilités déclarées par l'utilisateur connecté.
+   * GET /events/availability/me
+   */
+  const fetchMyAvailabilities = async () => {
+    error.value = null
+    try {
+      const data = await api('/events/availability/me')
+      return Array.isArray(data) ? data : []
+    } catch (e) {
+      error.value = e?.data?.message || 'FETCH_AVAILABILITIES_ERROR'
+      return []
+    }
+  }
+
+  /**
+   * Récupère les disponibilités déclarées par un utilisateur spécifique.
+   * Utilisé pour vérifier la disponibilité avant d'envoyer une invitation.
+   * GET /events/users/{userId}/availabilities
+   *
+   * @param {number} userId - L'ID de l'utilisateur cible
+   * @returns {Promise<Array>} Liste des EventResponseDto de type AVAILABILITY
+   */
+  const fetchUserAvailabilities = async (userId) => {
+    try {
+      const data = await api(`/events/users/${userId}/availabilities`)
+      return Array.isArray(data) ? data : []
+    } catch (e) {
+      console.error('[fetchUserAvailabilities]', e)
+      return []
+    }
+  }
+
+  /**
+   * Récupère les events (AUDIT, DEFENSE, RDV) d'un utilisateur qui chevauchent un créneau.
+   * GET /events/users/{userId}/busy-slots?start=...&end=...
+   *
+   * @param {number} userId - L'ID de l'utilisateur cible
+   * @param {string} start  - ISO datetime de début (format: YYYY-MM-DDTHH:mm:ss)
+   * @param {string} end    - ISO datetime de fin
+   * @returns {Promise<Array>} Liste des events conflictuels
+   */
+  const fetchUserBusySlots = async (userId, start, end) => {
+    try {
+      const toLocal = (isoStr) => isoStr.substring(0, 19) // retire le Z ou le timezone
+      const data = await api(`/events/users/${userId}/busy-slots`, {
+        params: { start: toLocal(start), end: toLocal(end) }
+      })
+      return Array.isArray(data) ? data : []
+    } catch (e) {
+      console.error('[fetchUserBusySlots]', e)
+      return []
+    }
+  }
+
+  /**
+   * Supprime une disponibilité appartenant à l'utilisateur connecté.
+   * DELETE /events/availability/{id}
+   *
+   * @param {number} id - L'ID de l'event AVAILABILITY
+   */
+  const deleteAvailability = async (id) => {
+    error.value = null
+    try {
+      await api(`/events/availability/${id}`, { method: 'DELETE' })
+      await fetchCalendarEvents()
+    } catch (e) {
+      const status = e?.response?.status ?? e?.statusCode
+      error.value = e?.data?.error || e?.data?.message || `Erreur (${status ?? 'réseau'})`
+      console.error('[deleteAvailability]', status, e?.data)
+      throw e
+    }
+  }
+
   return {
     fetchEventsByType,
     deleteEvent,
@@ -411,6 +508,11 @@ export const useEvents = () => {
     askForMeeting,
     removeParticipantFromMeeting,
     fetchPossibleUsersInterested,
-    fetchMyParticipations
+    fetchMyParticipations,
+    createAvailability,
+    fetchMyAvailabilities,
+    fetchUserAvailabilities,
+    fetchUserBusySlots,
+    deleteAvailability
   }
 }

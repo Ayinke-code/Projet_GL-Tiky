@@ -37,5 +37,36 @@ public enum TypeNotification {
     // nouveaux follower
     NEW_FOLLOWER,
     // desabonnement follower
-    NEW_UNFOLLOW
+    NEW_UNFOLLOW,
+    // demande de retrait d'une catégorie par un professeur
+    CATEGORY_REMOVAL_REQUEST,
+    // ajout d'un professeur à une catégorie
+    ADDED_TO_CATEGORY,
+    // utilsaiteur atteigne 5 liens => demande officiel
+    SUBSCRIBERS_NEW_LINK,
+    // Manager demade de lien a un autre manager
+    MANAGER_LINK_REQUEST,
+    // notifier les followers de l'issue d'un lien officiel
+    FOLLOWERS_LINK,
+    // notifier le manager lorsque la demande est accepté
+    MANAGER_RESPONSE_LINK_REQUEST,
+    // notifie le manager lorsqu'un autre manager veut fusionner
+    MERGE_REQUEST_MANAGER,
+    //notifie le manager d'un refus de fusion
+    MERGE_REQUEST_DENIED,
+    //notifie le manager d'une acceptation de fusion
+    MERGE_REQUEST_ACCEPTED,
+    // notifie les followers
+    MERGE_REQUEST_FOLLOWERS,
+    // notifier un teacher qu'un manager l'a rajoute dans sa categorie
+    MANAGER_ADDING_TEACHER_CATEGORY,
+    // notifier qu'un teacher veuille partir de la category
+    TEACHER_QUIT_CATEGORY,
+    // notifier qu'un category owner a accepté le départ
+    ACCEPTED_TEACHER_QUIT_CATEGORY,
+    // notifier qu'un category owner a refusé le départ
+    DENIED_TEACHER_QUIT_CATEGORY,
+    // catégorie supprimé
+    DELETING_CATEGORY
+
 }
