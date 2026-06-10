@@ -47,6 +47,8 @@ public class IssueService {
     private final NotificationService notificationService;
     private final DocumentService documentService;
     private final EventRepository eventRepository;
+    private final MergeRequestRepository mergeRequestRepository;
+    private final IssueRelationRepository issueRelationRepository;
 
     private static final String USER_NOT_FOUND = "User not found";
 
@@ -341,12 +343,17 @@ public class IssueService {
         if (!canDeleteIssue(issue, currentUser)) {
             throw new AccessDeniedException("Vous n'avez pas l'autorisation de supprimer cette issue");
         }
-
+        // Supprimer les demande de fusion et les liens
+        mergeRequestRepository.deleteByIssueId(id);
+        issueRelationRepository.deleteByIssueId(id);
         // Supprimer les événements liés avant de supprimer l'issue
         eventRepository.deleteByIssueId(id);
 
         // Supprime tous les documents liés à l'issue qui va être supprimé
         documentService.deleteDocumentsByIssueId(id);
+
+        // suppresion du lien de fusion
+        issueRepository.clearMergedIntoReference(id);
 
         issueRepository.delete(issue);
     }
@@ -372,6 +379,9 @@ public class IssueService {
 
         // Supprime tous les documents liés en une seule requête
         documentService.deleteDocumentsByIssueIdIn(issueIds);
+
+        // suppresion du lien de fusion
+        issueRepository.clearMergedIntoReferences(issueIds);
 
         // Supprime toutes les issues en une seule requête
         issueRepository.deleteAll(issues);

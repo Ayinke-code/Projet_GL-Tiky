@@ -12,6 +12,7 @@ import fr.horizon.backend_api.repository.CategoryRequestRepository;
 import fr.horizon.backend_api.repository.IssueRepository;
 import fr.horizon.backend_api.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import fr.horizon.backend_api.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,6 +49,12 @@ class CategoryServiceTest {
 
     @Mock
     private IssueService issueService;
+
+    @Mock
+    private DeletionCategoryRequestRepository deletionCategoryRequestRepository;
+
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private CategoryService categoryService;

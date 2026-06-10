@@ -20,8 +20,10 @@ public class NotificationDto {
     private String content;
     private Long issueId;
     private Long eventId;
+    private Long categoryId;
     private String eventCategory;
     private LocalDateTime sendingHour;
     private Long requestManagerId;
     private Long categoryId;
+    private Long officialLinkRequestId;
 }

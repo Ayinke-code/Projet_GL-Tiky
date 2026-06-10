@@ -5,7 +5,7 @@
         <h1 class="text-3xl font-bold text-black">
           Tickets suivis
         </h1>
-        <UButton to="/issues" variant="outline" icon="i-lucide-arrow-left">
+        <UButton to="/issues" color="secondary" variant="outline" size="lg" class="rounded-full font-bold" icon="i-lucide-arrow-left">
           Retour aux tickets
         </UButton>
       </div>
@@ -99,8 +99,10 @@ const handleDelete = async () => {
   }
 }
 
+const FOLLOWED_NOTIFICATION_TYPES = ['NEW_FOLLOWER', 'NEW_UNFOLLOW', 'MERGE_REQUEST_FOLLOWERS']
+
 const onNotificationReceived = async (e) => {
-  if (e.detail?.type === 'NEW_FOLLOWER' || e.detail?.type === 'NEW_UNFOLLOW') {
+  if (FOLLOWED_NOTIFICATION_TYPES.includes(e.detail?.type)) {
     await refreshFollowedIssues()
   }
 }

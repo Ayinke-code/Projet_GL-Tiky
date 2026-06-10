@@ -60,4 +60,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of(ERROR_KEY, ex.getMessage()));
     }
+
+    @ExceptionHandler(StorageSpaceFullException.class)
+    public ResponseEntity<Map<String, String>> handleStorageFull(StorageSpaceFullException ex) {
+        return ResponseEntity.status(HttpStatus.INSUFFICIENT_STORAGE) // 507
+                .body(Map.of(ERROR_KEY, ex.getMessage()));
+    }
 }

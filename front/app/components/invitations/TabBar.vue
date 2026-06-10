@@ -21,7 +21,7 @@
         'px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2'
       ]"
     >
-      <span class="i-lucide-users"></span> Suivi des présences
+      <span class="i-lucide-users"></span> Mes rendez-vous
     </button>
   </div>
 </template>

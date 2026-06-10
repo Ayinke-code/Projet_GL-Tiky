@@ -54,5 +54,26 @@ public class Notification extends BaseEntity{
     @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "category_id")
     private Category category;
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name ="officialLinkRequest_id")
+    private OfficialLinkRequest officialLinkRequest;
+
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name ="issueRelation_id")
+    private IssueRelation issueRelation;
+
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name ="category_id")
+    private Category category;
+
+    @ManyToOne
+    @OnDelete(action = OnDeleteAction.CASCADE)
+    @JoinColumn(name ="mergeRequest_id")
+    private MergeRequest mergeRequest;
+
+
 
 }

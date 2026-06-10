@@ -44,6 +44,9 @@ export const useConversations = () => {
 
     return {
       id: msg.id,
+      issueId: msg.issueId ?? null,
+      isMerged: Boolean(msg.isMerged),
+      originalIssueId: msg.originalIssueId ?? null,
       userId: user?.id ?? null,
       auteur: user?.name || 'Anonyme',
       role: user?.role || ROLE.STUDENT,
@@ -158,7 +161,7 @@ export const useConversations = () => {
     } catch (e) {
       console.error('Error sending message:', e)
       error.value = e?.data?.message || e?.message || 'UNKNOWN_ERROR'
-      throw e
+      return e
     }
   }
 

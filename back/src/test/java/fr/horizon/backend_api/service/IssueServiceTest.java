@@ -58,6 +58,12 @@ class IssueServiceTest {
     @Mock
     private IssueFollowerRepository issueFollowerRepository;
 
+    @Mock
+    private MergeRequestRepository mergeRequestRepository;
+
+    @Mock
+    private IssueRelationRepository issueRelationRepository;
+
     @InjectMocks
     private IssueService issueService;
 
@@ -241,6 +247,8 @@ class IssueServiceTest {
 
         // Action
         issueService.deleteById(1L, "john@test.com");
+
+        verify(mergeRequestRepository).deleteByIssueId(1L);
 
         // Vérif suppression événements liés
         verify(eventRepository).deleteByIssueId(1L);
@@ -1194,6 +1202,37 @@ class IssueServiceTest {
 
         issueService.deleteById(1L, "john@test.fr");
 
+        verify(mergeRequestRepository).deleteByIssueId(1L);
         verify(issueRepository).delete(issue);
+    }
+
+    @Test
+    void deleteById_should_cleanup_merge_requests_when_issue_is_merged_source() {
+        User creator = setupUser();
+        creator.setId(1L);
+        creator.setEmail("john@test.fr");
+
+        Issue target = new Issue();
+        target.setId(2L);
+
+        Issue source = setupIssue();
+        source.setId(1L);
+        source.setCreatedBy(creator);
+        source.setMerged(true);
+        source.setMergedInto(target);
+        source.setCategory(new Category());
+        source.getCategory().setOwner(new User());
+        source.getCategory().getOwner().setId(99L);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(source));
+        when(userRepository.findByEmail("john@test.fr")).thenReturn(Optional.of(creator));
+
+        issueService.deleteById(1L, "john@test.fr");
+
+        verify(mergeRequestRepository).deleteByIssueId(1L);
+        verify(issueRelationRepository).deleteByIssueId(1L);
+        verify(eventRepository).deleteByIssueId(1L);
+        verify(documentService).deleteDocumentsByIssueId(1L);
+        verify(issueRepository).delete(source);
     }
 }
