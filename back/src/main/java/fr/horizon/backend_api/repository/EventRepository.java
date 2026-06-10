@@ -125,6 +125,25 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     @Query(value = "DELETE FROM event_project_groups WHERE group_id = :groupId", nativeQuery = true)
     void removeGroupFromAllEvents(@Param("groupId") Long groupId);
 
+    /** Récupère les disponibilités déclarées par un utilisateur, triées par date de début. */
+    List<Event> findByCreatedBy_IdAndCategoryTypeOrderByStartDateAsc(Long userId, CategoryType categoryType);
+
+    /**
+     * Retourne les events (AUDIT, DEFENSE, ISSUE/RDV) chevauchant un créneau pour un utilisateur donné.
+     * Utilisé pour détecter les conflits d'agenda avant de proposer un RDV.
+     */
+    @Query("SELECT DISTINCT e FROM Event e " +
+            "LEFT JOIN e.participants p " +
+            "WHERE (e.createdBy.id = :userId OR p.user.id = :userId) " +
+            "AND e.categoryType IN ('AUDIT', 'DEFENSE', 'ISSUE') " +
+            "AND e.startDate < :endDate " +
+            "AND e.endDate > :startDate " +
+            "AND (e.validated = true OR p.hasAccepted = true OR e.createdBy.id = :userId) " +
+            "ORDER BY e.startDate ASC")
+    List<Event> findBusyEventsForUser(@Param("userId") Long userId,
+                                      @Param("startDate") LocalDateTime startDate,
+                                      @Param("endDate") LocalDateTime endDate);
+
     void deleteByIssueId(Long issueId);
 
     void deleteByIssueIdIn(List<Long> issueIds);

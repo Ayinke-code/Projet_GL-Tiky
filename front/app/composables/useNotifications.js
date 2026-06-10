@@ -8,6 +8,7 @@ export const useNotifications = () => {
   const config = useRuntimeConfig()
 
   const fetchHistory = async (userId) => {
+    if (!userId) return
     try {
       const data = await api(`/notifications/user/${userId}`)
       notifications.value = data

@@ -2,6 +2,7 @@
   <div v-if="category?.category?.id !== null && ready" class="min-h-screen bg-gray-50 p-8">
     <div class="max-w-7xl mx-auto px-4 py-6 space-y-4">
 
+      <!-- NAVIGATION / RETOUR -->
       <div class="flex items-center gap-2 text-sm text-gray-500">
         <NuxtLink to="/categories" class="hover:text-gray-800 flex items-center gap-1 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -13,6 +14,7 @@
         <span class="text-gray-700 font-medium">Catégorie #{{ category?.category?.id }}</span>
       </div>
 
+      <!-- HEADER -->
       <div class="flex justify-between items-start mb-8">
         <div>
           <h1 class="text-2xl font-bold text-gray-900">
@@ -30,8 +32,10 @@
         </span>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- GRILLE CONTENU -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
+        <!-- LISTE FOLLOWERS -->
         <div class="lg:col-span-2 space-y-6">
           <div class="bg-white rounded-xl shadow p-6">
             <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">
@@ -39,19 +43,30 @@
             </h2>
 
             <div v-if="category?.followers.length > 0" class="space-y-2">
-              <div v-for="follower in category?.followers" :key="follower.id" class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
+              <div v-for="follower in category?.followers" :key="follower.id"
+                class="flex justify-between items-center bg-gray-50 p-3 rounded-lg border">
                 <div>
                   <p class="font-medium text-gray-900">{{ follower.name }}</p>
                 </div>
 
-                <template v-if="isOwner">
+                <!-- Action suppression (admin ou owner) -->
+                <template v-if="isAdminOrOwner">
                   <button v-if="!checkTeacherIssueManager(follower.id)" class="text-red-500 text-sm hover:underline cursor-pointer" @click="removeFollower(follower.id)">
                     Retirer
                   </button>
                   <span v-else class="text-xs text-gray-400 mt-3">
-                    Billet ouvert
+                    L'utilisateur a un ticket ouvert
                   </span>
                 </template>
+
+                <!-- Demande de retrait (professeur abonné qui n'est pas owner) -->
+                <button
+                  v-else-if="user?.id === follower.id"
+                  class="text-orange-500 text-sm hover:underline cursor-pointer"
+                  @click="requestRemoval()">
+                  Demander à être retiré
+                </button>
+
               </div>
             </div>
 
@@ -61,9 +76,10 @@
           </div>
         </div>
 
+        <!-- PANNEAU ACTIONS -->
         <div class="space-y-6">
 
-          <template v-if="isOwner">
+          <template v-if="isAdminOrOwner">
             <CategoryManagerRequests
               :manager-id="user?.id"
               :category-id="category?.category?.id"
@@ -71,11 +87,12 @@
               @request-processed="refreshData"
             />
 
+            <!-- Ajout professeur -->
             <div class="bg-white rounded-xl shadow p-6">
               <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4">
                 Ajouter un professeur
               </h2>
-              <select v-model="selectedTeacherId" class="w-full border rounded-lg p-2 mb-4 text-sm">
+              <select v-model="selectedTeacherId" class="w-full border rounded-lg p-2 mb-4">
                 <option disabled value="">Sélectionner un professeur</option>
                 <option v-for="t in availableTeachers" :key="t.id" :value="t.id">
                   {{ t.name }}
@@ -88,8 +105,12 @@
                 @click="addFollower(selectedTeacherId)">
                 Ajouter
               </button>
+              <p class="text-xs text-gray-400 mt-3">
+                Seuls les enseignants non déjà abonnés sont affichés
+              </p>
             </div>
 
+            <!-- Supprimer catégorie -->
             <div class="bg-white rounded-xl shadow p-6 border border-red-100">
               <h2 class="text-sm font-bold text-red-400 uppercase tracking-widest mb-1">
                 Supprimer la catégorie
@@ -117,6 +138,7 @@
     </div>
   </div>
 
+  <!-- Modal de suppression de la catégorie -->
   <ConfirmModal
     v-model:open="isDeleteCategoryModalOpen"
     title="Supprimer la catégorie"
@@ -147,6 +169,7 @@ const {
   fetchCategoryById,
   addTeacherFollower,
   deleteTeacherFollower,
+  requestCategoryRemoval,
   deleteCategory,
 } = useCategories()
 
@@ -154,8 +177,11 @@ const { users, fetchUserByRoles } = useUsers()
 const { user, ready } = useAuth()
 const selectedTeacherId = ref('')
 
-const isOwner = computed(() => {
-  return category.value?.category?.ownerId === user.value?.id
+const isAdminOrOwner = computed(() => {
+  if (!user.value) return false
+  const isAdmin = user.value.roles?.includes('ADMIN')
+  const isOwner = user.value.id === category.value?.category?.ownerId
+  return isAdmin || isOwner
 })
 
 const isFollower = computed(() => {
@@ -214,6 +240,14 @@ const removeFollower = async (id) => {
   }
 }
 
+const requestRemoval = async () => {
+  try {
+    await requestCategoryRemoval(category?.value?.category?.id)
+  } catch (err) {
+    console.error(err)
+  }
+}
+
 const addFollower = async (id) => {
   try {
     await addTeacherFollower(id, category?.value?.category?.id)
@@ -225,11 +259,11 @@ const addFollower = async (id) => {
 }
 
 const handleDelete = async (id) => {
-  if(!id) return
+  if (!id) return
   try {
     await deleteCategory(id)
     router.push('/categories')
-  } catch(e) {
+  } catch (e) {
     console.error(e)
   }
 }

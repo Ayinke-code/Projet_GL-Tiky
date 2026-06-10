@@ -1,5 +1,11 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.model.Category;
+import fr.horizon.backend_api.model.Event;
+import fr.horizon.backend_api.model.Issue;
+import fr.horizon.backend_api.model.Notification;
+import fr.horizon.backend_api.model.RequestManager;
+import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.NotificationDto;
 import fr.horizon.backend_api.model.enums.CategoryType;
@@ -884,5 +890,79 @@ class NotificationServiceTest {
         assertEquals(TypeNotification.DELETING_CATEGORY, notif.getType());
         assertEquals(follower1, notif.getRecipient());
         assertTrue(notif.getContent().toLowerCase().contains("physique"));
+    }
+
+    @Test
+    @DisplayName("addedToCategoryNotification doit créer et envoyer une notification ADDED_TO_CATEGORY")
+    void addedToCategoryNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        Category category = new Category();
+        category.setId(5L);
+        category.setName("Projet Horizon");
+
+        notificationService.addedToCategoryNotification(testUser, category);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+        Notification saved = captor.getValue();
+
+        assertEquals(TypeNotification.ADDED_TO_CATEGORY, saved.getType());
+        assertEquals(testUser, saved.getRecipient());
+        assertEquals(category, saved.getCategory());
+        assertTrue(saved.getContent().contains("Projet Horizon"));
+        verify(messagingTemplate).convertAndSend(eq("/topic/notifications/user/1"), any(NotificationDto.class));
+    }
+
+    @Test
+    @DisplayName("categoryRemovalRequestNotification doit créer et envoyer une notification CATEGORY_REMOVAL_REQUEST")
+    void categoryRemovalRequestNotification_ShouldSaveAndSend() {
+        when(notificationRepository.save(any(Notification.class))).thenAnswer(i -> i.getArgument(0));
+
+        User owner = new User();
+        owner.setId(2L);
+        owner.setName("Propriétaire");
+
+        User requester = new User();
+        requester.setId(3L);
+        requester.setName("Jean Martin");
+
+        Category category = new Category();
+        category.setId(7L);
+        category.setName("Option IA");
+
+        notificationService.categoryRemovalRequestNotification(owner, requester, category);
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+        Notification saved = captor.getValue();
+
+        assertEquals(TypeNotification.CATEGORY_REMOVAL_REQUEST, saved.getType());
+        assertEquals(owner, saved.getRecipient());
+        assertEquals(category, saved.getCategory());
+        assertTrue(saved.getContent().contains("Jean Martin"));
+        assertTrue(saved.getContent().contains("Option IA"));
+        verify(messagingTemplate).convertAndSend(eq("/topic/notifications/user/2"), any(NotificationDto.class));
+    }
+
+    @Test
+    @DisplayName("toDto doit renseigner categoryId quand la notification est liée à une catégorie")
+    void toDto_ShouldMapCategoryId_WhenCategoryPresent() {
+        Category category = new Category();
+        category.setId(42L);
+        category.setName("Option IA");
+
+        Notification notif = Notification.builder()
+                .id(300L)
+                .type(TypeNotification.ADDED_TO_CATEGORY)
+                .content("Test")
+                .recipient(testUser)
+                .category(category)
+                .build();
+
+        NotificationDto dto = notificationService.toDto(notif);
+
+        assertNotNull(dto);
+        assertEquals(42L, dto.getCategoryId());
     }
 }

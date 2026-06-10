@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.util.Map;
 
@@ -71,5 +72,23 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.BAD_REQUEST, resp.getStatusCode());
         assertNotNull(resp.getBody());
         assertEquals("date invalide", resp.getBody().get("error"));
+    }
+
+    @Test
+    void handleEventConflict_returns409() {
+        EventConflictException ex = new EventConflictException("Conflit détecté pour : Alice");
+        ResponseEntity<Map<String, String>> resp = handler.handleEventConflict(ex);
+        assertEquals(HttpStatus.CONFLICT, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertEquals("Conflit détecté pour : Alice", resp.getBody().get("error"));
+    }
+
+    @Test
+    void handleAccessDenied_returns403() {
+        AccessDeniedException ex = new AccessDeniedException("Accès refusé");
+        ResponseEntity<Map<String, String>> resp = handler.handleAccessDenied(ex);
+        assertEquals(HttpStatus.FORBIDDEN, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertEquals("Accès refusé", resp.getBody().get("error"));
     }
 }
