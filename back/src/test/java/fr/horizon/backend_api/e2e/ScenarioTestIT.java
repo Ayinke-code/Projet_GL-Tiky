@@ -57,7 +57,7 @@ class ScenarioTestIT extends BaseSeleniumIT{
 
     }
 
-    @Order(5)
+    @Order(9)
     @Test
     @DisplayName("Scénario 1.3.1 Crée un ticket")
     void creeTicketSansMarquerIncompletTest(){
@@ -66,7 +66,7 @@ class ScenarioTestIT extends BaseSeleniumIT{
         creeTicket(false);
     }
 
-    @Order(6)
+    @Order(10)
     @Test
     @DisplayName("Scénario 1.3.2 Crée un ticket incomplet")
     void creeTicketMarquerIncompletTest(){
@@ -98,7 +98,7 @@ class ScenarioTestIT extends BaseSeleniumIT{
         creeCategorie(false);
     }
 
-    @Order(9)
+    @Order(5)
     @Test
     @DisplayName("Scénario 1.6.1 vérifier que la messagerie est désactivé ")
     void envoyerMessageButDisableTest(){
@@ -110,15 +110,14 @@ class ScenarioTestIT extends BaseSeleniumIT{
         checkMessageDisabled();
     }
 
-    @Order(10)
+    @Order(6)
     @Test
-    @Disabled
-    @DisplayName("Scénario 1.6.1 vérifier que la messagerie est désactivé ")
+    @DisplayName("Scénario 1.6.2 envoyer un message")
     void envoyerMessageSuccessTest(){
         //préconditon
         connexion(false);
         creeTicket(false);
-        affecterManager(false);
+        affecterManager(true);
         allerDansMessage();
         envoyerMessage();
     }
@@ -349,31 +348,35 @@ class ScenarioTestIT extends BaseSeleniumIT{
         Assertions.assertTrue(textDisableMessage.getText().trim().contains(MESSAGE_DISABLE_TCHAT));
     }
 
-    private void affecterManager(boolean self){
+    private void affecterManager(boolean self) {
         int choix = self ? 1 : 2;
 
-        WebElement selectorTeacher = wait.until(
-                ExpectedConditions.elementToBeClickable(By.cssSelector("[id^='selector-assignation-teacher-']"))
+        List<WebElement> selectorTeachers = wait.until(
+                ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("[id^='selector-assignation-teacher-']"))
         );
-        selectorTeacher.click();
+
+        WebElement lastSelectorTeacher = selectorTeachers.get(selectorTeachers.size() - 1);
+
+        wait.until(ExpectedConditions.elementToBeClickable(lastSelectorTeacher)).click();
 
         List<WebElement> options = wait.until(
                 ExpectedConditions.visibilityOfAllElementsLocatedBy(By.cssSelector("[role='option']"))
         );
         options.get(choix).click();
 
-        WebElement btnAffecterManager = driver.findElement(By.cssSelector("[id^='btn-affecter-manager-']"));
-        btnAffecterManager.click();
+        List<WebElement> buttonsAffecter = driver.findElements(By.cssSelector("[id^='btn-affecter-manager-']"));
+
+        WebElement lastBtnAffecterManager = buttonsAffecter.get(buttonsAffecter.size() - 1);
+        wait.until(ExpectedConditions.elementToBeClickable(lastBtnAffecterManager)).click();
 
         WebElement btnConfirmAssignation = wait.until(
                 ExpectedConditions.elementToBeClickable(By.id("btn-confirm-assignation"))
         );
-
         btnConfirmAssignation.click();
 
         wait.until(ExpectedConditions.invisibilityOf(btnConfirmAssignation));
 
-        boolean isTicketRemoved = wait.until(ExpectedConditions.invisibilityOf(btnAffecterManager));
+        boolean isTicketRemoved = wait.until(ExpectedConditions.invisibilityOf(lastBtnAffecterManager));
 
         Assertions.assertTrue(isTicketRemoved, "L'affectation n'a pas disparu de la liste après traitement.");
     }
