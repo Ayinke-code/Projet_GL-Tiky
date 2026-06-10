@@ -191,4 +191,25 @@ class CategoryControllerTest {
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$").isEmpty());
     }
+
+    @Test
+    void shouldGetFollowedCategories() throws Exception {
+        CategoryDto dto = CategoryDto.builder()
+                .id(1L)
+                .name("DEV")
+                .subject("Backend Java")
+                .build();
+
+        when(authentication.getName()).thenReturn("user@test.com");
+        when(categoryService.findFollowedCategories("user@test.com")).thenReturn(List.of(dto));
+
+        mockMvc.perform(get("/categories/followed")
+                        .principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("DEV"))
+                .andExpect(jsonPath("$[0].subject").value("Backend Java"));
+
+        verify(categoryService).findFollowedCategories("user@test.com");
+    }
 }
+

@@ -113,4 +113,17 @@ public class CategoryController {
     public List<CategoryDto> getCategoriesByType(@PathVariable CategoryType type) {
         return categoryService.findByCategoryType(type);
     }
+
+    /**
+     * Récupère les catégories suivies par l'utilisateur connecté.
+     *
+     * @param authentication informations sur l'utilisateur connecté
+     * @return liste des catégories suivies sous forme de DTO
+     */
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/followed")
+    public List<CategoryDto> getFollowedCategories(Authentication authentication) {
+        return categoryService.findFollowedCategories(authentication.getName());
+    }
 }
+

@@ -398,4 +398,25 @@ class CategoryServiceTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("not a follower");
     }
+
+    @Test
+    void shouldFindFollowedCategories() {
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(user));
+        when(categoryRepository.findByFollowersContains(user)).thenReturn(List.of(category));
+
+        List<CategoryDto> result = categoryService.findFollowedCategories("user@test.com");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo(category.getId());
+        verify(categoryRepository).findByFollowersContains(user);
+    }
+
+    @Test
+    void shouldThrowWhenUserNotFoundFindFollowedCategories() {
+        when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.findFollowedCategories("user@test.com"))
+                .isInstanceOf(jakarta.persistence.EntityNotFoundException.class)
+                .hasMessageContaining("User not found");
+    }
 }

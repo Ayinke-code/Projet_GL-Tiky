@@ -257,4 +257,20 @@ public class CategoryService {
                 )
                 .build();
     }
+
+    /**
+     * Récupère les catégories suivies par l'utilisateur connecté.
+     *
+     * @param currentUserEmail email de l'utilisateur connecté
+     * @return liste des catégories suivies sous forme de DTO
+     */
+    public List<CategoryDto> findFollowedCategories(String currentUserEmail) {
+        User user = userRepository.findByEmail(currentUserEmail)
+                .orElseThrow(() -> new EntityNotFoundException("User not found " + currentUserEmail));
+
+        return categoryRepository.findByFollowersContains(user)
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
 }
