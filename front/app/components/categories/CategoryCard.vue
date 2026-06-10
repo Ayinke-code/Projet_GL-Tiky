@@ -45,7 +45,7 @@
             Suivi
           </span>
 
-          <button v-else-if="false" @click.stop="$emit('follow')"
+          <button v-else-if="isTeacher" @click.stop="$emit('follow')"
                   class="text-[10px] bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full font-bold hover:bg-indigo-600 hover:text-white transition-colors cursor-pointer">
             <i class="fa-solid fa-plus mr-1"></i>
             Suivre
@@ -106,15 +106,15 @@ const props = defineProps({
   isFollowed: Boolean
 })
 
+const isTeacher = user.value.roles?.includes(ROLE.TEACHER)
+const isOwner = user.value.name === props.category.ownerName
+
 /**
  * Vérifie si l'utilisateur peut accéder au détail de la catégorie.
  * Autorisée si Teacher ET (Propriétaire OU Follower).
  */
 const canAccessCategory = computed(() => {
   if (!ready || !user?.value) return false
-
-  const isTeacher = user.value.roles?.includes(ROLE.TEACHER)
-  const isOwner = user.value.name === props.category.ownerName
 
   // Accessible si propriétaire OU si l'utilisateur suit la catégorie
   return isTeacher && (isOwner || props.isFollowed)
