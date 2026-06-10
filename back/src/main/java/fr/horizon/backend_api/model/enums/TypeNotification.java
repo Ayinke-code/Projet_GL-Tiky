@@ -41,8 +41,7 @@ public enum TypeNotification {
     // demande de retrait d'une catégorie par un professeur
     CATEGORY_REMOVAL_REQUEST,
     // ajout d'un professeur à une catégorie
-    ADDED_TO_CATEGORY
-    NEW_UNFOLLOW,
+    ADDED_TO_CATEGORY,
     // utilsaiteur atteigne 5 liens => demande officiel
     SUBSCRIBERS_NEW_LINK,
     // Manager demade de lien a un autre manager
