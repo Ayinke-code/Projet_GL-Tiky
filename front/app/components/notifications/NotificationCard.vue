@@ -2,10 +2,11 @@
   <div class="p-4 mb-2 rounded-lg border border-gray-100 bg-white shadow-sm hover:shadow-md transition-all duration-200 flex items-start gap-3 relative">
 
     <div class="flex-shrink-0 mt-0.5 z-10">
-      <label class="relative flex items-center justify-center cursor-pointer">
+      <label class="relative flex items-center justify-center cursor-pointer" aria-label="Marquer comme lu">
         <input
           type="checkbox"
           class="peer sr-only"
+          :aria-label="`Marquer la notification comme lue`"
           @change="$emit('mark-as-read', notification.id)"
         >
         <div class="w-5 h-5 rounded-full border-2 border-gray-300 peer-checked:border-[#00DC82] peer-checked:bg-[#00DC82] transition-all duration-200 flex items-center justify-center shadow-sm">
@@ -86,6 +87,12 @@ const targetUrl = computed(() => {
       return '/invitations'
     } else {
       return '/calendar'
+    }
+  }
+
+  if (props.notification.type === 'ADDED_TO_CATEGORY' || props.notification.type === 'CATEGORY_REMOVAL_REQUEST') {
+    if (props.notification.categoryId) {
+      return `/categories/${props.notification.categoryId}`
     }
   }
 
@@ -216,6 +223,20 @@ const uiConfig = computed(() => {
       return {
         title: 'Désabonnement',
         textColor: 'text-slate-400',
+        iconPath: 'M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.375 21c-2.331 0-4.512-.645-6.375-1.765z'
+      }
+
+    case 'ADDED_TO_CATEGORY':
+      return {
+        title: 'Ajout à une catégorie',
+        textColor: 'text-indigo-600',
+        iconPath: 'M12 10.5v6m3-3H9m4.06-7.19l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z'
+      }
+
+    case 'CATEGORY_REMOVAL_REQUEST':
+      return {
+        title: 'Demande de retrait',
+        textColor: 'text-orange-600',
         iconPath: 'M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.375 21c-2.331 0-4.512-.645-6.375-1.765z'
       }
 

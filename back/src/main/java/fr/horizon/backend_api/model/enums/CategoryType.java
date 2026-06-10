@@ -7,5 +7,6 @@ public enum CategoryType {
     ISSUE,
     OPTION,
     PROJECT,
-    PROMOTION
+    PROMOTION,
+    AVAILABILITY
 }

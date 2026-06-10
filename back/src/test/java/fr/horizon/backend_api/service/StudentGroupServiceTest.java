@@ -28,6 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.persistence.EntityNotFoundException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -1094,5 +1095,108 @@ class StudentGroupServiceTest {
         assertEquals(0, result.getCreated());
         assertEquals(0, result.getAlreadyExisted());
         assertEquals(1, result.getSkipped());
+    }
+
+    @Test
+    void assignTeacher_should_add_teacher_to_group() {
+        StudentGroup group = StudentGroup.builder()
+                .id(1L).type(GroupType.OPTION).name("Groupe A")
+                .category(category).createdBy(creator)
+                .members(new HashSet<>()).teachers(new HashSet<>()).build();
+
+        User teacher = new User();
+        teacher.setId(20L);
+        teacher.setName("M. Dupont");
+
+        when(studentGroupRepository.findById(1L)).thenReturn(Optional.of(group));
+        when(userRepository.findById(20L)).thenReturn(Optional.of(teacher));
+        when(studentGroupRepository.save(any(StudentGroup.class))).thenReturn(group);
+
+        StudentGroupDto result = studentGroupService.assignTeacher(1L, 20L);
+
+        assertNotNull(result);
+        assertTrue(group.getTeachers().contains(teacher));
+        verify(studentGroupRepository).save(group);
+    }
+
+    @Test
+    void assignTeacher_should_throw_when_group_not_found() {
+        when(studentGroupRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(StudentGroupNotFoundException.class,
+                () -> studentGroupService.assignTeacher(99L, 1L));
+    }
+
+    @Test
+    void assignTeacher_should_throw_when_teacher_not_found() {
+        StudentGroup group = StudentGroup.builder()
+                .id(1L).type(GroupType.OPTION).name("Groupe A")
+                .category(category).createdBy(creator)
+                .members(new HashSet<>()).teachers(new HashSet<>()).build();
+
+        when(studentGroupRepository.findById(1L)).thenReturn(Optional.of(group));
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class,
+                () -> studentGroupService.assignTeacher(1L, 99L));
+    }
+
+    @Test
+    void unassignTeacher_should_remove_teacher_from_group() {
+        User teacher = new User();
+        teacher.setId(20L);
+        teacher.setName("M. Dupont");
+
+        Set<User> teachers = new HashSet<>();
+        teachers.add(teacher);
+
+        StudentGroup group = StudentGroup.builder()
+                .id(1L).type(GroupType.OPTION).name("Groupe A")
+                .category(category).createdBy(creator)
+                .members(new HashSet<>()).teachers(teachers).build();
+
+        when(studentGroupRepository.findById(1L)).thenReturn(Optional.of(group));
+        when(studentGroupRepository.save(any(StudentGroup.class))).thenReturn(group);
+
+        StudentGroupDto result = studentGroupService.unassignTeacher(1L, 20L);
+
+        assertNotNull(result);
+        assertFalse(group.getTeachers().contains(teacher));
+        verify(studentGroupRepository).save(group);
+    }
+
+    @Test
+    void unassignTeacher_should_throw_when_group_not_found() {
+        when(studentGroupRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(StudentGroupNotFoundException.class,
+                () -> studentGroupService.unassignTeacher(99L, 1L));
+    }
+
+    @Test
+    void assignTeacher_project_group_should_assign_to_parent_group() {
+        StudentGroup parentGroup = StudentGroup.builder()
+                .id(2L).type(GroupType.OPTION).name("Option Parent")
+                .category(category).createdBy(creator)
+                .members(new HashSet<>()).teachers(new HashSet<>()).build();
+
+        StudentGroup projectGroup = StudentGroup.builder()
+                .id(1L).type(GroupType.PROJECT).name("Projet X")
+                .category(category).createdBy(creator).parentGroup(parentGroup)
+                .members(new HashSet<>()).teachers(new HashSet<>()).build();
+
+        User teacher = new User();
+        teacher.setId(20L);
+        teacher.setName("M. Dupont");
+
+        when(studentGroupRepository.findById(1L)).thenReturn(Optional.of(projectGroup));
+        when(userRepository.findById(20L)).thenReturn(Optional.of(teacher));
+        when(studentGroupRepository.save(any(StudentGroup.class))).thenReturn(parentGroup);
+
+        StudentGroupDto result = studentGroupService.assignTeacher(1L, 20L);
+
+        assertNotNull(result);
+        assertTrue(parentGroup.getTeachers().contains(teacher));
+        verify(studentGroupRepository).save(parentGroup);
     }
 }

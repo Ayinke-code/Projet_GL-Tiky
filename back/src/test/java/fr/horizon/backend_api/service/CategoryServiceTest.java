@@ -7,6 +7,11 @@ import fr.horizon.backend_api.model.dto.CategoryDto;
 import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
 import fr.horizon.backend_api.model.enums.CategoryType;
+import fr.horizon.backend_api.repository.CategoryRepository;
+import fr.horizon.backend_api.repository.CategoryRequestRepository;
+import fr.horizon.backend_api.repository.IssueRepository;
+import fr.horizon.backend_api.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import fr.horizon.backend_api.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -39,13 +45,13 @@ class CategoryServiceTest {
     private IssueRepository issueRepository;
 
     @Mock
+    private NotificationService notificationService;
+
+    @Mock
     private IssueService issueService;
 
     @Mock
     private DeletionCategoryRequestRepository deletionCategoryRequestRepository;
-
-    @Mock
-    private NotificationService notificationService;
 
     @InjectMocks
     private CategoryService categoryService;
@@ -189,6 +195,7 @@ class CategoryServiceTest {
         assertThat(category.getFollowers()).contains(user);
 
         verify(categoryRepository).save(category);
+        verify(notificationService).addedToCategoryNotification(user, category);
     }
 
     @Test
@@ -370,6 +377,47 @@ class CategoryServiceTest {
         user.setRoles(Set.of(Role.builder().name("TEACHER").build()));
 
         assertThatThrownBy(() -> categoryService.deleteFollowerById(10L, 1L))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("not a follower");
+    }
+
+    @Test
+    void requestRemoval_should_send_notification_when_follower() {
+        User owner = User.builder().id(2L).name("Owner").email("owner@test.com").build();
+        category.setOwner(owner);
+        category.setFollowers(new HashSet<>(Set.of(user)));
+
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+        when(userRepository.findByEmail("lucas@test.com")).thenReturn(Optional.of(user));
+
+        categoryService.requestRemoval(10L, "lucas@test.com");
+
+        verify(notificationService).categoryRemovalRequestNotification(owner, user, category);
+    }
+
+    @Test
+    void requestRemoval_should_throw_when_category_not_found() {
+        when(categoryRepository.findById(10L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.requestRemoval(10L, "lucas@test.com"))
+                .isInstanceOf(CategoryNotFoundException.class);
+    }
+
+    @Test
+    void requestRemoval_should_throw_when_user_not_found() {
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+        when(userRepository.findByEmail("lucas@test.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.requestRemoval(10L, "lucas@test.com"))
+                .isInstanceOf(EntityNotFoundException.class);
+    }
+
+    @Test
+    void requestRemoval_should_throw_when_not_a_follower() {
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+        when(userRepository.findByEmail("lucas@test.com")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> categoryService.requestRemoval(10L, "lucas@test.com"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("not a follower");
     }

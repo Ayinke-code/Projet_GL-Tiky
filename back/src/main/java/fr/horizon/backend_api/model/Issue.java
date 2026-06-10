@@ -52,7 +52,7 @@ public class Issue extends BaseEntity {
 
     // on affiche tout ceux qui sont a false, si true c'est la source des tickets
     @Builder.Default
-    @Column
+    @Column(columnDefinition = "boolean default false")
     private boolean merged = false;
 
     @ManyToOne(fetch = FetchType.LAZY)

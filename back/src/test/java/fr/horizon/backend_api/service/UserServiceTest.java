@@ -1,10 +1,12 @@
 package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.InvalidUserRolesException;
+import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Role;
 import fr.horizon.backend_api.model.User;
 import fr.horizon.backend_api.model.dto.UpdateRolesDto;
 import fr.horizon.backend_api.model.dto.UserDto;
+import fr.horizon.backend_api.model.dto.UserFollowerDto;
 import fr.horizon.backend_api.model.dto.UserRequestDto;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.model.enums.IssueStatus;
@@ -27,6 +29,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import jakarta.persistence.EntityNotFoundException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -401,5 +404,54 @@ class UserServiceTest {
 
         // STUDENT doit avoir été remplacé par TEACHER
         assertEquals(Set.of("TEACHER"), result.getRoles());
+    }
+
+    @Test
+    void getAllTeachersWithCategoryDetail_should_mark_followers_correctly() {
+        Role teacherRole = new Role("TEACHER");
+        teacherRole.setId(1L);
+
+        User teacher1 = new User();
+        teacher1.setId(10L);
+        teacher1.setName("Alice");
+
+        User teacher2 = new User();
+        teacher2.setId(11L);
+        teacher2.setName("Bob");
+
+        Category category = new Category();
+        category.setId(5L);
+        category.setName("Option IA");
+        category.setFollowers(Set.of(teacher1));
+
+        when(roleRepository.findByName("TEACHER")).thenReturn(Optional.of(teacherRole));
+        when(categoryRepository.findById(5L)).thenReturn(Optional.of(category));
+        when(userRepository.getAllByRoles(Set.of(teacherRole))).thenReturn(List.of(teacher1, teacher2));
+
+        List<UserFollowerDto> result = userService.getAllTeachersWithCategoryDetail(5L);
+
+        assertEquals(2, result.size());
+        UserFollowerDto dto1 = result.stream().filter(d -> d.getId().equals(10L)).findFirst().orElseThrow();
+        UserFollowerDto dto2 = result.stream().filter(d -> d.getId().equals(11L)).findFirst().orElseThrow();
+        assertTrue(dto1.isFollower());
+        assertFalse(dto2.isFollower());
+    }
+
+    @Test
+    void getAllTeachersWithCategoryDetail_should_throw_when_teacher_role_not_found() {
+        when(roleRepository.findByName("TEACHER")).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class,
+                () -> userService.getAllTeachersWithCategoryDetail(1L));
+    }
+
+    @Test
+    void getAllTeachersWithCategoryDetail_should_throw_when_category_not_found() {
+        Role teacherRole = new Role("TEACHER");
+        when(roleRepository.findByName("TEACHER")).thenReturn(Optional.of(teacherRole));
+        when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class,
+                () -> userService.getAllTeachersWithCategoryDetail(99L));
     }
 }

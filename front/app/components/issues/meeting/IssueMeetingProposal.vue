@@ -1,5 +1,6 @@
 <script setup lang="js">
 import { ref, computed, onMounted } from 'vue'
+import AvailabilityConflictModal from '~/components/invitations/AvailabilityConflictModal.vue'
 
 const props = defineProps({
   issue: {
@@ -8,7 +9,7 @@ const props = defineProps({
   }
 })
 
-const { createMeeting, inviteUsersToEvent } = useEvents()
+const { createMeeting, inviteUsersToEvent, fetchUserAvailabilities, fetchUserBusySlots, checkUpcomingMeeting } = useEvents()
 const { getIssueFollowers } = useIssueFollowers()
 const { user } = useAuth()
 
@@ -24,6 +25,14 @@ const loadingFollowers = ref(true)
 const submitting = ref(false)
 const error = ref(null)
 const success = ref(false)
+
+const hasUpcomingMeeting = ref(false)
+const loadingMeetingCheck = ref(true)
+
+// --- Contrôle de disponibilité ---
+const isAvailabilityConflictOpen = ref(false)
+const availabilityConflictUsers = ref([])
+const skipAvailabilityCheck = ref(false)
 
 const pad = (n) => n.toString().padStart(2, '0')
 
@@ -53,6 +62,14 @@ onMounted(async () => {
   startDate.value = formatDateTimeLocal(new Date())
 
   try {
+    hasUpcomingMeeting.value = await checkUpcomingMeeting(props.issue.id)
+  } catch (err) {
+    console.error('Erreur vérification meeting', err)
+  } finally {
+    loadingMeetingCheck.value = false
+  }
+
+  try {
     const data = await getIssueFollowers(props.issue.id)
     const myId = user?.value?.id
     followers.value = (data ?? []).filter(f => f.id !== myId)
@@ -64,31 +81,98 @@ onMounted(async () => {
   }
 })
 
+const isAvailableForSlot = (availabilities, eventStart, eventEnd) => {
+  if (!availabilities || availabilities.length === 0) return false
+  const eStart = new Date(String(eventStart).replace(' ', 'T'))
+  const eEnd = new Date(String(eventEnd).replace(' ', 'T'))
+  return availabilities.some(avail => {
+    const aStart = new Date(String(avail.startDate).replace(' ', 'T'))
+    const aEnd = new Date(String(avail.endDate).replace(' ', 'T'))
+    return aStart <= eStart && aEnd >= eEnd
+  })
+}
+
+const validateForm = () => {
+  if (!meetingName.value.trim() || !startDate.value) {
+    return 'Veuillez remplir tous les champs obligatoires.'
+  }
+  if (new Date(startDate.value) < new Date()) {
+    return "La date de début ne peut pas être dans le passé."
+  }
+  if (totalDurationMinutes.value < 15) {
+    return "La durée doit être d'au moins 15 minutes."
+  }
+  return null
+}
+
+const getConflictingFollowers = async (startObj, endObj) => {
+  const conflictList = []
+  for (const fId of selectedFollowerIds.value) {
+    const avails = await fetchUserAvailabilities(fId)
+
+    // Calculer la plage couvrant les dispos déclarées + le créneau demandé
+    // pour récupérer TOUS les events qui pourraient chevaucher les créneaux proposés
+    const allDates = avails.flatMap(a => [
+      new Date(String(a.startDate).replace(' ', 'T')),
+      new Date(String(a.endDate).replace(' ', 'T'))
+    ])
+    allDates.push(startObj, endObj)
+    const rangeStart = new Date(Math.min(...allDates.map(d => d.getTime())))
+    const rangeEnd = new Date(Math.max(...allDates.map(d => d.getTime())))
+
+    const busySlots = await fetchUserBusySlots(fId, rangeStart.toISOString(), rangeEnd.toISOString())
+
+    const hasAvailabilityConflict = !isAvailableForSlot(avails, startObj.toISOString(), endObj.toISOString())
+    const hasAgendaConflict = busySlots.some(b => {
+      const bStart = new Date(String(b.startDate).replace(' ', 'T'))
+      const bEnd = new Date(String(b.endDate).replace(' ', 'T'))
+      return bStart < endObj && bEnd > startObj
+    })
+
+    if (hasAvailabilityConflict || hasAgendaConflict) {
+      const follower = followers.value.find(f => f.id === fId)
+      conflictList.push({
+        id: fId,
+        name: follower?.name || 'Inconnu',
+        availabilities: avails,
+        busySlots  // couvre toute la plage des dispos → soustraction correcte dans le modal
+      })
+    }
+  }
+  return conflictList
+}
+
+const ERROR_MESSAGES = {
+  400: (err) => err?.data?.message || "Impossible de créer la réunion : vérifiez que la date n'est pas dans le passé.",
+  403: (err) => err?.data?.error || err?.data?.message || "Vous n'avez pas l'autorisation d'organiser cette réunion.",
+  409: (err) => err?.data?.message || "Conflit d'agenda détecté pour ce créneau.",
+}
+
 const handleSubmit = async () => {
   error.value = null
 
-  if (!meetingName.value.trim() || !startDate.value) {
-    error.value = 'Veuillez remplir tous les champs obligatoires.'
+  const validationError = validateForm()
+  if (validationError) {
+    error.value = validationError
     return
   }
 
   const startObj = new Date(startDate.value)
-
-  if (startObj < new Date()) {
-    error.value = "La date de début ne peut pas être dans le passé."
-    return
-  }
-
-  if (totalDurationMinutes.value < 15) {
-    error.value = "La durée doit être d'au moins 15 minutes."
-    return
-  }
-
   submitting.value = true
   success.value = false
 
   try {
     const endObj = new Date(startObj.getTime() + totalDurationMinutes.value * 60_000)
+
+    if (!skipAvailabilityCheck.value && selectedFollowerIds.value.length > 0) {
+      const conflictList = await getConflictingFollowers(startObj, endObj)
+      if (conflictList.length > 0) {
+        availabilityConflictUsers.value = conflictList
+        isAvailabilityConflictOpen.value = true
+        submitting.value = false
+        return
+      }
+    }
 
     const createdEvent = await createMeeting({
       name: meetingName.value,
@@ -103,23 +187,44 @@ const handleSubmit = async () => {
     }
 
     success.value = true
+    hasUpcomingMeeting.value = true
+    skipAvailabilityCheck.value = false
     setTimeout(() => { success.value = false }, 5000)
 
   } catch (err) {
     const status = err?.response?.status || err?.statusCode || err?.status
-
-    if (status === 400) {
-      error.value = err?.data?.message || "Impossible de créer la réunion : vérifiez que la date n'est pas dans le passé."
-    } else if (status === 403) {
-      error.value = "Vous n'avez pas l'autorisation d'organiser cette réunion."
-    } else if (status === 409) {
-      error.value = err?.data?.message || "Conflit d'agenda détecté pour ce créneau."
-    } else {
-      error.value = err?.data?.message || "Une erreur inattendue est survenue lors de la création de la réunion."
-    }
+    console.error('[IssueMeetingProposal] handleSubmit error, status:', status, err)
+    error.value = ERROR_MESSAGES[status]?.(err) ?? err?.data?.message ?? "Une erreur inattendue est survenue lors de la création de la réunion."
   } finally {
     submitting.value = false
   }
+}
+
+const proceedDespiteConflicts = async () => {
+  isAvailabilityConflictOpen.value = false
+  skipAvailabilityCheck.value = true
+  await handleSubmit()
+}
+
+const cancelAvailabilityCheck = () => {
+  isAvailabilityConflictOpen.value = false
+  skipAvailabilityCheck.value = false
+}
+
+const handleSelectSlot = async ({ startDate: slotStart }) => {
+  isAvailabilityConflictOpen.value = false
+
+  const start = new Date(slotStart)
+
+  // Met à jour uniquement l'heure de début — la durée prévue reste inchangée
+  startDate.value = formatDateTimeLocal(start)
+
+  // Attendre que Vue applique les mises à jour réactives avant de soumettre
+  await nextTick()
+
+  // Soumettre directement avec ce créneau (skip la vérification de dispo)
+  skipAvailabilityCheck.value = true
+  await handleSubmit()
 }
 </script>
 
@@ -133,7 +238,26 @@ const handleSubmit = async () => {
       </h2>
     </div>
 
-    <div class="px-5 py-6 flex flex-col items-center gap-6 text-sm w-full max-w-sm mx-auto">
+    <!-- Chargement de la vérification -->
+    <div v-if="loadingMeetingCheck" class="px-5 py-8 flex justify-center items-center gap-2 text-xs text-gray-400 italic">
+      <UIcon name="i-heroicons-arrow-path" class="animate-spin size-4" />
+      Vérification en cours…
+    </div>
+
+    <!-- RDV déjà programmé -->
+    <div v-else-if="hasUpcomingMeeting" class="px-5 py-8 flex flex-col items-center justify-center text-center gap-4 min-h-[180px]">
+      <div class="p-3 bg-violet-50 text-violet-600 rounded-full flex items-center justify-center">
+        <UIcon name="i-heroicons-calendar-days" class="size-6" />
+      </div>
+      <div class="space-y-1 max-w-[280px]">
+        <h3 class="text-sm font-semibold text-gray-900">Réunion déjà programmée</h3>
+        <p class="text-xs text-gray-500 leading-relaxed">
+          Un rendez-vous est déjà prévu ou en attente de confirmation pour ce ticket.
+        </p>
+      </div>
+    </div>
+
+    <div v-else class="px-5 py-6 flex flex-col items-center gap-6 text-sm w-full max-w-sm mx-auto">
 
       <Transition name="fade">
         <UAlert
@@ -148,15 +272,15 @@ const handleSubmit = async () => {
       </Transition>
 
       <Transition name="fade">
-        <UAlert
+        <div
           v-if="error"
-          color="red"
-          variant="soft"
-          icon="i-heroicons-exclamation-circle"
-          :title="error"
+          class="w-full flex items-start gap-2.5 bg-red-50 border border-red-300 text-red-700 rounded-xl px-4 py-3"
+          role="alert"
           aria-live="assertive"
-          class="text-center w-full"
-        />
+        >
+          <i class="fa-solid fa-circle-exclamation mt-0.5 shrink-0 text-red-500"></i>
+          <p class="text-xs font-semibold leading-snug">{{ error }}</p>
+        </div>
       </Transition>
 
       <UFormGroup
@@ -257,12 +381,11 @@ const handleSubmit = async () => {
           Aucun autre abonné à inviter.
         </div>
 
-        <div
+        <fieldset
           v-else
-          role="group"
-          aria-label="Liste des abonnés à inviter"
-          class="max-h-40 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 divide-y divide-gray-100 shadow-inner w-full"
+          class="max-h-40 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 divide-y divide-gray-100 shadow-inner w-full p-0 m-0"
         >
+          <legend class="sr-only">Liste des abonnés à inviter</legend>
           <label
             v-for="follower in followers"
             :key="follower.id"
@@ -282,7 +405,7 @@ const handleSubmit = async () => {
               size="xs"
             />
           </label>
-        </div>
+        </fieldset>
       </div>
 
       <div class="pt-2 w-full flex flex-col gap-4">
@@ -307,8 +430,18 @@ const handleSubmit = async () => {
         />
       </div>
 
-    </div>
+    </div><!-- fin v-else formulaire -->
   </div>
+
+  <AvailabilityConflictModal
+    v-model:open="isAvailabilityConflictOpen"
+    :conflictUsers="availabilityConflictUsers"
+    :selectable="true"
+    :durationMinutes="totalDurationMinutes"
+    @proceed="proceedDespiteConflicts"
+    @cancel="cancelAvailabilityCheck"
+    @select-slot="handleSelectSlot"
+  />
 </template>
 
 <style scoped>

@@ -228,6 +228,13 @@
       @confirm="confirmCancellation"
     />
 
+    <AvailabilityConflictModal
+      v-model:open="isAvailabilityConflictOpen"
+      :conflictUsers="availabilityConflictUsers"
+      @proceed="handleAvailabilityConflictProceed"
+      @cancel="handleAvailabilityConflictCancel"
+    />
+
   </div>
 </template>
 
@@ -247,6 +254,7 @@ import DeclineModal from '~/components/invitations/DeclineModal.vue'
 import StatusModal from '~/components/invitations/StatusModal.vue'
 import RescheduleModal from '~/components/invitations/RescheduleModal.vue'
 import CancelConfirmationModal from '~/components/invitations/CancelConfirmationModal.vue'
+import AvailabilityConflictModal from '~/components/invitations/AvailabilityConflictModal.vue'
 
 // --- États & Composables ---
 const { user, ready } = useAuth()
@@ -264,7 +272,8 @@ const {
   inviteUserToEvent,
   removeParticipantFromMeeting,
   fetchPossibleUsersInterested,
-  fetchMyParticipations
+  fetchMyParticipations,
+  fetchUserAvailabilities
 } = useEvents()
 
 const myParticipations = ref([])
@@ -285,6 +294,11 @@ const isCancelConfirmationOpen = ref(false)
 const activeEventIdForStatus = ref(null)
 const newParticipantId = ref('')
 const possibleUsers = ref([])
+
+// --- États liés au contrôle de disponibilité ---
+const isAvailabilityConflictOpen = ref(false)
+const availabilityConflictUsers = ref([])
+const pendingInviteParticipantId = ref(null)
 
 // --- Computed ---
 const isTeacher = computed(() => {
@@ -340,10 +354,10 @@ const rescheduleForm = ref({
   addAll: true
 })
 
-const EVENT_NOTIFICATION_TYPES = ['NEW_EVENT_INVITATION', 'UPDATE_EVENT', 'EVENT_RESPONSE', 'EVENT_CANCEL']
+const EVENT_NOTIFICATION_TYPES = new Set(['NEW_EVENT_INVITATION', 'UPDATE_EVENT', 'EVENT_RESPONSE', 'EVENT_CANCEL'])
 
 const onNotificationReceived = async (e) => {
-  if (EVENT_NOTIFICATION_TYPES.includes(e.detail?.type)) {
+  if (EVENT_NOTIFICATION_TYPES.has(e.detail?.type)) {
     await fetchMyInvitations()
     await fetchMyCreatedEvents()
   }
@@ -354,11 +368,11 @@ onMounted(async () => {
   await fetchMyInvitations()
   await fetchMyCreatedEvents()
   myParticipations.value = await fetchMyParticipations()
-  window.addEventListener('notification:received', onNotificationReceived)
+  globalThis.addEventListener('notification:received', onNotificationReceived)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('notification:received', onNotificationReceived)
+  globalThis.removeEventListener('notification:received', onNotificationReceived)
 })
 
 const switchTab = (tab) => {
@@ -394,7 +408,9 @@ const confirmCancellation = async () => {
     }
     isCancelConfirmationOpen.value = false
     exitCancelMode()
-  } catch (e) {}
+  } catch (e) {
+    console.error('Erreur lors de l\'annulation :', e)
+  }
 }
 
 // --- Méthodes Invitations ---
@@ -459,7 +475,9 @@ const loadEventStatuses = async (eventId) => {
     if (isTeacher.value) {
       possibleUsers.value = await fetchPossibleUsersInterested(eventId)
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('Erreur lors du chargement des participants :', e)
+  }
 }
 
 const viewEventStatuses = async (eventId) => {
@@ -478,13 +496,63 @@ const viewEventStatuses = async (eventId) => {
 }
 
 // --- Actions directes depuis la modale (Ajout / Suppression) ---
+const isAvailableForSlot = (availabilities, eventStart, eventEnd) => {
+  if (!availabilities || availabilities.length === 0) return false
+  const eStart = new Date(String(eventStart).replace(' ', 'T'))
+  const eEnd = new Date(String(eventEnd).replace(' ', 'T'))
+  return availabilities.some(avail => {
+    const aStart = new Date(String(avail.startDate).replace(' ', 'T'))
+    const aEnd = new Date(String(avail.endDate).replace(' ', 'T'))
+    return aStart <= eStart && aEnd >= eEnd
+  })
+}
+
+const doAddParticipant = async (participantId) => {
+  try {
+    await inviteUserToEvent(activeEventIdForStatus.value, participantId)
+    newParticipantId.value = ''
+    await loadEventStatuses(activeEventIdForStatus.value)
+  } catch (e) {
+    console.error('Erreur lors de l\'invitation :', e)
+  }
+}
+
 const handleAddParticipant = async () => {
   if (!activeEventIdForStatus.value || !newParticipantId.value) return
-  try {
-    await inviteUserToEvent(activeEventIdForStatus.value, newParticipantId.value)
-    newParticipantId.value = ''
-    await loadEventStatuses(activeEventIdForStatus.value) // Refresh
-  } catch (e) {}
+
+  const activeEvent = events.value.find(e => String(e.id) === String(activeEventIdForStatus.value))
+
+  if (activeEvent?.startDate && activeEvent?.endDate) {
+    const userId = Number(newParticipantId.value)
+    const availabilities = await fetchUserAvailabilities(userId)
+
+    if (!isAvailableForSlot(availabilities, activeEvent.startDate, activeEvent.endDate)) {
+      const user = possibleUsers.value.find(u => Number(u.id) === userId)
+      availabilityConflictUsers.value = [{
+        id: userId,
+        name: user?.name || 'Utilisateur inconnu',
+        availabilities
+      }]
+      pendingInviteParticipantId.value = newParticipantId.value
+      isAvailabilityConflictOpen.value = true
+      return
+    }
+  }
+
+  await doAddParticipant(newParticipantId.value)
+}
+
+const handleAvailabilityConflictProceed = async () => {
+  isAvailabilityConflictOpen.value = false
+  if (pendingInviteParticipantId.value) {
+    await doAddParticipant(pendingInviteParticipantId.value)
+    pendingInviteParticipantId.value = null
+  }
+}
+
+const handleAvailabilityConflictCancel = () => {
+  isAvailabilityConflictOpen.value = false
+  pendingInviteParticipantId.value = null
 }
 
 const handleRemoveParticipant = async (participantId) => {
@@ -492,7 +560,9 @@ const handleRemoveParticipant = async (participantId) => {
   try {
     await removeParticipantFromMeeting(activeEventIdForStatus.value, participantId)
     await loadEventStatuses(activeEventIdForStatus.value) // Refresh
-  } catch (e) {}
+  } catch (e) {
+    console.error('Erreur lors de la suppression du participant :', e)
+  }
 }
 
 // --- Reprogrammation ---
@@ -552,6 +622,8 @@ const handleReschedule = async () => {
       isRescheduleModalOpen.value = false
       selectedEventToReschedule.value = null
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('Erreur lors de la reprogrammation :', e)
+  }
 }
 </script>

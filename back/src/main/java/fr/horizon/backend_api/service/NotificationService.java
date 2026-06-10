@@ -623,8 +623,33 @@ public class NotificationService {
     }
 
     /**
-     * Convertit une entité Notification en NotificationDto
+     * Notifie un professeur qu'il a été ajouté à une catégorie.
      */
+    @Transactional
+    public void addedToCategoryNotification(User teacher, Category category) {
+        Notification notif = Notification.builder()
+                .type(TypeNotification.ADDED_TO_CATEGORY)
+                .content("Vous avez été ajouté à la catégorie \"" + category.getName() + "\".")
+                .recipient(teacher)
+                .category(category)
+                .build();
+        saveAndSend(notif);
+    }
+
+    /**
+     * Notifie le propriétaire d'une catégorie qu'un professeur souhaite en être retiré.
+     */
+    @Transactional
+    public void categoryRemovalRequestNotification(User owner, User requester, Category category) {
+        Notification notif = Notification.builder()
+                .type(TypeNotification.CATEGORY_REMOVAL_REQUEST)
+                .content(requester.getName() + " souhaite être retiré de la catégorie \"" + category.getName() + "\".")
+                .recipient(owner)
+                .category(category)
+                .build();
+        saveAndSend(notif);
+    }
+
     public NotificationDto toDto(Notification notification) {
         if (notification == null) {
             return null;
@@ -642,6 +667,7 @@ public class NotificationService {
                 .eventCategory(notification.getEvent() != null && notification.getEvent().getCategoryType() != null
                         ? notification.getEvent().getCategoryType().name() : null)
                 .requestManagerId(notification.getRequestManager() != null ? notification.getRequestManager().getRequestId(): null)
+                .categoryId(notification.getCategory() != null ? notification.getCategory().getId() : null)
                 .build();
     }
 }
