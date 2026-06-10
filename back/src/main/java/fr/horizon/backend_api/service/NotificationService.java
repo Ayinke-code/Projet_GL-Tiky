@@ -604,7 +604,7 @@ public class NotificationService {
                 .content(content)
                 .isRead(false)
                 .category(category)
-                .recipient(user)
+                .recipient(category.getOwner())
                 .type(TypeNotification.NEW_FOLLOWER_CATEGORY)
                 .build();
 

@@ -6,8 +6,10 @@ import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.Authenticator;
 import java.util.List;
 
 import fr.horizon.backend_api.model.enums.CategoryType;
@@ -74,8 +76,8 @@ public class CategoryController {
      */
     @PreAuthorize("hasAnyAuthority('ADMIN','TEACHER')")
     @PostMapping("/followers/{idUser}/{idCategory}")
-    public CategoryDetailsDto addCategoryFollower(@PathVariable Long idUser, @PathVariable Long idCategory) {
-        categoryService.addFollower(idCategory, idUser);
+    public CategoryDetailsDto addCategoryFollower(@PathVariable Long idUser, @PathVariable Long idCategory, Authentication authentication) {
+        categoryService.addFollower(idCategory, idUser, authentication.getName());
         return categoryService.findById(idCategory);
     }
 

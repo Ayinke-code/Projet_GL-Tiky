@@ -178,47 +178,97 @@ class CategoryServiceTest {
     }
 
     @Test
-    void shouldAddFollower() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    void shouldAddFollower_WhenManagerAddsTeacher() {
+        when(userRepository.findByEmail("lucas@test.com")).thenReturn(Optional.of(user));
+
+        User teacherToAdd = User.builder().id(2L).name("Prof").roles(Set.of(Role.builder().name("TEACHER").build())).build();
+        when(userRepository.findById(2L)).thenReturn(Optional.of(teacherToAdd));
+
         when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
 
-        user.setRoles(Set.of(Role.builder().name("TEACHER").build()));
+        categoryService.addFollower(10L, 2L, "lucas@test.com");
 
-        categoryService.addFollower(10L, 1L);
-
-        assertThat(category.getFollowers()).contains(user);
-
+        assertThat(category.getFollowers()).contains(teacherToAdd);
         verify(categoryRepository).save(category);
+
+        verify(notificationService).managerAddingFollowerNotification(teacherToAdd, category);
+    }
+
+    @Test
+    void shouldAddFollower_WhenTeacherFollowsByHimself() {
+        // Le prof s'abonne lui-même (l'initiateur est le prof)
+        User teacher = User.builder().id(2L).name("Prof").email("prof@test.com").roles(Set.of(Role.builder().name("TEACHER").build())).build();
+
+        when(userRepository.findByEmail("prof@test.com")).thenReturn(Optional.of(teacher));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(teacher));
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+
+        categoryService.addFollower(10L, 2L, "prof@test.com");
+
+        assertThat(category.getFollowers()).contains(teacher);
+        verify(categoryRepository).save(category);
+
+        // 👉 On vérifie que l'autre notification est envoyée (au manager)
+        verify(notificationService).notifyNewFollowerCategory(teacher, category);
     }
 
     @Test
     void shouldThrowWhenUserNotFoundAddFollower() {
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        // On suppose que l'initiateur existe
+        when(userRepository.findByEmail("lucas@test.com")).thenReturn(Optional.of(user));
+        // Mais la cible n'existe pas
+        when(userRepository.findById(2L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L))
+        assertThatThrownBy(() -> categoryService.addFollower(10L, 2L, "lucas@test.com"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("User not found");
+    }
+
+    @Test
+    void shouldThrowWhenInitiatorNotFoundAddFollower() {
+        when(userRepository.findByEmail("ghost@test.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L, "ghost@test.com"))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("User not found");
     }
 
     @Test
     void shouldThrowWhenCategoryNotFoundAddFollower() {
+        when(userRepository.findByEmail("lucas@test.com")).thenReturn(Optional.of(user));
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(categoryRepository.findById(10L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L))
+        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L, "lucas@test.com"))
                 .isInstanceOf(CategoryNotFoundException.class);
     }
 
     @Test
     void shouldThrowWhenUserIsNotTeacherAddFollower() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("lucas@test.com")).thenReturn(Optional.of(user));
+
+        User student = User.builder().id(2L).roles(Set.of(Role.builder().name("STUDENT").build())).build();
+        when(userRepository.findById(2L)).thenReturn(Optional.of(student));
         when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
 
-        user.setRoles(Set.of(Role.builder().name("STUDENT").build()));
-
-        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L))
+        assertThatThrownBy(() -> categoryService.addFollower(10L, 2L, "lucas@test.com"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Only teachers");
+    }
+
+    @Test
+    void shouldThrowWhenAlreadyFollower() {
+        when(userRepository.findByEmail("lucas@test.com")).thenReturn(Optional.of(user));
+
+        User teacher = User.builder().id(2L).roles(Set.of(Role.builder().name("TEACHER").build())).build();
+        category.getFollowers().add(teacher); // Déjà dedans
+
+        when(userRepository.findById(2L)).thenReturn(Optional.of(teacher));
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+
+        assertThatThrownBy(() -> categoryService.addFollower(10L, 2L, "lucas@test.com"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("already");
     }
 
     // =============================================
@@ -303,19 +353,6 @@ class CategoryServiceTest {
         // THEN
         assertThat(result).isEmpty();
         verify(categoryRepository).findByCategoryType(CategoryType.AUDIT);
-    }
-
-    @Test
-    void shouldThrowWhenAlreadyFollower() {
-        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
-
-        user.setRoles(Set.of(Role.builder().name("TEACHER").build()));
-        category.getFollowers().add(user);
-
-        assertThatThrownBy(() -> categoryService.addFollower(10L, 1L))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("already");
     }
 
     @Test

@@ -31,7 +31,8 @@
       <div v-if="category.status !== 'ARCHIVED'" class="flex gap-2">
 
         <template v-if="category.ownerName === user?.name">
-          <div class="text-[10px] bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-bold border border-amber-200">
+          <div :id="'category-card-proprio-' + category.name.replace(/\s+/g, '-')"
+            class="text-[10px] bg-amber-100 text-amber-700 px-3 py-1 rounded-full font-bold border border-amber-200">
             <i class="fa-solid fa-crown mr-1"></i> PROPRIÉTAIRE
           </div>
         </template>
@@ -59,18 +60,9 @@
 
     <div class="mt-4 pt-4 border-t border-gray-50 flex flex-col gap-2 text-[10px] text-gray-400">
 
-      <div class="flex items-center">
+      <div v-if="user?.name !== category.ownerName" class="flex items-center">
         <i class="fa-solid fa-user-tie mr-2 text-indigo-400"></i>
-
-        <span v-if="user?.name === category.ownerName">
-          <span
-            :id="'category-card-proprio-' + category.name.replace(/\s+/g, '-')"
-            class="px-2 py-0.5 text-xs font-semibold bg-indigo-100 text-indigo-700 rounded-full">
-            Propriétaire
-          </span>
-        </span>
-
-        <span v-else>
+        <span>
           Responsable : {{ category.ownerName || 'Non assigné' }}
         </span>
       </div>

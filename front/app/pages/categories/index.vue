@@ -237,5 +237,6 @@ const handleFollow = async (idCat, idUser) => {
   if(!(idCat && idUser)) return
   const res = await addTeacherFollower(idUser, idCat)
   if (!res) return
+  await navigateTo(`/categories/${idCat}`)
 }
 </script>
