@@ -214,9 +214,6 @@ class CategoryServiceTest {
 
     @Test
     void shouldThrowWhenUserNotFoundAddFollower() {
-        // On suppose que l'initiateur existe
-        when(userRepository.findByEmail("lucas@test.com")).thenReturn(Optional.of(user));
-        // Mais la cible n'existe pas
         when(userRepository.findById(2L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> categoryService.addFollower(10L, 2L, "lucas@test.com"))
@@ -226,6 +223,7 @@ class CategoryServiceTest {
 
     @Test
     void shouldThrowWhenInitiatorNotFoundAddFollower() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(userRepository.findByEmail("ghost@test.com")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> categoryService.addFollower(10L, 1L, "ghost@test.com"))
