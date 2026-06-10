@@ -274,7 +274,7 @@ selenium-test-dev:
   stage: selenium
   variables:
     FRONT_URL: $FRONT_URL_DEV
-    DEFAULT_PASSWORD: $DEFAULT_PASSWORD
+    DEFAULT_PASSWORD: $DEFAULT_PASSWORD_SELENIUM
   needs:
     - deploy_dev
     - build-backend
@@ -296,13 +296,14 @@ selenium-test-dev:
     - build-backend
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
+    - if: $CI_COMMIT_BRANCH == "feat/correction-test-selenium"
 
 # Stage 4: Selenium Tests
 selenium-test-prod:
   stage: selenium
   variables:
     FRONT_URL: $FRONT_URL_PROD
-    DEFAULT_PASSWORD: $DEFAULT_PASSWORD
+    DEFAULT_PASSWORD: $DEFAULT_PASSWORD_SELENIUM
   needs:
     - deploy_prod
     - build-backend
