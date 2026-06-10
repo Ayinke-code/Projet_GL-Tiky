@@ -57,9 +57,6 @@ class UserServiceTest {
     private CategoryRepository categoryRepository;
 
     @Mock
-    private CategoryRepository categoryRepository;
-
-    @Mock
     private EntityManager entityManager;
 
     @InjectMocks
