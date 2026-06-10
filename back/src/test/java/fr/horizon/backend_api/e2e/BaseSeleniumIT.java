@@ -22,14 +22,13 @@ abstract class BaseSeleniumIT {
 
     @BeforeEach
     void setUp() {
-        frontUrl = System.getenv("FRONT_URL");
-        password = System.getenv("DEFAULT_PASSWORD");
-        if (frontUrl == null) {
-            Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
-            frontUrl = dotenv.get("FRONT_URL");
-            password = dotenv.get("DEFAULT_PASSWORD");
-        }
-        Assertions.assertNotNull(frontUrl);
+        Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
+
+        frontUrl = getConfig("FRONT_URL", dotenv);
+        password = getConfig("DEFAULT_PASSWORD", dotenv);
+
+        Assertions.assertNotNull(frontUrl, "FRONT_URL est introuvable (ni env, ni .env)");
+        Assertions.assertNotNull(password, "DEFAULT_PASSWORD est introuvable (ni env, ni .env)");
 
         ChromeOptions options = new ChromeOptions();
         options.addArguments(
@@ -43,6 +42,14 @@ abstract class BaseSeleniumIT {
         );
         driver = new ChromeDriver(options);
         wait = new WebDriverWait(driver, Duration.ofSeconds(5));
+    }
+
+    /**
+     * Variable d'environnement réelle prioritaire, sinon repli sur le fichier .env.
+     */
+    private String getConfig(String key, Dotenv dotenv) {
+        String value = System.getenv(key);
+        return value != null ? value : dotenv.get(key);
     }
 
     @AfterEach
