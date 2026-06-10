@@ -275,9 +275,9 @@ selenium-test-dev:
   variables:
     FRONT_URL: $FRONT_URL_DEV
     DEFAULT_PASSWORD: $DEFAULT_PASSWORD_SELENIUM
-  # needs:
-    # - deploy_dev
-    # - build-backend
+  needs:
+    - deploy_dev
+    - build-backend
   before_script:
     # Proxy
     - export http_proxy=http://192.168.4.8:3128
@@ -296,7 +296,6 @@ selenium-test-dev:
     - build-backend
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
-    - if: $CI_COMMIT_BRANCH == "feat/correction-test-selenium"
 
 # Stage 4: Selenium Tests
 selenium-test-prod:
