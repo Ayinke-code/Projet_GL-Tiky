@@ -31,7 +31,7 @@
           >
             <div class="flex items-center">
               <i class="fa-solid fa-circle-exclamation w-6"></i>
-              <span class="font-medium">Tickets</span>
+              <span class="font-medium text-base">Tickets</span>
             </div>
           </UButton>
 
