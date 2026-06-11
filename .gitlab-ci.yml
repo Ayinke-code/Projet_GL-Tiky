@@ -342,7 +342,7 @@ sonar-dev:
         -Dsonar.token=$SONAR_TOKEN_DEV \
         -Dsonar.projectKey=Team3_2026_DevBranch_Project \
         -Dsonar.projectName=Team3_2026_DevBranch \
-        -DskipSelenium=true 
+        -DskipITs
   rules:
     - if: $CI_COMMIT_BRANCH == 'dev'
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
@@ -364,6 +364,6 @@ sonar-prod:
         -Dsonar.token=$SONAR_TOKEN_PROD \
         -Dsonar.projectKey=Team3_2026_MasterBranch_Project \
         -Dsonar.projectName=Team3_2026_MasterBranch \
-        -DskipSelenium=true 
+        -DskipITs
   rules:
     - if: $CI_COMMIT_BRANCH == 'main'

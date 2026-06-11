@@ -32,10 +32,6 @@
 		<!-- Sonar config -->
 		<sonar.qualitygate.wait>true</sonar.qualitygate.wait>
 		<sonar.host.url>http://172.24.1.1/sonar</sonar.host.url>
-		<!-- Exclusion tests selenium -->
-		<sonar.exclusions>**/e2e/**</sonar.exclusions>
-		<sonar.coverage.exclusions>**/e2e/**</sonar.coverage.exclusions>
-		<skipSelenium>false</skipSelenium>
 	</properties>
 	<dependencies>
 
