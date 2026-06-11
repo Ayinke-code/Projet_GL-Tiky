@@ -19,7 +19,7 @@ export const useIssues = () => {
     /**
    * Statuts autorisés (aligné backend)
    */
-    const VALID_STATUSES = ['OUVERT', 'EN_ATTENTE', 'INCOMPLET', 'TERMINE']
+    const VALID_STATUSES = ['OUVERT', 'EN_ATTENTE', 'INCOMPLET', 'TERMINE', 'DEMANDE_REOUVERTURE']
 
     /**
    * Récupère toutes les issues
@@ -57,15 +57,36 @@ export const useIssues = () => {
             return
         }
 
+        /**
+        * Mettre les données dans un formData pour inclure les fichiers si présents
+        */
+        const formData = new FormData()
+
+        // Donnée de base pour créer une issue
+        formData.append(
+        'dto',
+        new Blob(
+            [JSON.stringify({
+            title: payload.title,
+            description: payload.description,
+            categoryId: payload.categoryId,
+            pendingCase: payload.pendingCase
+            })],
+            { type: 'application/json' }
+        )
+        )
+
+        // Si fichiers
+        if (payload.files?.length) {
+            payload.files.forEach(file => {
+                formData.append('files', file)
+            })
+        }
+
         try {
             const created = await api('/issues', {
                 method: 'POST',
-                body: {
-                    title: payload.title,
-                    description: payload.description,
-                    categoryId: payload.categoryId,
-                    pendingCase: payload.pendingCase
-                }
+                body: formData
             })
 
             // refresh local state
@@ -74,24 +95,34 @@ export const useIssues = () => {
             return created
         } catch (e) {
             error.value = e?.data?.message || 'CREATE_ISSUE_ERROR'
-            return null
+            return e
         }
     }
 
      /**
     * Suppression d'une issue
     */
-    const deleteIssue = async (id) => {
-        await api(`/issues/${id}`, {
-            method: 'DELETE'
-        })
+     const deleteIssue = async (id) => {
+         try {
+             await api(`/issues/${id}`, {
+                 method: 'DELETE'
+             })
+         } catch (e) {
+             // Si l'issue est déjà supprimée (404), on ignore l'erreur
+             // car l'objectif est qu'elle disparaisse de l'interface.
+             if (e?.response?.status !== 404) {
+                 error.value = e?.data?.message || 'DELETE_ISSUE_ERROR'
+                 throw e
+             }
+         } finally {
+             // Dans tous les cas (succès ou 404), on retire l'issue de l'état local
+             issues.value = issues.value.filter(i => i.id !== id)
 
-        issues.value = issues.value.filter(i => i.id !== id)
-
-        // Mettre à jour également le state global des issues suivies si nécessaire
-        const { removeFollowedIssue } = useFollowedIssuesState()
-        removeFollowedIssue(id)
-    }
+             // Mettre à jour également le state global des issues suivies si nécessaire
+             const { removeFollowedIssue } = useFollowedIssuesState()
+             removeFollowedIssue(id)
+         }
+     }
 
      /**
     * Mise à jour statut issue
@@ -122,6 +153,33 @@ export const useIssues = () => {
 
          return newValue
      }
+
+    /**
+    * Mise à jour statut issue, en demande de réouverture
+    */
+    const requestOpening = async (id, description) => {
+        if(!description) return
+
+        await api(`/issues/${id}/request-reopening`, {
+            method: 'POST',
+            body: description
+        })
+
+        // Mettre à jour l'issue dans la liste locale des issues
+        const issueIndex = issues.value.findIndex(i => i.id === id)
+        if (issueIndex !== -1) {
+            issues.value[issueIndex].status = "DEMANDE_REOUVERTURE"
+        }
+
+        // Si le statut n'est plus OUVERT, on retire l'issue de la liste des suivies
+        // car le backend filtre uniquement sur OUVERT pour les issues suivies.
+        if (newValue !== 'OUVERT') {
+            const { removeFollowedIssue } = useFollowedIssuesState()
+            removeFollowedIssue(id)
+        }
+
+        return newValue
+    }
 
       /**
      * Toggle visibilité issue (private/public)
@@ -163,6 +221,24 @@ export const useIssues = () => {
          return response
      }
 
+  /**
+   * Récupère uniquement les issues affichables pour l'utilisateur connecté :
+   * - Créées par lui
+   * - Ouvertes et publiques
+   * - Suivies par lui
+   */
+  const getDisplayableIssues = async () => {
+    try {
+      const data = await api('/issues/displayable')
+
+      issues.value = data
+      return data
+    } catch (e) {
+      error.value = e?.data?.message || 'FETCH_DISPLAYABLE_ISSUES_ERROR'
+      return []
+    }
+  }
+
     return {
         issues,
         fetchIssues,
@@ -171,6 +247,8 @@ export const useIssues = () => {
         updateIssuePrivacy,
         updateIssueStatus,
         deleteIssue,
+        getDisplayableIssues,
+        requestOpening,
         error
     }
 }

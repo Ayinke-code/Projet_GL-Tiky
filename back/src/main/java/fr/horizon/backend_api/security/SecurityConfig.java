@@ -52,7 +52,8 @@ public class SecurityConfig {
 
                         .requestMatchers(HttpMethod.POST, "/events/*/invitations/").authenticated()
 
-                        .requestMatchers(HttpMethod.GET, "/events/calendar").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/events/calendar", "/events/my-participations", "/events/my-sessions").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/events/availability/*").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/events/**", "/groups/**")
                             .hasAnyAuthority(RoleEnum.ADMIN.value(), RoleEnum.TEACHER.value())
 

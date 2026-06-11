@@ -12,5 +12,7 @@ public enum FollowedReason {
     ABLE_TO_HELP,
 
     /** Interaction autorisée - l'utilisateur est également impacté par l'issue */
-    IMPACTED
+    IMPACTED,
+
+    IS_MANAGER
 }

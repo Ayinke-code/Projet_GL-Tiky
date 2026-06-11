@@ -2,7 +2,9 @@
   <div class="space-y-6">
     <!-- En-tête de la section -->
     <div class="flex items-center justify-between">
-      <h2 class="text-lg font-semibold text-gray-900">Demandes à compléter</h2>
+      <h2 class="text-lg font-semibold text-gray-900">
+        Demandes à compléter
+      </h2>
       <UBadge v-if="issues.length > 0" color="orange" variant="soft" size="sm">
         {{ issues.length }} action(s) requise(s)
       </UBadge>
@@ -28,7 +30,9 @@
       >
         <template #header>
           <div class="flex items-center justify-between">
-            <h3 class="font-bold text-gray-900">{{ issue.title }}</h3>
+            <h3 class="font-bold text-gray-900">
+              {{ issue.title }}
+            </h3>
             <span class="text-xs text-gray-500">Catégorie : {{ issue.categoryName }}</span>
           </div>
         </template>
@@ -55,7 +59,9 @@
 
           <!-- Aperçu de la description actuelle -->
           <div>
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Votre description actuelle</p>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+              Votre description actuelle
+            </p>
             <p class="text-sm text-gray-600 line-clamp-3 bg-gray-50 p-3 rounded border border-gray-100">
               {{ issue.description }}
             </p>
@@ -82,15 +88,20 @@
       </div>
     </div>
 
-    <!-- Modale de correction / finalisation -->
-    <UModal v-model:open="isModalOpen" :title="editingIssue?.rejectReason ? 'Mettre à jour la demande' : 'Finaliser la demande'">
+    <UModal
+      v-model:open="isModalOpen"
+      :title="editingIssue?.rejectReason ? 'Mettre à jour la demande' : 'Finaliser la demande'"
+    >
       <template #body>
         <div v-if="editingIssue" class="space-y-4">
-
           <!-- Cas 1 : Rappel de ce qu'il faut corriger (Superviseur) -->
           <div v-if="editingIssue.rejectReason" class="p-3 bg-orange-50 text-orange-800 rounded text-sm border border-orange-100 mb-4">
-            <span class="font-semibold block mb-1">À corriger : {{ editingIssue.rejectReason }}</span>
-            <span class="text-orange-700">{{ editingIssue.rejectComment }}</span>
+            <span class="font-semibold block mb-1">
+              À corriger : {{ editingIssue.rejectReason }}
+            </span>
+            <span class="text-orange-700">
+              {{ editingIssue.rejectComment }}
+            </span>
           </div>
 
           <!-- Cas 2 : Message informatif de finalisation (Créateur) -->
@@ -113,7 +124,9 @@
             <select v-model="formData.categoryId"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
                     required>
-              <option disabled value="">Sélectionnez une catégorie</option>
+              <option disabled value="">
+                Sélectionner une catégorie
+              </option>
               <option v-for="cat in categories" :key="cat.id" :value="cat.id">
                 {{ cat.name }}
               </option>
@@ -132,7 +145,7 @@
           />
           <UButton
             color="primary"
-            label="Enregistrer et soumettre"
+            :label="submitting ? 'Mise à jour...' : 'Soumettre'"
             icon="i-heroicons-paper-airplane"
             :loading="submitting"
             :disabled="!isFormValid"
@@ -190,9 +203,9 @@ const formData = ref({
 
 // Validation simple
 const isFormValid = computed(() => {
-  return formData.value.title.trim() !== '' &&
-    formData.value.description.trim() !== '' &&
-    formData.value.categoryId !== null
+  return formData.value.title.trim() !== ''
+    && formData.value.description.trim() !== ''
+    && formData.value.categoryId !== null
 })
 
 // Récupération des données
@@ -204,7 +217,7 @@ const fetchIssues = async () => {
 
     emit('has-issues', issues.value.length > 0)
   } catch (error) {
-    console.error("Erreur lors de la récupération des issues incomplètes :", error)
+    console.error('Erreur lors de la récupération des issues incomplètes :', error)
     emit('has-issues', false)
   } finally {
     loading.value = false
@@ -244,17 +257,32 @@ const submitCorrections = async () => {
 
     emit('issue-updated')
   } catch (error) {
-    console.error("Erreur lors de la mise à jour de l'issue :", error)
+    console.error('Erreur lors de la mise à jour de l\'issue :', error)
   } finally {
     submitting.value = false
   }
 }
 
-// Chargement des données au montage
-onMounted(async () => {
-  if (props.userId) {
-    await fetchCategories()
+const onNotificationReceived = async (e) => {
+  if (e.detail?.type === 'INCOMPLETE_ISSUE') {
     await fetchIssues()
   }
+}
+
+// Chargement des données au montage
+onMounted(async () => {
+  window.addEventListener('notification:received', onNotificationReceived)
+  if (props.userId) {
+    try {
+      await fetchCategories()
+    } catch (e) {
+      console.error('Erreur lors du chargement des catégories', e)
+    }
+    await fetchIssues()
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
 })
 </script>

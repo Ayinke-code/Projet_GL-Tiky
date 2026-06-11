@@ -1,10 +1,6 @@
 package fr.horizon.backend_api.service;
 
-import fr.horizon.backend_api.model.Conversation;
-import fr.horizon.backend_api.model.ConversationUser;
-import fr.horizon.backend_api.model.Issue;
-import fr.horizon.backend_api.model.Message;
-import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.enums.ConversationRole;
 import fr.horizon.backend_api.exception.ConversationNotFoundException;
 import fr.horizon.backend_api.exception.IssueNotFoundException;
@@ -173,8 +169,13 @@ public class ConversationService {
         }
 
         Message message = messageBuilder.build();
+        Message saved = messageRepository.save(message);
 
-        return messageRepository.save(message);
+        // Mettre à jour la date de modification de l'issue pour notifier les followers
+        issue.setUpdatedAt(java.time.LocalDateTime.now());
+        issueRepository.saveAndFlush(issue);
+
+        return saved;
     }
 
     /**
@@ -271,13 +272,53 @@ public class ConversationService {
 
     private Map<String, Object> toMessageMap(Message message) {
         Map<String, Object> messageMap = new HashMap<>();
+        Long conversationIssueId = message.getConversation() != null && message.getConversation().getIssue() != null
+                ? message.getConversation().getIssue().getId()
+                : null;
+        Long messageIssueId = message.getIssue() != null ? message.getIssue().getId() : null;
+        boolean isMerged = conversationIssueId != null && messageIssueId != null && !conversationIssueId.equals(messageIssueId);
+
         messageMap.put(MapKeys.ID, message.getId());
         messageMap.put(MapKeys.CONTENT, message.getContent());
+        messageMap.put(MapKeys.ISSUE_ID, messageIssueId);
         messageMap.put(MapKeys.USER, toUserMap(message.getUser()));
         messageMap.put(MapKeys.CREATED_AT, message.getCreatedAt());
+        messageMap.put(MapKeys.IS_MERGED, isMerged);
+        messageMap.put(MapKeys.ORIGINAL_ISSUE_ID, isMerged ? messageIssueId : null);
         messageMap.put(MapKeys.REPLY_TO_MESSAGE_ID, message.getReplyTo() != null ? message.getReplyTo().getId() : null);
         messageMap.put(MapKeys.REPLY_TO_MESSAGE, message.getReplyTo() != null ? toMessageSummaryMap(message.getReplyTo()) : null);
+        messageMap.put(MapKeys.DOCUMENTS, toDocumentList(message.getDocuments()));
         return messageMap;
+    }
+
+    /**
+     * Convertit une liste de documents en une liste de Maps
+     * sérialisables pour l'envoi WebSocket.
+     *
+     * @param documents liste des documents associés à un message
+     * @return liste des documents sous forme de Maps
+     */
+    private List<Map<String, Object>> toDocumentList(List<Document> documents) {
+        if (documents == null || documents.isEmpty()) return List.of();
+        return documents.stream()
+                .map(this::toDocumentMap)
+                .toList();
+    }
+
+    /**
+     * Convertit un document en Map contenant uniquement
+     * les informations nécessaires au frontend.
+     *
+     * @param document document à convertir
+     * @return représentation simplifiée du document
+     */
+    private Map<String, Object> toDocumentMap(Document document) {
+        Map<String, Object> documentMap = new HashMap<>();
+        documentMap.put(MapKeys.ID, document.getId());
+        documentMap.put(MapKeys.ORIGINAL_NAME, document.getOriginalName());
+        documentMap.put(MapKeys.CONTENT_TYPE, document.getContentType());
+        documentMap.put(MapKeys.SIZE, document.getSize());
+        return documentMap;
     }
 
     private Map<String, Object> toMessageSummaryMap(Message message) {

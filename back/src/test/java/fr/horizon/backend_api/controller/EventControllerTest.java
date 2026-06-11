@@ -2,6 +2,9 @@ package fr.horizon.backend_api.controller;
 
 import fr.horizon.backend_api.model.dto.EventInvitationResponseDto;
 import fr.horizon.backend_api.model.dto.EventResponseDto;
+import fr.horizon.backend_api.model.dto.FollowersInfoDto;
+import fr.horizon.backend_api.model.dto.MeetingDemandeDto;
+import fr.horizon.backend_api.model.dto.StatutInvitationParticipantDto;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.service.EventService;
 import fr.horizon.backend_api.service.JwtToken;
@@ -383,4 +386,223 @@ class EventControllerTest {
     }
 
 
+
+    @Test
+    void shouldGetMySessions_returns200() throws Exception {
+
+        EventResponseDto session = EventResponseDto.builder()
+                .id(1L)
+                .name("Audit Sprint 3")
+                .categoryType(CategoryType.AUDIT)
+                .categoryName("UI/UX")
+                .createdBy("Sophie ROUSSEAU")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(eventService.getMySessions(anyString())).thenReturn(List.of(session));
+        when(authentication.getName()).thenReturn("student@student.fr");
+
+        mockMvc.perform(get("/events/my-sessions").principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Audit Sprint 3"))
+                .andExpect(jsonPath("$[0].categoryType").value("AUDIT"));
+
+        verify(eventService).getMySessions("student@student.fr");
+    }
+
+    @Test
+    void shouldGetMyCalendarEvents_returns200() throws Exception {
+
+        EventResponseDto event = EventResponseDto.builder()
+                .id(1L)
+                .name("Soutenance")
+                .categoryType(CategoryType.DEFENSE)
+                .build();
+
+        when(eventService.getMyCalendarEvents(anyString())).thenReturn(List.of(event));
+        when(authentication.getName()).thenReturn("user@test.fr");
+
+        mockMvc.perform(get("/events/calendar").principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Soutenance"));
+
+        verify(eventService).getMyCalendarEvents("user@test.fr");
+    }
+
+    @Test
+    void shouldGetMyInvitations_returns200() throws Exception {
+
+        EventInvitationResponseDto invitation = EventInvitationResponseDto.builder()
+                .id(1L)
+                .name("Réunion")
+                .build();
+
+        when(eventService.getInvitationsToEvent(anyString())).thenReturn(List.of(invitation));
+        when(authentication.getName()).thenReturn("user@test.fr");
+
+        mockMvc.perform(get("/events/invitations/me").principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Réunion"));
+
+        verify(eventService).getInvitationsToEvent("user@test.fr");
+    }
+
+    @Test
+    void shouldGetMyParticipations_returns200() throws Exception {
+
+        EventResponseDto event = EventResponseDto.builder()
+                .id(2L)
+                .name("Audit Sprint 5")
+                .categoryType(CategoryType.AUDIT)
+                .build();
+
+        when(eventService.getMyParticipations(anyString())).thenReturn(List.of(event));
+        when(authentication.getName()).thenReturn("user@test.fr");
+
+        mockMvc.perform(get("/events/my-participations").principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Audit Sprint 5"));
+
+        verify(eventService).getMyParticipations("user@test.fr");
+    }
+
+    @Test
+    void shouldAskForMeeting_returns201() throws Exception {
+
+        EventResponseDto response = EventResponseDto.builder()
+                .id(10L)
+                .name("Demande de point")
+                .categoryType(CategoryType.ISSUE)
+                .build();
+
+        when(eventService.askForMeeting(any(), anyString(), eq(5L))).thenReturn(response);
+        when(authentication.getName()).thenReturn("student@test.fr");
+
+        mockMvc.perform(post("/events/meeting/ask/5")
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                            {
+                              "name": "Demande de point",
+                              "startDate": "2026-06-10T10:00:00",
+                              "endDate": "2026-06-10T11:00:00"
+                            }
+                            """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("Demande de point"));
+
+        verify(eventService).askForMeeting(any(), eq("student@test.fr"), eq(5L));
+    }
+
+    @Test
+    void shouldGetMyDemandsStatus_returns200() throws Exception {
+
+        MeetingDemandeDto dto = new MeetingDemandeDto();
+        dto.setIssueId(1L);
+        dto.setStatus(true);
+
+        when(eventService.getMyDemandsStatus(anyString())).thenReturn(List.of(dto));
+        when(authentication.getName()).thenReturn("student@test.fr");
+
+        mockMvc.perform(get("/events/me/demands").principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].issueId").value(1));
+
+        verify(eventService).getMyDemandsStatus("student@test.fr");
+    }
+
+    @Test
+    void shouldGetEventInvitationStatus_returns200() throws Exception {
+
+        StatutInvitationParticipantDto dto = StatutInvitationParticipantDto.builder()
+                .participantId(1L)
+                .participantName("Alice")
+                .isPresent(true)
+                .build();
+
+        when(eventService.getEventInvitationStatut(eq(1L), anyString())).thenReturn(List.of(dto));
+        when(authentication.getName()).thenReturn("teacher@test.fr");
+
+        mockMvc.perform(get("/events/1/invitations/status").principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].participantName").value("Alice"));
+
+        verify(eventService).getEventInvitationStatut(1L, "teacher@test.fr");
+    }
+
+    @Test
+    void shouldGetMyAvailabilities_returns200() throws Exception {
+        EventResponseDto dto = EventResponseDto.builder()
+                .id(1L).name("Disponible").build();
+
+        when(eventService.getMyAvailabilities(anyString())).thenReturn(List.of(dto));
+        when(authentication.getName()).thenReturn("user@test.fr");
+
+        mockMvc.perform(get("/events/availability/me").principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        verify(eventService).getMyAvailabilities("user@test.fr");
+    }
+
+    @Test
+    void shouldCreateAvailability_returns201() throws Exception {
+        EventResponseDto dto = EventResponseDto.builder()
+                .id(2L).name("Disponible").build();
+
+        when(eventService.createAvailability(any(), anyString())).thenReturn(dto);
+        when(authentication.getName()).thenReturn("user@test.fr");
+
+        mockMvc.perform(post("/events/availability")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"startDate\":\"2026-06-01T09:00:00\",\"endDate\":\"2026-06-01T11:00:00\"}")
+                        .principal(authentication))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(2));
+    }
+
+    @Test
+    void shouldDeleteAvailability_returns204() throws Exception {
+        when(authentication.getName()).thenReturn("user@test.fr");
+
+        mockMvc.perform(delete("/events/availability/1").principal(authentication))
+                .andExpect(status().isNoContent());
+
+        verify(eventService).deleteAvailability(1L, "user@test.fr");
+    }
+
+    @Test
+    void shouldGetUserAvailabilities_returns200() throws Exception {
+        EventResponseDto dto = EventResponseDto.builder()
+                .id(3L).name("Disponible").build();
+
+        when(eventService.getUserAvailabilities(5L)).thenReturn(List.of(dto));
+
+        mockMvc.perform(get("/events/users/5/availabilities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        verify(eventService).getUserAvailabilities(5L);
+    }
+
+    @Test
+    void shouldGetPossibleParticipants_returns200() throws Exception {
+        FollowersInfoDto follower = FollowersInfoDto.builder()
+                .id(7L).name("Follower").build();
+
+        when(eventService.getPossibleUserInterested(1L)).thenReturn(List.of(follower));
+
+        mockMvc.perform(get("/events/1/possible-participants"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Follower"));
+
+        verify(eventService).getPossibleUserInterested(1L);
+    }
 }

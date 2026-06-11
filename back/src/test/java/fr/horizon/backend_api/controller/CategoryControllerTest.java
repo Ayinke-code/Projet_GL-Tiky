@@ -10,14 +10,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.Authentication;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -110,10 +110,14 @@ class CategoryControllerTest {
 
         when(categoryService.findById(1L)).thenReturn(dto);
 
-        mockMvc.perform(post("/categories/followers/10/1"))
+        Authentication mockAuthentication = mock(Authentication.class);
+        when(mockAuthentication.getName()).thenReturn("manager@test.com");
+
+        mockMvc.perform(post("/categories/followers/10/1")
+                        .principal(mockAuthentication))
                 .andExpect(status().isOk());
 
-        verify(categoryService).addFollower(1L, 10L);
+        verify(categoryService).addFollower(1L, 10L, "manager@test.com");
         verify(categoryService).findById(1L);
     }
 

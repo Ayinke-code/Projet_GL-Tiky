@@ -44,6 +44,9 @@ export const useConversations = () => {
 
     return {
       id: msg.id,
+      issueId: msg.issueId ?? null,
+      isMerged: Boolean(msg.isMerged),
+      originalIssueId: msg.originalIssueId ?? null,
       userId: user?.id ?? null,
       auteur: user?.name || 'Anonyme',
       role: user?.role || ROLE.STUDENT,
@@ -61,7 +64,13 @@ export const useConversations = () => {
             date: replyToMessage.createdAt,
             contenu: replyToMessage.content ?? replyToMessage.contenu
           }
-        : null
+        : null,
+      documents: (msg.documents ?? []).map(doc => ({
+        id: doc.id,
+        originalName: doc.originalName,
+        contentType: doc.contentType,
+        size: doc.size
+      }))
     }
   }
 
@@ -107,7 +116,7 @@ export const useConversations = () => {
   /**
    * Envoie un message sur une issue.
    */
-  const sendIssueMessage = async (issueId, content, replyToMessageId = null) => {
+  const sendIssueMessage = async (issueId, content, files = [], replyToMessageId = null) => {
     try {
       // Initialiser/créer la conversation si elle n'existe pas
       const conversation = await initializeConversation(issueId)
@@ -119,16 +128,40 @@ export const useConversations = () => {
         body.replyToMessageId = replyToMessageId
       }
 
-      const message = await api(`/conversations/${conversationId}/messages`, {
+      const res = await api(`/conversations/${conversationId}/messages`, {
         method: 'POST',
         body
       })
+
+      let uploadedFiles = []
+
+      // Upload fichiers si présents
+      if (files?.length) {
+        const formData = new FormData()
+
+        files.forEach(file => {
+          formData.append('files', file)
+        })
+
+        uploadedFiles = await api(
+          `/documents/message/${res.id}`,
+          {
+            method: 'POST',
+            body: formData
+          }
+        )
+      }
+
+      const message = {
+        ...res,
+        documents: uploadedFiles
+      }
 
       return normalizeMessage(message)
     } catch (e) {
       console.error('Error sending message:', e)
       error.value = e?.data?.message || e?.message || 'UNKNOWN_ERROR'
-      throw e
+      return e
     }
   }
 

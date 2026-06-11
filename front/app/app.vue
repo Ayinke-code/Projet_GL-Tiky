@@ -1,20 +1,16 @@
 <template>
   <div class="flex h-screen bg-gray-50">
-
     <!-- Sidebar -->
     <Sidebar v-if="!isAuthPage" />
 
-    <div class="flex flex-col flex-1">
-
+    <div class="flex flex-col flex-1 relative">
       <!-- Header -->
       <Header v-if="!isAuthPage" />
 
       <main class="flex-1 overflow-y-auto">
         <NuxtPage />
       </main>
-
     </div>
-
   </div>
 </template>
 

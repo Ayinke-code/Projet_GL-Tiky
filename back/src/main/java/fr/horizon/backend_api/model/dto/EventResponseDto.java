@@ -24,7 +24,20 @@ public class EventResponseDto {
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private Set<String> participantNames;
-    private List<ProjectGroupRefDto> projectGroups;
+    private List<ParticipantInfoDto> participants;
+    private List<ProjectGroupRefDto> projectGroups;    /** true si l'événement est validé/confirmé, false si en attente de confirmation (RDV non encore accepté) */
+    private Boolean validated;    /** Statut de participation de l’utilisateur courant pour les events de type ISSUE : null=en attente, true=accepté, false=refusé */
+    private Boolean myParticipationStatus;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ParticipantInfoDto {
+        private String name;
+        /** null = en attente, true = accepté, false = refusé */
+        private Boolean hasAccepted;
+    }
 
     @Data
     @Builder
@@ -35,6 +48,15 @@ public class EventResponseDto {
         private String name;
         private String categoryName;
         private String parentGroupName;
-        private Set<String> teachers;
+        private Set<TeacherRefDto> teachers;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TeacherRefDto {
+        private String name;
+        private String teacherType;
     }
 }

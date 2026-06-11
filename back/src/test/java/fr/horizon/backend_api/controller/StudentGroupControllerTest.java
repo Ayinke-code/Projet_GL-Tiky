@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -206,5 +207,117 @@ class StudentGroupControllerTest {
                 .andExpect(status().isOk());
 
         verify(studentGroupService).deleteById(1L);
+    }
+
+    @Test
+    void shouldFindGroupById_returns200() throws Exception {
+
+        StudentGroupDto dto = StudentGroupDto.builder()
+                .id(1L)
+                .name("Groupe LD")
+                .type(GroupType.OPTION)
+                .categoryId(10L)
+                .categoryName("Logiciel & DevOps")
+                .build();
+
+        when(studentGroupService.findById(1L)).thenReturn(dto);
+
+        mockMvc.perform(get("/groups/1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.name").value("Groupe LD"))
+                .andExpect(jsonPath("$.type").value("OPTION"));
+
+        verify(studentGroupService).findById(1L);
+    }
+
+    @Test
+    void shouldFindMyGroups_returns200() throws Exception {
+
+        StudentGroupDto dto = StudentGroupDto.builder()
+                .id(1L)
+                .name("Groupe LD")
+                .type(GroupType.OPTION)
+                .categoryId(10L)
+                .categoryName("Logiciel & DevOps")
+                .build();
+
+        when(studentGroupService.findMyGroups(anyString(), any(GroupType.class))).thenReturn(List.of(dto));
+        when(authentication.getName()).thenReturn("student@student.fr");
+
+        mockMvc.perform(get("/groups/my-groups?type=OPTION").principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].name").value("Groupe LD"))
+                .andExpect(jsonPath("$[0].type").value("OPTION"));
+
+        verify(studentGroupService).findMyGroups("student@student.fr", GroupType.OPTION);
+    }
+
+    @Test
+    void shouldUpdateGroup_returns200() throws Exception {
+
+        StudentGroupDto dto = StudentGroupDto.builder()
+                .id(1L)
+                .name("Groupe LD Mis à jour")
+                .type(GroupType.OPTION)
+                .categoryId(10L)
+                .categoryName("Logiciel & DevOps")
+                .build();
+
+        when(studentGroupService.update(any(Long.class), any(StudentGroupCreateDto.class), anyString())).thenReturn(dto);
+        when(authentication.getName()).thenReturn("teacher@teacher.fr");
+
+        mockMvc.perform(put("/groups/1")
+                        .principal(authentication)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Groupe LD Mis à jour",
+                                  "type": "OPTION",
+                                  "categoryId": 10,
+                                  "memberIds": [1, 2, 3]
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Groupe LD Mis à jour"));
+
+        verify(studentGroupService).update(any(Long.class), any(StudentGroupCreateDto.class), anyString());
+    }
+
+    @Test
+    void shouldAssignTeacher_returns200() throws Exception {
+
+        StudentGroupDto dto = StudentGroupDto.builder()
+                .id(1L)
+                .name("Groupe LD")
+                .type(GroupType.OPTION)
+                .build();
+
+        when(studentGroupService.assignTeacher(1L, 5L)).thenReturn(dto);
+
+        mockMvc.perform(put("/groups/1/teachers/5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1));
+
+        verify(studentGroupService).assignTeacher(1L, 5L);
+    }
+
+    @Test
+    void shouldUnassignTeacher_returns200() throws Exception {
+
+        StudentGroupDto dto = StudentGroupDto.builder()
+                .id(1L)
+                .name("Groupe LD")
+                .type(GroupType.OPTION)
+                .build();
+
+        when(studentGroupService.unassignTeacher(1L, 5L)).thenReturn(dto);
+
+        mockMvc.perform(delete("/groups/1/teachers/5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1));
+
+        verify(studentGroupService).unassignTeacher(1L, 5L);
     }
 }

@@ -52,6 +52,33 @@
       <div v-if="event?.extendedProps?.description" class="p-3 bg-slate-50 rounded-lg border border-slate-100 text-xs text-slate-600 leading-relaxed italic">
         {{ event.extendedProps.description }}
       </div>
+
+      <!-- Participants -->
+      <div v-if="event?.extendedProps?.participants?.length" class="mt-1 border-t border-slate-100 pt-3">
+        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-2 flex items-center gap-1.5">
+          <i class="fa-solid fa-users text-xs" :class="theme.iconText"></i>
+          Participants
+        </span>
+        <div class="flex flex-col gap-1.5 mt-1.5">
+          <div
+            v-for="p in event.extendedProps.participants"
+            :key="p.name"
+            class="flex items-center justify-between"
+          >
+            <span class="text-xs text-slate-700 font-medium">{{ p.name }}</span>
+            <span
+              :class="[
+                'text-[10px] font-semibold px-2 py-0.5 rounded-full',
+                p.hasAccepted === true  ? 'bg-emerald-100 text-emerald-700' :
+                p.hasAccepted === false ? 'bg-red-100 text-red-600' :
+                                          'bg-amber-100 text-amber-700'
+              ]"
+            >
+              {{ p.hasAccepted === true ? 'Accepté' : p.hasAccepted === false ? 'Refusé' : 'En attente' }}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div v-if="event?.extendedProps?.groups?.length" class="mt-2 border-t border-slate-100 pt-3">
@@ -70,7 +97,24 @@
       </div>
     </div>
 
-    <div class="flex justify-end mt-4 border-t border-slate-100 pt-4">
+    <div class="flex justify-end mt-4 border-t border-slate-100 pt-4 gap-2">
+      <Button
+        v-if="event?.extendedProps?.type === 'ISSUE' && event?.extendedProps?.isOwner"
+        @click="confirmCancel"
+        color="error"
+        label="Annuler ce RDV"
+        variant="subtle"
+        size="sm"
+      />
+      <Button
+        v-if="event?.extendedProps?.type === 'AVAILABILITY'"
+        @click="showDeleteModal = true"
+        color="error"
+        label="Supprimer"
+        variant="subtle"
+        size="sm"
+        rounded
+      />
       <Button
         @click="$emit('close')"
         color="secondary"
@@ -81,18 +125,40 @@
       />
     </div>
 
+    <ConfirmModal
+      v-model:open="showDeleteModal"
+      title="Suppression"
+      description="Supprimer ce créneau de disponibilité ?"
+      @confirm="emit('delete', event?.id)"
+    />
+
+    <ConfirmModal
+      v-model:open="showCancelModal"
+      title="Annuler le rendez-vous"
+      description="Annuler ce rendez-vous ? Les participants seront notifiés."
+      @confirm="emit('cancel', event?.id)"
+    />
+
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import Button from '~/components/ui/Button.vue'
+import ConfirmModal from '~/components/ui/ConfirmModal.vue'
 
 const props = defineProps({
   event: Object
 })
 
-defineEmits(['close'])
+const emit = defineEmits(['close', 'delete', 'cancel'])
+
+const showDeleteModal = ref(false)
+const showCancelModal = ref(false)
+
+const confirmCancel = () => {
+  showCancelModal.value = true
+}
 
 const cleanTypeLabel = (type) => {
   switch(type) {
@@ -100,6 +166,7 @@ const cleanTypeLabel = (type) => {
     case 'AUDIT': return 'Audit'
     case 'MEETING': return 'Réunion'
     case 'ISSUE': return 'Rendez-vous Ticket'
+    case 'AVAILABILITY': return 'Disponible'
     default: return 'Événement'
   }
 }
@@ -111,6 +178,7 @@ const theme = computed(() => {
     case 'DEFENSE': return { badge: 'bg-emerald-100 text-emerald-700 border-emerald-200', iconBg: 'bg-emerald-50', iconText: 'text-emerald-600', dot: 'bg-emerald-500' }
     case 'MEETING': return { badge: 'bg-amber-100 text-amber-700 border-amber-200', iconBg: 'bg-amber-50', iconText: 'text-amber-600', dot: 'bg-amber-500' }
     case 'ISSUE': return { badge: 'bg-rose-100 text-rose-700 border-rose-200', iconBg: 'bg-rose-50', iconText: 'text-rose-600', dot: 'bg-rose-500' }
+    case 'AVAILABILITY': return { badge: 'bg-teal-100 text-teal-700 border-teal-200', iconBg: 'bg-teal-50', iconText: 'text-teal-600', dot: 'bg-teal-500' }
     default: return { badge: 'bg-gray-100 text-gray-600 border-gray-200', iconBg: 'bg-gray-50', iconText: 'text-gray-600', dot: 'bg-gray-500' }
   }
 })

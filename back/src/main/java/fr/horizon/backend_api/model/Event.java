@@ -35,7 +35,7 @@ public class Event extends BaseEntity {
     private CategoryType categoryType; // AUDIT, DEFENSE, MEETING, ISSUE
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id", nullable = false)
+    @JoinColumn(name = "category_id", nullable = true)
     private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -52,6 +52,7 @@ public class Event extends BaseEntity {
     @Column
     private LocalDateTime endDate;
 
+    @Builder.Default
     @Column
     private Boolean validated = true;
 

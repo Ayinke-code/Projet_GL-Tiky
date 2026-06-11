@@ -40,9 +40,10 @@
             <!-- Actions : droite -->
             <div class="flex items-center justify-end gap-3 w-1/3">
               <USelectMenu
+                :id="'selector-assignation-teacher-' + req.id"
                 v-model="selectedTeachers[req.id]"
                 :items="formattedTeachers"
-                placeholder="Assigner à..."
+                placeholder="Affecter à..."
                 value-key="value"
                 label-key="label"
                 class="w-56">
@@ -58,19 +59,25 @@
 
               <div class="flex flex-col gap-1.5">
                 <UButton
-                  label="Assigner"
+                  :id="'btn-affecter-manager-' + req.id"
+                  label="Affecter"
                   icon="i-heroicons-paper-airplane"
                   :disabled="!selectedTeachers[req.id] || loadingIds.has(req.id)"
                   :loading="loadingIds.has(req.id)"
                   @click="openConfirm(req)"
+                  color="green"
+                  variant="outline"
+                  class="transition-all duration-200 hover:bg-green-600 hover:text-white border-2 border-green-500 text-green-600 font-bold"
                 />
                 <UButton
                   label="Incomplet"
                   icon="i-heroicons-x-mark"
-                  class="bg-red-600 hover:bg-red-700 text-white border-0"
                   :disabled="loadingIncompleteIds.has(req.id)"
                   :loading="loadingIncompleteIds.has(req.id)"
                   @click="openIncompleteConfirm(req)"
+                  color="red"
+                  variant="outline"
+                  class="transition-all duration-200 hover:bg-red-600 hover:text-white border-2 border-red-500 text-red-600 font-bold"
                 />
               </div>
             </div>
@@ -109,7 +116,7 @@
     <UModal v-model:open="isConfirmOpen" title="Confirmer l'assignation">
       <template #body>
         <p class="text-gray-600">
-          Voulez-vous vraiment assigner
+          Voulez-vous vraiment affecter
           <strong class="text-gray-900">{{ getSelectedTeacherName }}</strong>
           pour traiter le ticket :
         </p>
@@ -120,7 +127,7 @@
       <template #footer>
         <div class="flex justify-end gap-3">
           <UButton color="neutral" variant="ghost" label="Annuler" @click="isConfirmOpen = false"/>
-          <UButton color="primary" label="Confirmer l'envoi" @click="confirmAssignation"/>
+          <UButton  id="btn-confirm-assignation" color="primary" label="Confirmer l'envoi" @click="confirmAssignation"/>
         </div>
       </template>
     </UModal>
@@ -365,5 +372,20 @@ const formatDate = (d) => {
   return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
-onMounted(loadData)
+const MANAGER_NOTIFICATION_TYPES = ['NEW_ISSUE_IN_CATEGORIE', 'RESPONSE_TO_MANAGER_ISSUE']
+
+const onNotificationReceived = async (e) => {
+  if (MANAGER_NOTIFICATION_TYPES.includes(e.detail?.type)) {
+    await loadData()
+  }
+}
+
+onMounted(async () => {
+  await loadData()
+  window.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notification:received', onNotificationReceived)
+})
 </script>

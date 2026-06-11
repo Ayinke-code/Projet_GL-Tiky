@@ -20,21 +20,16 @@
                     <span>
                         {{ formatDateTime(categoryRequest.createdAt) }}
                     </span>
-
-                    <span class="w-1 h-1 rounded-full bg-gray-400"></span>
-
-                    <span>
-                        ID #{{ categoryRequest.id }}
-                    </span>
                 </div>
             </div>
 
             <!-- Badge utilisateur -->
             <template v-if="ready && categoryRequest.requesterId === user?.id">
                 <div
+                    :id="'category-card-proprio-'+categoryRequest.name"
                     class="text-[10px] bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-bold border border-blue-200">
                     <i class="fa-solid fa-crown mr-1"></i>
-                    PROPRIÉTAIRE
+                  PROPRIÉTAIRE
                 </div>
             </template>
 
@@ -52,6 +47,7 @@
             class="flex gap-2 mt-auto">
 
             <button @click.stop="handleAcceptCategoryRequest"
+                    id="btn-validate-category"
                 class="text-[10px] bg-emerald-600 text-white px-3 py-1 rounded-full font-bold hover:bg-green-800 transition-all cursor-pointer">
                 <i class="fa-solid fa-check mr-1"></i>
                 Accepter
@@ -71,7 +67,7 @@
     <Modal v-model:open="isDetailOpen" title="Détails de la catégorie">
 
         <!-- Protection rendu -->
-        <div v-if="categoryRequest" class="rounded-xl shadow-2xl w-full max-w-lg p-6">
+        <div v-if="categoryRequest">
 
             <!-- Titre -->
             <h2 class="text-xl font-bold mb-2">
@@ -80,12 +76,12 @@
 
             <!-- Nom -->
             <p class="text-indigo-600 text-sm mb-6">
-                {{ categoryRequest.name }}
+                <span class="text-sm text-gray-500 mb-6">Nom: </span>{{ categoryRequest.name }}
             </p>
 
             <!-- Description (optionnel) -->
             <p v-if="categoryRequest?.description" class="text-indigo-600 text-sm mb-6">
-                {{ categoryRequest.description }}
+                <span class="text-sm text-gray-500 mb-6">Description: </span>{{ categoryRequest.description }}
             </p>
 
             <!-- Owner -->

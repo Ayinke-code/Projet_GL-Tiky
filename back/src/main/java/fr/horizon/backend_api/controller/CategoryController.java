@@ -5,7 +5,9 @@ import fr.horizon.backend_api.model.dto.CategoryDto;
 import fr.horizon.backend_api.model.dto.CategoryCreateDto;
 import fr.horizon.backend_api.service.CategoryService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -74,8 +76,8 @@ public class CategoryController {
      */
     @PreAuthorize("hasAnyAuthority('ADMIN','TEACHER')")
     @PostMapping("/followers/{idUser}/{idCategory}")
-    public CategoryDetailsDto addCategoryFollower(@PathVariable Long idUser, @PathVariable Long idCategory) {
-        categoryService.addFollower(idCategory, idUser);
+    public CategoryDetailsDto addCategoryFollower(@PathVariable Long idUser, @PathVariable Long idCategory, Authentication authentication) {
+        categoryService.addFollower(idCategory, idUser, authentication.getName());
         return categoryService.findById(idCategory);
     }
 
@@ -89,6 +91,20 @@ public class CategoryController {
     @PostMapping
     public CategoryDto createCategory(@RequestBody CategoryCreateDto dto) {
         return categoryService.createCategory(dto);
+    }
+
+    /**
+     * Permet à un professeur de demander son retrait d'une catégorie.
+     * Une notification est envoyée au propriétaire de la catégorie.
+     *
+     * @param id             identifiant de la catégorie
+     * @param authentication utilisateur authentifié
+     */
+    @PreAuthorize("hasAuthority('TEACHER')")
+    @PostMapping("/{id}/removal-request")
+    public ResponseEntity<Void> requestRemoval(@PathVariable Long id, Authentication authentication) {
+        categoryService.requestRemoval(id, authentication.getName());
+        return ResponseEntity.ok().build();
     }
 
     /**

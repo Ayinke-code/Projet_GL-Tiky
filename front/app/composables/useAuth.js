@@ -1,5 +1,9 @@
+import {useNotifications} from "~/composables/useNotifications.js";
+
 export const useAuth = () => {
     const api = useApi()
+
+    const { disconnect } = useNotifications()
 
     /**
      * État global de l'utilisateur connecté.
@@ -32,6 +36,10 @@ export const useAuth = () => {
         wsToken.value = null
         if (process.client) localStorage.removeItem('wsToken')
         ready.value = true
+
+        if (process.client) {
+          disconnect()
+        }
     }
 
     /**

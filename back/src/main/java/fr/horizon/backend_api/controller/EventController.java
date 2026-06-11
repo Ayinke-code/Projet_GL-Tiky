@@ -1,12 +1,15 @@
 package fr.horizon.backend_api.controller;
 import fr.horizon.backend_api.model.dto.*;
+import fr.horizon.backend_api.model.dto.AvailabilityRequestDto;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.service.EventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -121,9 +124,37 @@ public class EventController {
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasAuthority('TEACHER') or hasAuthority('ADMIN')")
     @DeleteMapping("/{id}")
     public void deleteEvent(@PathVariable Long id) {
         eventService.deleteById(id);
+    }
+
+    /**
+     * Retourne les sessions de l'utilisateur connecté (rôle-aware) :
+     * - STUDENT : events des groupes + RDV (ISSUE) auxquels il est convoqué
+     * - TEACHER/ADMIN : events des groupes enseignés + RDV créés ou auxquels il participe
+     *
+     * @param authentication contexte de sécurité Spring
+     * @return liste des événements triés par date
+     */
+    @GetMapping("/my-sessions")
+    public ResponseEntity<List<EventResponseDto>> mySessions(Authentication authentication) {
+        String email = authentication.getName();
+        return ResponseEntity.ok(eventService.getMySessions(email));
+    }
+
+    /**
+     * Retourne les événements auxquels l'utilisateur connecté participe (invitations acceptées).
+     * Exclut les événements créés par l'utilisateur lui-même.
+     *
+     * @param authentication contexte de sécurité Spring
+     * @return liste des événements acceptés triés par date
+     */
+    @GetMapping("/my-participations")
+    public ResponseEntity<List<EventResponseDto>> myParticipations(Authentication authentication) {
+        String email = authentication.getName();
+        return ResponseEntity.ok(eventService.getMyParticipations(email));
     }
 
     /**
@@ -259,6 +290,68 @@ public class EventController {
         String email = authentication.getName();
         List<EventResponseDto> calendarEvents = eventService.getMyCalendarEvents(email);
         return ResponseEntity.ok(calendarEvents);
+    }
+
+    /**
+     * Déclare une plage de disponibilité pour l'utilisateur connecté.
+     * POST /events/availability
+     */
+    @PostMapping("/availability")
+    public ResponseEntity<EventResponseDto> createAvailability(
+            @RequestBody AvailabilityRequestDto request,
+            Authentication authentication) {
+
+        EventResponseDto response = eventService.createAvailability(request, authentication.getName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Récupère toutes les disponibilités déclarées par l'utilisateur connecté.
+     * GET /events/availability/me
+     */
+    @GetMapping("/availability/me")
+    public ResponseEntity<List<EventResponseDto>> getMyAvailabilities(Authentication authentication) {
+        List<EventResponseDto> response = eventService.getMyAvailabilities(authentication.getName());
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Supprime une disponibilité appartenant à l'utilisateur connecté.
+     * DELETE /events/availability/{id}
+     */
+    @DeleteMapping("/availability/{id}")
+    public ResponseEntity<Void> deleteAvailability(
+            @PathVariable Long id,
+            Authentication authentication) {
+
+        eventService.deleteAvailability(id, authentication.getName());
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Récupère les disponibilités déclarées par un utilisateur spécifique.
+     * Utilisé par le front pour vérifier la disponibilité avant d'envoyer une invitation.
+     * GET /events/users/{userId}/availabilities
+     */
+    @GetMapping("/users/{userId}/availabilities")
+    public ResponseEntity<List<EventResponseDto>> getUserAvailabilities(@PathVariable Long userId) {
+        List<EventResponseDto> response = eventService.getUserAvailabilities(userId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Retourne les events (AUDIT, DEFENSE, RDV) d'un utilisateur qui chevauchent un créneau donné.
+     * Utilisé par le front pour détecter les conflits d'agenda avant de proposer un RDV.
+     * GET /events/users/{userId}/busy-slots?start=...&end=...
+     */
+    @GetMapping("/users/{userId}/busy-slots")
+    public ResponseEntity<List<EventResponseDto>> getUserBusySlots(
+            @PathVariable Long userId,
+            @RequestParam String start,
+            @RequestParam String end) {
+        LocalDateTime startDt = LocalDateTime.parse(start);
+        LocalDateTime endDt = LocalDateTime.parse(end);
+        return ResponseEntity.ok(eventService.getUserBusySlots(userId, startDt, endDt));
     }
 }
 

@@ -10,6 +10,7 @@
           </label>
 
           <input
+            id="categorie-name-teacher"
             v-model="formData.name"
             type="text"
             placeholder="Ex: Mathématiques"
@@ -24,6 +25,7 @@
           </label>
 
           <input
+            id="categorie-subject-teacher"
             v-model="formData.subject"
             type="text"
             placeholder="Ex: Algèbre"
@@ -37,6 +39,7 @@
       <div class="flex gap-3 pt-2">
 
         <button
+          id="validate-categorie"
           type="submit"
           class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-all cursor-pointer"
         >
@@ -59,6 +62,11 @@ const formData = ref({
   name: '',
   subject: ''
 })
+
+const resetForm = () => {
+  formData.value.name = ''
+  formData.value.subject = ''
+}
 
 const submitForm = () => {
   emit('submit', {

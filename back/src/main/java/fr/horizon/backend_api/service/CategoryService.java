@@ -1,20 +1,20 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.exception.CategoryNameAlreadyExistsOfThisTypeException;
 import fr.horizon.backend_api.model.enums.CategoryType;
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.model.*;
 import fr.horizon.backend_api.model.dto.*;
 import fr.horizon.backend_api.model.enums.CategoryStatus;
+import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.RoleEnum;
-import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.CategoryRequestRepository;
-import fr.horizon.backend_api.repository.IssueRepository;
-import fr.horizon.backend_api.repository.UserRepository;
+import fr.horizon.backend_api.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,6 +33,9 @@ public class CategoryService {
     private final UserRepository userRepository;
     private final CategoryRequestRepository categoryRequestRepository;
     private final IssueRepository issueRepository;
+    private final IssueService issueService;
+    private final DeletionCategoryRequestRepository deletionCategoryRequestRepository;
+    private final NotificationService notificationService;
 
     /**
      * Récupère toutes les catégories.
@@ -72,9 +75,18 @@ public class CategoryService {
         User owner = userRepository.findById(dto.getOwnerId())
                 .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
 
+        // Check si une catégorie n'existe pas déja avec ce nom et de type ISSUE
+        if (categoryRepository.existsByNameIgnoreCaseAndCategoryType(
+                dto.getName(),
+                CategoryType.ISSUE)) {
+            throw new CategoryNameAlreadyExistsOfThisTypeException(dto.getName());
+        }
+
         Category category = Category.builder()
                 .name(dto.getName())
                 .subject(dto.getSubject())
+                //correction
+                .categoryType(CategoryType.ISSUE)
                 .status(CategoryStatus.ACTIVE)
                 .owner(owner)
                 .build();
@@ -117,10 +129,13 @@ public class CategoryService {
      * Ajoute un follower à une catégorie.
      */
     @Transactional
-    public void addFollower(Long idCategory, Long idUser) {
+    public void addFollower(Long idCategory, Long idUser, String initiator) {
 
         User user = userRepository.findById(idUser)
                 .orElseThrow(() -> new EntityNotFoundException("User not found " + idUser));
+
+        User actor = userRepository.findByEmail(initiator)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         Category category = categoryRepository.findById(idCategory)
                 .orElseThrow(() -> new CategoryNotFoundException(idCategory));
@@ -140,6 +155,38 @@ public class CategoryService {
         category.getFollowers().add(user);
 
         categoryRepository.save(category);
+
+        if (actor.getId().equals(category.getOwner().getId())) {
+            notificationService.managerAddingFollowerNotification(user, category);
+        } else if (actor.getId().equals(user.getId())) {
+            notificationService.notifyNewFollowerCategory(user, category);
+        }
+    }
+
+    /**
+     * Envoie une demande de retrait d'une catégorie par un professeur au propriétaire.
+     *
+     * @param categoryId identifiant de la catégorie
+     * @param email      email du professeur demandant le retrait
+     * @throws CategoryNotFoundException si la catégorie n'existe pas
+     * @throws EntityNotFoundException   si l'utilisateur n'existe pas
+     * @throws IllegalStateException     si l'utilisateur n'est pas follower
+     */
+    @Transactional
+    public void requestRemoval(Long categoryId, String email) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new CategoryNotFoundException(categoryId));
+
+        User requester = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + email));
+
+        if (!category.getFollowers().contains(requester)) {
+            throw new IllegalStateException("User is not a follower of this category");
+        }
+
+        notificationService.categoryRemovalRequestNotification(category.getOwner(), requester, category);
+
+        notificationService.managerAddingFollowerNotification(requester, category);
     }
 
     /**
@@ -152,12 +199,17 @@ public class CategoryService {
     public void deleteById(Long id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new CategoryNotFoundException(id));
+        //notification
+        notificationService.notifyFollowersCategoryDeleted(category);
 
-        List<CategoryRequest> requests = categoryRequestRepository.findAllByCategory(category);
-        List<Issue> issues = issueRepository.findByCategoryId(category.getId());
+        // Délègue la suppression des issues et leurs dépendances
+        issueService.deleteAllByCategory(category);
 
-        issueRepository.deleteAll(issues);
-        categoryRequestRepository.deleteAll(requests);
+        // Supprime les demandes de catégorie
+        categoryRequestRepository.deleteAllByCategory(category);
+
+        // suppresion des demandes de désinsciption
+        deletionCategoryRequestRepository.deleteAllByCategory(category);
 
         categoryRepository.delete(category);
     }
@@ -190,13 +242,28 @@ public class CategoryService {
                 .categoryType(category.getCategoryType())
                 .ownerName(category.getOwner() != null ? category.getOwner().getName() : null)
                 .ownerId(category.getOwner() != null ? category.getOwner().getId() : null)
+                .followerIds(category.getFollowers() != null ?
+                        category.getFollowers().stream().map(User::getId).collect(Collectors.toSet()) :
+                        new HashSet<>())
                 .build();
     }
 
     /**
      * Convertit l'entité User → DTO comprenant: id, name, roles.
      */
-    private UserRefDto toUserRefDto(User user) {
+    private UserRefDto toUserRefDto(User user, Category category) {
+
+        /**
+         * Vérifie si l'utilisateur est manager d'au moins une issue
+         * ouverte appartenant à la catégorie courante.
+         */
+        boolean isIssueManagerInCategory = issueRepository
+                .existsByManagerIdAndStatusAndCategoryId(
+                        user.getId(),
+                        IssueStatus.OUVERT,
+                        category.getId()
+                );
+
         return UserRefDto.builder()
                 .id(user.getId())
                 .name(user.getName())
@@ -206,6 +273,7 @@ public class CategoryService {
                                 .map(Role::getName)
                                 .collect(Collectors.toSet())
                 )
+                .isIssueManagerInCategory(isIssueManagerInCategory)
                 .build();
     }
 
@@ -218,7 +286,7 @@ public class CategoryService {
                 .followers(
                         category.getFollowers()
                                 .stream()
-                                .map(this::toUserRefDto)
+                                .map(user -> toUserRefDto(user, category))
                                 .toList()
                 )
                 .build();

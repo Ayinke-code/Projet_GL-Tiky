@@ -120,8 +120,9 @@ export const useCategories = () => {
 
       return created
     } catch (e) {
-      error.value = e?.data?.message || 'UNKNOWN_ERROR'
-      return null
+      return {
+        error: `Catégorie existe déja pour le type Issue`
+      }
     }
   }
 
@@ -138,6 +139,17 @@ export const useCategories = () => {
     categories.value = categories.value.filter(c => c.id !== id)
   }
 
+  /**
+ * Envoie une demande de retrait d'une catégorie au propriétaire.
+ *
+ * @param categoryId identifiant de la catégorie
+ */
+  const requestCategoryRemoval = async (categoryId) => {
+    await api(`/categories/${categoryId}/removal-request`, {
+      method: 'POST'
+    })
+  }
+
   return {
     categories,
     category,
@@ -148,6 +160,7 @@ export const useCategories = () => {
     deleteCategory,
     deleteTeacherFollower,
     addTeacherFollower,
+    requestCategoryRemoval,
     error
   }
 }

@@ -2,24 +2,22 @@ package fr.horizon.backend_api.service;
 
 import fr.horizon.backend_api.exception.CategoryNotFoundException;
 import fr.horizon.backend_api.exception.IssueNotFoundException;
-import fr.horizon.backend_api.model.Category;
-import fr.horizon.backend_api.model.Issue;
-import fr.horizon.backend_api.model.RequestManager;
-import fr.horizon.backend_api.model.User;
+import fr.horizon.backend_api.model.*;
+import fr.horizon.backend_api.model.dto.DocumentDto;
 import fr.horizon.backend_api.model.dto.IssueCreateDto;
 import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.dto.RequestManagerDto;
+import fr.horizon.backend_api.model.enums.FollowedReason;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
-import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.IssueRepository;
-import fr.horizon.backend_api.repository.RequestManagerRepository;
-import fr.horizon.backend_api.repository.UserRepository;
+import fr.horizon.backend_api.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -44,11 +42,20 @@ public class IssueService {
     private final CategoryRepository categoryRepository;
     private final ConversationService conversationService;
     private final RequestManagerRepository requestManagerRepository;
+    private final IssueFollowerRepository issueFollowerRepository;
     private final IssueFollowerService issueFollowerService;
+    private final NotificationService notificationService;
+    private final DocumentService documentService;
+    private final EventRepository eventRepository;
+    private final MergeRequestRepository mergeRequestRepository;
+    private final IssueRelationRepository issueRelationRepository;
 
-    // Common exception messages
     private static final String USER_NOT_FOUND = "User not found";
 
+    private static final String OWNER_NF = "Owner not found";
+
+    @Value("${app.upload-dir}")
+    private String uploadDir;
     /**
      * Retourne la liste de toutes les issues.
      *
@@ -86,23 +93,67 @@ public class IssueService {
     }
 
     /**
-     * Crée une nouvelle issue.
-     * <p>
-     * L'issue est associée à un utilisateur (owner) via son email
-     * et à une catégorie existante.
-     * Crée automatiquement une conversation pour cette issue.
+     * Crée une issue sans fichiers attachés.
      *
      * @param dto   données de création de l'issue
      * @param email email de l'utilisateur créateur
      * @return issue créée sous forme de DTO
-     * @throws RuntimeException si l'utilisateur n'existe pas
-     * @throws CategoryNotFoundException si la catégorie n'existe pas
      */
     @Transactional
     public IssueDto createIssue(IssueCreateDto dto, String email) {
+        return createIssueInternal(dto, List.of(), email);
+    }
+
+    /**
+     * Crée une issue avec fichiers attachés.
+     *
+     * @param dto   données de création de l'issue
+     * @param files fichiers à attacher à l'issue
+     * @param email email de l'utilisateur créateur
+     * @return issue créée sous forme de DTO
+     */
+    @Transactional
+    public IssueDto createIssue(IssueCreateDto dto, List<MultipartFile> files, String email) {
+        return createIssueInternal(dto, files, email);
+    }
+
+    /**
+     * Logique commune de création d'une issue.
+     * <p>
+     * Construit l'issue, la persiste, abonne automatiquement le créateur,
+     * puis exécute les actions post-création (gestionnaire, notification,
+     * conversation, fichiers).
+     *
+     * @param dto   données de création de l'issue
+     * @param files fichiers à attacher (peut être vide)
+     * @param email email de l'utilisateur créateur
+     * @return issue créée sous forme de DTO
+     */
+    private IssueDto createIssueInternal(IssueCreateDto dto, List<MultipartFile> files, String email) {
+        Issue issue = buildIssue(dto, email);
+        issueRepository.save(issue);
+        autoFollowCreator(issue);
+        postCreateActions(dto, files, issue);
+        return toDto(issue);
+    }
+
+    /**
+     * Construit une instance {@link Issue} à partir des données de création.
+     * <p>
+     * Récupère le créateur et la catégorie depuis la base de données,
+     * puis initialise le statut de l'issue selon qu'il s'agit d'un cas
+     * incomplet ou non.
+     *
+     * @param dto   données de création de l'issue
+     * @param email email de l'utilisateur créateur
+     * @return instance Issue non encore persistée
+     * @throws EntityNotFoundException   si le créateur n'est pas trouvé
+     * @throws CategoryNotFoundException si la catégorie n'est pas trouvée
+     */
+    private Issue buildIssue(IssueCreateDto dto, String email) {
 
         User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
+                .orElseThrow(() -> new EntityNotFoundException(OWNER_NF));
 
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));
@@ -115,20 +166,58 @@ public class IssueService {
                 .createdBy(owner)
                 .build();
 
-        if(dto.isPendingCase()){
+        if (dto.isPendingCase()) {
             issue.setStatus(IssueStatus.INCOMPLET);
         }
 
-        issueRepository.save(issue);
+        return issue;
+    }
+
+    /**
+     * Abonne automatiquement le créateur de l'issue en tant que gestionnaire.
+     * <p>
+     * Si le créateur n'est pas déjà abonné, un {@link IssueFollower} est créé
+     * avec la raison {@link FollowedReason#IS_MANAGER}.
+     *
+     * @param issue issue déjà persistée
+     */
+    private void autoFollowCreator(Issue issue) {
+        User owner = issue.getCreatedBy();
+        if (!issueFollowerRepository.existsByUserAndIssue(owner, issue)) {
+            IssueFollower follower = IssueFollower.builder()
+                    .issue(issue)
+                    .user(owner)
+                    .reason(FollowedReason.IS_MANAGER)
+                    .build();
+            issueFollowerRepository.save(follower);
+        }
+    }
+
+    /**
+     * Exécute les actions post-création d'une issue.
+     * <p>
+     * Si l'issue n'est pas un cas incomplet :
+     * <ul>
+     *   <li>crée le gestionnaire de demande associé</li>
+     *   <li>envoie une notification de création au responsable de la catégorie</li>
+     * </ul>
+     * Dans tous les cas, crée la conversation liée à l'issue et traite
+     * les éventuels fichiers attachés.
+     *
+     * @param dto   données de création de l'issue
+     * @param files fichiers à attacher (peut être vide)
+     * @param issue issue déjà persistée
+     */
+    private void postCreateActions(IssueCreateDto dto, List<MultipartFile> files, Issue issue) {
 
         if (!dto.isPendingCase()) {
             createRequestManager(issue);
+            notificationService.creationTicketNotification(issue.getCategory().getOwner(), issue);
         }
 
-        // Créer automatiquement une conversation pour cette issue
         conversationService.createConversationForIssue(issue);
 
-        return toDto(issue);
+        documentService.storeFiles(files, issue, issue.getCreatedBy(), null);
     }
 
     /**
@@ -143,10 +232,10 @@ public class IssueService {
      * @throws IssueNotFoundException si l'issue n'existe pas
      */
     public void updateStatus(String status, Long id) {
-        IssueStatus issueStatus;
+        IssueStatus newStatus;
 
         try {
-            issueStatus = IssueStatus.valueOf(status.toUpperCase());
+            newStatus = IssueStatus.valueOf(status.toUpperCase());
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid status");
         }
@@ -154,7 +243,51 @@ public class IssueService {
         Issue issue = issueRepository.findById(id)
                 .orElseThrow(() -> new IssueNotFoundException(id));
 
-        issue.setStatus(issueStatus);
+        IssueStatus oldStatus = issue.getStatus();
+
+        issue.setStatus(newStatus);
+        issue.setUpdatedAt(LocalDateTime.now());
+        issueRepository.save(issue);
+
+        if (oldStatus == IssueStatus.DEMANDE_REOUVERTURE && newStatus == IssueStatus.OUVERT) {
+            notificationService.reopeningDemandAcceptedNotification(issue.getCreatedBy(), issue);
+        }
+        if (oldStatus == IssueStatus.OUVERT && newStatus == IssueStatus.TERMINE) {
+            notificationService.closeIssueNotification(issue.getCreatedBy(), issue);
+        }
+        if(oldStatus == IssueStatus.TERMINE && newStatus == IssueStatus.OUVERT ){
+            notificationService.openIssueNotification(issue.getCreatedBy(), issue);
+        }
+
+    }
+
+    /**
+     * Demande la réouverture d'une issue terminée.
+     * <p>
+     * Met à jour le statut en {@link IssueStatus#DEMANDE_REOUVERTURE}
+     * et enregistre la description fournie par l'utilisateur.
+     *
+     * @param description justification de la demande de réouverture
+     * @param id identifiant de l'issue
+     * @throws IssueNotFoundException si l'issue n'existe pas
+     * @throws IllegalStateException si l'issue n'est pas au statut TERMINE
+     * @throws IllegalArgumentException si la description est vide
+     */
+    public void requestReopening(String description, Long id){
+        Issue issue = issueRepository.findById(id)
+                .orElseThrow(() -> new IssueNotFoundException(id));
+
+        if (issue.getStatus() != IssueStatus.TERMINE) {
+            throw new IllegalStateException("L'issue doit être terminée pour demander une réouverture");
+        }
+
+        if (description == null || description.trim().isEmpty()) {
+            throw new IllegalArgumentException("La description est obligatoire");
+        }
+
+        issue.setStatus(IssueStatus.DEMANDE_REOUVERTURE);
+        issue.setReopeningDescription(description);
+        notificationService.reopeningDemandNotification(issue.getManager(), issue);
 
         issueRepository.save(issue);
     }
@@ -184,6 +317,7 @@ public class IssueService {
         boolean willBecomePrivate = !issue.isPrivate();
         
         issue.setPrivate(!issue.isPrivate());
+        issue.setUpdatedAt(LocalDateTime.now());
         issueRepository.saveAndFlush(issue);
 
         // Nettoyer les followers qui n'ont plus accès si l'issue vient de devenir privée
@@ -209,8 +343,48 @@ public class IssueService {
         if (!canDeleteIssue(issue, currentUser)) {
             throw new AccessDeniedException("Vous n'avez pas l'autorisation de supprimer cette issue");
         }
+        // Supprimer les demande de fusion et les liens
+        mergeRequestRepository.deleteByIssueId(id);
+        issueRelationRepository.deleteByIssueId(id);
+        // Supprimer les événements liés avant de supprimer l'issue
+        eventRepository.deleteByIssueId(id);
+
+        // Supprime tous les documents liés à l'issue qui va être supprimé
+        documentService.deleteDocumentsByIssueId(id);
+
+        // suppresion du lien de fusion
+        issueRepository.clearMergedIntoReference(id);
 
         issueRepository.delete(issue);
+    }
+
+    /**
+     * Deletes all issues associated with the given category,
+     * along with their related events and documents.
+     *
+     * @param category the category whose issues must be deleted
+     */
+    @Transactional
+    public void deleteAllByCategory(Category category) {
+        List<Issue> issues = issueRepository.findByCategoryId(category.getId());
+
+        if (issues.isEmpty()) return;
+
+        List<Long> issueIds = issues.stream()
+                .map(Issue::getId)
+                .toList();
+
+        // Supprime tous les événements liés en une seule requête
+        eventRepository.deleteByIssueIdIn(issueIds);
+
+        // Supprime tous les documents liés en une seule requête
+        documentService.deleteDocumentsByIssueIdIn(issueIds);
+
+        // suppresion du lien de fusion
+        issueRepository.clearMergedIntoReferences(issueIds);
+
+        // Supprime toutes les issues en une seule requête
+        issueRepository.deleteAll(issues);
     }
 
     /**
@@ -227,7 +401,7 @@ public class IssueService {
                 .orElseThrow(() -> new IssueNotFoundException(id));
 
         User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("Owner not found"));
+                .orElseThrow(() -> new EntityNotFoundException(OWNER_NF));
 
         Category category = categoryRepository.findById(dto.getCategoryId())
                 .orElseThrow(() -> new CategoryNotFoundException(dto.getCategoryId()));
@@ -243,6 +417,8 @@ public class IssueService {
         issueRepository.save(issue);
 
         createRequestManager(issue);
+
+        notificationService.creationTicketNotification(category.getOwner(), issue);
 
         return toDto(issue);
     }
@@ -281,6 +457,35 @@ public class IssueService {
                 .createdName(issue.getCreatedBy().getName())
                 .createdAt(issue.getCreatedAt())
                 .updatedAt(issue.getUpdatedAt())
+                // request reopening
+                .reopeningDescription(issue.getReopeningDescription())
+                //manager
+                .teacherManagerName(manager != null ? manager.getName() : null)
+                //follower
+                .followersCount(countFollower(issue))
+                // documents
+                .documents(
+                        issue.getDocuments()
+                                .stream()
+                                .map(this::toDocumentDto)
+                                .toList()
+                )
+                .build();
+    }
+
+    /**
+     * Convertit une entité Issue en DTO Document.
+     *
+     * @param document entité document
+     * @return DTO document
+     */
+    private DocumentDto toDocumentDto(Document document) {
+        return DocumentDto.builder()
+                .id(document.getId())
+                .originalName(document.getOriginalName())
+                .contentType(document.getContentType())
+                .size(document.getSize())
+                .createdAt(document.getCreatedAt())
                 .build();
     }
 
@@ -375,13 +580,28 @@ public class IssueService {
 
         if (targetedUser.getId().equals(issue.getCategory().getOwner().getId())) {
             issue.setManager(targetedUser);
+
+            if (!issueFollowerRepository.existsByUserAndIssue(targetedUser, issue)) {
+                IssueFollower follower = IssueFollower.builder()
+                        .issue(issue)
+                        .user(targetedUser)
+                        .reason(FollowedReason.IS_MANAGER)
+                        .build();
+                issueFollowerRepository.save(follower);
+            }
+
             requestManager.setProcessingDate(LocalDateTime.now());
             initialStatus = RequestManagerStatus.ACCEPTED;
             issue.setStatus(IssueStatus.OUVERT);
+            // notification du créateur
+            notificationService.validatationTicketNotification(issue.getCreatedBy(), issue);
         }
 
         requestManager.setTargetTeacher(targetedUser);
         requestManager.setStatus(initialStatus);
+        if(!targetedUser.getId().equals(issue.getCategory().getOwner().getId())){
+        notificationService.reveivedManagerRequest(targetedUser,requestManager);
+        }
 
         return toDto(requestManagerRepository.save(requestManager));
     }
@@ -402,22 +622,39 @@ public class IssueService {
             throw new IllegalStateException("Vous n'êtes pas autorisé à répondre à cette demande");
         }
 
+        Issue issue = requestManager.getIssue();
+        User teacher = requestManager.getTargetTeacher();
+
         requestManager.setProcessingDate(LocalDateTime.now());
 
         if (response) {
             requestManager.setStatus(RequestManagerStatus.ACCEPTED);
-            requestManager.getIssue().setManager(requestManager.getTargetTeacher());
-            requestManager.getIssue().setStatus(IssueStatus.OUVERT);
+            issue.setManager(teacher);
+            issue.setStatus(IssueStatus.OUVERT);
+            //notification du créateur
+            notificationService.validatationTicketNotification(issue.getCreatedBy(), issue);
+            // notifcation pour le categorie Owner que sa demande a été accepté
+            notificationService.managerDemandNotification(requestManager.getCategoryOwner(), requestManager);
+
+
+            if (!issueFollowerRepository.existsByUserAndIssue(teacher, issue)) {
+                IssueFollower follower = IssueFollower.builder()
+                        .issue(issue)
+                        .user(teacher)
+                        .reason(FollowedReason.IS_MANAGER)
+                        .build();
+                issueFollowerRepository.save(follower);
+            }
+
         } else {
             requestManager.setStatus(RequestManagerStatus.DENIED);
-            createRequestManager(requestManager.getIssue());
+            notificationService.managerDemandNotification(requestManager.getCategoryOwner(), requestManager);
+            createRequestManager(issue);
         }
 
-        issueRepository.saveAndFlush(requestManager.getIssue());
-
-        // Nettoyer les followers qui n'ont plus accès suite au changement de manager
-        issueFollowerService.cleanupFollowersWithoutAccess(requestManager.getIssue().getId());
-
+        requestManagerRepository.save(requestManager);
+        issueRepository.saveAndFlush(issue);
+        issueFollowerService.cleanupFollowersWithoutAccess(issue.getId());
         return toDto(requestManager);
     }
 
@@ -506,6 +743,7 @@ public class IssueService {
         issue.setRejectComment(commentaire);
         issue.setRejectReason(raison);
         issue.setStatus(IssueStatus.INCOMPLET);
+        notificationService.incompleteTicketNotification(issue.getCreatedBy(), issue);
         issueRepository.save(issue);
 
         RequestManager requestManager = requestManagerRepository.findFirstByIssueOrderByCreatedAtDesc(issue)
@@ -538,6 +776,38 @@ public class IssueService {
                 .map(this::toDto)
                 .toList();
     }
+
+
+    /**
+     * récupérer la liste des issues à afficher dans la page index des issues
+     * @param email mail de l'utilisateur
+     * @return la liste des DTO des issues à afficher
+     */
+    public List<IssueDto> getAllDisplayableIssue(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException(OWNER_NF));
+
+        List<IssueStatus> openStatuses = List.of(IssueStatus.OUVERT);
+
+        List<Issue> displayableIssues = issueRepository.findDisplayableIssues(user, openStatuses);
+
+        return displayableIssues.stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    /**
+     * Compte le nombre d'abonnés pour un ticket donné.
+     * * @param issue l'entité ticket
+     * @return le nombre total d'abonnés
+     */
+    private int countFollower(Issue issue) {
+        if (issue == null || issue.getId() == null) {
+            return 0;
+        }
+        return (int) issueFollowerRepository.countByIssue(issue);
+    }
+
 
 
 

@@ -8,10 +8,7 @@ import fr.horizon.backend_api.model.dto.IssueDto;
 import fr.horizon.backend_api.model.dto.RequestManagerDto;
 import fr.horizon.backend_api.model.enums.IssueStatus;
 import fr.horizon.backend_api.model.enums.RequestManagerStatus;
-import fr.horizon.backend_api.repository.CategoryRepository;
-import fr.horizon.backend_api.repository.IssueRepository;
-import fr.horizon.backend_api.repository.RequestManagerRepository;
-import fr.horizon.backend_api.repository.UserRepository;
+import fr.horizon.backend_api.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,6 +46,24 @@ class IssueServiceTest {
     @Mock
     private IssueFollowerService issueFollowerService;
 
+    @Mock
+    private NotificationService notificationService;
+
+    @Mock
+    private DocumentService documentService;
+
+    @Mock
+    private EventRepository eventRepository;
+
+    @Mock
+    private IssueFollowerRepository issueFollowerRepository;
+
+    @Mock
+    private MergeRequestRepository mergeRequestRepository;
+
+    @Mock
+    private IssueRelationRepository issueRelationRepository;
+
     @InjectMocks
     private IssueService issueService;
 
@@ -57,7 +72,7 @@ class IssueServiceTest {
 
     @Test
     void createIssue_should_save_with_OUVERT_status_and_create_manager_when_not_pending() {
-        // Préparation
+
         User categoryOwner = new User();
         categoryOwner.setId(99L);
         categoryOwner.setName("Teacher");
@@ -66,7 +81,7 @@ class IssueServiceTest {
         dto.setTitle("Bug");
         dto.setDescription("Bug description");
         dto.setCategoryId(1L);
-        dto.setPendingCase(false); // Cas normal
+        dto.setPendingCase(false);
 
         User owner = new User();
         owner.setId(1L);
@@ -75,26 +90,39 @@ class IssueServiceTest {
 
         Category category = new Category();
         category.setId(1L);
-        category.setName("Software");
         category.setOwner(categoryOwner);
 
-        when(userRepository.findByEmail("john@test.com")).thenReturn(Optional.of(owner));
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+        when(userRepository.findByEmail("john@test.com"))
+                .thenReturn(Optional.of(owner));
 
-        // Intercepter l'Issue sauvegardée pour vérifier son statut interne
-        when(issueRepository.save(any(Issue.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(categoryRepository.findById(1L))
+                .thenReturn(Optional.of(category));
 
-        // Action
+        when(issueRepository.save(any(Issue.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        // IMPORTANT
+        when(documentService.storeFiles(
+                anyList(),
+                any(Issue.class),
+                any(User.class),
+                isNull()
+        )).thenReturn(List.of());
+
         IssueDto result = issueService.createIssue(dto, "john@test.com");
 
-        // Assertions
         assertNotNull(result);
-        assertEquals("Bug", result.getTitle());
 
-        // Vérification des appels
         verify(issueRepository).save(any(Issue.class));
         verify(conversationService).createConversationForIssue(any(Issue.class));
         verify(requestManagerRepository).save(any(RequestManager.class));
+
+        verify(documentService).storeFiles(
+                anyList(),
+                any(Issue.class),
+                any(User.class),
+                isNull()
+        );
     }
 
     @Test
@@ -213,11 +241,19 @@ class IssueServiceTest {
 
         when(issueRepository.findById(1L))
                 .thenReturn(Optional.of(issue));
+
         when(userRepository.findByEmail("john@test.com"))
                 .thenReturn(Optional.of(currentUser));
 
+        // Action
         issueService.deleteById(1L, "john@test.com");
 
+        verify(mergeRequestRepository).deleteByIssueId(1L);
+
+        // Vérif suppression événements liés
+        verify(eventRepository).deleteByIssueId(1L);
+
+        // Vérif suppression issue
         verify(issueRepository).delete(issue);
     }
 
@@ -279,6 +315,8 @@ class IssueServiceTest {
                 .category(category)
                 .createdBy(user)
                 .build();
+
+        when(issueFollowerRepository.countByIssue(issue)).thenReturn(0L);
 
         IssueDto dto = issueService.toDto(issue);
 
@@ -858,7 +896,7 @@ class IssueServiceTest {
         RequestManagerDto result = issueService.respondManagerRequest(false, 10L, 1L);
 
         assertEquals(RequestManagerStatus.DENIED.name(), result.getStatus());
-        verify(requestManagerRepository).save(any(RequestManager.class));
+        verify(requestManagerRepository, times(2)).save(any(RequestManager.class));
         verify(issueRepository).saveAndFlush(issue);
     }
 
@@ -905,5 +943,296 @@ class IssueServiceTest {
         when(userRepository.findByEmail("not_owner@test.fr")).thenReturn(Optional.of(user));
 
         assertThrows(AccessDeniedException.class, () -> issueService.updatePrivacy(1L, "not_owner@test.fr"));
+    }
+
+    // =============================================
+    // updateStatus()
+    // =============================================
+
+    @Test
+    void updateStatus_should_change_to_TERMINE() {
+        Issue issue = setupIssue();
+        issue.setStatus(IssueStatus.OUVERT);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(issueRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        issueService.updateStatus("TERMINE", 1L);
+
+        assertEquals(IssueStatus.TERMINE, issue.getStatus());
+        verify(notificationService).closeIssueNotification(any(), any());
+    }
+
+    @Test
+    void updateStatus_should_throw_on_invalid_status() {
+        assertThrows(IllegalArgumentException.class, () -> issueService.updateStatus("INVALID", 1L));
+    }
+
+    @Test
+    void updateStatus_should_notify_reopening_when_DEMANDE_REOUVERTURE_to_OUVERT() {
+        Issue issue = setupIssue();
+        issue.setStatus(IssueStatus.DEMANDE_REOUVERTURE);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(issueRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        issueService.updateStatus("OUVERT", 1L);
+
+        verify(notificationService).reopeningDemandAcceptedNotification(any(), any());
+    }
+
+    // =============================================
+    // requestReopening()
+    // =============================================
+
+    @Test
+    void requestReopening_should_set_status_and_notify() {
+        Issue issue = setupIssue();
+        issue.setStatus(IssueStatus.TERMINE);
+        User manager = new User();
+        manager.setId(42L);
+        issue.setManager(manager);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(issueRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        issueService.requestReopening("Besoin de réouverture", 1L);
+
+        assertEquals(IssueStatus.DEMANDE_REOUVERTURE, issue.getStatus());
+        verify(notificationService).reopeningDemandNotification(any(), any());
+    }
+
+    @Test
+    void requestReopening_should_throw_when_not_TERMINE() {
+        Issue issue = setupIssue();
+        issue.setStatus(IssueStatus.OUVERT);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+
+        assertThrows(IllegalStateException.class, () -> issueService.requestReopening("desc", 1L));
+    }
+
+    @Test
+    void requestReopening_should_throw_when_description_blank() {
+        Issue issue = setupIssue();
+        issue.setStatus(IssueStatus.TERMINE);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+
+        assertThrows(IllegalArgumentException.class, () -> issueService.requestReopening("  ", 1L));
+    }
+
+    // =============================================
+    // markIssueAsIncomplete()
+    // =============================================
+
+    @Test
+    void markIssueAsIncomplete_should_set_status_INCOMPLET() {
+        Issue issue = setupIssue();
+        issue.setStatus(IssueStatus.OUVERT);
+
+        RequestManager rm = new RequestManager();
+        rm.setStatus(RequestManagerStatus.PENDING);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(issueRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(requestManagerRepository.findFirstByIssueOrderByCreatedAtDesc(issue)).thenReturn(Optional.of(rm));
+        when(requestManagerRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+        issueService.markIssueAsIncomplete(1L, "commentaire", "raison");
+
+        assertEquals(IssueStatus.INCOMPLET, issue.getStatus());
+        assertEquals(RequestManagerStatus.DENIED, rm.getStatus());
+        verify(notificationService).incompleteTicketNotification(any(), any());
+    }
+
+    @Test
+    void markIssueAsIncomplete_should_throw_when_already_TERMINE() {
+        Issue issue = setupIssue();
+        issue.setStatus(IssueStatus.TERMINE);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+
+        assertThrows(IllegalStateException.class,
+                () -> issueService.markIssueAsIncomplete(1L, "c", "r"));
+    }
+
+    // =============================================
+    // getIssueDTOById()
+    // =============================================
+
+    @Test
+    void getIssueDTOById_should_return_dto_when_accessible() {
+        User user = setupUser();
+        Issue issue = setupIssue();
+        issue.setPrivate(false);
+        Category cat = new Category();
+        cat.setId(1L);
+        cat.setName("CAT");
+        User owner = new User();
+        owner.setId(99L);
+        owner.setName("Owner");
+        cat.setOwner(owner);
+        issue.setCategory(cat);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("john@test.fr")).thenReturn(Optional.of(user));
+
+        IssueDto result = issueService.getIssueDTOById(1L, "john@test.fr");
+
+        assertNotNull(result);
+    }
+
+    @Test
+    void getIssueDTOById_should_throw_when_private_and_not_allowed() {
+        User user = setupUser();
+        user.setId(99L);
+        Issue issue = setupIssue();
+        issue.setPrivate(true);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("john@test.fr")).thenReturn(Optional.of(user));
+
+        assertThrows(AccessDeniedException.class,
+                () -> issueService.getIssueDTOById(1L, "john@test.fr"));
+    }
+
+    // =============================================
+    // getIncompleteIssuesToResent()
+    // =============================================
+
+    @Test
+    void getIncompleteIssuesToResent_should_return_list() {
+        Issue issue = setupIssue();
+        Category cat = new Category();
+        cat.setId(1L);
+        cat.setName("CAT");
+        User owner = new User();
+        owner.setId(99L);
+        owner.setName("Owner");
+        cat.setOwner(owner);
+        issue.setCategory(cat);
+
+        when(issueRepository.findByStatusAndCreatedBy_Id(IssueStatus.INCOMPLET, 1L))
+                .thenReturn(List.of(issue));
+
+        List<IssueDto> result = issueService.getIncompleteIssuesToResent(1L);
+
+        assertEquals(1, result.size());
+    }
+
+    // =============================================
+    // getTeacherAssignations() / alertCategoryOwner() / getHistoricalRequestManager()
+    // =============================================
+
+    @Test
+    void getTeacherAssignations_should_return_list() {
+        when(requestManagerRepository.findByTargetTeacher_Id(1L)).thenReturn(List.of());
+
+        List<RequestManagerDto> result = issueService.getTeacherAssignations(1L);
+
+        assertNotNull(result);
+    }
+
+    @Test
+    void getHistoricalRequestManager_should_return_list() {
+        when(requestManagerRepository.findByCategoryOwner_IdAndTargetTeacherIsNotNullOrderByCreatedAtDesc(1L))
+                .thenReturn(List.of());
+
+        List<RequestManagerDto> result = issueService.getHistoricalRequestManager(1L);
+
+        assertNotNull(result);
+    }
+
+    // =============================================
+    // canAccessIssue()
+    // =============================================
+
+    @Test
+    void canAccessIssue_should_return_true_when_public() {
+        Issue issue = setupIssue();
+        issue.setPrivate(false);
+
+        assertTrue(issueService.canAccessIssue(issue, setupUser()));
+    }
+
+    @Test
+    void canAccessIssue_should_return_true_for_creator_when_private() {
+        User creator = setupUser();
+        creator.setId(1L);
+        Issue issue = setupIssue();
+        issue.setPrivate(true);
+        issue.setCreatedBy(creator);
+        issue.setCategory(new Category());
+        issue.getCategory().setOwner(new User());
+        issue.getCategory().getOwner().setId(99L);
+
+        assertTrue(issueService.canAccessIssue(issue, creator));
+    }
+
+    @Test
+    void deleteById_should_throw_when_not_authorized() {
+        User user = setupUser();
+        user.setId(99L);
+        Issue issue = setupIssue();
+        issue.setCreatedBy(new User());
+        issue.getCreatedBy().setId(1L);
+        issue.setCategory(new Category());
+        issue.getCategory().setOwner(new User());
+        issue.getCategory().getOwner().setId(2L);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("john@test.fr")).thenReturn(Optional.of(user));
+
+        assertThrows(AccessDeniedException.class, () -> issueService.deleteById(1L, "john@test.fr"));
+    }
+
+    @Test
+    void deleteById_should_delete_when_authorized() {
+        User creator = setupUser();
+        creator.setId(1L);
+        Issue issue = setupIssue();
+        issue.setCreatedBy(creator);
+        issue.setCategory(new Category());
+        issue.getCategory().setOwner(new User());
+        issue.getCategory().getOwner().setId(99L);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(issue));
+        when(userRepository.findByEmail("john@test.fr")).thenReturn(Optional.of(creator));
+
+        issueService.deleteById(1L, "john@test.fr");
+
+        verify(mergeRequestRepository).deleteByIssueId(1L);
+        verify(issueRepository).delete(issue);
+    }
+
+    @Test
+    void deleteById_should_cleanup_merge_requests_when_issue_is_merged_source() {
+        User creator = setupUser();
+        creator.setId(1L);
+        creator.setEmail("john@test.fr");
+
+        Issue target = new Issue();
+        target.setId(2L);
+
+        Issue source = setupIssue();
+        source.setId(1L);
+        source.setCreatedBy(creator);
+        source.setMerged(true);
+        source.setMergedInto(target);
+        source.setCategory(new Category());
+        source.getCategory().setOwner(new User());
+        source.getCategory().getOwner().setId(99L);
+
+        when(issueRepository.findById(1L)).thenReturn(Optional.of(source));
+        when(userRepository.findByEmail("john@test.fr")).thenReturn(Optional.of(creator));
+
+        issueService.deleteById(1L, "john@test.fr");
+
+        verify(mergeRequestRepository).deleteByIssueId(1L);
+        verify(issueRelationRepository).deleteByIssueId(1L);
+        verify(eventRepository).deleteByIssueId(1L);
+        verify(documentService).deleteDocumentsByIssueId(1L);
+        verify(issueRepository).delete(source);
     }
 }

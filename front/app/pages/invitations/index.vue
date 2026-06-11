@@ -2,7 +2,7 @@
   <div class="p-8 pb-8 min-h-screen bg-gray-50">
 
     <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">Gestion des Invitations</h1>
+      <h1 class="text-2xl font-bold text-gray-800">Gérer mon planning</h1>
     </div>
 
     <Alert v-if="error" color="error" title="Erreur système" class="mb-6">
@@ -17,10 +17,124 @@
       @switch="switchTab"
     />
 
+    <div v-if="activeTab === 'sessions'" class="animate-in fade-in duration-300">
+      <!-- Demandes de RDV en attente (ISSUE) -->
+      <div v-if="pendingIssueInvitations.length > 0" class="mb-6">
+        <h2 class="text-sm font-semibold text-amber-700 uppercase tracking-wide mb-3">Demandes de RDV en attente</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div
+            v-for="rdv in pendingIssueInvitations"
+            :key="'pending-' + rdv.id"
+            class="bg-white rounded-2xl shadow-sm border border-amber-200 p-5 hover:shadow-md transition-all flex flex-col gap-3"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-600">
+                {{ rdv.categoryType }}
+              </span>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                En attente
+              </span>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-gray-900">{{ rdv.name }}</h3>
+              <p v-if="rdv.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ rdv.description }}</p>
+            </div>
+            <div v-if="rdv.startDate" class="rounded-xl bg-amber-50 px-3 py-2.5 text-xs">
+              <div class="font-semibold mb-1 capitalize text-amber-900">
+                <i class="fa-solid fa-calendar-days mr-1"></i>
+                {{ new Date(rdv.startDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <span class="uppercase tracking-wide text-[9px] opacity-60">Début</span>
+                  <p class="font-medium">{{ new Date(rdv.startDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) }}</p>
+                </div>
+                <div>
+                  <span class="uppercase tracking-wide text-[9px] opacity-60">Fin</span>
+                  <p class="font-medium">{{ new Date(rdv.endDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) }}</p>
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-gray-400"><i class="fa-solid fa-user mr-1"></i>Demande de {{ rdv.createdBy }}</p>
+            <div class="flex gap-2 mt-auto pt-1">
+              <Button
+                color="success" variant="soft" size="sm" rounded
+                :loading="pendingRdvResponse === rdv.id + '-accept'"
+                @click="respondToRdv(rdv, true)"
+                label="Accepter"
+              />
+              <Button
+                color="error" variant="subtle" size="sm" rounded
+                :loading="pendingRdvResponse === rdv.id + '-refuse'"
+                @click="openDeclineRdvModal(rdv)"
+                label="Refuser"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sessions acceptées -->
+      <div v-if="myParticipations.length > 0">
+        <h2 v-if="pendingIssueInvitations.length > 0" class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Sessions confirmées</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div
+            v-for="session in myParticipations"
+            :key="session.id"
+            class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 hover:shadow-md hover:border-indigo-200 transition-all flex flex-col gap-3"
+          >
+            <div class="flex items-start justify-between gap-2">
+              <span class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-indigo-100 text-indigo-600">
+                {{ session.categoryType }}
+              </span>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600">
+                Acceptée
+              </span>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-gray-900">{{ session.name }}</h3>
+              <p v-if="session.description" class="text-xs text-gray-400 mt-0.5 line-clamp-1">{{ session.description }}</p>
+            </div>
+            <div v-if="session.startDate" class="rounded-xl bg-indigo-50 px-3 py-2.5 text-xs">
+              <div class="font-semibold mb-1 capitalize">
+                <i class="fa-solid fa-calendar-days mr-1"></i>
+                {{ new Date(session.startDate).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) }}
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <span class="uppercase tracking-wide text-[9px] opacity-60">Début</span>
+                  <p class="font-medium">{{ new Date(session.startDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) }}</p>
+                </div>
+                <div>
+                  <span class="uppercase tracking-wide text-[9px] opacity-60">Fin</span>
+                  <p class="font-medium">{{ new Date(session.endDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) }}</p>
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-gray-400"><i class="fa-solid fa-user mr-1"></i>Organisé par {{ session.createdBy }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="pendingIssueInvitations.length === 0 && myParticipations.length === 0" class="flex flex-col items-center justify-center p-12 bg-white rounded-xl border border-dashed border-gray-300 text-gray-500">
+        <span class="i-lucide-calendar-check w-12 h-12 mb-3 text-gray-300"></span>
+        <p class="text-lg font-medium text-gray-700">Aucune session</p>
+        <p class="text-sm">Vous n'avez aucune session pour le moment.</p>
+      </div>
+
+      <!-- Modal de refus RDV -->
+      <DeclineModal
+        v-if="isDeclineRdvModalOpen"
+        v-model:open="isDeclineRdvModalOpen"
+        v-model:reason="declineRdvReason"
+        @confirm="handleDeclineRdv"
+      />
+    </div>
+
     <div v-if="activeTab === 'pending'" class="animate-in fade-in duration-300">
-      <div v-if="myPendingInvitations && myPendingInvitations.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div v-if="myPendingInvitations && pendingNonIssueInvitations.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <InvitationCard
-          v-for="invitation in myPendingInvitations"
+          v-for="invitation in pendingNonIssueInvitations"
           :key="invitation.id"
           :invitation="invitation"
           @accept="handleAccept"
@@ -114,11 +228,18 @@
       @confirm="confirmCancellation"
     />
 
+    <AvailabilityConflictModal
+      v-model:open="isAvailabilityConflictOpen"
+      :conflictUsers="availabilityConflictUsers"
+      @proceed="handleAvailabilityConflictProceed"
+      @cancel="handleAvailabilityConflictCancel"
+    />
+
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useEvents } from '~/composables/useEvents'
 import { useAuth } from '~/composables/useAuth'
 import { ROLE } from '~/utils/roles'
@@ -133,6 +254,7 @@ import DeclineModal from '~/components/invitations/DeclineModal.vue'
 import StatusModal from '~/components/invitations/StatusModal.vue'
 import RescheduleModal from '~/components/invitations/RescheduleModal.vue'
 import CancelConfirmationModal from '~/components/invitations/CancelConfirmationModal.vue'
+import AvailabilityConflictModal from '~/components/invitations/AvailabilityConflictModal.vue'
 
 // --- États & Composables ---
 const { user, ready } = useAuth()
@@ -149,10 +271,19 @@ const {
   cancelEvent,
   inviteUserToEvent,
   removeParticipantFromMeeting,
-  fetchPossibleUsersInterested
+  fetchPossibleUsersInterested,
+  fetchMyParticipations,
+  fetchUserAvailabilities
 } = useEvents()
 
-const activeTab = ref('pending')
+const myParticipations = ref([])
+const pendingRdvResponse = ref(null)
+const isDeclineRdvModalOpen = ref(false)
+const selectedRdvToDecline = ref(null)
+const declineRdvReason = ref('')
+
+const route = useRoute()
+const activeTab = ref(route.query.tab || 'pending')
 
 // --- États liés à la suppression multiple ---
 const isCancelMode = ref(false)
@@ -164,33 +295,45 @@ const activeEventIdForStatus = ref(null)
 const newParticipantId = ref('')
 const possibleUsers = ref([])
 
+// --- États liés au contrôle de disponibilité ---
+const isAvailabilityConflictOpen = ref(false)
+const availabilityConflictUsers = ref([])
+const pendingInviteParticipantId = ref(null)
+
 // --- Computed ---
 const isTeacher = computed(() => {
   return ready.value && user?.value?.roles?.includes(ROLE.TEACHER)
 })
 
+const pendingIssueInvitations = computed(() =>
+  myPendingInvitations.value.filter(inv => inv.categoryType === 'ISSUE')
+)
+
+// Pour l'onglet "Mes invitations" : toutes les invitations en attente (y compris ISSUE du prof reçues)
+const pendingNonIssueInvitations = computed(() => myPendingInvitations.value)
+
 const tabDescription = computed(() => isTeacher.value
-  ? "Gérez vos réunions : suivez les réponses des invités ou reprogrammez un créneau à tout moment."
+  ? "Suivez les réponses des invités ou reprogrammez un créneau à tout moment."
   : "Suivez l'état de vos demandes de rendez-vous et relancez les enseignants si besoin."
 )
 const emptyIcon = computed(() => isTeacher.value ? 'i-lucide-calendar-x' : 'i-lucide-send')
-const emptyTitle = computed(() => isTeacher.value ? 'Aucun événement' : 'Aucune demande')
+const emptyTitle = computed(() => isTeacher.value ? 'Aucun rendez-vous' : 'Aucune demande')
 const emptyDesc = computed(() => isTeacher.value
-  ? 'Vous n\'avez organisé aucun événement pour le moment.'
+  ? 'Vous n\'avez organisé aucun rendez-vous pour le moment.'
   : 'Vous n\'avez fait aucune demande de rendez-vous pour le moment.'
 )
 
 const cancelActionLabel = computed(() => {
-  if (!isCancelMode.value) return isTeacher.value ? "Annuler un événement" : "Annuler une demande"
-  if (selectedEventIds.value.length > 1) return isTeacher.value ? "Annuler des événements" : "Annuler des demandes"
-  return isTeacher.value ? "Annuler l'événement" : "Annuler la demande"
+  if (!isCancelMode.value) return isTeacher.value ? "Annuler un rendez-vous" : "Annuler une demande"
+  if (selectedEventIds.value.length > 1) return isTeacher.value ? "Annuler des rendez-vous" : "Annuler des demandes"
+  return isTeacher.value ? "Annuler le rendez-vous" : "Annuler la demande"
 })
 
 const confirmCancelText = computed(() => {
   if (selectedEventIds.value.length > 1) {
-    return `ces ${selectedEventIds.value.length} ${isTeacher.value ? 'événements' : 'demandes'}`
+    return `ces ${selectedEventIds.value.length} ${isTeacher.value ? 'rendez-vous' : 'demandes'}`
   }
-  return isTeacher.value ? 'cet événement' : 'cette demande'
+  return isTeacher.value ? 'ce rendez-vous' : 'cette demande'
 })
 
 // --- États des modales ---
@@ -211,10 +354,25 @@ const rescheduleForm = ref({
   addAll: true
 })
 
+const EVENT_NOTIFICATION_TYPES = new Set(['NEW_EVENT_INVITATION', 'UPDATE_EVENT', 'EVENT_RESPONSE', 'EVENT_CANCEL'])
+
+const onNotificationReceived = async (e) => {
+  if (EVENT_NOTIFICATION_TYPES.has(e.detail?.type)) {
+    await fetchMyInvitations()
+    await fetchMyCreatedEvents()
+  }
+}
+
 // --- Lifecycle ---
 onMounted(async () => {
   await fetchMyInvitations()
   await fetchMyCreatedEvents()
+  myParticipations.value = await fetchMyParticipations()
+  globalThis.addEventListener('notification:received', onNotificationReceived)
+})
+
+onUnmounted(() => {
+  globalThis.removeEventListener('notification:received', onNotificationReceived)
 })
 
 const switchTab = (tab) => {
@@ -250,12 +408,15 @@ const confirmCancellation = async () => {
     }
     isCancelConfirmationOpen.value = false
     exitCancelMode()
-  } catch (e) {}
+  } catch (e) {
+    console.error('Erreur lors de l\'annulation :', e)
+  }
 }
 
 // --- Méthodes Invitations ---
 const handleAccept = async (eventId) => {
   await respondToInvitation(eventId, true)
+  myParticipations.value = await fetchMyParticipations()
 }
 
 const openDeclineModal = (invitation) => {
@@ -270,6 +431,36 @@ const handleDecline = async () => {
   if (res) {
     isDeclineModalOpen.value = false
     selectedInvitationEventId.value = null
+    myParticipations.value = await fetchMyParticipations()
+  }
+}
+
+// --- Répondre à une demande de RDV depuis l'onglet sessions ---
+const respondToRdv = async (rdv, accepted) => {
+  pendingRdvResponse.value = rdv.id + (accepted ? '-accept' : '-refuse')
+  try {
+    await respondToInvitation(rdv.id, accepted)
+    myParticipations.value = await fetchMyParticipations()
+  } finally {
+    pendingRdvResponse.value = null
+  }
+}
+
+const openDeclineRdvModal = (rdv) => {
+  selectedRdvToDecline.value = rdv
+  declineRdvReason.value = ''
+  isDeclineRdvModalOpen.value = true
+}
+
+const handleDeclineRdv = async () => {
+  if (!selectedRdvToDecline.value) return
+  pendingRdvResponse.value = selectedRdvToDecline.value.id + '-refuse'
+  try {
+    await respondToInvitation(selectedRdvToDecline.value.id, false, declineRdvReason.value)
+    isDeclineRdvModalOpen.value = false
+    selectedRdvToDecline.value = null
+  } finally {
+    pendingRdvResponse.value = null
   }
 }
 
@@ -284,7 +475,9 @@ const loadEventStatuses = async (eventId) => {
     if (isTeacher.value) {
       possibleUsers.value = await fetchPossibleUsersInterested(eventId)
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('Erreur lors du chargement des participants :', e)
+  }
 }
 
 const viewEventStatuses = async (eventId) => {
@@ -303,13 +496,63 @@ const viewEventStatuses = async (eventId) => {
 }
 
 // --- Actions directes depuis la modale (Ajout / Suppression) ---
+const isAvailableForSlot = (availabilities, eventStart, eventEnd) => {
+  if (!availabilities || availabilities.length === 0) return false
+  const eStart = new Date(String(eventStart).replace(' ', 'T'))
+  const eEnd = new Date(String(eventEnd).replace(' ', 'T'))
+  return availabilities.some(avail => {
+    const aStart = new Date(String(avail.startDate).replace(' ', 'T'))
+    const aEnd = new Date(String(avail.endDate).replace(' ', 'T'))
+    return aStart <= eStart && aEnd >= eEnd
+  })
+}
+
+const doAddParticipant = async (participantId) => {
+  try {
+    await inviteUserToEvent(activeEventIdForStatus.value, participantId)
+    newParticipantId.value = ''
+    await loadEventStatuses(activeEventIdForStatus.value)
+  } catch (e) {
+    console.error('Erreur lors de l\'invitation :', e)
+  }
+}
+
 const handleAddParticipant = async () => {
   if (!activeEventIdForStatus.value || !newParticipantId.value) return
-  try {
-    await inviteUserToEvent(activeEventIdForStatus.value, newParticipantId.value)
-    newParticipantId.value = ''
-    await loadEventStatuses(activeEventIdForStatus.value) // Refresh
-  } catch (e) {}
+
+  const activeEvent = events.value.find(e => String(e.id) === String(activeEventIdForStatus.value))
+
+  if (activeEvent?.startDate && activeEvent?.endDate) {
+    const userId = Number(newParticipantId.value)
+    const availabilities = await fetchUserAvailabilities(userId)
+
+    if (!isAvailableForSlot(availabilities, activeEvent.startDate, activeEvent.endDate)) {
+      const user = possibleUsers.value.find(u => Number(u.id) === userId)
+      availabilityConflictUsers.value = [{
+        id: userId,
+        name: user?.name || 'Utilisateur inconnu',
+        availabilities
+      }]
+      pendingInviteParticipantId.value = newParticipantId.value
+      isAvailabilityConflictOpen.value = true
+      return
+    }
+  }
+
+  await doAddParticipant(newParticipantId.value)
+}
+
+const handleAvailabilityConflictProceed = async () => {
+  isAvailabilityConflictOpen.value = false
+  if (pendingInviteParticipantId.value) {
+    await doAddParticipant(pendingInviteParticipantId.value)
+    pendingInviteParticipantId.value = null
+  }
+}
+
+const handleAvailabilityConflictCancel = () => {
+  isAvailabilityConflictOpen.value = false
+  pendingInviteParticipantId.value = null
 }
 
 const handleRemoveParticipant = async (participantId) => {
@@ -317,7 +560,9 @@ const handleRemoveParticipant = async (participantId) => {
   try {
     await removeParticipantFromMeeting(activeEventIdForStatus.value, participantId)
     await loadEventStatuses(activeEventIdForStatus.value) // Refresh
-  } catch (e) {}
+  } catch (e) {
+    console.error('Erreur lors de la suppression du participant :', e)
+  }
 }
 
 // --- Reprogrammation ---
@@ -377,6 +622,8 @@ const handleReschedule = async () => {
       isRescheduleModalOpen.value = false
       selectedEventToReschedule.value = null
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error('Erreur lors de la reprogrammation :', e)
+  }
 }
 </script>

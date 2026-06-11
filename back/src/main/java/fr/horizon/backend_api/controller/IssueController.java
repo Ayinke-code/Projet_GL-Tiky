@@ -10,10 +10,12 @@ import fr.horizon.backend_api.websocket.ConversationWebSocketHandler;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -76,10 +78,13 @@ public class IssueController {
      * @return issue créée sous forme de DTO
      */
     @PreAuthorize("isAuthenticated()")
-    @PostMapping
-    public IssueDto createIssue(@RequestBody IssueCreateDto dto, Authentication authentication) {
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public IssueDto createIssue(@RequestPart("dto") IssueCreateDto dto,
+                                @RequestPart(value = "files", required = false) List<MultipartFile> files,
+                                Authentication authentication
+    ) {
         String email = authentication.getName();
-        return issueService.createIssue(dto, email);
+        return issueService.createIssue(dto, files, email);
     }
 
     /**
@@ -92,6 +97,24 @@ public class IssueController {
     @PostMapping("/{id}/update-status")
     public void updateStatus(@PathVariable Long id, @RequestBody String status) {
         issueService.updateStatus(status, id);
+
+        // Notification WebSocket pour le changement de statut
+        conversationService.getConversationByIssueId(id).ifPresent(conv -> {
+            String payload = "{\"type\":\"" + fr.horizon.backend_api.util.MapKeys.STATUS_UPDATE + "\",\"issueId\":" + id + "}";
+            conversationWebSocketHandler.broadcastToConversation(conv.getId(), payload);
+        });
+    }
+
+    /**
+     * Met à jour le statut de l'issue pour DEMANDE_REOUVERTURE.
+     *
+     * @param id     identifiant de l'issue
+     * @param description description de la demande de réouverture
+     */
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/{id}/request-reopening")
+        public void createRequestReopening(@PathVariable Long id, @RequestBody String description) {
+        issueService.requestReopening(description, id);
     }
 
      /**
@@ -110,7 +133,7 @@ public class IssueController {
 
          // Diffusion d'une notification via WebSocket pour forcer le refresh/redirection chez les clients
          conversationService.getConversationByIssueId(id).ifPresent(conv -> {
-             String payload = "{\"type\":\"privacy_update\",\"issueId\":" + id + "}";
+             String payload = "{\"type\":\"" + fr.horizon.backend_api.util.MapKeys.PRIVACY_UPDATE + "\",\"issueId\":" + id + "}";
              conversationWebSocketHandler.broadcastToConversation(conv.getId(), payload);
          });
 
@@ -385,6 +408,19 @@ public class IssueController {
     @GetMapping("/{issueId}/followers")
     public ResponseEntity<List<FollowersInfoDto>> getIssueFollowers(@PathVariable Long issueId){
         return  ResponseEntity.ok(issueFollowerService.getFollowers(issueId));
+    }
+
+    /**
+     * Récupère la liste des issues affichage a l'acceuil de la page
+     *
+     * @param auth contexte d'authentification Spring Security
+     * @return liste des issues affichage a l'acceuil
+     */
+    @GetMapping("/displayable")
+    public ResponseEntity<List<IssueDto>> getDisplayableIssues(Authentication auth) {
+        String email = auth.getName();
+        List<IssueDto> displayableIssues = issueService.getAllDisplayableIssue(email);
+        return ResponseEntity.ok(displayableIssues);
     }
 
 }
