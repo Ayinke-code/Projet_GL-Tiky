@@ -161,7 +161,9 @@ deploy_dev:
       ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV << 'ENDSSH'
         sudo cp ~/app/apache-site.conf /etc/apache2/sites-available/app.conf
         sudo a2ensite app.conf
-        sudo a2enmod proxy proxy_http ssl headers rewrite
+        sudo a2enmod proxy proxy_http ssl headers rewrite deflate
+        # Brotli is enabled separately: on an Apache build without mod_brotli the site still works with GZIP only
+        sudo a2enmod brotli || echo "mod_brotli indisponible, repli sur GZIP"
         sudo systemctl reload apache2
 
         echo "Déploiement du frontend..."
@@ -241,7 +243,9 @@ deploy_prod:
       ssh $DEPLOY_USER@$DEPLOY_SERVER_PROD << 'ENDSSH'
         sudo cp ~/app/apache-site.conf /etc/apache2/sites-available/app.conf
         sudo a2ensite app.conf
-        sudo a2enmod proxy proxy_http ssl headers rewrite
+        sudo a2enmod proxy proxy_http ssl headers rewrite deflate
+        # Brotli is enabled separately: on an Apache build without mod_brotli the site still works with GZIP only
+        sudo a2enmod brotli || echo "mod_brotli indisponible, repli sur GZIP"
         sudo systemctl reload apache2
 
         echo "Déploiement du frontend..."

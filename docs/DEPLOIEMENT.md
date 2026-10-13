@@ -33,6 +33,7 @@ appels API vers le backend.
               │           Apache 2           │
               │  ─ Redirection 80 → 443      │
               │  ─ Sert le front statique    │  /var/www/html
+              │  ─ Compression Brotli / GZIP │
               │  ─ Reverse-proxy /api ───────┼──┐
               └──────────────────────────────┘  │ http://localhost:8081/api
                                                  ▼
@@ -45,6 +46,21 @@ appels API vers le backend.
                                        ┌───────────────────┐
                                        │     MariaDB       │
                                        └───────────────────┘
+```
+
+### Compression des ressources (RGESN 6.3)
+
+Apache compresse à la volée les ressources **texte** (HTML, CSS, JavaScript,
+JSON, XML, SVG), y compris les réponses JSON de l'API relayées par le
+reverse-proxy. **Brotli** est servi aux navigateurs qui l'annoncent
+(`Accept-Encoding: br`), **GZIP** sert de repli. Les images, polices et
+documents déjà compressés ne sont pas recompressés. La configuration se trouve
+dans `apache-site-dev.conf` / `apache-site-prod.conf`.
+
+Vérification après déploiement (réponse attendue : `content-encoding: br`) :
+
+```bash
+curl -skI -H "Accept-Encoding: br, gzip" https://<serveur>/ | grep -i content-encoding
 ```
 
 ---
@@ -107,7 +123,7 @@ appels API vers le backend.
 |---|---|
 | **Java** | JRE 17 (ou supérieur compatible) — nécessaire pour exécuter `app.jar` |
 | **MariaDB** | Version 10.x, base et utilisateur dédiés |
-| **Apache 2** | Modules requis : `proxy`, `proxy_http`, `ssl`, `headers`, `rewrite` |
+| **Apache 2** | Modules requis : `proxy`, `proxy_http`, `ssl`, `headers`, `rewrite`, `deflate` (GZIP) — recommandé : `brotli` (Apache ≥ 2.4.26) |
 | **Certificat SSL** | `server.crt` + `server.key` (HTTPS obligatoire) |
 | **Réseau** | Ports **80** (redirigé) et **443** (public) ouverts ; port **8081** interne pour le backend |
 | **Mémoire** | Prévoir ~512 Mo à 1 Go de RAM pour la JVM *(estimation usuelle, à ajuster selon la charge réelle)* |
