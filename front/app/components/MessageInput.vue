@@ -57,7 +57,7 @@
           v-model="messageFiles"
           multiple
           size="sm"
-          accept="application/pdf,image/png,image/jpeg,.docx,.xlsx"
+          :accept="UPLOAD_ACCEPT"
           icon="i-lucide-paperclip"
           layout="list"
           class="w-fit cursor-pointer"
@@ -73,6 +73,13 @@
             buttonLeadingIcon: 'size-5',
           }"
         />
+        <!-- The upload button is icon-only here, so the limits are shown as plain text before any transfer -->
+        <p
+          id="message-upload-limits"
+          class="text-xs text-gray-400"
+        >
+          {{ UPLOAD_LIMITS_LABEL }}
+        </p>
       </div>
 
       <!-- Erreur taille ou format de fichier -->
@@ -105,7 +112,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { validateFiles } from '../utils/validateFiles'
+import { validateFiles, UPLOAD_ACCEPT, UPLOAD_LIMITS_LABEL } from '../utils/validateFiles'
 
 defineOptions({ inheritAttrs: false })
 

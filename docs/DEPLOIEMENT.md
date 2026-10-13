@@ -156,6 +156,24 @@ la CI). Principales variables :
 Côté frontend, l'URL de l'API (`NUXT_PUBLIC_API_BASE`) est injectée au moment du
 build selon l'environnement.
 
+### Limites des fichiers téléversés (RGESN 4.11)
+
+Les limites sont affichées à côté de chaque champ d'envoi, contrôlées par le
+navigateur avant le transfert, puis revérifiées par l'API.
+
+| Envoi | Formats acceptés | Poids maximal |
+|---|---|---|
+| Pièces jointes d'un ticket ou d'un message | PDF, PNG, JPG, DOCX, XLSX | 10 Mo par fichier, 20 Mo au total |
+| Import d'étudiants dans une promotion | CSV, XLSX | 2 Mo |
+
+Un fichier refusé par l'API renvoie `415` (format) ou `413` (poids) avec un
+message JSON `{"error": "…"}`. Les valeurs sont définies à deux endroits, à
+modifier ensemble :
+
+- backend : `back/src/main/java/fr/horizon/backend_api/service/UploadPolicy.java`
+  (et `spring.servlet.multipart.*` dans `application.properties`) ;
+- frontend : `front/app/utils/validateFiles.js`.
+
 ---
 
 ## 9. Environnements

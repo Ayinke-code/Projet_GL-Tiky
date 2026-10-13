@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.Map;
 
@@ -90,5 +91,32 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.FORBIDDEN, resp.getStatusCode());
         assertNotNull(resp.getBody());
         assertEquals("Accès refusé", resp.getBody().get("error"));
+    }
+
+    @Test
+    void handleUnsupportedFileFormat_returns415() {
+        UnsupportedFileFormatException ex = new UnsupportedFileFormatException("script.exe", "PDF, PNG");
+        ResponseEntity<Map<String, String>> resp = handler.handleUnsupportedFileFormat(ex);
+        assertEquals(HttpStatus.UNSUPPORTED_MEDIA_TYPE, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertEquals("Format non autorisé : script.exe (formats acceptés : PDF, PNG)", resp.getBody().get("error"));
+    }
+
+    @Test
+    void handleFileTooLarge_returns413() {
+        FileTooLargeException ex = new FileTooLargeException("Fichier trop volumineux : gros.pdf");
+        ResponseEntity<Map<String, String>> resp = handler.handleFileTooLarge(ex);
+        assertEquals(HttpStatus.PAYLOAD_TOO_LARGE, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertEquals("Fichier trop volumineux : gros.pdf", resp.getBody().get("error"));
+    }
+
+    @Test
+    void handleMaxUploadSize_returns413() {
+        MaxUploadSizeExceededException ex = new MaxUploadSizeExceededException(10L * 1024 * 1024);
+        ResponseEntity<Map<String, String>> resp = handler.handleMaxUploadSize(ex);
+        assertEquals(HttpStatus.PAYLOAD_TOO_LARGE, resp.getStatusCode());
+        assertNotNull(resp.getBody());
+        assertTrue(resp.getBody().get("error").startsWith("Fichier trop volumineux"));
     }
 }

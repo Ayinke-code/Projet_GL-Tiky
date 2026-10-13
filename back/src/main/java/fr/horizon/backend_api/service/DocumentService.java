@@ -176,9 +176,14 @@ public class DocumentService {
      * @param message    message auquel lier les documents, ou {@code null} si aucun
      * @return liste des documents persistés
      * @throws FileStorageException si une erreur survient lors du stockage d'un fichier
+     * @throws fr.horizon.backend_api.exception.UnsupportedFileFormatException si un format n'est pas autorisé
+     * @throws fr.horizon.backend_api.exception.FileTooLargeException si une limite de poids est dépassée
      */
     public List<Document> storeFiles(List<MultipartFile> files, Issue issue, User uploadedBy, Message message) {
         if (files == null || files.isEmpty()) return List.of();
+
+        // Whole batch is checked before the first write so a rejected upload leaves nothing on disk
+        UploadPolicy.validateDocuments(files);
 
         List<Document> documents = new ArrayList<>();
 

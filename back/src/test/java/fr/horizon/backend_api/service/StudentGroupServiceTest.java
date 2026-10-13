@@ -1,8 +1,10 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.exception.FileTooLargeException;
 import fr.horizon.backend_api.exception.InvalidGroupSizeException;
 import fr.horizon.backend_api.exception.StudentAlreadyInGroupException;
 import fr.horizon.backend_api.exception.StudentGroupNotFoundException;
+import fr.horizon.backend_api.exception.UnsupportedFileFormatException;
 import fr.horizon.backend_api.exception.UserNotFoundException;
 import fr.horizon.backend_api.model.Category;
 import fr.horizon.backend_api.model.Role;
@@ -1095,6 +1097,36 @@ class StudentGroupServiceTest {
         assertEquals(0, result.getCreated());
         assertEquals(0, result.getAlreadyExisted());
         assertEquals(1, result.getSkipped());
+    }
+
+    /**
+     * A wrong format must be rejected before the group is even looked up.
+     */
+    @Test
+    void importStudents_should_reject_unsupported_format_before_any_lookup() {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.getOriginalFilename()).thenReturn("students.pdf");
+
+        assertThrows(UnsupportedFileFormatException.class,
+                () -> studentGroupService.importStudents(1L, file));
+
+        verifyNoInteractions(studentGroupRepository, userRepository);
+    }
+
+    /**
+     * An oversized file must be rejected before it is parsed.
+     */
+    @Test
+    void importStudents_should_reject_oversized_file_before_any_lookup() throws IOException {
+        MultipartFile file = mock(MultipartFile.class);
+        when(file.getOriginalFilename()).thenReturn("students.csv");
+        when(file.getSize()).thenReturn(UploadPolicy.MAX_IMPORT_BYTES + 1);
+
+        assertThrows(FileTooLargeException.class,
+                () -> studentGroupService.importStudents(1L, file));
+
+        verify(file, never()).getInputStream();
+        verifyNoInteractions(studentGroupRepository, userRepository);
     }
 
     @Test
