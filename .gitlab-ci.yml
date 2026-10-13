@@ -159,6 +159,8 @@ deploy_dev:
     # 7. Déployer front + redémarrer backend (une fois tous les fichiers transférés)
     - |
       ssh $DEPLOY_USER@$DEPLOY_SERVER_DEV << 'ENDSSH'
+        # mod_http2 backs the "Protocols h2" directive of the vhost (RGESN 6.7)
+        sudo a2enmod http2
         sudo cp ~/app/apache-site.conf /etc/apache2/sites-available/app.conf
         sudo a2ensite app.conf
         sudo a2enmod proxy proxy_http ssl headers rewrite
@@ -239,6 +241,8 @@ deploy_prod:
     # 7. Déployer front + redémarrer backend (une fois tous les fichiers transférés)
     - |
       ssh $DEPLOY_USER@$DEPLOY_SERVER_PROD << 'ENDSSH'
+        # mod_http2 backs the "Protocols h2" directive of the vhost (RGESN 6.7)
+        sudo a2enmod http2
         sudo cp ~/app/apache-site.conf /etc/apache2/sites-available/app.conf
         sudo a2ensite app.conf
         sudo a2enmod proxy proxy_http ssl headers rewrite

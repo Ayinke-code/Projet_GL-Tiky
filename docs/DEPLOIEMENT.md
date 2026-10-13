@@ -113,6 +113,24 @@ appels API vers le backend.
 | **Mémoire** | Prévoir ~512 Mo à 1 Go de RAM pour la JVM *(estimation usuelle, à ajuster selon la charge réelle)* |
 | **Stockage** | ~100 Mo pour l'application + espace pour la base et les documents téléversés |
 
+### Protocole HTTP/2 (RGESN 6.7)
+
+Toutes les ressources (HTML, CSS, JS, images, polices, réponses de l'API) sont
+servies en **HTTP/2** sur le port 443 : directive `Protocols h2 http/1.1` dans
+`apache-site-dev.conf` / `apache-site-prod.conf`, module Apache `http2` activé
+par le pipeline. HTTP/1.1 n'est conservé qu'en repli (anciens clients et
+ouverture des WebSockets).
+
+HTTP/2 exige un MPM Apache multi-thread (`event` ou `worker`) : avec
+`mpm_prefork`, la directive est ignorée et le serveur reste en HTTP/1.1.
+
+Vérification après déploiement (réponse attendue : `HTTP/2 200`) :
+
+```bash
+apache2ctl -M | grep -E 'mpm_|http2'
+curl -skI --http2 https://<serveur>/ | head -1
+```
+
 ---
 
 ## 7. Procédure de déploiement
