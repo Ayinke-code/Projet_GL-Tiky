@@ -1,5 +1,7 @@
 package fr.horizon.backend_api.service;
 
+import fr.horizon.backend_api.exception.FileTooLargeException;
+import fr.horizon.backend_api.exception.UnsupportedFileFormatException;
 import fr.horizon.backend_api.model.Document;
 import fr.horizon.backend_api.model.Issue;
 import fr.horizon.backend_api.model.Message;
@@ -15,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.ResponseEntity;
 import org.springframework.core.io.Resource;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -178,6 +181,56 @@ class DocumentServiceTest {
 
         verify(fileStorageService).store(file);
         verify(documentRepository).saveAll(any());
+    }
+
+    /**
+     * A rejected format must stop the upload before anything is written to disk or to the database.
+     */
+    @Test
+    void shouldRejectUnsupportedFormatWithoutStoringAnything() throws IOException {
+
+        // Real in-memory file rather than a mock: strict stubs would flag the getters the policy short-circuits
+        MultipartFile file = new MockMultipartFile(
+                "files", "script.exe", "application/x-msdownload", "MZ".getBytes());
+
+        List<MultipartFile> files = List.of(file);
+        Issue issue = new Issue();
+        User user = new User();
+
+        assertThatThrownBy(() -> documentService.storeFiles(files, issue, user, null))
+                .isInstanceOf(UnsupportedFileFormatException.class);
+
+        verify(fileStorageService, never()).store(any());
+        verify(documentRepository, never()).saveAll(any());
+    }
+
+    /**
+     * The second file is the oversized one: the first, valid file must not be stored either.
+     */
+    @Test
+    void shouldRejectOversizedFileWithoutStoringAnything() throws IOException {
+
+        MultipartFile valid = mock(MultipartFile.class);
+        when(valid.isEmpty()).thenReturn(false);
+        when(valid.getOriginalFilename()).thenReturn("ok.pdf");
+        when(valid.getContentType()).thenReturn("application/pdf");
+        when(valid.getSize()).thenReturn(100L);
+
+        MultipartFile tooBig = mock(MultipartFile.class);
+        when(tooBig.isEmpty()).thenReturn(false);
+        when(tooBig.getOriginalFilename()).thenReturn("gros.pdf");
+        when(tooBig.getContentType()).thenReturn("application/pdf");
+        when(tooBig.getSize()).thenReturn(UploadPolicy.MAX_FILE_BYTES + 1);
+
+        List<MultipartFile> files = List.of(valid, tooBig);
+        Issue issue = new Issue();
+        User user = new User();
+
+        assertThatThrownBy(() -> documentService.storeFiles(files, issue, user, null))
+                .isInstanceOf(FileTooLargeException.class);
+
+        verify(fileStorageService, never()).store(any());
+        verify(documentRepository, never()).saveAll(any());
     }
 
     @Test

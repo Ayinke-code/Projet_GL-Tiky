@@ -112,7 +112,7 @@
         <!-- Import fichier -->
         <div>
           <p class="text-xs font-medium text-gray-700 mb-2">
-            Importer via CSV ou Excel
+            Importer via CSV ou Excel (.xlsx)
             <span class="text-gray-400 font-normal ml-1">(colonnes : Nom, Email)</span>
           </p>
           <div
@@ -124,8 +124,14 @@
             <p class="text-sm text-gray-500 mb-3">Glissez un fichier ou</p>
             <label class="cursor-pointer px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium transition">
               Parcourir
-              <input type="file" accept=".csv,.xlsx,.xls" class="hidden" @change="onFileChange" />
+              <input type="file" :accept="IMPORT_ACCEPT" class="hidden" @change="onFileChange" />
             </label>
+            <p
+              id="import-upload-limits"
+              class="mt-3 text-xs text-gray-400"
+            >
+              {{ IMPORT_LIMITS_LABEL }}
+            </p>
             <p v-if="selectedFile" class="mt-3 text-xs text-indigo-600 font-medium">
               <i class="fa-solid fa-file-csv mr-1"></i>{{ selectedFile.name }}
             </p>
@@ -195,6 +201,7 @@
 definePageMeta({ ssr: false })
 
 import Alert from '~/components/ui/Alert.vue'
+import { validateImportFile, IMPORT_ACCEPT, IMPORT_LIMITS_LABEL } from '~/utils/validateFiles'
 
 const route = useRoute()
 const router = useRouter()
@@ -255,16 +262,27 @@ onMounted(async () => {
   }
 })
 
-function onFileChange(e) {
-  selectedFile.value = e.target.files[0] ?? null
+/**
+ * Keeps the picked file only if it respects the import limits, so a wrong
+ * format or an oversized file is refused before any transfer.
+ *
+ * @param {File|null} file - File picked through the input or dropped on the zone
+ */
+function selectImportFile(file) {
   importResult.value = null
-  importError.value = null
+  const check = validateImportFile(file)
+  importError.value = check.valid ? null : check.error
+  selectedFile.value = check.valid ? file : null
+}
+
+function onFileChange(e) {
+  selectImportFile(e.target.files[0] ?? null)
+  // Reset the input so picking the same file again after a rejection fires "change" again
+  e.target.value = ''
 }
 
 function onDrop(e) {
-  selectedFile.value = e.dataTransfer.files[0] ?? null
-  importResult.value = null
-  importError.value = null
+  selectImportFile(e.dataTransfer.files[0] ?? null)
 }
 
 async function handleImport() {

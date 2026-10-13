@@ -43,10 +43,10 @@
             <UFileUpload
               v-model="files"
               multiple
-              accept="application/pdf,image/png,image/jpeg,.jpg,.jpeg,.docx,.xlsx"
+              :accept="UPLOAD_ACCEPT"
               :dropzone="true"
               label="Déposez vos fichiers ici"
-              description="PDF, PNG, JPG, JPEG, DOCX, XLSX (max. 10Mo)"
+              :description="UPLOAD_LIMITS_LABEL"
               icon="i-lucide-image"
               highlight
               color="info"
@@ -92,7 +92,7 @@
  * - crée une issue
  */
 
-import { validateFiles } from '../../utils/validateFiles'
+import { validateFiles, UPLOAD_ACCEPT, UPLOAD_LIMITS_LABEL } from '../../utils/validateFiles'
 
 const { ready, user } = useAuth()
 const { createIssue } = useIssues()

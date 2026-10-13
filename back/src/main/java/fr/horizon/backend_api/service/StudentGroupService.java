@@ -293,6 +293,9 @@ public class StudentGroupService {
 
     @Transactional
     public StudentImportResultDto importStudents(Long groupId, MultipartFile file) throws IOException {
+        // Rejected before any database access: a wrong format or an oversized file must not start the import
+        UploadPolicy.validateStudentImport(file);
+
         StudentGroup group = studentGroupRepository.findById(groupId)
                 .orElseThrow(() -> new StudentGroupNotFoundException(groupId));
 
